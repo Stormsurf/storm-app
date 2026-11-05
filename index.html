@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mi clase · Storm Academia Anual</title>
+<meta name="theme-color" content="#EFECE8">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="apple-touch-icon" href="/icons/storm-app-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Storm">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1">
+</head>
+<body>
+<header class="ap-top"><a href="https://www.stormsurf.cl" aria-label="Storm"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></a></header>
+<main>
+<style>
+.mc{--aa:#61A1C8;--aa-dk:#2d6e94;--aa-soft:#E6F1F8;--ink:#2C2C2B;--line:rgba(44,44,43,.09);max-width:680px;margin:0 auto;color:var(--ink)}
+.mc-hero{text-align:center;padding:4px 0 2px}
+.mc-hero img{width:min(280px,64%);height:auto;display:block;margin:0 auto}
+.mc-hero h1{margin:12px 0 0;font-family:var(--font-heading-family);font-weight:500;font-size:2.8rem}
+.mc-hero .mc-lead{margin:6px auto 0;max-width:44ch;font-size:1.5rem;line-height:1.5;opacity:.75}
+.mc-hero .mc-lead p{margin:0}
+.mc-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:14px;box-shadow:0 1px 2px rgba(44,44,43,.04)}
+.mc-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding:12px 16px;background:#fff;border:1px solid var(--line);border-radius:999px}
+.mc-top span{font-size:1.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-top b{font-weight:600}
+.mc-link{background:none;border:0;padding:0;font:inherit;font-size:1.35rem;color:var(--aa-dk);text-decoration:underline;cursor:pointer;flex:none}
+.mc-h2{margin:26px 0 0;font-family:var(--font-heading-family);font-weight:500;font-size:2rem;display:flex;align-items:center;gap:10px}
+.mc-h2:before{content:'';width:10px;height:10px;border-radius:50%;background:var(--aa);flex:none}
+.mc-kid{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mc-kid h3{margin:0;font-family:var(--font-heading-family);font-weight:500;font-size:2.2rem;line-height:1.2}
+.mc-kid p{margin:4px 0 0;font-size:1.4rem;opacity:.72}
+.mc-paid{flex:none;text-align:right;font-size:1.2rem;line-height:1.3}
+.mc-paid b{display:inline-block;background:var(--aa-soft);color:var(--aa-dk);font-weight:600;font-size:1.3rem;padding:4px 10px;border-radius:999px}
+.mc-paid small{display:block;opacity:.6;margin-top:4px}
+.mc-list{margin-top:14px;border-top:1px solid var(--line)}
+.mc-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mc-row:last-child{border-bottom:0}
+.mc-row b{font-weight:600;font-size:1.5rem}
+.mc-row small{display:block;opacity:.65;font-size:1.3rem;margin-top:2px}
+.mc-tag{display:inline-block;font-size:1.1rem;padding:2px 9px;border-radius:20px;background:var(--aa-soft);color:var(--aa-dk);margin-left:6px;vertical-align:middle}
+.mc-btn{background:#fff;border:1.5px solid var(--aa);color:var(--aa-dk);border-radius:999px;padding:8px 16px;font:inherit;font-weight:600;font-size:1.3rem;cursor:pointer}
+.mc-btn:hover{background:var(--aa-soft)}
+.mc-lock{font-size:1.2rem;opacity:.5}
+.mc-opts{width:100%;margin-top:4px;padding:12px;background:var(--aa-soft);border-radius:14px}
+.mc-opts[hidden]{display:none}
+.mc-opts>p{margin:0 0 8px;font-size:1.35rem}
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mc-opt{background:#fff;border:1.5px solid transparent;border-radius:12px;padding:10px 12px;font:inherit;font-size:1.35rem;cursor:pointer;text-align:left;color:var(--ink)}
+.mc-opt:hover,.mc-opt.on{border-color:var(--aa)}
+.mc-opt small{display:block;opacity:.65}
+.mc-confirm{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.mc-confirm[hidden]{display:none}
+.mc-confirm p{flex:1 1 100%;margin:0;font-size:1.35rem}
+.mc-go{display:inline-block;border:0;border-radius:999px;background:var(--aa);color:#fff;text-decoration:none;font:inherit;font-weight:600;font-size:1.5rem;padding:14px 26px;cursor:pointer;text-align:center}
+.mc-go:hover{filter:brightness(.95)}
+.mc-go[disabled]{opacity:.6;cursor:default}
+.mc-go--sm{font-size:1.35rem;padding:10px 18px}
+.mc-msg{padding:14px 16px;border-radius:14px;margin-top:14px;font-size:1.45rem;line-height:1.45}
+.mc-msg--ok{background:var(--aa-soft)}.mc-msg--err{background:#f6e3df}
+.mc-note{font-size:1.3rem;opacity:.65;margin-top:16px;line-height:1.5;text-align:center}
+.mc-login{text-align:center}
+.mc-login p{margin:0 auto 14px;max-width:38ch;font-size:1.5rem;line-height:1.5}
+.mc-in{display:block;width:100%;max-width:340px;margin:0 auto 12px;box-sizing:border-box;border:1.5px solid rgba(44,44,43,.18);border-radius:12px;padding:13px 14px;font:inherit;font-size:1.6rem;text-align:center;background:#fff;color:var(--ink)}
+.mc-in:focus{outline:none;border-color:var(--aa)}
+.mc-in--code{letter-spacing:.4em;font-size:2.2rem;font-weight:600}
+.mc-login .mc-go{width:100%;max-width:340px}
+.mc-cta{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--aa-soft);border-color:transparent}
+.mc-cta p{margin:0;font-size:1.45rem}
+.mc-cta b{display:block;font-size:1.6rem}
+.mc-ren p{flex-basis:100%}
+.mc-ren ul{flex-basis:100%;list-style:none;margin:0;padding:0;font-size:1.4rem;line-height:1.5}
+.mc-ren li b{display:inline;font-size:inherit}
+.mc-ren__otro{font-size:1.3rem}
+.mc-asis{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:1.35rem}
+.mc-asis i{flex:1;height:6px;border-radius:6px;background:var(--aa-soft);overflow:hidden;max-width:160px}
+.mc-asis i span{display:block;height:100%;background:var(--aa)}
+.mc-enc{background:var(--ink);color:#fff;border-color:transparent}
+.mc-enc h3{margin:0;font-family:var(--font-heading-family);font-weight:500;font-size:2rem}
+.mc-enc p{margin:4px 0 0;font-size:1.35rem;opacity:.75}
+.mc-stars{display:flex;gap:6px;margin-top:14px}
+.mc-star{flex:1;border:1.5px solid rgba(255,255,255,.25);background:none;color:#fff;border-radius:12px;padding:10px 0 8px;font:inherit;font-size:1.1rem;cursor:pointer;line-height:1.2}
+.mc-star b{display:block;font-size:2rem;font-weight:400;line-height:1}
+.mc-star.on{background:#fff;color:var(--ink);border-color:#fff}
+.mc-enc textarea{display:block;width:100%;box-sizing:border-box;margin-top:12px;border:0;border-radius:12px;padding:11px 12px;font:inherit;font-size:1.45rem;min-height:70px;resize:vertical}
+.mc-enc .mc-go{margin-top:12px;background:#fff;color:var(--ink)}
+.mc-ev{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.mc-ev:last-child{border-bottom:0}
+.mc-ev__d{flex:none;align-self:flex-start;width:52px;text-align:center;border-radius:12px;background:var(--aa-soft);color:var(--aa-dk);padding:6px 0;line-height:1.1}
+.mc-ev__d b{display:block;font-size:2rem;font-weight:600}
+.mc-ev__d small{font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em}
+.mc-ev h4{margin:0;font-size:1.55rem;font-weight:600}
+.mc-ev p{margin:3px 0 0;font-size:1.3rem;opacity:.7;line-height:1.4}
+.mc-calmes__card{padding:12px}
+.mc-calmes__card img{width:100%;height:auto;display:block;border-radius:10px}
+.mc-calmes__hint{display:block;text-align:center;font-size:1.25rem;opacity:.6;margin-top:8px}
+.mc-calmes__tabs{display:flex;gap:8px;margin-bottom:10px}
+.mc-calmes__tabs:empty{display:none}
+.mc-calmes__tab{flex:1;padding:9px 10px;border:1px solid rgba(44,44,43,.16);border-radius:10px;background:#fff;font:inherit;font-size:1.4rem;cursor:pointer}
+.mc-calmes__tab.on{background:var(--aa);border-color:var(--aa);color:#fff}
+.mc-ev .mc-link{font-size:1.3rem;margin-top:6px;display:inline-block}
+.mc-old{margin-top:14px}
+.mc-old summary{cursor:pointer;font-size:1.4rem;color:var(--aa-dk);padding:6px 0}
+.mc-skel{height:120px;border-radius:18px;margin-top:14px;background:linear-gradient(90deg,#fff 0%,#f3f1ee 50%,#fff 100%);background-size:200% 100%;animation:mcsk 1.2s infinite linear}
+@keyframes mcsk{to{background-position:-200% 0}}
+@media (max-width:599px){.mc-card{padding:18px;border-radius:16px}.mc-grid{grid-template-columns:1fr}.mc-cta .mc-go{width:100%}}
+.mc-msgs{margin-top:16px}
+.mc-msg1{background:#fff;border:1px solid rgba(44,44,43,.09);border-left:4px solid #61A1C8;border-radius:16px;padding:14px 16px;margin-top:10px}
+.mc-msg1 small{display:flex;align-items:center;gap:6px;font-size:1.2rem;opacity:.65;margin-bottom:6px}
+.mc-msg1 small i{font-style:normal;font-weight:700;font-size:1.05rem;letter-spacing:.04em;text-transform:uppercase;background:#61A1C8;color:#fff;border-radius:999px;padding:1px 7px;opacity:1}
+.mc-msg1 p{margin:0;font-size:1.5rem;line-height:1.5;white-space:pre-line}
+.mc-msg1--new{background:#E6F1F8}
+</style>
+<section class='storm-section color-scheme-1 gradient'>
+  <div class='storm-wrap mc'>
+    <div class='mc-hero'>
+      <img src='/img/academia-anual-logo.png' alt='Academia Anual Storm' width='1200' height='496'>
+      <h1>Mi clase</h1>
+      <div class='mc-lead'><p>Revisa las clases de tus hijos, sus días y lo que tienes pagado.</p></div>
+    </div>
+    <div id='mc-app'><div class='mc-skel'></div></div>
+  </div>
+</section>
+
+<script>
+(()=>{
+  const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
+  const PAY = "https://www.stormsurf.cl/products/mensualidad-academia-anual";
+  const NOTA = "Puedes mover una clase avisando 3 d\u00edas antes. Solo aplica a surf en los planes B\u00e1sico y Medio.";
+  const KEY = 'storm-mi-clase';
+  const app = document.getElementById('mc-app');
+  const q = new URLSearchParams(location.search);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
+  const clp = n => '$' + Math.round(n).toLocaleString('es-CL');
+  const guardar = s => { try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(_){} };
+  const leer = () => { try{ return JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(_){ return null; } };
+  const borrar = () => { try{ localStorage.removeItem(KEY); }catch(_){} };
+
+  // Sesión: 1) vuelta del pago (link firmado), 2) la guardada en este navegador, 3) cuenta de la tienda.
+  let auth = null;
+  if(q.get('e') && q.get('ts') && q.get('f')) auth = {email:q.get('e'), ts:q.get('ts'), firma:q.get('f')};
+  else auth = leer();
+  
+  if(auth) guardar(auth);
+  if(q.get('e')){ ['e','ts','f'].forEach(k=>q.delete(k)); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '')); }
+
+  let msg = q.get('pago')==='pendiente' ? `<div class='mc-msg mc-msg--ok'>Tu pago está en proceso. Cuando Mercado Pago lo apruebe te llegará un correo y aparecerá aquí.</div>`
+    : q.get('pago')==='ok' ? `<div class='mc-msg mc-msg--ok'>¡Pago recibido! Te enviamos la confirmación por correo.</div>` : '';
+  const revisar = (q.get('ref') && API) ? post({accion:'revisar-pago', ref:q.get('ref')}).catch(()=>null) : null;
+
+  async function post(body){
+    if(!API) throw new Error('El sistema aún no está conectado.');
+    const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error || 'Error');
+    return d;
+  }
+  const call = body => post(Object.assign({}, auth, body));
+
+  // ---------- Entrar con código ----------
+  function login(email, err, paso){
+    app.innerHTML = msg + `<div class='mc-card mc-login'>
+      ${paso==='codigo'
+        ? `<p>Te enviamos un código de 6 números a <b>${esc(email)}</b>. Escríbelo aquí:</p>
+           <input class='mc-in mc-in--code' id='mc-code' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='······'>
+           <button class='mc-go' id='mc-ok'>Entrar</button>
+           <p class='mc-note' style='margin-top:12px'><button class='mc-link' id='mc-back'>Usar otro correo o pedir otro código</button></p>`
+        : `<p>Entra con el correo que usaste al pagar la mensualidad. Te mandamos un código, sin contraseñas.</p>
+           <input class='mc-in' id='mc-email' type='email' autocomplete='email' placeholder='tu@correo.cl' value='${esc(email||'')}'>
+           <button class='mc-go' id='mc-ok'>Recibir código</button>`}
+      ${err ? `<div class='mc-msg mc-msg--err' style='text-align:left'>${esc(err)}</div>` : ''}
+    </div>
+    <p class='mc-note'>¿Aún no pagas la mensualidad? <a href='${esc(PAY)}'>Págala aquí</a>.</p>`;
+    const ok = document.getElementById('mc-ok');
+    const input = document.getElementById(paso==='codigo' ? 'mc-code' : 'mc-email');
+    input.focus();
+    input.addEventListener('keydown', e => { if(e.key==='Enter') ok.click(); });
+    if(paso==='codigo'){
+      document.getElementById('mc-back').onclick = () => login(email);
+      input.addEventListener('input', () => { input.value = input.value.replace(/\D/g,''); if(input.value.length===6) ok.click(); });
+      ok.onclick = async () => {
+        ok.disabled = true; ok.textContent = 'Entrando…';
+        try{ const s = await post({accion:'entrar', email, codigo:input.value}); auth = {email:s.email, ts:s.ts, firma:s.firma}; guardar(auth); load(); }
+        catch(x){ login(email, x.message, 'codigo'); }
+      };
+    } else {
+      ok.onclick = async () => {
+        const e = input.value.trim().toLowerCase();
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return login(e, 'Revisa el correo.');
+        ok.disabled = true; ok.textContent = 'Enviando…';
+        try{ await post({accion:'pedir-codigo', email:e}); login(e, '', 'codigo'); }
+        catch(x){ login(e, x.message); }
+      };
+    }
+  }
+
+  // ---------- Mi cuenta ----------
+  function claseRow(c, ai, ci, aviso){
+    let h = `<div class='mc-row'><div><b>${esc(cap(c.texto))}</b>${c.cambiada?"<span class='mc-tag'>movida</span>":''}<small>${esc(c.clase)} · ${esc(c.horario)}${c.nota?' · '+esc(c.nota):''}</small></div>`;
+    if(c.recupera && c.movible) h += `<button class='mc-btn' data-open='${ai}-${ci}'>Mover</button>`;
+    else if(c.recupera) h += `<span class='mc-lock'>Faltan menos de ${aviso} días</span>`;
+    if(c.recupera && c.movible){
+      h += `<div class='mc-opts' id='o-${ai}-${ci}' hidden>`;
+      if(c.opciones.length){
+        h += `<p>¿A qué día la quieres mover?</p><div class='mc-grid'>` + c.opciones.map(o=>`<button class='mc-opt' data-pick='${ai}-${ci}' data-hacia='${o.fecha}'><b>${esc(cap(o.texto))}</b><small>${esc(o.horario)}</small></button>`).join('') + `</div>
+          <div class='mc-confirm' id='k-${ai}-${ci}' hidden><p></p><button class='mc-go mc-go--sm' data-mv='${ai}-${ci}'>Confirmar cambio</button><button class='mc-link' data-cancel='${ai}-${ci}'>Cancelar</button></div>`;
+      } else h += `<p>No hay otros días con cupo este mes.</p>`;
+      h += `</div>`;
+    }
+    return h + `</div>`;
+  }
+  function alumnoCard(a, ai, aviso){
+    let h = `<div class='mc-card'><div class='mc-kid'><div><h3>${esc(a.alumno)}</h3><p>Plan ${esc(a.plan)} · ${esc(cap(a.mes))}${a.dias?' · '+esc(cap(a.dias)):''}</p></div>
+      <div class='mc-paid'>${a.pagado ? `<b>Pagado ${clp(a.pagado)}</b>` : a.beca ? `<b>Beca Storm</b>` : `<b>Inscrito</b>`}${a.fechaPago ? `<small>${esc(a.fechaPago)}</small>` : ''}</div></div>`;
+    if(a.asistencia && a.asistencia.total) h += `<div class='mc-asis'><span>Asistencia</span><i><span style='width:${Math.round(a.asistencia.vino/a.asistencia.total*100)}%'></span></i><b>Fue a ${a.asistencia.vino} de ${a.asistencia.total} clase${a.asistencia.total===1?'':'s'}</b></div>`;
+    if(a.clases.length) h += a.clases.some(c=>c.recupera)
+      ? `<p class='mc-note' style='text-align:left;margin:10px 0 0'>Si no puede ir a una clase de surf, puedes moverla a otro día avisando con ${aviso} días de anticipación.</p>`
+      : `<p class='mc-note' style='text-align:left;margin:10px 0 0'>Las clases de este plan no se pueden mover a otro día.</p>`;
+    h += a.clases.length ? `<div class='mc-list'>` + a.clases.map((c,ci)=>claseRow(c, ai, ci, aviso)).join('') + `</div>` : `<p class='mc-note' style='text-align:left;margin-top:12px'>Ya no quedan clases este mes.</p>`;
+    return h + `</div>`;
+  }
+  // Renovar: repite el plan y los días del último mes pagado, con todas las clases del mes siguiente (ene/feb no hay Academia Anual).
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const SIN_ANUAL = [0,1];
+  const nMes = t => { const [m,y] = String(t).toLowerCase().split(' '); const i = MESES.indexOf(m); return i < 0 ? -1 : (+y)*12 + i; };
+  const PLANES_OK = ['Básico','Medio','Plus','Full','Skate'];
+  const sinTilde = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  function renovacion(lista){
+    const conMes = lista.filter(a => nMes(a.mes) >= 0);
+    if(!conMes.length) return null;
+    const ultimo = Math.max(...conMes.map(a => nMes(a.mes)));
+    const hoy = new Date(), ahora = hoy.getFullYear()*12 + hoy.getMonth();
+    if(ultimo > ahora) return null; // ya pagó el mes que viene
+    let sig = ultimo + 1; while(SIN_ANUAL.includes(sig % 12)) sig++;
+    const alumnos = [];
+    conMes.filter(a => nMes(a.mes) === ultimo).forEach(a => {
+      const partes = String(a.plan).split('+').map(x => x.trim());
+      const plan = PLANES_OK.find(p => partes.some(x => sinTilde(x) === sinTilde(p)));
+      if(!plan || alumnos.some(x => x.nombre === a.alumno)) return;
+      if(a.beca && a.beca.valor === 0) return; // beca completa: se anota sola cada mes
+      const dl = String(a.dias).toLowerCase();
+      const dia = (plan === 'Básico' || plan === 'Medio') ? (dl.includes('domingo') ? 'Domingo' : dl.includes('jueves') ? 'Jueves' : '') : '';
+      const al = {nombre: a.alumno, plan, dia, yoga: partes.some(x => sinTilde(x) === 'yoga')};
+      if(a.beca && a.beca.plan === plan) al.beca = a.beca.valor;
+      alumnos.push(al);
+    });
+    return alumnos.length ? {mes: MESES[sig % 12] + ' ' + Math.floor(sig/12), correo: auth.email, alumnos} : null;
+  }
+  // ---------- Mensajes del equipo para el grupo (v17) ----------
+  const VISTOS = KEY + '-vistos';
+  const vistos = () => { try{ return JSON.parse(localStorage.getItem(VISTOS) || '[]'); }catch(_){ return []; } };
+  function mensajesCard(ms){
+    const v = vistos();
+    return `<div class='mc-msgs'><h2 class='mc-h2'>Mensajes de Storm</h2>` + ms.map(m => `<div class='mc-msg1${v.includes(m.id)?'':' mc-msg1--new'}'><small>${v.includes(m.id)?'':'<i>Nuevo</i>'}${esc(m.de)} · ${esc(m.texto)}${m.hora?' · '+esc(m.hora):''}</small><p>${esc(m.mensaje)}</p></div>`).join('') + `</div>`;
+  }
+  function marcarVistos(ms){ try{ const v = vistos(); ms.forEach(m => { if(!v.includes(m.id)) v.push(m.id); }); localStorage.setItem(VISTOS, JSON.stringify(v.slice(-40))); }catch(_){} }
+  // ---------- Calendario del mes (imagen "calendario-<mes>-<año>.jpg" en Archivos de Shopify) ----------
+  const CAL_IMG = "https://cdn.shopify.com/s/files/1/1007/2683/3442/files/calendario.jpg";
+  function calendariosMes(){
+    const box = app.querySelector('[data-calmes]'); if(!box) return;
+    const hoy = new Date(); let n = hoy.getFullYear()*12 + hoy.getMonth();
+    const meses = [];
+    while(meses.length < 2){ if(!SIN_ANUAL.includes(n % 12)) meses.push(MESES[n % 12] + ' ' + Math.floor(n/12)); n++; }
+    const ok = [];
+    const mostrar = () => {
+      const lista = meses.filter(m => ok.includes(m));
+      if(!lista.length) return;
+      const img = box.querySelector('[data-calmes-img]'), tabs = box.querySelector('[data-calmes-tabs]');
+      const ver = m => { img.src = ok[m]; box.querySelector('[data-calmes-a]').href = ok[m]; tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m)); };
+      tabs.innerHTML = lista.length > 1 ? lista.map(m => `<button class='mc-calmes__tab' data-m='${m}'>${cap(m.split(' ')[0])}</button>`).join('') : '';
+      tabs.querySelectorAll('button').forEach(b => b.onclick = () => ver(b.dataset.m));
+      box.querySelector('.mc-h2').textContent = lista.length > 1 ? 'Calendario del mes' : 'Calendario de ' + lista[0].split(' ')[0];
+      ver(lista[0]); box.hidden = false;
+    };
+    meses.forEach(m => {
+      const url = CAL_IMG.replace(/calendario\.jpg.*$/, 'calendario-' + m.replace(/\s+/g,'-') + '.jpg');
+      const p = new Image(); p.onload = () => { ok.push(m); ok[m] = url; mostrar(); }; p.src = url;
+    });
+  }
+  // ---------- Encuesta de fin de mes y Calendario Storm ----------
+  const MES3 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const ESTRELLAS = ['Mal','Regular','Bien','Muy bien','Increíble'];
+  function encuestaCard(e, i){
+    return `<div class='mc-card mc-enc' data-enc='${i}'><h3>¿Cómo lo pasó ${esc(e.alumno.split(' ')[0])} en ${esc(e.mes.split(' ')[0])}?</h3><p>Nos ayuda mucho a mejorar. Son 10 segundos.</p>
+      <div class='mc-stars'>${ESTRELLAS.map((t,n)=>`<button class='mc-star' data-n='${n+1}'><b>${n+1}</b>${t}</button>`).join('')}</div>
+      <div data-mas hidden><textarea placeholder='¿Algo que quieras contarnos? (opcional)' maxlength='1000'></textarea><button class='mc-go mc-go--sm' data-env>Enviar</button></div></div>`;
+  }
+  const ical = s => String(s||'').replace(/[\\,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
+  function evFechas(e){
+    const d = e.fecha.replace(/-/g,''), m = String(e.hora||'').match(/(\d{1,2})[:.](\d{2})/);
+    if(!m) { const n = new Date(e.fecha+'T12:00:00'); n.setDate(n.getDate()+1); return {todo:true, ini:d, fin:n.toISOString().slice(0,10).replace(/-/g,'')}; }
+    const h = ('0'+m[1]).slice(-2)+m[2]+'00', h2 = ('0'+Math.min(23,+m[1]+2)).slice(-2)+m[2]+'00';
+    return {todo:false, ini:d+'T'+h, fin:d+'T'+h2};
+  }
+  function agregarEvento(e){
+    const f = evFechas(e);
+    if(/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)){
+      const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Storm//Mi clase//ES','BEGIN:VEVENT','UID:'+f.ini+'-'+encodeURIComponent(e.titulo)+'@stormsurf.cl',
+        'DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',
+        (f.todo?'DTSTART;VALUE=DATE:':'DTSTART;TZID=America/Santiago:')+f.ini,(f.todo?'DTEND;VALUE=DATE:':'DTEND;TZID=America/Santiago:')+f.fin,
+        'SUMMARY:'+ical(e.titulo+' · Storm'),'LOCATION:'+ical(e.lugar),'DESCRIPTION:'+ical(e.detalle+(e.link?' '+e.link:'')),'END:VEVENT','END:VCALENDAR'].join('\r\n');
+      location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+    } else {
+      const u = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(e.titulo + ' · Storm') + '&dates=' + f.ini + '/' + f.fin +
+        (f.todo ? '' : '&ctz=America/Santiago') + '&location=' + encodeURIComponent(e.lugar||'') + '&details=' + encodeURIComponent((e.detalle||'') + (e.link ? '\n' + e.link : ''));
+      window.open(u, '_blank', 'noopener');
+    }
+  }
+  function eventosCard(evs){
+    return `<h2 class='mc-h2'>Calendario Storm</h2><div class='mc-card' style='padding-top:8px;padding-bottom:8px'>${evs.map((e,i)=>{ const m = e.fecha.split('-');
+      return `<div class='mc-ev'><div class='mc-ev__d'><b>${+m[2]}</b><small>${MES3[+m[1]-1]}</small></div><div><h4>${esc(e.titulo)}</h4>
+        <p>${esc(e.texto)}${e.hora?' · '+esc(e.hora):''}${e.lugar?' · '+esc(e.lugar):''}</p>${e.detalle?`<p>${esc(e.detalle)}</p>`:''}
+        ${e.link?`<a class='mc-link' href='${esc(e.link)}' target='_blank' rel='noopener'>Más información</a>`:''}${e.link&&e.agendar!==false?' · ':''}${e.agendar!==false?`<button class='mc-link' data-ev='${i}'>Agregar a mi calendario</button>`:''}</div></div>`; }).join('')}</div>`;
+  }
+  function render(d){
+    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + msg;
+    const activos = d.alumnos.filter(a=>a.futuro), pasados = d.alumnos.filter(a=>!a.futuro);
+    if(!d.alumnos.length){
+      h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
+    }
+    if((d.mensajes || []).length) h += mensajesCard(d.mensajes);
+    (d.encuesta || []).forEach((e,i) => h += encuestaCard(e,i));
+    if(activos.length){
+      h += `<h2 class='mc-h2'>Tus clases</h2>` + activos.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('');
+    }
+    const ren = renovacion(d.alumnos);
+    if(ren){
+      h += `<div class='mc-card mc-cta mc-ren'><p><b>Renovar ${esc(cap(ren.mes.split(' ')[0]))}</b>Mismo plan y días, con todas las clases del mes.</p>
+        <ul>${ren.alumnos.map(a=>`<li><b>${esc(a.nombre)}</b> · Plan ${esc(a.plan)}${a.dia?' · '+esc(a.dia):''}${a.yoga?' + Yoga':''}${a.beca?' · $'+Number(a.beca).toLocaleString('es-CL'):''}</li>`).join('')}</ul>
+        <a class='mc-go mc-go--sm' href='${esc(PAY + (PAY.indexOf('?')<0?'?':'&') + 'renovar=' + encodeURIComponent(JSON.stringify(ren)))}'>Pagar en un toque</a>
+        <a class='mc-link mc-ren__otro' href='${esc(PAY)}'>Elegir otro plan</a></div>`;
+    } else if(d.alumnos.length && d.alumnos.every(a => a.beca && a.beca.valor === 0)){
+      h += `<div class='mc-card mc-cta'><p><b>Beca Storm</b>Sus clases se anotan solas cada mes. No tienes nada que pagar.</p></div>`;
+    } else {
+      h += `<div class='mc-card mc-cta'><p><b>¿Toca pagar el próximo mes?</b>Elige el plan y sus clases quedan agendadas.</p><a class='mc-go mc-go--sm' href='${esc(PAY)}'>Pagar mensualidad</a></div>`;
+    }
+    h += `<div class='mc-calmes' data-calmes hidden><h2 class='mc-h2'>Calendario del mes</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calmes-tabs></div><a data-calmes-a target='_blank' rel='noopener'><img alt='Calendario del mes' data-calmes-img></a><small class='mc-calmes__hint'>Toca la imagen para verla más grande.</small></div></div>`;
+    if((d.eventos || []).length) h += eventosCard(d.eventos);
+    if(pasados.length){
+      h += `<details class='mc-old'><summary>Meses anteriores (${pasados.length})</summary>` + pasados.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('') + `</details>`;
+    }
+    app.innerHTML = h;
+    marcarVistos(d.mensajes || []);
+    calendariosMes();
+    document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; login(); };
+    app.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => agregarEvento(d.eventos[+b.dataset.ev]));
+    app.querySelectorAll('[data-enc]').forEach(card => {
+      const e = d.encuesta[+card.dataset.enc]; let nota = 0;
+      card.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { nota = +b.dataset.n; card.querySelectorAll('[data-n]').forEach(x => x.classList.toggle('on', +x.dataset.n <= nota)); card.querySelector('[data-mas]').hidden = false; });
+      card.querySelector('[data-env]').onclick = async (ev) => {
+        ev.target.disabled = true; ev.target.textContent = 'Enviando…';
+        try{ await call({accion:'encuesta', alumno:e.alumno, mes:e.mes, nota, comentario:card.querySelector('textarea').value.trim()});
+          card.innerHTML = `<h3>¡Gracias! 🌊</h3><p>Lo leemos todo el equipo Storm.</p>`; d.encuesta = d.encuesta.filter(x => x !== e); }
+        catch(x){ ev.target.disabled = false; ev.target.textContent = 'Enviar'; }
+      };
+    });
+    app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ const o=document.getElementById('o-'+b.dataset.open); o.hidden=!o.hidden; b.textContent = o.hidden ? 'Mover' : 'Cerrar'; });
+    app.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
+      const id = b.dataset.pick, [ai,ci] = id.split('-').map(Number);
+      const a = d.alumnos[ai], c = a.clases[ci], o = c.opciones.find(x=>x.fecha===b.dataset.hacia);
+      app.querySelectorAll(`[data-pick='${id}']`).forEach(x=>x.classList.toggle('on', x===b));
+      const k = document.getElementById('k-'+id);
+      k.hidden = false; k.dataset.hacia = o.fecha;
+      k.querySelector('p').innerHTML = `Mover la clase de <b>${esc(a.alumno)}</b> del <b>${esc(c.texto)}</b> al <b>${esc(o.texto)}</b>.`;
+    });
+    app.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{ const id=b.dataset.cancel; document.getElementById('k-'+id).hidden=true; app.querySelectorAll(`[data-pick='${id}']`).forEach(x=>x.classList.remove('on')); });
+    app.querySelectorAll('[data-mv]').forEach(b=>b.onclick=async()=>{
+      const id = b.dataset.mv, [ai,ci] = id.split('-').map(Number);
+      const a = d.alumnos[ai], c = a.clases[ci], hacia = document.getElementById('k-'+id).dataset.hacia;
+      app.querySelectorAll('button').forEach(x=>x.disabled=true); b.textContent = 'Moviendo…';
+      try{
+        const r = await call({accion:'mover', alumno:a.alumno, mes:a.mes, desde:c.fecha, hacia});
+        msg = `<div class='mc-msg mc-msg--ok'>Listo. ${esc(r.mensaje)} Te enviamos un correo de confirmación.</div>`;
+        render(r); window.scrollTo({top: app.offsetTop - 20, behavior:'smooth'});
+      }catch(x){ msg = `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`; load(); }
+    });
+  }
+  async function load(){
+    if(!auth) return login();
+    app.innerHTML = `<div class='mc-skel'></div><div class='mc-skel'></div>`;
+    try{ render(await call({accion:'mis-clases'})); }
+    catch(x){
+      if(/sesión|expir/i.test(x.message)){ borrar(); const e = auth.email; auth = null; return login(e, 'Por seguridad, vuelve a entrar.'); }
+      app.innerHTML = msg + `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`;
+    }
+  }
+  Promise.resolve(revisar).then(load);
+})();
+</script>
+
+
+</main>
+<script>window.STORM_APP = { appId: "be18352b-5820-4912-aa46-d851890394a3", safariId: "web.onesignal.auto.1afb9025-a2b0-4a54-8c00-23b218b2b39b", clave: "storm-mi-clase", nombre: "Storm", raiz: "/" };</script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script src="/app.js?v=1" defer></script>
+</body>
+</html>

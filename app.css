@@ -1,0 +1,33 @@
+:root{--font-body-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;--font-heading-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;--bg:#EFECE8;--ink:#2C2C2B}
+*{box-sizing:border-box}
+html{font-size:62.5%;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body-family);font-size:1.6rem;line-height:1.5;min-height:100vh;padding:env(safe-area-inset-top) 0 calc(28px + env(safe-area-inset-bottom))}
+a{color:#2d6e94}
+img{max-width:100%}
+.ap-top{display:flex;justify-content:center;padding:14px 16px 4px}
+.ap-top img{width:96px;height:auto;display:block}
+@media (display-mode: standalone){.ap-top{display:none}body{padding-top:calc(14px + env(safe-area-inset-top))}}
+.storm-section{padding:12px 16px 24px}
+.storm-wrap{width:100%;margin:0 auto}
+h1,h2,h3{font-family:var(--font-heading-family)}
+button,input,textarea,select{font-family:inherit}
+/* Aviso de instalar y de notificaciones */
+.st-app{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(44,44,43,.18);font-size:1.4rem;line-height:1.35;color:#2C2C2B;max-width:520px;margin:0 auto}
+.st-app img{width:46px;height:46px;border-radius:12px;flex:none}
+.st-app b{display:block;font-size:1.5rem}
+.st-app p{margin:0;flex:1}
+.st-app button{border:0;background:none;font:inherit;cursor:pointer;color:inherit}
+.st-go{background:#2C2C2B!important;color:#fff!important;border-radius:999px;padding:10px 16px!important;font-weight:600;white-space:nowrap;font-size:1.4rem}
+.st-app .st-x{font-size:2.2rem;line-height:1;color:#8a8986;padding:4px}
+.st-sheet{position:fixed;inset:0;z-index:61;background:rgba(44,44,43,.45);display:flex;align-items:flex-end;justify-content:center}
+.st-card{background:#fff;width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));color:#2C2C2B}
+.st-card h3{margin:0 0 4px;font-size:2rem;text-align:center}
+.st-card .st-sub{margin:0 0 16px;text-align:center;color:#6b6a67;font-size:1.4rem}
+.st-step{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid rgba(44,44,43,.08);font-size:1.6rem;line-height:1.35}
+.st-n{width:28px;height:28px;border-radius:50%;background:#EFECE8;display:grid;place-items:center;font-weight:700;font-size:1.4rem;flex:none}
+.st-ic{width:40px;height:40px;border-radius:10px;background:#EFECE8;display:grid;place-items:center;flex:none;color:#2f6fd8}
+.st-ic svg{width:22px;height:22px}
+.st-step small{display:block;color:#6b6a67;font-size:1.3rem}
+.st-ok{display:block;width:100%;margin-top:14px;background:#2C2C2B;color:#fff;border:0;border-radius:999px;padding:14px;font:inherit;font-weight:600;font-size:1.5rem;cursor:pointer}
+.st-bell{width:46px;height:46px;border-radius:12px;flex:none;background:#E6F1F8;color:#2d6e94;display:grid;place-items:center}
+.st-bell svg{width:24px;height:24px}
