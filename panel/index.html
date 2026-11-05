@@ -109,6 +109,20 @@
 .pn-ta:focus{outline:none;border-color:var(--aa)}
 .pn-chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:1.35rem}
 .pn-chk input{width:18px;height:18px;accent-color:var(--aa)}
+.pn-stat--sun{background:#FADF70;color:#3B2610;border-color:transparent}
+.pn-stat--sun small,.pn-stat--sun em{opacity:.8}
+.pn-stat--sun b{font-size:3rem}
+.pn-day small{display:block;font-size:1.1rem;opacity:.65}
+.pn-vk{padding:11px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.pn-vk:last-child{border-bottom:0}
+.pn-vk b{font-size:1.5rem;font-weight:600}
+.pn-vk small{display:block;font-size:1.2rem;opacity:.65;margin-top:2px}
+.pn-sw{display:flex;gap:4px;margin-top:14px;padding:4px;border-radius:999px;background:#fff;border:1px solid var(--line)}
+.pn-sw button{flex:1;border:0;border-radius:999px;padding:10px 8px;font:inherit;font-size:1.4rem;font-weight:600;background:none;color:var(--ink);cursor:pointer}
+.pn-sw button.on{background:var(--aa);color:#fff}
+.pn-sw button[data-acad='verano'].on{background:#FADF70;color:#3B2610}
+.pn-verano[hidden]{display:none}
+.pn-salud{display:block;margin-top:4px;font-size:1.25rem;color:var(--warn)}
 .pn-sent p{margin:4px 0 0;font-size:1.4rem;line-height:1.45;white-space:pre-line}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
@@ -117,6 +131,8 @@
 <script>
 (()=>{
   const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
+  // Academia de Verano: URL /exec del programa de la planilla de Verano (vacío = no se muestra la pestaña).
+  const API_VERANO = "";
   const LOGO = "/img/academia-anual-logo.png";
   const KEY = 'storm-panel';
   const app = document.getElementById('pn-app');
@@ -302,12 +318,13 @@
         app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t); };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
+      ponerSelector();
       bindLista(); copiar(); bindMensajes(d);
     };
     if(d.rol === 'instructor'){
       app.innerHTML = `<div class='pn-head'><div><h1>Clases Storm</h1><p>${esc(d.hoy)}</p></div><button class='pn-link' id='pn-out'>Salir</button></div>` + tabs(d) +
         `<div class='pn-pane' data-pane='clases'>` + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas.</p></div>`) +
-        `<p class='pn-note'>↪ = alumno que se cambió a esta clase.</p></div><div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div>`;
+        `<p class='pn-note'>↪ = alumno que se cambió a esta clase.</p></div><div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
       document.getElementById('pn-out').onclick = () => { borrar(); auth = null; login(); };
       tabsOn();
       return;
@@ -324,7 +341,7 @@
 
     h += `<div class='pn-pane' data-pane='clases'>` + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas en el Calendario.</p></div>`) + `</div>`;
 
-    h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div>`;
+    h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
     h += `<div class='pn-pane' data-pane='pagos'>
       <div class='pn-card'><h3>Faltan por pagar ${esc(M)}</h3>
         ${A.faltan.length ? A.faltan.map((f,fi) => `<div class='pn-row pn-row--wrap'><div><b>${f.alumnos.map(esc).join(', ')}</b><small>${esc(f.apoderado||'')}${f.monto?' · '+clp(f.monto):''}${f.recordado?"<span class='pn-tag'>recordatorio enviado</span>":''}</small></div>
@@ -366,6 +383,68 @@
       try{ render(await post(Object.assign({}, auth, {accion:'marcar-pagado', alumnos:f.alumnos}))); }
       catch(x){ b.disabled = false; delete b.dataset.ok; b.textContent = 'No se pudo, reintenta'; console.error(x); }
     });
+  }
+
+
+  // ---------- Academia de Verano ----------
+  let VER = null, vSem = '';
+  // Selector Academia Anual / Academia de Verano (en enero y febrero parte en Verano).
+  let acad = (() => { try{ return sessionStorage.getItem(KEY + '-acad'); }catch(_){ return null; } })() || ([0,1].includes(new Date().getMonth()) ? 'verano' : 'anual');
+  function ponerSelector(){
+    if(!API_VERANO) return;
+    const head = app.querySelector('.pn-head'); if(!head || app.querySelector('.pn-sw')) return;
+    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Academia Anual</button><button data-acad='verano'>Academia de Verano</button></div>`);
+    app.querySelectorAll('[data-acad]').forEach(b => b.onclick = () => { acad = b.dataset.acad; try{ sessionStorage.setItem(KEY + '-acad', acad); }catch(_){} mostrarAcad(); });
+    mostrarAcad();
+  }
+  function mostrarAcad(){
+    const ver = acad === 'verano';
+    app.querySelectorAll('[data-acad]').forEach(b => b.classList.toggle('on', b.dataset.acad === acad));
+    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano')) el.style.display = ver ? 'none' : ''; });
+    const pv = app.querySelector('.pn-verano'); pv.hidden = !ver;
+    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : h1.dataset.t; }
+    if(ver) loadVerano();
+  }
+  const NIV = ['Kids','Principiante','Progress','Intermedio','Avanzado','Federados'];
+  async function loadVerano(){
+    const pane = app.querySelector('.pn-verano'); if(!pane) return;
+    if(VER) return pintarVerano(pane);
+    try{
+      const r = await (await fetch(API_VERANO, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({}, auth, {accion:'panel'}))})).json();
+      if(!r.ok) throw new Error(r.error || 'No se pudo cargar Verano.');
+      VER = r; pintarVerano(pane);
+    }catch(x){ pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
+  }
+  function pintarVerano(pane){
+    const v = VER, admin = v.rol !== 'instructor';
+    if(!vSem){ const hoy = new Date(), conNinos = v.semanas.filter(s => s.n); vSem = conNinos.length ? conNinos[0].id : 'todas'; }
+    const lista = vSem === 'todas' ? v.alumnos : v.alumnos.filter(a => a.semanas.includes(vSem));
+    const sem = v.semanas.find(s => s.id === vSem);
+    const fed = v.niveles.find(n => n.nivel === 'Federados');
+    let h = `<div class='pn-stats'>
+      <div class='pn-stat pn-stat--sun'><small>Niños inscritos</small><b>${v.total}</b><em>${v.tablas} con tabla · ${v.trajes} con traje</em></div>
+      ${admin ? `<div class='pn-stat'><small>Recaudado</small><b>${clp(v.recaudado)}</b><em>antes de comisión</em></div>` : ''}
+      <div class='pn-stat'><small>Federados</small><b>${fed ? fed.n : 0}</b><em>solo enero</em></div>
+    </div>
+    <div class='pn-days'><button class='pn-day${vSem==='todas'?' on':''}' data-vs='todas'><b>Todas</b><i>${v.total} niños</i></button>${v.semanas.map(s =>
+      `<button class='pn-day${vSem===s.id?' on':''}' data-vs='${s.id}'><b>${esc(s.nombre)}</b><small>${esc(s.fechas)}</small><i>${s.n}${s.cupo ? ' de '+s.cupo : ''} niño${s.n===1?'':'s'}</i></button>`).join('')}</div>
+    <div class='pn-card'><h3>${sem ? esc(sem.nombre)+' · '+esc(sem.fechas) : 'Todo el verano'}<span class='pn-count'>${lista.length}</span></h3>
+      ${lista.length ? NIV.map(n => { const g = lista.filter(a => a.nivel === n); if(!g.length) return '';
+        return `<div class='pn-grp'><small>${esc(n)} · ${g.length}</small>${g.map(a => `<div class='pn-vk'><div><b>${esc(a.nombre)}</b>
+          <small>${esc(a.edad)}${a.tabla?" <span class='pn-tag'>tabla</span>":''}${a.traje?" <span class='pn-tag'>traje</span>":''}${vSem==='todas'?' · '+a.semanas.map(x=>x.replace('s','S')).join(' '):''}${admin?' · '+esc(a.apoderado):''}</small>
+          ${a.salud ? `<span class='pn-salud'>⚠︎ ${esc(a.salud)}</span>` : ''}
+          ${a.emergencia ? `<small>Emergencia: ${esc(a.emergencia)} ${esc(a.emergenciaTel)}</small>` : ''}</div>
+          ${admin && wa(a.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(a.telefono)}'>WhatsApp</a>` : ''}</div>`).join('')}</div>`; }).join('')
+        : `<p class='pn-empty'>Todavía no hay niños inscritos esta semana.</p>`}
+    </div>
+    <div class='pn-card'><h3>Por nivel</h3><div class='pn-chips' style='margin-top:10px'>${v.niveles.map(n => `<span class='pn-chip'>${esc(n.nivel)} <b>${n.n}</b></span>`).join('') || "<span class='pn-empty'>Sin inscritos.</span>"}</div></div>`;
+    if(admin){
+      if(v.revisar && v.revisar.length) h += `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${v.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla de Verano: ${v.revisar.map(esc).join(', ')}</p></div>`;
+      h += `<div class='pn-card'><h3>Últimos pagos web</h3>${v.ultimos.length ? v.ultimos.map(p => `<div class='pn-row'><div><b>${esc(p.alumnos.join(', '))}</b><small>${esc(p.apoderado)} · ${esc(p.fecha)}${p.codigo?" <span class='pn-tag'>"+esc(p.codigo)+'</span>':''}</small></div><span class='pn-amt'>${p.total ? clp(p.total) : 'Beca'}</span></div>`).join('') : `<p class='pn-empty'>Aún no hay pagos con Mercado Pago. Las inscripciones de antes (Shopify) ya están en la lista.</p>`}</div>`;
+      if(v.planilla) h += `<p class='pn-note'><a class='pn-link' href='${esc(v.planilla)}' target='_blank' rel='noopener'>Abrir la planilla de Verano</a></p>`;
+    }
+    pane.innerHTML = h;
+    pane.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { vSem = b.dataset.vs; pintarVerano(pane); });
   }
 
   async function load(){
