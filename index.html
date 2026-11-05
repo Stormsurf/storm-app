@@ -142,6 +142,25 @@
 .mc-msg1 small i{font-style:normal;font-weight:700;font-size:1.05rem;letter-spacing:.04em;text-transform:uppercase;background:#61A1C8;color:#fff;border-radius:999px;padding:1px 7px;opacity:1}
 .mc-msg1 p{margin:0;font-size:1.5rem;line-height:1.5;white-space:pre-line}
 .mc-msg1--new{background:#E6F1F8}
+.mc-sw{display:flex;gap:6px;margin-top:12px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:999px}
+.mc-sw button{flex:1;border:0;border-radius:999px;background:none;font:inherit;font-size:1.35rem;font-weight:600;padding:10px 8px;cursor:pointer;color:var(--ink);opacity:.6}
+.mc-sw button.on{background:var(--aa);color:#fff;opacity:1}
+.mc-sw button.on[data-vista=verano]{background:#FADF70;color:#3B2610}
+.mc-hero--v img{background:#4A6B70;padding:18px 26px;border-radius:20px;width:min(300px,72%)}
+.mc-v{--v-wax:#FADF70;--v-sea:#4A6B70;--v-ink:#3B2610}
+.mc-v .mc-aviso{background:var(--v-wax);border:2px solid var(--v-ink);border-radius:18px;padding:16px 18px;margin-top:14px;color:var(--v-ink)}
+.mc-v .mc-aviso b{display:block;font-family:var(--font-heading-family);font-size:2rem;font-weight:600;margin-bottom:4px}
+.mc-v .mc-aviso p{margin:0;font-size:1.5rem;line-height:1.5}
+.mc-v .mc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mc-v .mc-tags span{font-size:1.25rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#F6EDC4;color:var(--v-ink)}
+.mc-v .mc-tags span.y{background:var(--v-wax)}
+.mc-v .mc-lbl{font-size:1.15rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.55;margin:16px 0 6px}
+.mc-v .mc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mc-v .mc-chips span{border:1.5px solid var(--ink);border-radius:999px;padding:4px 12px;font-size:1.35rem}
+.mc-v .mc-dia{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:1.45rem}
+.mc-v .mc-dia b{flex:none;width:88px;font-weight:600}
+.mc-v .mc-dia.off span{opacity:.5}
+.mc-v .mc-wa{background:#25D366;color:#fff}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap mc'>
@@ -160,6 +179,11 @@
   const PAY = "https://www.stormsurf.cl/products/mensualidad-academia-anual";
   const NOTA = "Puedes mover una clase avisando 3 d\u00edas antes. Solo aplica a surf en los planes B\u00e1sico y Medio.";
   const KEY = 'storm-mi-clase';
+  // Academia de Verano: mismo ingreso (las dos planillas firman con la misma clave).
+  const API_VERANO = "https://script.google.com/macros/s/AKfycbzSHDu8whWWNwq-EFwaWqwKOtyU5pnyPuixutUI8sd5twFaTjDibN11TA3bMH_UddTo/exec";
+  const LOGO_ANUAL = document.querySelector('.mc-hero img') ? document.querySelector('.mc-hero img').getAttribute('src') : '';
+  const LOGO_VERANO = '/img/verano-logo.png';
+  let fuente = API;
   const app = document.getElementById('mc-app');
   const q = new URLSearchParams(location.search);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -181,9 +205,10 @@
     : q.get('pago')==='ok' ? `<div class='mc-msg mc-msg--ok'>¡Pago recibido! Te enviamos la confirmación por correo.</div>` : '';
   const revisar = (q.get('ref') && API) ? post({accion:'revisar-pago', ref:q.get('ref')}).catch(()=>null) : null;
 
-  async function post(body){
-    if(!API) throw new Error('El sistema aún no está conectado.');
-    const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
+  async function post(body, url){
+    url = url || API;
+    if(!url) throw new Error('El sistema aún no está conectado.');
+    const r = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
     const d = await r.json();
     if(!d.ok) throw new Error(d.error || 'Error');
     return d;
@@ -198,7 +223,7 @@
            <input class='mc-in mc-in--code' id='mc-code' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='······'>
            <button class='mc-go' id='mc-ok'>Entrar</button>
            <p class='mc-note' style='margin-top:12px'><button class='mc-link' id='mc-back'>Usar otro correo o pedir otro código</button></p>`
-        : `<p>Entra con el correo que usaste al pagar la mensualidad. Te mandamos un código, sin contraseñas.</p>
+        : `<p>Entra con el correo que usaste al pagar la Academia. Te mandamos un código, sin contraseñas.</p>
            <input class='mc-in' id='mc-email' type='email' autocomplete='email' placeholder='tu@correo.cl' value='${esc(email||'')}'>
            <button class='mc-go' id='mc-ok'>Recibir código</button>`}
       ${err ? `<div class='mc-msg mc-msg--err' style='text-align:left'>${esc(err)}</div>` : ''}
@@ -213,7 +238,7 @@
       input.addEventListener('input', () => { input.value = input.value.replace(/\D/g,''); if(input.value.length===6) ok.click(); });
       ok.onclick = async () => {
         ok.disabled = true; ok.textContent = 'Entrando…';
-        try{ const s = await post({accion:'entrar', email, codigo:input.value}); auth = {email:s.email, ts:s.ts, firma:s.firma}; guardar(auth); load(); }
+        try{ const s = await post({accion:'entrar', email, codigo:input.value}, fuente); auth = {email:s.email, ts:s.ts, firma:s.firma}; guardar(auth); load(); }
         catch(x){ login(email, x.message, 'codigo'); }
       };
     } else {
@@ -221,8 +246,15 @@
         const e = input.value.trim().toLowerCase();
         if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return login(e, 'Revisa el correo.');
         ok.disabled = true; ok.textContent = 'Enviando…';
-        try{ await post({accion:'pedir-codigo', email:e}); login(e, '', 'codigo'); }
-        catch(x){ login(e, x.message); }
+        try{ fuente = API; await post({accion:'pedir-codigo', email:e}); login(e, '', 'codigo'); }
+        catch(x){
+          if(API_VERANO && /no encontramos/i.test(x.message)){
+            try{ fuente = API_VERANO; await post({accion:'pedir-codigo', email:e}, API_VERANO); return login(e, '', 'codigo'); }
+            catch(y){ if(!/no encontramos/i.test(y.message)) return login(e, y.message); }
+            fuente = API; return login(e, 'No encontramos pagos con este correo. Usa el mismo correo con el que pagaste la mensualidad o la Academia de Verano.');
+          }
+          login(e, x.message);
+        }
       };
     }
   }
@@ -384,8 +416,49 @@
         <p>${esc(e.texto)}${e.hora?' · '+esc(e.hora):''}${e.lugar?' · '+esc(e.lugar):''}</p>${e.detalle?`<p>${esc(e.detalle)}</p>`:''}
         ${e.link?`<a class='mc-link' href='${esc(e.link)}' target='_blank' rel='noopener'>Más información</a>`:''}${e.link&&e.agendar!==false?' · ':''}${e.agendar!==false?`<button class='mc-link' data-ev='${i}'>Agregar a mi calendario</button>`:''}</div></div>`; }).join('')}</div>`;
   }
+  // ---------- Academia Anual / Academia de Verano ----------
+  const VISTA = KEY + '-vista';
+  let D = {anual:null, verano:null}, vista = '';
+  const hayAnual = () => !!(D.anual && D.anual.alumnos && D.anual.alumnos.length);
+  const hayVerano = () => !!(D.verano && D.verano.hijos && D.verano.hijos.length);
+  function selector(){
+    if(!(hayAnual() && hayVerano())) return '';
+    return `<div class='mc-sw'><button data-vista='anual'${vista==='anual'?" class='on'":''}>Academia Anual</button><button data-vista='verano'${vista==='verano'?" class='on'":''}>Academia de Verano</button></div>`;
+  }
+  function hero(){
+    const box = document.querySelector('.mc-hero'), img = box && box.querySelector('img'); if(!img) return;
+    const v = vista === 'verano';
+    box.classList.toggle('mc-hero--v', v);
+    img.src = v ? LOGO_VERANO : LOGO_ANUAL; img.alt = v ? 'Academia de Verano Storm' : 'Academia Anual Storm';
+    const lead = box.querySelector('.mc-lead');
+    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
+  }
+  function bindSw(){
+    app.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { vista = b.dataset.vista; try{ localStorage.setItem(VISTA, vista); }catch(_){} mostrar(); window.scrollTo({top:0, behavior:'smooth'}); });
+  }
+  function mostrar(){
+    hero();
+    if(vista === 'verano') renderVerano(D.verano); else render(D.anual);
+  }
+  function renderVerano(d){
+    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<div class='mc-v'>`;
+    if(d.aviso) h += `<div class='mc-aviso'><b>${esc(d.aviso.titulo)}</b><p>${esc(d.aviso.texto)}</p></div>`;
+    d.hijos.forEach(k => {
+      h += `<div class='mc-card'><div class='mc-kid'><div><h3>${esc(k.nombre)}</h3></div></div>
+        <div class='mc-tags'><span class='y'>${esc(k.nivel)}</span>${k.edad?`<span>${esc(k.edad)}</span>`:''}${k.tabla?'<span>Arrienda tabla</span>':''}${k.traje?'<span>Arrienda traje</span>':''}</div>
+        <p class='mc-lbl'>Inscrito en</p><div class='mc-chips'>${k.semanas.map(s=>`<span>${esc(s)}</span>`).join('')}</div>
+        ${k.horario?`<p class='mc-lbl'>Horario</p><div style='font-size:1.45rem'>${esc(k.horario)}</div>`:''}
+        ${k.dias.length?`<p class='mc-lbl'>Su semana</p>${k.dias.map(x=>`<div class='mc-dia${/^sin\b/i.test(x.que)?' off':''}'><b>${esc(x.dia)}</b><span>${esc(x.que)}</span></div>`).join('')}`:''}
+      </div>`;
+    });
+    if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
+    h += `<div class='mc-card mc-cta'><p><b>¿Dudas o un cambio?</b>Escríbenos y lo vemos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
+    app.innerHTML = h;
+    bindSw();
+    document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
+  }
   function render(d){
-    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + msg;
+    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + msg;
     const activos = d.alumnos.filter(a=>a.futuro), pasados = d.alumnos.filter(a=>!a.futuro);
     if(!d.alumnos.length){
       h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
@@ -412,9 +485,10 @@
       h += `<details class='mc-old'><summary>Meses anteriores (${pasados.length})</summary>` + pasados.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('') + `</details>`;
     }
     app.innerHTML = h;
+    bindSw();
     marcarVistos(d.mensajes || []);
     calendariosMes([].concat(...activos.map(a => (a.clases||[]).map(c => c.fecha))));
-    document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; login(); };
+    document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
     app.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => agregarEvento(d.eventos[+b.dataset.ev]));
     app.querySelectorAll('[data-enc]').forEach(card => {
       const e = d.encuesta[+card.dataset.enc]; let nota = 0;
@@ -443,14 +517,25 @@
       try{
         const r = await call({accion:'mover', alumno:a.alumno, mes:a.mes, desde:c.fecha, hacia});
         msg = `<div class='mc-msg mc-msg--ok'>Listo. ${esc(r.mensaje)} Te enviamos un correo de confirmación.</div>`;
-        render(r); window.scrollTo({top: app.offsetTop - 20, behavior:'smooth'});
+        D.anual = r; render(r); window.scrollTo({top: app.offsetTop - 20, behavior:'smooth'});
       }catch(x){ msg = `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`; load(); }
     });
   }
   async function load(){
     if(!auth) return login();
     app.innerHTML = `<div class='mc-skel'></div><div class='mc-skel'></div>`;
-    try{ render(await call({accion:'mis-clases'})); }
+    try{
+      const ver = API_VERANO ? post(Object.assign({accion:'mi-verano'}, auth), API_VERANO).catch(() => null) : Promise.resolve(null);
+      const anu = call({accion:'mis-clases'}).catch(x => { if(/sesión|expir/i.test(x.message)) throw x; return null; });
+      const [a, v] = await Promise.all([anu, ver]);
+      D = {anual: a || {alumnos:[]}, verano: v};
+      if(!a && !hayVerano()) throw new Error('No pudimos cargar tus clases. Intenta de nuevo en un rato.');
+      let pref = ''; try{ pref = localStorage.getItem(VISTA) || ''; }catch(_){}
+      const m = new Date().getMonth();
+      vista = !hayVerano() ? 'anual' : !hayAnual() ? 'verano' : (pref || (m < 2 ? 'verano' : 'anual'));
+      if(q.get('pago')) vista = hayAnual() ? 'anual' : vista;
+      mostrar();
+    }
     catch(x){
       if(/sesión|expir/i.test(x.message)){ borrar(); const e = auth.email; auth = null; return login(e, 'Por seguridad, vuelve a entrar.'); }
       app.innerHTML = msg + `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`;
