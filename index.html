@@ -97,9 +97,35 @@
 .mc-ev__d small{font-size:1.1rem;text-transform:uppercase;letter-spacing:.06em}
 .mc-ev h4{margin:0;font-size:1.55rem;font-weight:600}
 .mc-ev p{margin:3px 0 0;font-size:1.3rem;opacity:.7;line-height:1.4}
-.mc-calmes__card{padding:12px}
-.mc-calmes__card img{width:100%;height:auto;display:block;border-radius:10px}
-.mc-calmes__hint{display:block;text-align:center;font-size:1.25rem;opacity:.6;margin-top:8px}
+.mc-calmes__card{padding:14px 12px}
+.mc-cal__sem,.mc-cal__grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.mc-cal__sem span{text-align:center;font-size:1.15rem;font-weight:600;opacity:.45;padding-bottom:4px}
+.mc-cal__d{position:relative;min-height:52px;border:0;border-radius:10px;background:transparent;font:inherit;color:var(--ink);padding:5px 2px 4px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;cursor:pointer}
+.mc-cal__d:disabled{cursor:default}
+.mc-cal__d b{font-size:1.45rem;font-weight:500;line-height:1;width:24px;height:24px;display:grid;place-items:center;border-radius:50%}
+.mc-cal__d i{font-style:normal;font-size:1.02rem;font-weight:600;letter-spacing:.01em;line-height:1;padding:3px 5px;border-radius:999px;white-space:nowrap}
+.mc-cal__d--surf{background:#EEF5FA}.mc-cal__d--surf i{background:var(--aa);color:#fff}
+.mc-cal__d--skate{background:#FBF3DC}.mc-cal__d--skate i{background:#E9B93A;color:#3d2f05}
+.mc-cal__d--vac{background:#E7F4EE}.mc-cal__d--vac i{background:#3E9B76;color:#fff}
+.mc-cal__d--no{background:#F6F4F1}.mc-cal__d--no b{text-decoration:line-through;opacity:.45}.mc-cal__d--no i{background:none;color:#B5543C;padding:3px 0;font-size:.95rem}
+.mc-cal__d--pas{opacity:.42}
+.mc-cal__d small{font-size:.95rem;line-height:1;opacity:.6}
+.mc-cal__av--otro{background:#FBF3DC}
+.mc-cal__d--hoy b{background:var(--ink);color:#fff;font-weight:700}
+.mc-cal__d--mia{box-shadow:inset 0 0 0 2px var(--aa-dk)}
+.mc-cal__d--sel{outline:2px solid var(--ink);outline-offset:1px}
+.mc-cal__det{margin-top:12px;padding:10px 12px;border-radius:12px;background:#F6F4F1;font-size:1.4rem;line-height:1.4;min-height:44px}
+.mc-cal__det p{margin:0}.mc-cal__det p+p{margin-top:2px}
+.mc-cal__tip{opacity:.55;text-align:center}
+.mc-cal__tuya{color:var(--aa-dk);font-weight:600}
+.mc-cal__av{list-style:none;margin:10px 0 0;padding:0;font-size:1.4rem;line-height:1.4}
+.mc-cal__av li{padding:8px 12px;border-radius:10px;margin-top:6px}
+.mc-cal__av--no{background:#FBEDE8}.mc-cal__av--vac{background:#E7F4EE}
+.mc-cal__ley{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:1.2rem;opacity:.75}
+.mc-cal__k{display:inline-flex;align-items:center;gap:6px}
+.mc-cal__k::before{content:'';width:10px;height:10px;border-radius:3px;background:var(--aa)}
+.mc-cal__k--skate::before{background:#E9B93A}.mc-cal__k--vac::before{background:#3E9B76}.mc-cal__k--no::before{background:#E2C5BB}
+.mc-cal__k--mia::before{background:none;box-shadow:inset 0 0 0 2px var(--aa-dk)}
 .mc-calmes__tabs{display:flex;gap:8px;margin-bottom:10px}
 .mc-calmes__tabs:empty{display:none}
 .mc-calmes__tab{flex:1;padding:9px 10px;border:1px solid rgba(44,44,43,.16);border-radius:10px;background:#fff;font:inherit;font-size:1.4rem;cursor:pointer}
@@ -261,27 +287,66 @@
     return `<div class='mc-msgs'><h2 class='mc-h2'>Mensajes de Storm</h2>` + ms.map(m => `<div class='mc-msg1${v.includes(m.id)?'':' mc-msg1--new'}'><small>${v.includes(m.id)?'':'<i>Nuevo</i>'}${esc(m.de)} · ${esc(m.texto)}${m.hora?' · '+esc(m.hora):''}</small><p>${esc(m.mensaje)}</p></div>`).join('') + `</div>`;
   }
   function marcarVistos(ms){ try{ const v = vistos(); ms.forEach(m => { if(!v.includes(m.id)) v.push(m.id); }); localStorage.setItem(VISTOS, JSON.stringify(v.slice(-40))); }catch(_){} }
-  // ---------- Calendario del mes (imagen "calendario-<mes>-<año>.jpg" en Archivos de Shopify) ----------
-  const CAL_IMG = "https://cdn.shopify.com/s/files/1/1007/2683/3442/files/calendario.jpg";
-  function calendariosMes(){
-    const box = app.querySelector('[data-calmes]'); if(!box) return;
-    const hoy = new Date(); let n = hoy.getFullYear()*12 + hoy.getMonth();
+  // ---------- Calendario del mes (dibujado desde la pestaña Calendario de la planilla) ----------
+  const DSEM = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const listaY = xs => xs.length < 2 ? xs.join('') : xs.slice(0,-1).join(', ') + ' y ' + xs[xs.length-1];
+  const tipoDe = c => c.cancelada ? 'no' : /vacacion/i.test((c.grupo||'') + ' ' + (c.nota||'')) ? 'vac' : /skate/i.test(c.clase) ? 'skate' : 'surf';
+  function calendariosMes(mias){
+    const box = app.querySelector('[data-calmes]'); if(!box || !API) return;
+    const hoy = new Date(), hoyIso = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
+    let n = hoy.getFullYear()*12 + hoy.getMonth();
     const meses = [];
-    while(meses.length < 2){ if(!SIN_ANUAL.includes(n % 12)) meses.push(MESES[n % 12] + ' ' + Math.floor(n/12)); n++; }
-    const ok = [];
-    const mostrar = () => {
-      const lista = meses.filter(m => ok.includes(m));
+    while(meses.length < 2){ if(!SIN_ANUAL.includes(n % 12)) meses.push(n); n++; }
+    const claves = meses.concat([meses[meses.length-1] + 1]);
+    const pedir = claves.map(k => post({accion:'calendario', mes: MESES[k % 12] + ' ' + Math.floor(k/12)}).catch(() => null));
+    Promise.all(pedir).then(rs => {
+      const dias = {};
+      rs.forEach((r, i) => { if(!r) return;
+        (r.clases || []).forEach(c => (dias[c.fecha] = dias[c.fecha] || []).push(Object.assign({mk: claves[i]}, c)));
+        (r.canceladas || []).forEach(c => (dias[c.fecha] = dias[c.fecha] || []).push(Object.assign({cancelada:true, mk: claves[i]}, c))); });
+      const lista = meses.filter(k => Object.keys(dias).some(f => f.slice(0,7) === Math.floor(k/12) + '-' + String(k%12+1).padStart(2,'0')));
       if(!lista.length) return;
-      const img = box.querySelector('[data-calmes-img]'), tabs = box.querySelector('[data-calmes-tabs]');
-      const ver = m => { img.src = ok[m]; box.querySelector('[data-calmes-a]').href = ok[m]; tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m)); };
-      tabs.innerHTML = lista.length > 1 ? lista.map(m => `<button class='mc-calmes__tab' data-m='${m}'>${cap(m.split(' ')[0])}</button>`).join('') : '';
-      tabs.querySelectorAll('button').forEach(b => b.onclick = () => ver(b.dataset.m));
-      box.querySelector('.mc-h2').textContent = lista.length > 1 ? 'Calendario del mes' : 'Calendario de ' + lista[0].split(' ')[0];
+      const tabs = box.querySelector('[data-calmes-tabs]'), grid = box.querySelector('[data-calmes-grid]');
+      const ver = k => {
+        const y = Math.floor(k/12), m = k % 12, pre = y + '-' + String(m+1).padStart(2,'0') + '-';
+        const ini = (new Date(y, m, 1).getDay() + 6) % 7, total = new Date(y, m+1, 0).getDate();
+        let h = `<div class='mc-cal__sem'>${['L','M','M','J','V','S','D'].map(x=>`<span>${x}</span>`).join('')}</div><div class='mc-cal__grid'>`;
+        const sinClase = [], especiales = [], antes = [];
+        const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        for(let i=0;i<ini;i++){
+          const dt = new Date(y, m, i - ini + 1), f = iso(dt), cs = (dias[f] || []).filter(x => x.mk === k), c = cs.find(x=>!x.cancelada);
+          if(!c){ h += `<span></span>`; continue; }
+          const t = tipoDe(c); antes.push(`${DSEM[dt.getDay()]} ${dt.getDate()} de ${MESES[dt.getMonth()]}`);
+          h += `<button class='mc-cal__d mc-cal__d--${t} mc-cal__d--otro${f<hoyIso?' mc-cal__d--pas':''}${mias.includes(f)?' mc-cal__d--mia':''}' data-f='${f}'><b>${dt.getDate()}</b><i>${t==='skate'?'Skate':'Surf'}</i><small>de ${MES3[dt.getMonth()]}</small></button>`;
+        }
+        for(let dd=1; dd<=total; dd++){
+          const f = pre + String(dd).padStart(2,'0'), cs = dias[f] || [], c = cs.find(x=>!x.cancelada) || cs[0];
+          const t = c ? tipoDe(c) : '', mia = mias.includes(f) && t !== 'no';
+          if(t === 'no') sinClase.push(dd);
+          if(c && !c.cancelada && t === 'vac') especiales.push(dd);
+          h += `<button class='mc-cal__d${t?' mc-cal__d--'+t:''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}${mia?' mc-cal__d--mia':''}' data-f='${f}'${c?'':' disabled'}><b>${dd}</b>${c ? `<i>${t==='no'?'Sin clase':t==='skate'?'Skate':'Surf'}</i>` : ''}</button>`;
+        }
+        h += `</div><div class='mc-cal__det' data-det><p class='mc-cal__tip'>Toca un día para ver el horario.</p></div>`;
+        const nm = MESES[m], av = [];
+        if(sinClase.length) av.push(`<li class='mc-cal__av--no'><b>Sin clases:</b> ${listaY(sinClase.map(String))} de ${nm}.</li>`);
+        if(antes.length) av.push(`<li class='mc-cal__av--otro'>La clase del ${listaY(antes)} cuenta para ${nm}.</li>`);
+        if(especiales.length) av.push(`<li class='mc-cal__av--vac'><b>Clases de vacaciones:</b> ${listaY(especiales.map(String))} de ${nm}.</li>`);
+        h += (av.length ? `<ul class='mc-cal__av'>${av.join('')}</ul>` : '')
+          + `<div class='mc-cal__ley'><span class='mc-cal__k mc-cal__k--surf'>Surf</span><span class='mc-cal__k mc-cal__k--skate'>Skate</span>${especiales.length?`<span class='mc-cal__k mc-cal__k--vac'>Vacaciones</span>`:''}${sinClase.length?`<span class='mc-cal__k mc-cal__k--no'>Sin clase</span>`:''}${mias.some(f=>f.startsWith(pre))?`<span class='mc-cal__k mc-cal__k--mia'>Clase de tu hijo/a</span>`:''}</div>`;
+        grid.innerHTML = h;
+        tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.m === k));
+        grid.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+          grid.querySelectorAll('.mc-cal__d--sel').forEach(x => x.classList.remove('mc-cal__d--sel')); b.classList.add('mc-cal__d--sel');
+          const f = b.dataset.f, dt = new Date(f + 'T12:00:00'), cs = dias[f] || [];
+          grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b></p>` + cs.map(c => c.cancelada
+            ? `<p>No hay clase de ${esc(c.clase)}${c.horario?' ('+esc(c.horario)+')':''}.</p>`
+            : `<p>${esc(c.clase)} · ${esc(c.horario)}${tipoDe(c)==='vac'?' · clase de vacaciones':''}${c.mk !== undefined && (c.mk % 12) !== dt.getMonth() ? ' · cuenta para ' + MESES[c.mk % 12] : ''}${mias.includes(f)?' · <span class=\'mc-cal__tuya\'>Tu hijo/a tiene clase</span>':''}</p>`).join('');
+        });
+      };
+      tabs.innerHTML = lista.length > 1 ? lista.map(k => `<button class='mc-calmes__tab' data-m='${k}'>${cap(MESES[k % 12])}</button>`).join('') : '';
+      tabs.querySelectorAll('button').forEach(b => b.onclick = () => ver(+b.dataset.m));
+      box.querySelector('.mc-h2').textContent = lista.length > 1 ? 'Calendario Academia' : 'Calendario de ' + MESES[lista[0] % 12];
       ver(lista[0]); box.hidden = false;
-    };
-    meses.forEach(m => {
-      const url = CAL_IMG.replace(/calendario\.jpg.*$/, 'calendario-' + m.replace(/\s+/g,'-') + '.jpg');
-      const p = new Image(); p.onload = () => { ok.push(m); ok[m] = url; mostrar(); }; p.src = url;
     });
   }
   // ---------- Encuesta de fin de mes y Calendario Storm ----------
@@ -341,14 +406,14 @@
     } else {
       h += `<div class='mc-card mc-cta'><p><b>¿Toca pagar el próximo mes?</b>Elige el plan y sus clases quedan agendadas.</p><a class='mc-go mc-go--sm' href='${esc(PAY)}'>Pagar mensualidad</a></div>`;
     }
-    h += `<div class='mc-calmes' data-calmes hidden><h2 class='mc-h2'>Calendario del mes</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calmes-tabs></div><a data-calmes-a target='_blank' rel='noopener'><img alt='Calendario del mes' data-calmes-img></a><small class='mc-calmes__hint'>Toca la imagen para verla más grande.</small></div></div>`;
+    h += `<div class='mc-calmes' data-calmes hidden><h2 class='mc-h2'>Calendario Academia</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calmes-tabs></div><div data-calmes-grid></div></div></div>`;
     if((d.eventos || []).length) h += eventosCard(d.eventos);
     if(pasados.length){
       h += `<details class='mc-old'><summary>Meses anteriores (${pasados.length})</summary>` + pasados.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('') + `</details>`;
     }
     app.innerHTML = h;
     marcarVistos(d.mensajes || []);
-    calendariosMes();
+    calendariosMes([].concat(...activos.map(a => (a.clases||[]).map(c => c.fecha))));
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; login(); };
     app.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => agregarEvento(d.eventos[+b.dataset.ev]));
     app.querySelectorAll('[data-enc]').forEach(card => {
