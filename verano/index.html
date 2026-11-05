@@ -50,6 +50,9 @@
 .mv a.go.wa{background:#25D366;border-color:#25D366;color:#fff;margin-top:10px}
 .mv .err{color:#B3261E;font-size:14px;margin:0 0 10px}
 .mv .link{background:none;border:0;color:var(--sea);text-decoration:underline;font:inherit;font-size:14px;cursor:pointer;padding:0}
+.mv .aviso{background:var(--wax);border:2px solid var(--ink);border-radius:20px;padding:18px 20px;margin-top:14px}
+.mv .aviso b{display:block;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:22px;line-height:1.1;margin:0 0 6px}
+.mv .aviso p{margin:0;font-size:16px}
 .mv .skel{height:120px;border-radius:20px;margin-top:14px;background:linear-gradient(90deg,#fff,#faf6ea,#fff);background-size:200% 100%;animation:mvk 1.2s infinite linear}
 @keyframes mvk{to{background-position:-200% 0}}
 .mv .center{text-align:center}
@@ -92,6 +95,7 @@
 
   function pintar(d){
     let h = `<h1>Mi Verano</h1><p class="sub">${esc(d.email)} · <button class="link" id="mv-out">Salir</button></p>`;
+    if(d.aviso) h += `<div class="aviso"><b>${esc(d.aviso.titulo)}</b><p>${esc(d.aviso.texto)}</p></div>`;
     if(!d.hijos.length) h += `<div class="card"><p>No encontramos niños inscritos con este correo. Si ya pagaste, espera unos minutos o escríbenos por WhatsApp.</p></div>`;
     d.hijos.forEach(k => {
       h += `<div class="card"><h2>${esc(k.nombre)}</h2>
