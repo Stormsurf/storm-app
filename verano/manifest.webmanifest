@@ -1,0 +1,28 @@
+{
+  "name": "Storm · Mi Verano",
+  "short_name": "Mi Verano",
+  "start_url": "/verano/",
+  "scope": "/verano/",
+  "display": "standalone",
+  "background_color": "#1E1E1D",
+  "theme_color": "#EFECE8",
+  "lang": "es-CL",
+  "icons": [
+    {
+      "src": "/icons/storm-app-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/storm-app-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/storm-app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
