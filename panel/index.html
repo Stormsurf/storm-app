@@ -122,6 +122,8 @@
 .pn-sw button.on{background:var(--aa);color:#fff}
 .pn-sw button[data-acad='verano'].on{background:#FADF70;color:#3B2610}
 .pn-verano[hidden]{display:none}
+.pn-verano .pn-gbtn.on{background:#FADF70;border-color:#FADF70;color:#3B2610}
+.pn-verano .pn-day.on{background:#3B2610;border-color:#3B2610}
 .pn-salud{display:block;margin-top:4px;font-size:1.25rem;color:var(--warn)}
 .pn-sent p{margin:4px 0 0;font-size:1.4rem;line-height:1.45;white-space:pre-line}
 </style>
@@ -387,7 +389,7 @@
 
 
   // ---------- Academia de Verano ----------
-  let VER = null, vSem = '';
+  let VER = null, vSem = '', vNiv = '';
   // Selector Academia Anual / Academia de Verano (en enero y febrero parte en Verano).
   let acad = (() => { try{ return sessionStorage.getItem(KEY + '-acad'); }catch(_){ return null; } })() || ([0,1].includes(new Date().getMonth()) ? 'verano' : 'anual');
   function ponerSelector(){
@@ -418,7 +420,8 @@
   function pintarVerano(pane){
     const v = VER, admin = v.rol !== 'instructor';
     if(!vSem){ const hoy = new Date(), conNinos = v.semanas.filter(s => s.n); vSem = conNinos.length ? conNinos[0].id : 'todas'; }
-    const lista = vSem === 'todas' ? v.alumnos : v.alumnos.filter(a => a.semanas.includes(vSem));
+    const enSem = vSem === 'todas' ? v.alumnos : v.alumnos.filter(a => a.semanas.includes(vSem));
+    const lista = vNiv ? enSem.filter(a => a.nivel === vNiv) : enSem;
     const sem = v.semanas.find(s => s.id === vSem);
     const fed = v.niveles.find(n => n.nivel === 'Federados');
     let h = `<div class='pn-stats'>
@@ -428,16 +431,17 @@
     </div>
     <div class='pn-days'><button class='pn-day${vSem==='todas'?' on':''}' data-vs='todas'><b>Todas</b><i>${v.total} niños</i></button>${v.semanas.map(s =>
       `<button class='pn-day${vSem===s.id?' on':''}' data-vs='${s.id}'><b>${esc(s.nombre)}</b><small>${esc(s.fechas)}</small><i>${s.n}${s.cupo ? ' de '+s.cupo : ''} niño${s.n===1?'':'s'}</i></button>`).join('')}</div>
-    <div class='pn-card'><h3>${sem ? esc(sem.nombre)+' · '+esc(sem.fechas) : 'Todo el verano'}<span class='pn-count'>${lista.length}</span></h3>
+    <div class='pn-gsel'><button class='pn-gbtn${vNiv?'':' on'}' data-vn=''>Todos<small>${enSem.length}</small></button>${NIV.map(n => { const c = enSem.filter(a => a.nivel === n).length;
+      return c ? `<button class='pn-gbtn${vNiv===n?' on':''}' data-vn='${esc(n)}'>${esc(n)}<small>${c}</small></button>` : ''; }).join('')}</div>
+    <div class='pn-card'><h3>${vNiv ? esc(vNiv)+' · ' : ''}${sem ? esc(sem.nombre)+' · '+esc(sem.fechas) : 'Todo el verano'}<span class='pn-count'>${lista.length}</span></h3>
       ${lista.length ? NIV.map(n => { const g = lista.filter(a => a.nivel === n); if(!g.length) return '';
         return `<div class='pn-grp'><small>${esc(n)} · ${g.length}</small>${g.map(a => `<div class='pn-vk'><div><b>${esc(a.nombre)}</b>
           <small>${esc(a.edad)}${a.tabla?" <span class='pn-tag'>tabla</span>":''}${a.traje?" <span class='pn-tag'>traje</span>":''}${vSem==='todas'?' · '+a.semanas.map(x=>x.replace('s','S')).join(' '):''}${admin?' · '+esc(a.apoderado):''}</small>
           ${a.salud ? `<span class='pn-salud'>⚠︎ ${esc(a.salud)}</span>` : ''}
           ${a.emergencia ? `<small>Emergencia: ${esc(a.emergencia)} ${esc(a.emergenciaTel)}</small>` : ''}</div>
           ${admin && wa(a.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(a.telefono)}'>WhatsApp</a>` : ''}</div>`).join('')}</div>`; }).join('')
-        : `<p class='pn-empty'>Todavía no hay niños inscritos esta semana.</p>`}
-    </div>
-    <div class='pn-card'><h3>Por nivel</h3><div class='pn-chips' style='margin-top:10px'>${v.niveles.map(n => `<span class='pn-chip'>${esc(n.nivel)} <b>${n.n}</b></span>`).join('') || "<span class='pn-empty'>Sin inscritos.</span>"}</div></div>`;
+        : `<p class='pn-empty'>${vNiv ? 'No hay niños de '+esc(vNiv)+' esta semana.' : 'Todavía no hay niños inscritos esta semana.'}</p>`}
+    </div>`;
     if(admin){
       if(v.revisar && v.revisar.length) h += `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${v.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla de Verano: ${v.revisar.map(esc).join(', ')}</p></div>`;
       h += `<div class='pn-card'><h3>Últimos pagos web</h3>${v.ultimos.length ? v.ultimos.map(p => `<div class='pn-row'><div><b>${esc(p.alumnos.join(', '))}</b><small>${esc(p.apoderado)} · ${esc(p.fecha)}${p.codigo?" <span class='pn-tag'>"+esc(p.codigo)+'</span>':''}</small></div><span class='pn-amt'>${p.total ? clp(p.total) : 'Beca'}</span></div>`).join('') : `<p class='pn-empty'>Aún no hay pagos con Mercado Pago. Las inscripciones de antes (Shopify) ya están en la lista.</p>`}</div>`;
@@ -445,6 +449,7 @@
     }
     pane.innerHTML = h;
     pane.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { vSem = b.dataset.vs; pintarVerano(pane); });
+    pane.querySelectorAll('[data-vn]').forEach(b => b.onclick = () => { vNiv = b.dataset.vn; pintarVerano(pane); });
   }
 
   async function load(){
