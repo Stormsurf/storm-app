@@ -146,7 +146,10 @@
 .mc-sw button{flex:1;border:0;border-radius:999px;background:none;font:inherit;font-size:1.35rem;font-weight:600;padding:10px 8px;cursor:pointer;color:var(--ink);opacity:.6}
 .mc-sw button.on{background:var(--aa);color:#fff;opacity:1}
 .mc-sw button.on[data-vista=verano]{background:#FADF70;color:#3B2610}
-.mc-hero--v img{background:#4A6B70;padding:18px 26px;border-radius:20px;width:min(300px,72%)}
+.mc-hero img.mc-storm{display:none}
+.mc-dos{display:flex;justify-content:center;align-items:center;gap:22px;margin:18px 0 4px}
+.mc-dos img{width:min(150px,40%);height:auto;display:block}
+.mc-alogo{display:block;width:min(230px,58%);height:auto;margin:20px auto 0}
 .mc-v{--v-wax:#FADF70;--v-sea:#4A6B70;--v-ink:#3B2610}
 .mc-v .mc-aviso{background:var(--v-wax);border:2px solid var(--v-ink);border-radius:18px;padding:16px 18px;margin-top:14px;color:var(--v-ink)}
 .mc-v .mc-aviso b{display:block;font-family:var(--font-heading-family);font-size:2rem;font-weight:600;margin-bottom:4px}
@@ -165,7 +168,7 @@
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap mc'>
     <div class='mc-hero'>
-      <img src='/img/academia-anual-logo.png' alt='Academia Anual Storm' width='1200' height='496'>
+      <img class='mc-storm' src='/img/storm-logo.png' alt='Storm Surf Academy' width='400' height='216'>
       <h1>Mi clase</h1>
       <div class='mc-lead'><p>Revisa las clases de tus hijos, sus días y lo que tienes pagado.</p></div>
     </div>
@@ -181,7 +184,7 @@
   const KEY = 'storm-mi-clase';
   // Academia de Verano: mismo ingreso (las dos planillas firman con la misma clave).
   const API_VERANO = "https://script.google.com/macros/s/AKfycbzSHDu8whWWNwq-EFwaWqwKOtyU5pnyPuixutUI8sd5twFaTjDibN11TA3bMH_UddTo/exec";
-  const LOGO_ANUAL = document.querySelector('.mc-hero img') ? document.querySelector('.mc-hero img').getAttribute('src') : '';
+  const LOGO_ANUAL = '/img/academia-anual-logo.png';
   const LOGO_VERANO = '/img/verano-logo.png';
   let fuente = API;
   const app = document.getElementById('mc-app');
@@ -217,7 +220,8 @@
 
   // ---------- Entrar con código ----------
   function login(email, err, paso){
-    app.innerHTML = msg + `<div class='mc-card mc-login'>
+    hero();
+    app.innerHTML = msg + `<div class='mc-dos'><img src='${LOGO_ANUAL}' alt='Academia Anual Storm'><img src='${LOGO_VERANO}' alt='Academia de Verano Storm'></div><div class='mc-card mc-login'>
       ${paso==='codigo'
         ? `<p>Te enviamos un código de 6 números a <b>${esc(email)}</b>. Escríbelo aquí:</p>
            <input class='mc-in mc-in--code' id='mc-code' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='······'>
@@ -228,7 +232,7 @@
            <button class='mc-go' id='mc-ok'>Recibir código</button>`}
       ${err ? `<div class='mc-msg mc-msg--err' style='text-align:left'>${esc(err)}</div>` : ''}
     </div>
-    <p class='mc-note'>¿Aún no pagas la mensualidad? <a href='${esc(PAY)}'>Págala aquí</a>.</p>`;
+    <p class='mc-note'>¿Aún no inscribes a tus hijos? <a href='${esc(PAY)}'>Academia Anual</a> · <a href='${esc(PAY.replace(/mensualidad-academia-anual.*$/, 'academia-de-verano-2027'))}'>Academia de Verano</a></p>`;
     const ok = document.getElementById('mc-ok');
     const input = document.getElementById(paso==='codigo' ? 'mc-code' : 'mc-email');
     input.focus();
@@ -428,10 +432,8 @@
   function hero(){
     const box = document.querySelector('.mc-hero'), img = box && box.querySelector('img'); if(!img) return;
     const v = vista === 'verano';
-    box.classList.toggle('mc-hero--v', v);
-    img.src = v ? LOGO_VERANO : LOGO_ANUAL; img.alt = v ? 'Academia de Verano Storm' : 'Academia Anual Storm';
     const lead = box.querySelector('.mc-lead');
-    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
+    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = !auth ? '<p>Todo lo de tus hijos en Storm: Academia Anual y Academia de Verano.</p>' : v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
   }
   function bindSw(){
     app.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { vista = b.dataset.vista; try{ localStorage.setItem(VISTA, vista); }catch(_){} mostrar(); window.scrollTo({top:0, behavior:'smooth'}); });
@@ -441,7 +443,7 @@
     if(vista === 'verano') renderVerano(D.verano); else render(D.anual);
   }
   function renderVerano(d){
-    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<div class='mc-v'>`;
+    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<img class='mc-alogo' src='${LOGO_VERANO}' alt='Academia de Verano Storm'><div class='mc-v'>`;
     if(d.aviso) h += `<div class='mc-aviso'><b>${esc(d.aviso.titulo)}</b><p>${esc(d.aviso.texto)}</p></div>`;
     d.hijos.forEach(k => {
       h += `<div class='mc-card'><div class='mc-kid'><div><h3>${esc(k.nombre)}</h3></div></div>
@@ -458,7 +460,7 @@
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
   }
   function render(d){
-    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + msg;
+    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<img class='mc-alogo' src='${LOGO_ANUAL}' alt='Academia Anual Storm'>` + msg;
     const activos = d.alumnos.filter(a=>a.futuro), pasados = d.alumnos.filter(a=>!a.futuro);
     if(!d.alumnos.length){
       h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
