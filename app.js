@@ -56,7 +56,8 @@
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async OneSignal => {
       try {
-        await OneSignal.init({ appId: C.appId, safari_web_id: C.safariId, serviceWorkerPath: 'OneSignalSDKWorker.js', serviceWorkerParam: { scope: '/' }, notifyButton: { enable: false }, autoResubscribe: true });
+        await OneSignal.init({ appId: C.appId, safari_web_id: C.safariId, serviceWorkerPath: 'OneSignalSDKWorker.js', serviceWorkerParam: { scope: '/' }, notifyButton: { enable: false }, autoResubscribe: true,
+          welcomeNotification: { title: 'Storm 🌊', message: '¡Ya eres parte de la familia Storm! Aquí te avisaremos de las clases y novedades.' } });
         OS = OneSignal;
         OneSignal.Notifications.addEventListener('permissionChange', () => { permiso = Notification.permission; sincronizar(); decidir(); });
         sincronizar(); decidir();
