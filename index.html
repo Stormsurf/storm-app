@@ -489,6 +489,11 @@ body:has(.mc-hero--login) .ap-top{display:none}
   // Calendario Verano de la familia: los días que viene cada hijo/a (según sus semanas), su horario y qué le toca.
   const INI_VER = {s1:'2027-01-04', s2:'2027-01-11', s3:'2027-01-18', s4:'2027-01-25', s5:'2027-02-01', s6:'2027-02-08', s7:'2027-02-15', s8:'2027-02-22'};
   const HITOS_VER = {'2027-01-04':['Inicio','¡Comenzamos enero!'], '2027-01-29':['Cierre','Cierre de mes'], '2027-02-01':['Inicio','¡Comenzamos febrero!'], '2027-02-26':['Cierre','Cierre de mes']};
+  // Viernes especiales de enero (charla del día o actividad con todo el grupo). todos: también para Federados.
+  const ESPECIAL_VER = {'2027-01-08':{et:'Charla', txt:'Charla con Carolyne Vitta: windsurfista, entrenadora y ex Cirque du Soleil'},
+    '2027-01-15':{et:'Limpieza', txt:'Limpieza de playa con todo el grupo', todos:true},
+    '2027-01-22':{et:'Charla', txt:'Charla con Lucas Lijesthrom, nutricionista deportivo'}};
+  const especialDe = (f, cs) => { const e = ESPECIAL_VER[f]; return e && (e.todos || (cs || []).some(c => /charla/i.test(c.que))) ? e : null; };
   const sinT = x => String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   function semanasDe(k){
     const ids = [];
@@ -518,19 +523,20 @@ body:has(.mc-hero--login) .ap-top{display:none}
       for(let i=0;i<ini;i++) h += `<span></span>`;
       for(let dd=1; dd<=total; dd++){
         const f = pre + String(dd).padStart(2,'0'), cs = dias[f];
-        const hi = HITOS_VER[f];
-        const et = hi ? hi[0] : cs ? ([...new Set(cs.map(c => corto(c.que)))].length === 1 ? corto(cs[0].que) : 'Surf') : '';
+        const hi = HITOS_VER[f], es = cs && especialDe(f, cs);
+        const et = hi ? hi[0] : es ? es.et : cs ? ([...new Set(cs.map(c => corto(c.que)))].length === 1 ? corto(cs[0].que) : 'Surf') : '';
         h += `<button class='mc-cal__d${cs?' mc-cal__d--ver':''}${hi?' mc-cal__d--hito':''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}' data-f='${f}'${cs||hi?'':' disabled'}><b>${dd}</b>${et?`<i>${et}</i>`:''}</button>`;
       }
       h += `</div><div class='mc-cal__det' data-det><p class='mc-cal__tip'>Toca un día para ver el horario y qué le toca.</p></div>`;
-      const hs = Object.keys(HITOS_VER).filter(f => f.startsWith(pre));
-      if(hs.length) h += `<ul class='mc-cal__av'>${hs.map(f => { const dt = new Date(f + 'T12:00:00'); return `<li class='mc-cal__av--otro'><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()}:</b> ${HITOS_VER[f][1].replace(/^¡|!$/g,'').replace(/^C/, 'c')}</li>`; }).join('')}</ul>`;
+      const hs = [...new Set(Object.keys(HITOS_VER).concat(Object.keys(ESPECIAL_VER).filter(f => especialDe(f, dias[f]))))].filter(f => f.startsWith(pre)).sort();
+      const txtDe = f => [HITOS_VER[f] ? HITOS_VER[f][1].replace(/^¡|!$/g,'').replace(/^C/, 'c') : '', especialDe(f, dias[f]) ? ESPECIAL_VER[f].txt : ''].filter(Boolean).join(' · ');
+      if(hs.length) h += `<ul class='mc-cal__av'>${hs.map(f => { const dt = new Date(f + 'T12:00:00'); return `<li class='mc-cal__av--otro'><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()}:</b> ${esc(txtDe(f))}</li>`; }).join('')}</ul>`;
       grid.innerHTML = h;
       tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.m === m));
       grid.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
         grid.querySelectorAll('.mc-cal__d--sel').forEach(x => x.classList.remove('mc-cal__d--sel')); b.classList.add('mc-cal__d--sel');
         const f = b.dataset.f, dt = new Date(f + 'T12:00:00');
-        grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b>${HITOS_VER[f] ? ' · ' + HITOS_VER[f][1] : ''}</p>` +
+        grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b>${HITOS_VER[f] ? ' · ' + HITOS_VER[f][1] : ''}</p>${especialDe(f, dias[f]) ? `<p>⭐ ${esc(ESPECIAL_VER[f].txt)}</p>` : ''}` +
           (dias[f] || []).map(c => `<p>${varios ? '<b>'+esc(c.nombre)+':</b> ' : ''}${esc(c.que)} · ${esc(c.horario)}</p>`).join('');
       });
     };
