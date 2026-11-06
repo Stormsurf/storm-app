@@ -350,7 +350,7 @@
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
         app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t);
-        if(t === 'alumnos') cargarNotas().then(pintarAlumnos); };
+        if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); } };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
@@ -465,17 +465,41 @@
       };
     });
   }
+  // ---------- Informes de fin de mes (borradores que deja Claude en la pestaña Informes) ----------
+  let INF = null;
+  async function cargarInformes(){ try{ INF = (await post(Object.assign({}, auth, {accion:'informes'}))).informes || []; }catch(_){ INF = INF || []; } return INF; }
+  function informesHTML(){
+    if(!ES_ADMIN || !INF) return '';
+    const bor = INF.filter(x => x.estado === 'Borrador'), env = INF.filter(x => x.estado === 'Enviado');
+    if(!bor.length && !env.length) return '';
+    return `<div class='pn-card'><h3>Informes de fin de mes${bor.length ? `<span class='pn-count'>${bor.length} por revisar</span>` : ''}</h3>
+      ${bor.length ? `<p class='pn-sub'>Revisa cada informe, corrige lo que quieras y envíalo. A la familia le llega un aviso y lo ve en Mi clase.</p>` : `<p class='pn-sub'>No hay informes por revisar. 👌</p>`}
+      ${bor.map(x => `<div class='pn-ntbox' style='margin-top:10px'><p class='pn-sub'><b>${esc(x.alumno)}</b> · ${esc(cap(x.mes))} · ${esc(x.academia)}</p>
+        <textarea data-inf='${x.fila}' style='min-height:150px'>${esc(x.texto)}</textarea>
+        <button class='pn-ntgo' data-infgo='${x.fila}'>Enviar a la familia</button></div>`).join('')}
+      ${env.length ? `<details style='margin-top:10px'><summary class='pn-sub' style='cursor:pointer'>Enviados (${env.length})</summary>${env.map(x => `<div class='pn-row'><div><b>${esc(x.alumno)}</b><small>${esc(cap(x.mes))} · ${esc(x.academia)} · enviado ${esc(fechaCorta(x.enviado))}</small></div></div>`).join('')}</details>` : ''}
+    </div>`;
+  }
+  function bindInformes(pane){
+    pane.querySelectorAll('[data-infgo]').forEach(b => b.onclick = async () => {
+      const ta = pane.querySelector(`[data-inf='${b.dataset.infgo}']`);
+      b.disabled = true; b.textContent = 'Enviando…';
+      try{ const r = await post(Object.assign({}, auth, {accion:'informe', fila: +b.dataset.infgo, texto: ta.value.trim()})); INF = r.informes || []; pintarAlumnos(); }
+      catch(x){ b.disabled = false; b.textContent = 'Enviar a la familia'; b.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(x.message)}</p>`); }
+    });
+  }
   function pintarAlumnos(){
     const pane = app.querySelector("[data-pane='alumnos']"); if(!pane || !NOTAS) return;
     const al = (NOTAS.alumnos || []).slice().sort((a,b) => porOrden(a.grupo, b.grupo) || a.nombre.localeCompare(b.nombre));
     const grupos = [...new Set(al.map(a => a.grupo || 'Sin grupo'))];
     const lista = aGrupo ? al.filter(a => (a.grupo || 'Sin grupo') === aGrupo) : al;
-    pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
+    pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + informesHTML() + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
       `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
       <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}<span class='pn-count'>${lista.length}</span></h3>
       <p class='pn-sub'>Anota cómo va cada alumno. Las notas son solo para el equipo.</p>
       ${lista.map(a => `<div class='pn-al'><div><b>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div><div>${notaBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
     pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
+    bindInformes(pane);
     pane.querySelectorAll('[data-acn]').forEach(b => b.onclick = () => { aCambio = b.dataset.acn; aNuevo = ''; aMsg = ''; pintarAlumnos(); });
     pane.querySelectorAll('[data-anv]').forEach(b => b.onclick = () => { aNuevo = b.dataset.anv; const av = pane.querySelector('#pn-anvav').checked; pintarAlumnos(); pane.querySelector('#pn-anvav').checked = av; });
     const ax = pane.querySelector('#pn-anvx'); if(ax) ax.onclick = () => { aCambio = ''; aNuevo = ''; pintarAlumnos(); };

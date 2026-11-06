@@ -168,6 +168,9 @@ body:has(.mc-hero--login) .ap-top{display:none}
 .mc-v .mc-dia b{flex:none;width:88px;font-weight:600}
 .mc-v .mc-dia.off span{opacity:.5}
 .mc-v .mc-wa{background:#25D366;color:#fff}
+.mc-inf summary{list-style:none;cursor:pointer}.mc-inf summary::-webkit-details-marker{display:none}
+.mc-inf summary b{display:block;font-size:1.6rem}.mc-inf summary small{display:block;font-size:1.25rem;opacity:.6;margin-top:2px}
+.mc-inf p{margin:12px 0 0;font-size:1.45rem;line-height:1.6;white-space:pre-line}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap mc'>
@@ -453,6 +456,12 @@ body:has(.mc-hero--login) .ap-top{display:none}
     hero();
     if(vista === 'verano') renderVerano(D.verano); else render(D.anual);
   }
+  // Informes de fin de mes (los escribe Storm; vienen con los datos de la Academia Anual).
+  function informesCard(acad){
+    const xs = ((D.anual && D.anual.informes) || []).filter(x => x.academia === acad);
+    if(!xs.length) return '';
+    return `<h2 class='mc-h2'>Informes de fin de mes</h2>` + xs.map((x,i) => `<details class='mc-card mc-inf'${i===0?' open':''}><summary><b>${esc(x.alumno.split(' ')[0])} · ${esc(cap(x.mes))}</b><small>Lo que logró este mes en Storm</small></summary><p>${esc(x.texto)}</p></details>`).join('');
+  }
   function renderVerano(d){
     let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<div class='mc-v'>`;
     if(d.aviso) h += `<div class='mc-aviso'><b>${esc(d.aviso.titulo)}</b><p>${esc(d.aviso.texto)}</p></div>`;
@@ -464,6 +473,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
         ${k.dias.length?`<p class='mc-lbl'>Su semana</p>${k.dias.map(x=>`<div class='mc-dia${/^sin\b/i.test(x.que)?' off':''}'><b>${esc(x.dia)}</b><span>${esc(x.que)}</span></div>`).join('')}`:''}
       </div>`;
     });
+    h += informesCard('Verano');
     if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
     h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     app.innerHTML = h;
@@ -477,6 +487,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
       h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
     }
     if((d.mensajes || []).length) h += mensajesCard(d.mensajes);
+    h += informesCard('Anual');
     (d.encuesta || []).forEach((e,i) => h += encuestaCard(e,i));
     if(activos.length){
       h += `<h2 class='mc-h2'>Tus clases</h2>` + activos.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('');
