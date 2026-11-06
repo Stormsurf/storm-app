@@ -147,6 +147,8 @@
 .mc-sw button.on{background:var(--aa);color:#fff;opacity:1}
 .mc-sw button.on[data-vista=verano]{background:#FADF70;color:#3B2610}
 .mc-hero img.mc-storm{display:none}
+.mc-dos{display:flex;justify-content:center;align-items:center;gap:22px;margin:18px 0 4px}
+.mc-dos img{width:min(150px,40%);height:auto;display:block}
 .mc-alogo{display:block;width:min(230px,58%);height:auto;margin:20px auto 0}
 .mc-v{--v-wax:#FADF70;--v-sea:#4A6B70;--v-ink:#3B2610}
 .mc-v .mc-aviso{background:var(--v-wax);border:2px solid var(--v-ink);border-radius:18px;padding:16px 18px;margin-top:14px;color:var(--v-ink)}
@@ -218,7 +220,8 @@
 
   // ---------- Entrar con código ----------
   function login(email, err, paso){
-    app.innerHTML = msg + `<div class='mc-card mc-login'>
+    hero();
+    app.innerHTML = msg + `<div class='mc-dos'><img src='${LOGO_ANUAL}' alt='Academia Anual Storm'><img src='${LOGO_VERANO}' alt='Academia de Verano Storm'></div><div class='mc-card mc-login'>
       ${paso==='codigo'
         ? `<p>Te enviamos un código de 6 números a <b>${esc(email)}</b>. Escríbelo aquí:</p>
            <input class='mc-in mc-in--code' id='mc-code' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='······'>
@@ -229,7 +232,7 @@
            <button class='mc-go' id='mc-ok'>Recibir código</button>`}
       ${err ? `<div class='mc-msg mc-msg--err' style='text-align:left'>${esc(err)}</div>` : ''}
     </div>
-    <p class='mc-note'>¿Aún no pagas la mensualidad? <a href='${esc(PAY)}'>Págala aquí</a>.</p>`;
+    <p class='mc-note'>¿Aún no inscribes a tus hijos? <a href='${esc(PAY)}'>Academia Anual</a> · <a href='${esc(PAY.replace(/mensualidad-academia-anual.*$/, 'academia-de-verano-2027'))}'>Academia de Verano</a></p>`;
     const ok = document.getElementById('mc-ok');
     const input = document.getElementById(paso==='codigo' ? 'mc-code' : 'mc-email');
     input.focus();
@@ -430,7 +433,7 @@
     const box = document.querySelector('.mc-hero'), img = box && box.querySelector('img'); if(!img) return;
     const v = vista === 'verano';
     const lead = box.querySelector('.mc-lead');
-    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
+    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = !auth ? '<p>Todo lo de tus hijos en Storm: Academia Anual y Academia de Verano.</p>' : v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
   }
   function bindSw(){
     app.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { vista = b.dataset.vista; try{ localStorage.setItem(VISTA, vista); }catch(_){} mostrar(); window.scrollTo({top:0, behavior:'smooth'}); });
