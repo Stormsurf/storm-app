@@ -454,7 +454,7 @@
       </div>`;
     });
     if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
-    h += `<div class='mc-card mc-cta'><p><b>¿Dudas o un cambio?</b>Escríbenos y lo vemos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
+    h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     app.innerHTML = h;
     bindSw();
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
