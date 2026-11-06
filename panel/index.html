@@ -64,6 +64,9 @@
 .pn-bar span{display:block;height:100%;background:var(--aa);border-radius:6px}
 .pn-grp{margin-top:12px}
 .pn-grp>small{display:block;font-size:1.15rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.5;margin-bottom:6px}
+.pn-cargo{display:block;font-size:1.25rem;opacity:.75;margin:-3px 0 7px}
+.pn-tu{display:inline-block;background:var(--aa);color:#fff;border-radius:999px;padding:1px 8px;font-size:1.1rem;font-weight:700;margin-left:6px;vertical-align:1px}
+.pn-verano .pn-tu{background:#FADF70;color:#3B2610}
 .pn-chips{display:flex;flex-wrap:wrap;gap:6px}
 .pn-chip{font-size:1.35rem;padding:5px 11px;border-radius:999px;background:#f4f1ec}
 .pn-chip--in{background:var(--ok-soft);color:var(--ok)}
@@ -246,7 +249,7 @@
       <h3>${esc(c.clase)} · ${esc(c.horario)}<span class='pn-count'>${c.van} de ${c.cupos}</span></h3>
       <p class='pn-sub'>${esc(c.texto)}${c.nota?' · '+esc(c.nota):''}</p>
       <div class='pn-bar'><span style='width:${pct}%'></span></div>
-      ${c.alumnos.length ? Object.keys(grupos).sort(porOrden).map(g => `<div class='pn-grp'><small>${esc(g)} · ${grupos[g].length}</small><div class='pn-chips'>${grupos[g].map(a => `<span class='pn-chip${a.movido?' pn-chip--in':''}'>${a.movido?'↪ ':''}${esc(a.nombre)}</span>`).join('')}</div></div>`).join('')
+      ${c.alumnos.length ? Object.keys(grupos).sort(primeroMio()).map(g => `<div class='pn-grp'>${grpHead(g, grupos[g].length, ACARGO)}<div class='pn-chips'>${grupos[g].map(a => `<span class='pn-chip${a.movido?' pn-chip--in':''}'>${a.movido?'↪ ':''}${esc(a.nombre)}</span>`).join('')}</div></div>`).join('')
         : `<p class='pn-empty'>Todavía no hay alumnos en esta clase.</p>`}
       ${c.salen.length ? `<p class='pn-sub' style='margin-top:10px'>Se cambiaron a otro día: ${c.salen.map(esc).join(', ')}</p>` : ''}
     </div>`;
@@ -257,6 +260,11 @@
   const ORDEN = ['Kids','Iniciante','Progress','Intermedio','Avanzado','Federados'];
   const rango = g => { const t = String(g||'').toLowerCase().replace('principiante','iniciante'); const i = ORDEN.findIndex(x => x.toLowerCase() === t); return i < 0 ? 99 : i; };
   const porOrden = (a, b) => rango(a) - rango(b);
+  // Quién está a cargo de cada grupo (pestaña Equipo) y cuál es el grupo de quien entra: va primero.
+  let ACARGO = {}, MIOS = [];
+  const mio = (g, mios) => (mios || MIOS).includes(g);
+  const primeroMio = mios => (a, b) => (mio(b, mios) - mio(a, mios)) || porOrden(a, b);
+  const grpHead = (g, n, cargo, mios) => `<small>${esc(g)} · ${n}${mio(g, mios) ? `<span class='pn-tu'>Tu grupo</span>` : ''}</small>${cargo && cargo[g] ? `<span class='pn-cargo'>A cargo: ${esc(cargo[g])}</span>` : ''}`;
 
   // ---------- Lista: asistencia ----------
   let LISTA = [], diaSel = 0, marcas = {};
@@ -344,6 +352,8 @@
 
   function render(d){
     CL = []; ES_ADMIN = d.rol !== 'instructor';
+    if(d.aCargo) ACARGO = d.aCargo;
+    if(d.miGrupo) MIOS = d.miGrupo;
     LISTA = d.lista || [];
     const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
     const tabsOn = () => {
@@ -490,12 +500,12 @@
   }
   function pintarAlumnos(){
     const pane = app.querySelector("[data-pane='alumnos']"); if(!pane || !NOTAS) return;
-    const al = (NOTAS.alumnos || []).slice().sort((a,b) => porOrden(a.grupo, b.grupo) || a.nombre.localeCompare(b.nombre));
+    const al = (NOTAS.alumnos || []).slice().sort((a,b) => primeroMio()(a.grupo, b.grupo) || a.nombre.localeCompare(b.nombre));
     const grupos = [...new Set(al.map(a => a.grupo || 'Sin grupo'))];
     const lista = aGrupo ? al.filter(a => (a.grupo || 'Sin grupo') === aGrupo) : al;
     pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + informesHTML() + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
       `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
-      <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}<span class='pn-count'>${lista.length}</span></h3>
+      <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}${aGrupo && mio(aGrupo) ? `<span class='pn-tu'>Tu grupo</span>` : ''}<span class='pn-count'>${lista.length}</span></h3>${aGrupo && ACARGO[aGrupo] ? `<p class='pn-sub' style='margin-bottom:4px'>A cargo: ${esc(ACARGO[aGrupo])}</p>` : ''}
       <p class='pn-sub'>Anota cómo va cada alumno. Las notas son solo para el equipo.</p>
       ${lista.map(a => `<div class='pn-al'><div><b>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div><div>${notaBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
     pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
@@ -556,7 +566,8 @@
   }
   function pintarVerano(pane){
     const v = VER, admin = v.rol !== 'instructor';
-    if(!vSem){ const hoy = new Date(), conNinos = v.semanas.filter(s => s.n); vSem = conNinos.length ? conNinos[0].id : 'todas'; }
+    if(!vSem){ const hoy = new Date(), conNinos = v.semanas.filter(s => s.n); vSem = conNinos.length ? conNinos[0].id : 'todas'; if(!admin && (v.miGrupo || []).length) vNiv = v.miGrupo[0]; }
+    const vMios = v.miGrupo || [], vOrden = NIV.slice().sort(primeroMio(vMios));
     const enSem = vSem === 'todas' ? v.alumnos : v.alumnos.filter(a => a.semanas.includes(vSem));
     const lista = vNiv ? enSem.filter(a => a.nivel === vNiv) : enSem;
     const sem = v.semanas.find(s => s.id === vSem);
@@ -568,11 +579,11 @@
     </div>
     <div class='pn-days'><button class='pn-day${vSem==='todas'?' on':''}' data-vs='todas'><b>Todas</b><i>${v.total} niños</i></button>${v.semanas.map(s =>
       `<button class='pn-day${vSem===s.id?' on':''}' data-vs='${s.id}'><b>${esc(s.nombre)}</b><small>${esc(s.fechas)}</small><i>${s.n}${s.cupo ? ' de '+s.cupo : ''} niño${s.n===1?'':'s'}</i></button>`).join('')}</div>
-    <div class='pn-gsel'><button class='pn-gbtn${vNiv?'':' on'}' data-vn=''>Todos<small>${enSem.length}</small></button>${NIV.map(n => { const c = enSem.filter(a => a.nivel === n).length;
-      return c ? `<button class='pn-gbtn${vNiv===n?' on':''}' data-vn='${esc(n)}'>${esc(n)}<small>${c}</small></button>` : ''; }).join('')}</div>
+    <div class='pn-gsel'><button class='pn-gbtn${vNiv?'':' on'}' data-vn=''>Todos<small>${enSem.length}</small></button>${vOrden.map(n => { const c = enSem.filter(a => a.nivel === n).length;
+      return c ? `<button class='pn-gbtn${vNiv===n?' on':''}' data-vn='${esc(n)}'>${mio(n, vMios)?'★ ':''}${esc(n)}<small>${c}</small></button>` : ''; }).join('')}</div>
     <div class='pn-card'><h3>${vNiv ? esc(vNiv)+' · ' : ''}${sem ? esc(sem.nombre)+' · '+esc(sem.fechas) : 'Todo el verano'}<span class='pn-count'>${lista.length}</span></h3>
-      ${lista.length ? NIV.map(n => { const g = lista.filter(a => a.nivel === n); if(!g.length) return '';
-        return `<div class='pn-grp'><small>${esc(n)} · ${g.length}</small>${g.map(a => `<div class='pn-vk'><div><b>${esc(a.nombre)}</b>
+      ${lista.length ? vOrden.map(n => { const g = lista.filter(a => a.nivel === n); if(!g.length) return '';
+        return `<div class='pn-grp'>${grpHead(n, g.length, v.aCargo, vMios)}${g.map(a => `<div class='pn-vk'><div><b>${esc(a.nombre)}</b>
           <small>${duracion(a)}${esc(a.edad)}${a.tabla?" <span class='pn-tag'>tabla</span>":''}${a.traje?" <span class='pn-tag'>traje</span>":''}${vSem==='todas'?' · '+a.semanas.map(x=>x.replace('s','S')).join(' '):''}${admin?' · '+esc(a.apoderado):''}</small>
           ${a.salud ? `<span class='pn-salud'>⚠︎ ${esc(a.salud)}</span>` : ''}
           ${a.emergencia ? `<small>Emergencia: ${esc(a.emergencia)} ${esc(a.emergenciaTel)}</small>` : ''}
@@ -603,7 +614,7 @@
         const r = await (await fetch(API_VERANO, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
           body: JSON.stringify(Object.assign({}, auth, {accion:'nivel', alumno: vCambio, nivel: vNuevo, avisar: pane.querySelector('#pn-nvav').checked}))})).json();
         if(!r.ok) throw new Error(r.error || 'No se pudo cambiar el nivel.');
-        VER = r; const c = r.cambio || {};
+        VER = Object.assign({ miGrupo: VER.miGrupo }, r); const c = r.cambio || {};
         vMsg = `Listo: ${c.alumno || vCambio} ahora está en ${c.nivel || vNuevo}.` + (c.avisado ? ' Le avisamos a la familia en la app.' : '');
         vCambio = ''; vNuevo = ''; pintarVerano(pane); window.scrollTo({top:0, behavior:'smooth'});
       }catch(x){ go.disabled = false; go.textContent = 'Guardar'; const e = pane.querySelector('.pn-nverr') || go.parentNode.appendChild(Object.assign(document.createElement('p'), {className:'pn-nverr'})); e.style.cssText = 'color:#a12c1c;margin:8px 0 0'; e.textContent = x.message; }
