@@ -474,12 +474,13 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const RECURSOS = [
     {url:'/familias/preguntas-despues-del-surf.html', titulo:'Preguntas para después del surf', texto:'Para que "¿cómo te fue?" no termine en "bien".', icono:'💬'},
     {url:'/familias/cuando-se-frustra.html', titulo:'Cuando se frustra', texto:'Qué decir cuando no le sale, se compara o cree que debería estar en otro grupo.', icono:'🌊'},
-    {url:'/familias/respira-como-surfista.html', titulo:'Respira como surfista', texto:'Respiración, apnea y visualización para entrenar la calma fuera del agua.', icono:'🌬️'}
+    {url:'/familias/respira-como-surfista.html', titulo:'Respira como surfista', texto:'Respiración, apnea y visualización para entrenar la calma fuera del agua.', icono:'🌬️', solo:'anual'}
   ];
-  function familiasCard(nivel, edad){
-    if(!RECURSOS.length) return '';
+  function familiasCard(nivel, edad, acad){
+    const rs = RECURSOS.filter(r => !r.solo || r.solo === acad);
+    if(!rs.length) return '';
     const q = (nivel ? 'nivel=' + encodeURIComponent(nivel) : '') + (edad ? (nivel ? '&' : '') + 'edad=' + encodeURIComponent(edad) : '');
-    return `<h2 class='mc-h2'>Para las familias</h2>` + RECURSOS.map(r => `<a class='mc-card mc-rec' href='${r.url}${q ? '?' + q : ''}'><span class='mc-rec__i'>${r.icono}</span><span><b>${esc(r.titulo)}</b><small>${esc(r.texto)}</small></span><span class='mc-rec__go'>›</span></a>`).join('');
+    return `<h2 class='mc-h2'>Para las familias</h2>` + rs.map(r => `<a class='mc-card mc-rec' href='${r.url}${q ? '?' + q : ''}'><span class='mc-rec__i'>${r.icono}</span><span><b>${esc(r.titulo)}</b><small>${esc(r.texto)}</small></span><span class='mc-rec__go'>›</span></a>`).join('');
   }
   function renderVerano(d){
     let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<div class='mc-v'>`;
@@ -495,7 +496,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     h += `<div class='mc-calmes mc-calv' data-calv hidden><h2 class='mc-h2'>Calendario Verano</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calv-tabs></div><div data-calv-grid></div></div></div>`;
     h += informesCard('Verano');
     if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
-    { const k = (d.hijos || [])[0] || {}; h += familiasCard(k.nivel, parseInt(k.edad, 10) || ''); }
+    { const k = (d.hijos || [])[0] || {}; h += familiasCard(k.nivel, parseInt(k.edad, 10) || '', 'verano'); }
     h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     app.innerHTML = h;
     bindSw();
@@ -544,9 +545,6 @@ body:has(.mc-hero--login) .ap-top{display:none}
         h += `<button class='mc-cal__d${cs?' mc-cal__d--ver':''}${hi?' mc-cal__d--hito':''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}' data-f='${f}'${cs||hi?'':' disabled'}><b>${dd}</b>${et?`<i>${et}</i>`:''}</button>`;
       }
       h += `</div><div class='mc-cal__det' data-det><p class='mc-cal__tip'>Toca un día para ver el horario y qué le toca.</p></div>`;
-      const hs = [...new Set(Object.keys(HITOS_VER).concat(Object.keys(ESPECIAL_VER).filter(f => especialDe(f, dias[f]))))].filter(f => f.startsWith(pre)).sort();
-      const txtDe = f => [HITOS_VER[f] ? HITOS_VER[f][1].replace(/^¡|!$/g,'').replace(/^C/, 'c') : '', especialDe(f, dias[f]) ? ESPECIAL_VER[f].txt : ''].filter(Boolean).join(' · ');
-      if(hs.length) h += `<ul class='mc-cal__av'>${hs.map(f => { const dt = new Date(f + 'T12:00:00'); return `<li class='mc-cal__av--otro'><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()}:</b> ${esc(txtDe(f))}</li>`; }).join('')}</ul>`;
       grid.innerHTML = h;
       tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.m === m));
       grid.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
@@ -586,7 +584,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
       h += `<div class='mc-card mc-cta'><p><b>¿Toca pagar el próximo mes?</b>Elige el plan y sus clases quedan agendadas.</p><a class='mc-go mc-go--sm' href='${esc(PAY)}'>Pagar mensualidad</a></div>`;
     }
     h += `<div class='mc-calmes' data-calmes hidden><h2 class='mc-h2'>Calendario Academia</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calmes-tabs></div><div data-calmes-grid></div></div></div>`;
-    { const a = activos[0] || d.alumnos[0] || {}; h += familiasCard(a.grupo || '', parseInt(a.edad, 10) || ''); }
+    { const a = activos[0] || d.alumnos[0] || {}; h += familiasCard(a.grupo || '', parseInt(a.edad, 10) || '', 'anual'); }
     if((d.eventos || []).length) h += eventosCard(d.eventos);
     if(pasados.length){
       h += `<details class='mc-old'><summary>Meses anteriores (${pasados.length})</summary>` + pasados.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('') + `</details>`;
