@@ -407,7 +407,7 @@
     const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : h1.dataset.t; }
     if(ver) loadVerano();
   }
-  const NIV = ['Kids','Principiante','Progress','Intermedio','Avanzado','Federados'];
+  const NIV = ['Kids','Iniciante','Progress','Intermedio','Avanzado','Federados'];
   async function loadVerano(){
     const pane = app.querySelector('.pn-verano'); if(!pane) return;
     if(VER) return pintarVerano(pane);
