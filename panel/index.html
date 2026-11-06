@@ -79,6 +79,8 @@
 .pn-paid[disabled]{opacity:.5}
 @media (max-width:420px){.pn-row--wrap{flex-wrap:wrap}.pn-row--wrap .pn-acts{width:100%;justify-content:flex-end}}
 .pn-wa{flex:none;display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#25D366;color:#fff;text-decoration:none;font-weight:600;font-size:1.3rem;padding:8px 14px}
+.pn-dur{display:inline-block;font-size:1.1rem;font-weight:700;padding:2px 8px;border-radius:999px;background:#EDEBE6;color:#2C2C2B;margin-right:2px;vertical-align:middle}
+.pn-dur--mes{background:#FFDE59}
 .pn-tag{display:inline-block;font-size:1.1rem;padding:2px 8px;border-radius:999px;background:var(--aa-soft);color:var(--aa-dk);margin-left:4px;vertical-align:middle;font-weight:600}
 .pn-tag--warn{background:var(--warn-soft);color:var(--warn)}
 .pn-empty{font-size:1.4rem;opacity:.65;margin:10px 0 0}
@@ -236,7 +238,7 @@
   }
 
   function claseCard(c){
-    if(c.cancelada) return `<div class='pn-card pn-cancel'><span class='pn-when'>${esc(c.cuando)}</span><h3>${esc(c.clase)} · ${esc(c.horario)}<span class='pn-count'>Cancelada</span></h3><p class='pn-sub'>${esc(c.texto)}${c.nota?' · '+esc(c.nota):''}</p>${msgBtns(c, CL.push(c)-1)}</div>`;
+    if(c.cancelada) return `<div class='pn-card pn-cancel'><span class='pn-when'>${esc(c.cuando)}</span><h3>${esc(c.clase)} · ${esc(c.horario)}<span class='pn-count'>Cancelada</span></h3><p class='pn-sub'>${esc(c.texto)}${c.nota?' · '+esc(c.nota):''}</p></div>`;
     const grupos = {};
     c.alumnos.forEach(a => (grupos[a.grupo || 'Sin grupo'] = grupos[a.grupo || 'Sin grupo'] || []).push(a));
     const pct = c.cupos ? Math.min(100, Math.round(c.van / c.cupos * 100)) : 0;
@@ -244,14 +246,17 @@
       <h3>${esc(c.clase)} · ${esc(c.horario)}<span class='pn-count'>${c.van} de ${c.cupos}</span></h3>
       <p class='pn-sub'>${esc(c.texto)}${c.nota?' · '+esc(c.nota):''}</p>
       <div class='pn-bar'><span style='width:${pct}%'></span></div>
-      ${c.alumnos.length ? Object.keys(grupos).map(g => `<div class='pn-grp'><small>${esc(g)} · ${grupos[g].length}</small><div class='pn-chips'>${grupos[g].map(a => `<span class='pn-chip${a.movido?' pn-chip--in':''}'>${a.movido?'↪ ':''}${esc(a.nombre)}</span>`).join('')}</div></div>`).join('')
+      ${c.alumnos.length ? Object.keys(grupos).sort(porOrden).map(g => `<div class='pn-grp'><small>${esc(g)} · ${grupos[g].length}</small><div class='pn-chips'>${grupos[g].map(a => `<span class='pn-chip${a.movido?' pn-chip--in':''}'>${a.movido?'↪ ':''}${esc(a.nombre)}</span>`).join('')}</div></div>`).join('')
         : `<p class='pn-empty'>Todavía no hay alumnos en esta clase.</p>`}
       ${c.salen.length ? `<p class='pn-sub' style='margin-top:10px'>Se cambiaron a otro día: ${c.salen.map(esc).join(', ')}</p>` : ''}
-      ${msgBtns(c, CL.push(c)-1)}
     </div>`;
   }
 
   let CL = [];
+  // Orden de los grupos en todo el Panel.
+  const ORDEN = ['Kids','Iniciante','Progress','Intermedio','Avanzado','Federados'];
+  const rango = g => { const t = String(g||'').toLowerCase().replace('principiante','iniciante'); const i = ORDEN.findIndex(x => x.toLowerCase() === t); return i < 0 ? 99 : i; };
+  const porOrden = (a, b) => rango(a) - rango(b);
 
   // ---------- Lista: asistencia ----------
   let LISTA = [], diaSel = 0, marcas = {};
@@ -300,7 +305,7 @@
   // ---------- Mensajes por grupo (v17) ----------
   let gSel = [], borrador = '', diasSel = 0;
   function mensajesPane(d){
-    const gs = d.grupos || [], total = gs.reduce((t,g)=>t+g.alumnos,0);
+    const gs = (d.grupos || []).slice().sort((a,b) => porOrden(a.grupo, b.grupo)), total = gs.reduce((t,g)=>t+g.alumnos,0);
     return `<div class='pn-card'><h3>Mensaje para un grupo</h3>
       <p class='pn-sub'>Las familias lo ven arriba en Mi clase y también les llega por correo.</p>
       <div class='pn-gsel'>${gs.map(g=>`<button class='pn-gbtn${gSel.includes(g.grupo)?' on':''}' data-g='${esc(g.grupo)}'>${esc(g.grupo)}<small>${g.alumnos}</small></button>`).join('')}<button class='pn-gbtn${gSel.includes('Todos')?' on':''}' data-g='Todos'>Todos<small>${total}</small></button></div>
@@ -338,9 +343,9 @@
   }
 
   function render(d){
-    CL = [];
+    CL = []; ES_ADMIN = d.rol !== 'instructor';
     LISTA = d.lista || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='lista'>Lista</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
@@ -417,7 +422,14 @@
 
 
   // ---------- Notas internas por alumno (solo el equipo; las familias no las ven) ----------
-  let NOTAS = null, ntAbierta = '', aGrupo = '';
+  let NOTAS = null, ntAbierta = '', aGrupo = '', aCambio = '', aNuevo = '', aMsg = '', ES_ADMIN = false;
+  // Cajita para elegir el nivel nuevo (Anual y Verano).
+  function nivelBox(nombre, actual, niveles, nuevo, p){
+    return `<div class='pn-nvbox'><p>¿A qué nivel pasa <b>${esc(nombre.split(' ')[0])}</b>?${actual ? ' Hoy está en ' + esc(actual) + '.' : ''}</p>
+      <div class='pn-nvops'>${niveles.map(x => `<button data-${p}nv='${x}' class='${x===actual?'act':''}${x===nuevo?' on':''}'${x===actual?' disabled':''}>${x}</button>`).join('')}</div>
+      <label><input type='checkbox' id='pn-${p}nvav' checked> Avisar a la familia en la app</label>
+      <button class='pn-nvgo' id='pn-${p}nvgo'${nuevo?'':' disabled'}>Guardar</button><button class='pn-link' id='pn-${p}nvx'>Cancelar</button></div>`;
+  }
   const nk = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
   const notasDe = nombre => NOTAS ? NOTAS.notas.filter(n => nk(n.alumno) === nk(nombre)) : [];
   async function cargarNotas(forzar){
@@ -455,15 +467,28 @@
   }
   function pintarAlumnos(){
     const pane = app.querySelector("[data-pane='alumnos']"); if(!pane || !NOTAS) return;
-    const al = NOTAS.alumnos || [];
+    const al = (NOTAS.alumnos || []).slice().sort((a,b) => porOrden(a.grupo, b.grupo) || a.nombre.localeCompare(b.nombre));
     const grupos = [...new Set(al.map(a => a.grupo || 'Sin grupo'))];
     const lista = aGrupo ? al.filter(a => (a.grupo || 'Sin grupo') === aGrupo) : al;
-    pane.innerHTML = (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
+    pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
       `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
       <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}<span class='pn-count'>${lista.length}</span></h3>
       <p class='pn-sub'>Anota cómo va cada alumno. Las notas son solo para el equipo.</p>
-      ${lista.map(a => `<div class='pn-al'><div><b>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div>${notaBtn(a.nombre)}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
+      ${lista.map(a => `<div class='pn-al'><div><b>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div><div>${notaBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
     pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
+    pane.querySelectorAll('[data-acn]').forEach(b => b.onclick = () => { aCambio = b.dataset.acn; aNuevo = ''; aMsg = ''; pintarAlumnos(); });
+    pane.querySelectorAll('[data-anv]').forEach(b => b.onclick = () => { aNuevo = b.dataset.anv; const av = pane.querySelector('#pn-anvav').checked; pintarAlumnos(); pane.querySelector('#pn-anvav').checked = av; });
+    const ax = pane.querySelector('#pn-anvx'); if(ax) ax.onclick = () => { aCambio = ''; aNuevo = ''; pintarAlumnos(); };
+    const ago = pane.querySelector('#pn-anvgo');
+    if(ago) ago.onclick = async () => {
+      ago.disabled = true; ago.textContent = 'Guardando…';
+      try{
+        const r = await post(Object.assign({}, auth, {accion:'grupo', alumno: aCambio, grupo: aNuevo, avisar: pane.querySelector('#pn-anvav').checked}));
+        NOTAS = r; const c = r.cambio || {};
+        aMsg = `Listo: ${c.alumno || aCambio} ahora está en ${c.grupo || aNuevo}.` + (c.avisado ? ' Le avisamos a la familia en la app.' : '');
+        aCambio = ''; aNuevo = ''; pintarAlumnos();
+      }catch(x){ ago.disabled = false; ago.textContent = 'Guardar'; ago.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(x.message)}</p>`); }
+    };
     bindNotas(pane, pintarAlumnos);
   }
 
@@ -497,6 +522,14 @@
       cargarNotas().then(() => pintarVerano(pane));
     }catch(x){ pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
   }
+  // Cuánto va el niño en el mes de la semana elegida: mes completo o cuántas semanas.
+  const MES_SEM = {ene:['s1','s2','s3','s4'], feb:['s5','s6','s7','s8']};
+  function duracion(a){
+    if(!vSem || vSem === 'todas') return '';
+    const mes = MES_SEM.ene.includes(vSem) ? MES_SEM.ene : MES_SEM.feb;
+    const n = mes.filter(x => a.semanas.includes(x)).length;
+    return n === 4 ? `<span class='pn-dur pn-dur--mes'>Mes completo</span> ` : `<span class='pn-dur'>${n} semana${n===1?'':'s'}</span> `;
+  }
   function pintarVerano(pane){
     const v = VER, admin = v.rol !== 'instructor';
     if(!vSem){ const hoy = new Date(), conNinos = v.semanas.filter(s => s.n); vSem = conNinos.length ? conNinos[0].id : 'todas'; }
@@ -516,7 +549,7 @@
     <div class='pn-card'><h3>${vNiv ? esc(vNiv)+' · ' : ''}${sem ? esc(sem.nombre)+' · '+esc(sem.fechas) : 'Todo el verano'}<span class='pn-count'>${lista.length}</span></h3>
       ${lista.length ? NIV.map(n => { const g = lista.filter(a => a.nivel === n); if(!g.length) return '';
         return `<div class='pn-grp'><small>${esc(n)} · ${g.length}</small>${g.map(a => `<div class='pn-vk'><div><b>${esc(a.nombre)}</b>
-          <small>${esc(a.edad)}${a.tabla?" <span class='pn-tag'>tabla</span>":''}${a.traje?" <span class='pn-tag'>traje</span>":''}${vSem==='todas'?' · '+a.semanas.map(x=>x.replace('s','S')).join(' '):''}${admin?' · '+esc(a.apoderado):''}</small>
+          <small>${duracion(a)}${esc(a.edad)}${a.tabla?" <span class='pn-tag'>tabla</span>":''}${a.traje?" <span class='pn-tag'>traje</span>":''}${vSem==='todas'?' · '+a.semanas.map(x=>x.replace('s','S')).join(' '):''}${admin?' · '+esc(a.apoderado):''}</small>
           ${a.salud ? `<span class='pn-salud'>⚠︎ ${esc(a.salud)}</span>` : ''}
           ${a.emergencia ? `<small>Emergencia: ${esc(a.emergencia)} ${esc(a.emergenciaTel)}</small>` : ''}
           ${notaBtn(a.nombre)}${admin && a.nivel !== 'Federados' && vCambio !== a.nombre ? `<button class='pn-nv' data-cn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>
