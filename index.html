@@ -128,6 +128,7 @@
 .mc-cal__k--mia::before{background:none;box-shadow:inset 0 0 0 2px var(--aa-dk)}
 .mc-calmes__tabs{display:flex;gap:8px;margin-bottom:10px}
 .mc-cal__d--ver{background:#FDF4CF}.mc-cal__d--ver i{background:#FADF70;color:#3B2610}
+.mc-cal__d--hito{box-shadow:inset 0 0 0 2px #E9B93A}.mc-cal__d--hito i{background:#3B2610;color:#FADF70}
 .mc-calv .mc-calmes__tab.on{background:#FADF70;border-color:#FADF70;color:#3B2610}
 .mc-calv .mc-cal__det p+p{margin-top:6px}
 .mc-calmes__tabs:empty{display:none}
@@ -487,6 +488,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   }
   // Calendario Verano de la familia: los días que viene cada hijo/a (según sus semanas), su horario y qué le toca.
   const INI_VER = {s1:'2027-01-04', s2:'2027-01-11', s3:'2027-01-18', s4:'2027-01-25', s5:'2027-02-01', s6:'2027-02-08', s7:'2027-02-15', s8:'2027-02-22'};
+  const HITOS_VER = {'2027-01-04':['Inicio','¡Comenzamos enero!'], '2027-01-29':['Cierre','Cierre de mes'], '2027-02-01':['Inicio','¡Comenzamos febrero!'], '2027-02-26':['Cierre','Cierre de mes']};
   const sinT = x => String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   function semanasDe(k){
     const ids = [];
@@ -516,17 +518,20 @@ body:has(.mc-hero--login) .ap-top{display:none}
       for(let i=0;i<ini;i++) h += `<span></span>`;
       for(let dd=1; dd<=total; dd++){
         const f = pre + String(dd).padStart(2,'0'), cs = dias[f];
-        const et = cs ? ([...new Set(cs.map(c => corto(c.que)))].length === 1 ? corto(cs[0].que) : 'Surf') : '';
-        h += `<button class='mc-cal__d${cs?' mc-cal__d--ver':''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}' data-f='${f}'${cs?'':' disabled'}><b>${dd}</b>${cs?`<i>${et}</i>`:''}</button>`;
+        const hi = HITOS_VER[f];
+        const et = hi ? hi[0] : cs ? ([...new Set(cs.map(c => corto(c.que)))].length === 1 ? corto(cs[0].que) : 'Surf') : '';
+        h += `<button class='mc-cal__d${cs?' mc-cal__d--ver':''}${hi?' mc-cal__d--hito':''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}' data-f='${f}'${cs||hi?'':' disabled'}><b>${dd}</b>${et?`<i>${et}</i>`:''}</button>`;
       }
       h += `</div><div class='mc-cal__det' data-det><p class='mc-cal__tip'>Toca un día para ver el horario y qué le toca.</p></div>`;
+      const hs = Object.keys(HITOS_VER).filter(f => f.startsWith(pre));
+      if(hs.length) h += `<ul class='mc-cal__av'>${hs.map(f => { const dt = new Date(f + 'T12:00:00'); return `<li class='mc-cal__av--otro'><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()}:</b> ${HITOS_VER[f][1].replace(/^¡|!$/g,'').replace(/^C/, 'c')}</li>`; }).join('')}</ul>`;
       grid.innerHTML = h;
       tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.m === m));
       grid.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
         grid.querySelectorAll('.mc-cal__d--sel').forEach(x => x.classList.remove('mc-cal__d--sel')); b.classList.add('mc-cal__d--sel');
         const f = b.dataset.f, dt = new Date(f + 'T12:00:00');
-        grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b></p>` +
-          dias[f].map(c => `<p>${varios ? '<b>'+esc(c.nombre)+':</b> ' : ''}${esc(c.que)} · ${esc(c.horario)}</p>`).join('');
+        grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b>${HITOS_VER[f] ? ' · ' + HITOS_VER[f][1] : ''}</p>` +
+          (dias[f] || []).map(c => `<p>${varios ? '<b>'+esc(c.nombre)+':</b> ' : ''}${esc(c.que)} · ${esc(c.horario)}</p>`).join('');
       });
     };
     tabs.innerHTML = meses.length > 1 ? meses.map(m => `<button class='mc-calmes__tab' data-m='${m}'>${cap(MESES[m])}</button>`).join('') : '';
