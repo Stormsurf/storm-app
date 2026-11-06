@@ -127,6 +127,10 @@
 .mc-cal__k--skate::before{background:#E9B93A}.mc-cal__k--vac::before{background:#3E9B76}.mc-cal__k--no::before{background:#E2C5BB}
 .mc-cal__k--mia::before{background:none;box-shadow:inset 0 0 0 2px var(--aa-dk)}
 .mc-calmes__tabs{display:flex;gap:8px;margin-bottom:10px}
+.mc-rec{display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink)}
+.mc-rec__i{font-size:2.4rem;line-height:1;flex:none}
+.mc-rec b{display:block;font-size:1.55rem}.mc-rec small{display:block;font-size:1.3rem;opacity:.7;margin-top:2px}
+.mc-rec>span:nth-child(2){flex:1}.mc-rec__go{font-size:2.4rem;opacity:.35}
 .mc-cal__d--ver{background:#FDF4CF}.mc-cal__d--ver i{background:#FADF70;color:#3B2610}
 .mc-cal__d--hito{box-shadow:inset 0 0 0 2px #E9B93A}.mc-cal__d--hito i{background:#3B2610;color:#FADF70}
 .mc-calv .mc-calmes__tab.on{background:#FADF70;border-color:#FADF70;color:#3B2610}
@@ -466,6 +470,15 @@ body:has(.mc-hero--login) .ap-top{display:none}
     if(!xs.length) return '';
     return `<h2 class='mc-h2'>Informes de fin de mes</h2>` + xs.map((x,i) => `<details class='mc-card mc-inf'${i===0?' open':''}><summary><b>${esc(x.alumno.split(' ')[0])} · ${esc(cap(x.mes))}</b><small>Lo que logró este mes en Storm</small></summary><p>${esc(x.texto)}</p></details>`).join('');
   }
+  // ---------- Para las familias: recursos gratis de Storm ----------
+  const RECURSOS = [
+    {url:'/familias/preguntas-despues-del-surf.html', titulo:'Preguntas para después del surf', texto:'Para que "¿cómo te fue?" no termine en "bien".', icono:'💬'}
+  ];
+  function familiasCard(nivel, edad){
+    if(!RECURSOS.length) return '';
+    const q = (nivel ? 'nivel=' + encodeURIComponent(nivel) : '') + (edad ? (nivel ? '&' : '') + 'edad=' + encodeURIComponent(edad) : '');
+    return `<h2 class='mc-h2'>Para las familias</h2>` + RECURSOS.map(r => `<a class='mc-card mc-rec' href='${r.url}${q ? '?' + q : ''}'><span class='mc-rec__i'>${r.icono}</span><span><b>${esc(r.titulo)}</b><small>${esc(r.texto)}</small></span><span class='mc-rec__go'>›</span></a>`).join('');
+  }
   function renderVerano(d){
     let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<div class='mc-v'>`;
     if(d.aviso) h += `<div class='mc-aviso'><b>${esc(d.aviso.titulo)}</b><p>${esc(d.aviso.texto)}</p></div>`;
@@ -479,6 +492,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     });
     h += `<div class='mc-calmes mc-calv' data-calv hidden><h2 class='mc-h2'>Calendario Verano</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calv-tabs></div><div data-calv-grid></div></div></div>`;
     h += informesCard('Verano');
+    { const k = (d.hijos || [])[0] || {}; h += familiasCard(k.nivel, parseInt(k.edad, 10) || ''); }
     if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
     h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     app.innerHTML = h;
@@ -570,6 +584,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
       h += `<div class='mc-card mc-cta'><p><b>¿Toca pagar el próximo mes?</b>Elige el plan y sus clases quedan agendadas.</p><a class='mc-go mc-go--sm' href='${esc(PAY)}'>Pagar mensualidad</a></div>`;
     }
     h += `<div class='mc-calmes' data-calmes hidden><h2 class='mc-h2'>Calendario Academia</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calmes-tabs></div><div data-calmes-grid></div></div></div>`;
+    { const a = activos[0] || d.alumnos[0] || {}; h += familiasCard(a.grupo || '', parseInt(a.edad, 10) || ''); }
     if((d.eventos || []).length) h += eventosCard(d.eventos);
     if(pasados.length){
       h += `<details class='mc-old'><summary>Meses anteriores (${pasados.length})</summary>` + pasados.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('') + `</details>`;
