@@ -39,6 +39,20 @@
 .pn-msgs{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .pn-tabs{position:relative;display:flex;gap:4px;margin:18px -4px 0;padding:6px 4px;background:inherit}
 .pn-tab{flex:1;border:0;border-radius:999px;padding:10px 6px;font:inherit;font-size:1.4rem;font-weight:600;background:#fff;color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.pn-tabs{overflow-x:auto;scrollbar-width:none}.pn-tabs::-webkit-scrollbar{display:none}
+.pn-tab{flex:1 0 auto;padding-left:12px;padding-right:12px}
+.pn-nt{border:1px solid var(--line);background:#fff;border-radius:999px;font:inherit;font-size:1.2rem;font-weight:600;padding:5px 12px;margin:6px 6px 0 0;cursor:pointer;color:inherit}
+.pn-nt i{font-style:normal;display:inline-block;min-width:18px;margin-left:4px;border-radius:999px;background:#2C2C2B;color:#fff;font-size:1.05rem;line-height:18px;text-align:center}
+.pn-ntbox{flex-basis:100%;background:#F3F1EC;border-radius:14px;padding:12px;margin-top:6px}
+.pn-ntbox .pn-n{background:#fff;border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:1.35rem;line-height:1.45;white-space:pre-line}
+.pn-ntbox .pn-n small{display:block;font-size:1.15rem;opacity:.6;margin-bottom:2px}
+.pn-ntbox textarea{width:100%;box-sizing:border-box;min-height:70px;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:1.4rem;resize:vertical}
+.pn-ntbox .pn-ntgo{border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;font-size:1.3rem;padding:8px 16px;margin-top:6px;cursor:pointer}
+.pn-ntbox .pn-ntgo[disabled]{opacity:.5}
+.pn-ntbox .pn-sub{margin:0 0 8px}
+.pn-al{padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px}
+.pn-al:last-child{border-bottom:0}
+.pn-al b{font-size:1.5rem;font-weight:600}
 .pn-tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .pn-tab i{font-style:normal;display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--warn);color:#fff;font-size:1.1rem;line-height:18px}
 .pn-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:12px}
@@ -115,7 +129,7 @@
 .pn-day small{display:block;font-size:1.1rem;opacity:.65}
 .pn-vk{padding:11px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
 .pn-vk:last-child{border-bottom:0}
-.pn-vk{flex-wrap:wrap}
+.pn-vk{flex-wrap:wrap}.pn-vk>div:first-child{flex:1 1 0;min-width:0}
 .pn-nv{border:1px solid var(--line);background:#fff;border-radius:999px;font:inherit;font-size:1.2rem;font-weight:600;padding:5px 12px;margin-top:6px;cursor:pointer;color:inherit}
 .pn-nvbox{flex-basis:100%;background:#FFF7D6;border-radius:14px;padding:12px;margin-top:4px}
 .pn-nvbox p{margin:0 0 8px;font-size:1.3rem}
@@ -326,11 +340,12 @@
   function render(d){
     CL = [];
     LISTA = d.lista || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='lista'>Lista</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='lista'>Lista</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-        app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t); };
+        app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t);
+        if(t === 'alumnos') cargarNotas().then(pintarAlumnos); };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
@@ -339,7 +354,7 @@
     if(d.rol === 'instructor'){
       app.innerHTML = `<div class='pn-head'><div><h1>Clases Storm</h1><p>${esc(d.hoy)}</p></div><button class='pn-link' id='pn-out'>Salir</button></div>` + tabs(d) +
         `<div class='pn-pane' data-pane='clases'>` + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas.</p></div>`) +
-        `<p class='pn-note'>↪ = alumno que se cambió a esta clase.</p></div><div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
+        `<p class='pn-note'>↪ = alumno que se cambió a esta clase.</p></div><div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
       document.getElementById('pn-out').onclick = () => { borrar(); auth = null; login(); };
       tabsOn();
       return;
@@ -356,7 +371,7 @@
 
     h += `<div class='pn-pane' data-pane='clases'>` + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas en el Calendario.</p></div>`) + `</div>`;
 
-    h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
+    h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
     h += `<div class='pn-pane' data-pane='pagos'>
       <div class='pn-card'><h3>Faltan por pagar ${esc(M)}</h3>
         ${A.faltan.length ? A.faltan.map((f,fi) => `<div class='pn-row pn-row--wrap'><div><b>${f.alumnos.map(esc).join(', ')}</b><small>${esc(f.apoderado||'')}${f.monto?' · '+clp(f.monto):''}${f.recordado?"<span class='pn-tag'>recordatorio enviado</span>":''}</small></div>
@@ -401,6 +416,57 @@
   }
 
 
+  // ---------- Notas internas por alumno (solo el equipo; las familias no las ven) ----------
+  let NOTAS = null, ntAbierta = '', aGrupo = '';
+  const nk = s => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  const notasDe = nombre => NOTAS ? NOTAS.notas.filter(n => nk(n.alumno) === nk(nombre)) : [];
+  async function cargarNotas(forzar){
+    if(NOTAS && !forzar) return NOTAS;
+    try{ const r = await post(Object.assign({}, auth, {accion:'notas'})); NOTAS = r; }
+    catch(x){ NOTAS = NOTAS || {alumnos:[], notas:[], error: x.message}; }
+    return NOTAS;
+  }
+  const fechaCorta = f => { const m = String(f).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + '/' + (+m[2]) + '/' + m[1].slice(2) : f; };
+  // Botón "Notas" + cajita con las notas y para escribir una nueva.
+  function notaBtn(nombre){
+    const n = notasDe(nombre).length;
+    return ntAbierta === nombre ? '' : `<button class='pn-nt' data-nt='${esc(nombre)}'>📝 Notas${n ? `<i>${n}</i>` : ''}</button>`;
+  }
+  function notaBox(nombre, academia){
+    if(ntAbierta !== nombre) return '';
+    const ns = notasDe(nombre);
+    return `<div class='pn-ntbox' data-ntbox data-acad='${academia}'><p class='pn-sub'>Notas internas de <b>${esc(nombre.split(' ')[0])}</b>. Solo las ve el equipo Storm, nunca la familia.</p>
+      ${ns.map(n => `<div class='pn-n'><small>${esc(fechaCorta(n.fecha))} · ${esc(n.de || 'Storm')} · ${esc(n.academia)}</small>${esc(n.nota)}</div>`).join('') || ''}
+      <textarea placeholder='Cómo va, qué está trabajando, algo a tener en cuenta…'></textarea>
+      <button class='pn-ntgo'>Guardar nota</button><button class='pn-link' data-ntx style='margin-left:10px'>Cerrar</button></div>`;
+  }
+  function bindNotas(root, repintar){
+    root.querySelectorAll('[data-nt]').forEach(b => b.onclick = async () => { ntAbierta = b.dataset.nt; await cargarNotas(); repintar(); const t = root.querySelector('[data-ntbox] textarea'); if(t) t.focus(); });
+    root.querySelectorAll('[data-ntx]').forEach(b => b.onclick = () => { ntAbierta = ''; repintar(); });
+    root.querySelectorAll('[data-ntbox]').forEach(box => {
+      const go = box.querySelector('.pn-ntgo'), ta = box.querySelector('textarea');
+      go.onclick = async () => {
+        if(ta.value.trim().length < 2) return ta.focus();
+        go.disabled = true; go.textContent = 'Guardando…';
+        try{ NOTAS = await post(Object.assign({}, auth, {accion:'nota', alumno: ntAbierta, academia: box.dataset.acad, nota: ta.value.trim()})); repintar(); }
+        catch(x){ go.disabled = false; go.textContent = 'Guardar nota'; ta.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(x.message)}</p>`); }
+      };
+    });
+  }
+  function pintarAlumnos(){
+    const pane = app.querySelector("[data-pane='alumnos']"); if(!pane || !NOTAS) return;
+    const al = NOTAS.alumnos || [];
+    const grupos = [...new Set(al.map(a => a.grupo || 'Sin grupo'))];
+    const lista = aGrupo ? al.filter(a => (a.grupo || 'Sin grupo') === aGrupo) : al;
+    pane.innerHTML = (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
+      `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
+      <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}<span class='pn-count'>${lista.length}</span></h3>
+      <p class='pn-sub'>Anota cómo va cada alumno. Las notas son solo para el equipo.</p>
+      ${lista.map(a => `<div class='pn-al'><div><b>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div>${notaBtn(a.nombre)}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
+    pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
+    bindNotas(pane, pintarAlumnos);
+  }
+
   // ---------- Academia de Verano ----------
   let VER = null, vSem = '', vNiv = '', vCambio = '', vNuevo = '', vMsg = '';
   // Selector Academia Anual / Academia de Verano (en enero y febrero parte en Verano).
@@ -428,6 +494,7 @@
       const r = await (await fetch(API_VERANO, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({}, auth, {accion:'panel'}))})).json();
       if(!r.ok) throw new Error(r.error || 'No se pudo cargar Verano.');
       VER = r; pintarVerano(pane);
+      cargarNotas().then(() => pintarVerano(pane));
     }catch(x){ pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
   }
   function pintarVerano(pane){
@@ -452,12 +519,12 @@
           <small>${esc(a.edad)}${a.tabla?" <span class='pn-tag'>tabla</span>":''}${a.traje?" <span class='pn-tag'>traje</span>":''}${vSem==='todas'?' · '+a.semanas.map(x=>x.replace('s','S')).join(' '):''}${admin?' · '+esc(a.apoderado):''}</small>
           ${a.salud ? `<span class='pn-salud'>⚠︎ ${esc(a.salud)}</span>` : ''}
           ${a.emergencia ? `<small>Emergencia: ${esc(a.emergencia)} ${esc(a.emergenciaTel)}</small>` : ''}
-          ${admin && a.nivel !== 'Federados' && vCambio !== a.nombre ? `<button class='pn-nv' data-cn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>
+          ${notaBtn(a.nombre)}${admin && a.nivel !== 'Federados' && vCambio !== a.nombre ? `<button class='pn-nv' data-cn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>
           ${admin && wa(a.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(a.telefono)}'>WhatsApp</a>` : ''}
           ${vCambio === a.nombre ? `<div class='pn-nvbox'><p>¿A qué nivel pasa <b>${esc(a.nombre.split(' ')[0])}</b>? Hoy está en ${esc(a.nivel)}.</p>
             <div class='pn-nvops'>${NIV.filter(x => x !== 'Federados').map(x => `<button data-nv='${x}' class='${x===a.nivel?'act':''}${x===vNuevo?' on':''}'${x===a.nivel?' disabled':''}>${x}</button>`).join('')}</div>
             <label><input type='checkbox' id='pn-nvav' checked> Avisar a la familia en la app</label>
-            <button class='pn-nvgo' id='pn-nvgo'${vNuevo?'':' disabled'}>Guardar</button><button class='pn-link' id='pn-nvx'>Cancelar</button></div>` : ''}</div>`).join('')}</div>`; }).join('')
+            <button class='pn-nvgo' id='pn-nvgo'${vNuevo?'':' disabled'}>Guardar</button><button class='pn-link' id='pn-nvx'>Cancelar</button></div>` : ''}${notaBox(a.nombre, 'Verano')}</div>`).join('')}</div>`; }).join('')
         : `<p class='pn-empty'>${vNiv ? 'No hay niños de '+esc(vNiv)+' esta semana.' : 'Todavía no hay niños inscritos esta semana.'}</p>`}
     </div>`;
     if(admin){
@@ -468,6 +535,7 @@
     pane.innerHTML = h;
     pane.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { vSem = b.dataset.vs; pintarVerano(pane); });
     pane.querySelectorAll('[data-vn]').forEach(b => b.onclick = () => { vNiv = b.dataset.vn; pintarVerano(pane); });
+    bindNotas(pane, () => pintarVerano(pane));
     pane.querySelectorAll('[data-cn]').forEach(b => b.onclick = () => { vCambio = b.dataset.cn; vNuevo = ''; vMsg = ''; pintarVerano(pane); });
     pane.querySelectorAll('[data-nv]').forEach(b => b.onclick = () => { vNuevo = b.dataset.nv; const av = pane.querySelector('#pn-nvav').checked; pintarVerano(pane); pane.querySelector('#pn-nvav').checked = av; });
     const nx = pane.querySelector('#pn-nvx'); if(nx) nx.onclick = () => { vCambio = ''; vNuevo = ''; pintarVerano(pane); };
