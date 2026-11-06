@@ -12,7 +12,7 @@
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.5}
 button{font:inherit;color:inherit;cursor:pointer}
-.wrap{max-width:520px;margin:0 auto;padding:14px 16px 40px}
+.wrap{max-width:520px;margin:0 auto;padding:14px 24px 44px}
 .top{display:flex;align-items:center;justify-content:space-between;padding:4px 0 10px}
 .top img{width:84px;display:block}
 .back{background:none;border:0;padding:6px 0;font-size:14px;color:var(--dk);display:flex;align-items:center;gap:4px}
@@ -92,6 +92,8 @@ h1{font-weight:500;font-size:30px;line-height:1.12;margin:8px 0 8px;letter-spaci
 .why p{margin:0 0 12px;font-size:14px;color:#4a4947}
 .why a{color:var(--dk)}
 .sign{margin-top:22px;text-align:center;font-size:13px;color:var(--mute)}
+</style>
+<style>
 .modes{display:grid;gap:10px;margin-top:20px}
 .mode{display:flex;gap:14px;align-items:center;text-align:left;width:100%;background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:15px 16px;transition:border-color .2s}
 .mode.on{border-color:var(--aa);box-shadow:0 6px 20px rgba(45,110,148,.12)}
@@ -142,6 +144,7 @@ h1{font-weight:500;font-size:30px;line-height:1.12;margin:8px 0 8px;letter-spaci
 .water .body{position:absolute;left:0;right:0;top:18px;bottom:-60px;background:linear-gradient(#61A1C8,#2d6e94)}
 @keyframes drift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .center{z-index:2;text-shadow:0 1px 8px rgba(10,30,45,.45)}
+.vis .stage{margin:4px 0 0}
 </style>
 </head>
 <body>
@@ -195,8 +198,8 @@ var MODES=[
   why:'Para tener calma y control en una serie de olas seguidas. El aguante final tiene un tope según la edad: el objetivo es la calma, no el récord.',
   apnea:true,
   blocks:[{k:'cycle',p:[6,2,12,2],d:120,l:'Ciclo 1'},{k:'cycle',p:[4,2,4,2],d:120,l:'Ciclo 2'},{k:'rounds',p:[6,2,6,2],n:2,l:'Ciclo 3'},{k:'max',inh:6,cap:30,l:'Aguanta con aire',key:'in'}]},
- {id:'ola',ic:'eye',name:'Visualiza tu mejor ola',tag:'Visualización · 2 min',min:'2 min',
-  why:'Ensayar la ola en la mente antes de surfearla. Con los ojos cerrados: una voz te guía paso a paso.',
+ {id:'ola',ic:'eye',name:'Visualiza tu mejor ola',tag:'Visualización guiada · 3 min',min:'3 min',audio:'audio/visualiza-tu-mejor-ola.mp3',
+  why:'Ensayar la ola en la mente antes de surfearla. Con los ojos cerrados, guiado por la voz de Isidora.',
   vis:[
    'Cierra los ojos. Respira profundo tres veces y suelta los hombros.',
    'Estás sentado en tu tabla, en el line up. Sientes el agua fría, el viento y el sol en la cara.',
@@ -207,8 +210,8 @@ var MODES=[
    {t:'Termina la ola. Repite en tu cabeza:',s:'"Estoy preparado. Esta ola es mía."'},
    'Respira profundo y abre los ojos cuando estés listo.'
   ]},
- {id:'revolcon',ic:'wave',name:'Prepárate para el revolcón',tag:'Visualización · 2 min',min:'2 min',
-  why:'El revolcón es parte del surf. Si la mente ya lo vivió, el cuerpo reacciona con calma. Con los ojos cerrados: una voz te guía.',
+ {id:'revolcon',ic:'wave',name:'Prepárate para el revolcón',tag:'Visualización guiada · 3 min',min:'3 min',audio:'audio/preparate-para-el-revolcon.mp3',
+  why:'El revolcón es parte del surf. Si la mente ya lo vivió, el cuerpo reacciona con calma. Guiado por la voz de Isidora.',
   vis:[
    'Cierra los ojos y respira profundo varias veces.',
    'Estás en el mar. Una ola grande viene hacia ti y decides enfrentarla.',
@@ -230,15 +233,34 @@ function $(id){return document.getElementById(id)}
 function svg(k){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+IC[k]+'</svg>'}
 function fmt(s){s=Math.max(0,Math.round(s));return s<60?s+' s':Math.floor(s/60)+':'+('0'+s%60).slice(-2)}
 function vib(){try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
+// Sonidos de guía. Si existen grabaciones (CLIPS), se usan; si no, tonos suaves.
+var CLIPS={inhala:'audio/voz-inhala.mp3',manten:'audio/voz-manten.mp3',exhala:'audio/voz-exhala.mp3',aguanta:'audio/voz-manten.mp3'};var AC=null;
+function tone(f1,f2,dur,vol){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();var t=AC.currentTime,o=AC.createOscillator(),o2=AC.createOscillator(),g=AC.createGain();
+  o.type='sine';o2.type='sine';o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+dur);o2.frequency.setValueAtTime(f1*1.5,t);o2.frequency.exponentialRampToValueAtTime(f2*1.5,t+dur);
+  var g2=AC.createGain();g2.gain.value=.25;o2.connect(g2);g2.connect(g);o.connect(g);g.connect(AC.destination);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.25);g.gain.exponentialRampToValueAtTime(0.0001,t+dur+.6);
+  o.start(t);o2.start(t);o.stop(t+dur+.7);o2.stop(t+dur+.7)}catch(e){}}
+var PRE={};try{Object.keys(CLIPS).forEach(function(k){var a=new Audio(CLIPS[k]);a.preload='auto';PRE[k]=a})}catch(e){}
+function cue(k){
+  if(!voiceOn)return;
+  if(CLIPS[k]){try{var a=PRE[k]||new Audio(CLIPS[k]);a.currentTime=0;a.play()}catch(e){}return}
+  var W={inhala:'Inhala',exhala:'Exhala',manten:'Mantén',aguanta:'Aguanta'}[k];if(W)speak(W);
+}
 var voiceOn=true,VOZ=null;
 try{voiceOn=localStorage.getItem('st-voz')!=='0'}catch(e){}
-function pickVoice(){try{var v=speechSynthesis.getVoices().filter(function(x){return /^es/i.test(x.lang)});
-  var pref=['es-CL','es-419','es-MX','es-US','es-AR','es-ES'];for(var k=0;k<pref.length;k++){var f=v.filter(function(x){return x.lang.replace('_','-')===pref[k]});if(f.length){VOZ=f[0];return}}VOZ=v[0]||null}catch(e){}}
+function pickVoice(){try{var v=speechSynthesis.getVoices().filter(function(x){return /^es/i.test(x.lang)});if(!v.length)return;
+  var sc=function(x){var n=x.name,l=x.lang.replace('_','-'),s=0;
+    if(/premium|enhanced|mejorad|natural|neural|online/i.test(n))s+=50;
+    if(/google/i.test(n))s+=30;
+    if(/paulina|m[oó]nica|marisol|helena|elvira|dalia|camila|isabela|sabina|ximena|francisca/i.test(n))s+=20;
+    if(/eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|jorge|diego|juan|pablo|carlos|raul|alvaro/i.test(n))s-=40;
+    s+=({'es-CL':8,'es-419':7,'es-US':6,'es-MX':6,'es-AR':5,'es-ES':3})[l]||0;if(x.localService===false)s+=5;return s};
+  v.sort(function(a,b){return sc(b)-sc(a)});VOZ=v[0]}catch(e){}}
 try{pickVoice();speechSynthesis.onvoiceschanged=pickVoice}catch(e){}
 function hush(){try{speechSynthesis.cancel()}catch(e){}}
 function speak(t,cb){
   if(!voiceOn||!('speechSynthesis' in window))return false;
-  try{hush();var u=new SpeechSynthesisUtterance(t);u.lang=VOZ?VOZ.lang:'es-CL';if(VOZ)u.voice=VOZ;u.rate=.86;u.pitch=1;
+  try{hush();var u=new SpeechSynthesisUtterance(t);u.lang=VOZ?VOZ.lang:'es-CL';if(VOZ)u.voice=VOZ;u.rate=t.length<9?.72:.86;u.pitch=1.04;u.volume=.9;
     var done=false,fin=function(){if(done)return;done=true;cb&&cb()};
     u.onend=fin;u.onerror=fin;setTimeout(fin,Math.max(4000,t.length*110));
     speechSynthesis.speak(u);return true}catch(e){return false}
@@ -248,7 +270,7 @@ function addRec(r){try{var a=recs();a.unshift(r);localStorage.setItem('st-apnea'
 function recHtml(){var a=recs();if(!a.length)return '<div class="rec">Aquí van a quedar tus tiempos para que veas cómo avanzas.</div>';
   var bi=0,bo=0;a.forEach(function(r){bi=Math.max(bi,r.in||0);bo=Math.max(bo,r.out||0)});
   return '<div class="rec"><div class="row"><span>Récord con aire</span><b>'+fmt(bi)+'</b></div><div class="row"><span>Récord sin aire</span><b>'+fmt(bo)+'</b></div>'+a.slice(0,3).map(function(r){return '<div class="row" style="opacity:.75"><span>'+r.f+'</span><span>'+fmt(r.in||0)+' · '+fmt(r.out||0)+'</span></div>'}).join('')+'</div>'}
-function stopRun(){hush();if(run){clearInterval(run.t);clearTimeout(run.v);run=null}}
+function stopRun(){hush();if(AUD){try{AUD.pause()}catch(e){};AUD=null}if(run){clearInterval(run.t);clearTimeout(run.v);run=null}}
 function renderModes(){$('modes').innerHTML=MODES.map(function(m,k){return '<button type="button" class="mode'+(k===cur?' on':'')+'" data-k="'+k+'"><span class="ic">'+svg(m.ic)+'</span><span><b>'+m.name+'</b><small>'+m.why.split('.')[0]+'.</small></span><span class="min">'+m.min+'</span></button>'}).join('')}
 function renderTrainer(){
   stopRun();var m=MODES[cur];
@@ -283,7 +305,7 @@ function startBreath(m){
       $('ph').textContent=names[phase];$('ct').textContent=left;
       $('sb').textContent=b.k==='cycle'?(b.l+' · quedan '+fmt(limit-blockEl)):(b.l+' · ronda '+(cycles+1)+' de '+b.n);
     }
-    function enter(){vib();left=pat[phase];if(voiceOn)speak(names[phase].toLowerCase());if(phase===0)setBall(1,pat[0]);if(phase===2)setBall(.42,pat[2]);show()}
+    function enter(){vib();left=pat[phase];if(voiceOn)cue(['inhala','manten','exhala','manten'][phase]);if(phase===0)setBall(1,pat[0]);if(phase===2)setBall(.42,pat[2]);show()}
     enter();
     run={t:setInterval(function(){
       left--;blockEl++;done++;$('pb').style.width=Math.min(100,done/total*100)+'%';
@@ -296,10 +318,10 @@ function startBreath(m){
   function maxHold(b){
     var first=b.inh||b.exh,left=first;
     $('ph').textContent=b.inh?'Inhala profundo':'Bota todo el aire';$('ct').textContent=left;$('sb').textContent=b.l;
-    setBall(b.inh?1:.42,first);vib();if(voiceOn)speak(b.inh?'Inhala profundo':'Bota todo el aire');
+    setBall(b.inh?1:.42,first);vib();cue(b.inh?'inhala':'exhala');
     run={t:setInterval(function(){
       left--;if(left>0){$('ct').textContent=left;return}
-      clearInterval(run.t);vib();if(voiceOn)speak('Aguanta');
+      clearInterval(run.t);vib();if(voiceOn)cue('aguanta');
       var t0=Date.now();$('ph').textContent='Aguanta';$('sb').textContent='Tranquilo, hasta '+b.cap+' segundos o hasta que necesites respirar';
       $('ctrl').innerHTML='<button type="button" class="hold" id="hold">Necesito respirar</button>';
       run={t:setInterval(function(){var e=(Date.now()-t0)/1000;$('ct').textContent=fmt(e);if(b.cap&&e>=b.cap)$('hold').click()},200)};
@@ -318,7 +340,22 @@ function startBreath(m){
   }
   nextBlock();
 }
+var AUD=null;
+var STAGE='<div class="stage" id="stg"><div class="ripple"></div><div class="ripple"></div><div class="ripple"></div><div class="sea"><div class="water" id="ball"><svg viewBox="0 0 460 40" preserveAspectRatio="none" class="w2"><path d="M0 20 Q 28.75 -6 57.5 20 T 115 20 T 172.5 20 T 230 20 T 287.5 20 T 345 20 T 402.5 20 T 460 20 V40 H0z"/></svg><svg viewBox="0 0 460 40" preserveAspectRatio="none" class="w1"><path d="M0 20 Q 28.75 -6 57.5 20 T 115 20 T 172.5 20 T 230 20 T 287.5 20 T 345 20 T 402.5 20 T 460 20 V40 H0z"/></svg><div class="body"></div></div></div>';
+function startAudio(m){
+  stopRun();var a=AUD=new Audio(m.audio);a.preload='auto';
+  var c=$('trBody').querySelector('.ctrl');
+  var vis=$('trBody').querySelector('.vis');vis.innerHTML=STAGE+'<div class="center"><div class="ph" id="ph" style="font-size:20px;font-weight:500">Cierra los ojos</div><div class="sub" id="sb">y escucha</div></div></div>'+'<p id="vp" style="display:none"></p>';
+  var inh=true,loop=function(){if(AUD!==a)return;setBall(inh?1:.42,inh?5:7);inh=!inh;a._lp=setTimeout(loop,inh?7000:5000)};setTimeout(loop,400);
+  c.innerHTML='<button type="button" class="stop" id="stp">Parar</button><button type="button" class="go" id="pz">Pausa</button>';
+  $('stp').onclick=function(){a.pause();clearTimeout(a._lp);AUD=null;renderTrainer()};
+  $('pz').onclick=function(){if(a.paused){a.play();this.textContent='Pausa'}else{a.pause();this.textContent='Seguir'}};
+  a.ontimeupdate=function(){if(a.duration)$('pb').style.width=(a.currentTime/a.duration*100)+'%'};
+  a.onended=function(){clearTimeout(a._lp);var ph=$('ph');if(ph){ph.textContent='Listo';$('sb').textContent='Ahora sí, al agua'}setBall(.6,3);$('pb').style.width='100%';c.innerHTML='<button type="button" class="go" id="go">Otra vez</button>';$('go').onclick=function(){startAudio(m)}};
+  var p=a.play();if(p&&p.catch)p.catch(function(){var s=$('sb');if(s)s.textContent='Toca Seguir para escuchar';$('pz').textContent='Seguir'});
+}
 function startVis(m){
+  if(m.audio){startAudio(m);return}
   stopRun();var i=0,gen=(run={t:0,v:0,g:Math.random()}).g;
   var c=$('trBody').querySelector('.ctrl');
   c.innerHTML='<button type="button" class="stop" id="stp">Parar</button><button type="button" class="go" id="nx">Siguiente</button>';
