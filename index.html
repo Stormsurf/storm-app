@@ -492,7 +492,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   // Viernes especiales de enero (charla del día o actividad con todo el grupo). todos: también para Federados.
   const ESPECIAL_VER = {'2027-01-08':{et:'Charla', txt:'Charla con Carolyne Vitta: windsurfista, entrenadora y ex Cirque du Soleil'},
     '2027-01-15':{et:'Limpieza', txt:'Limpieza de playa con todo el grupo', todos:true},
-    '2027-01-22':{et:'Charla', txt:'Charla con Lucas Lijesthrom, nutricionista deportivo'}};
+    '2027-01-22':{et:'Charla', txt:'Charla con Lucas Liljesthrom, nutricionista deportivo'}};
   const especialDe = (f, cs) => { const e = ESPECIAL_VER[f]; return e && (e.todos || (cs || []).some(c => /charla/i.test(c.que))) ? e : null; };
   const sinT = x => String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   function semanasDe(k){
