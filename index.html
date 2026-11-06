@@ -152,7 +152,8 @@ body:has(.mc-hero--login) .ap-top{display:none}
 .mc-big{display:block;width:min(260px,66%);height:auto;margin:14px auto 6px}
 .mc-dos{display:flex;justify-content:center;align-items:center;gap:22px;margin:18px 0 4px}
 .mc-dos img{height:52px;width:auto;max-width:46%;object-fit:contain;display:block}
-.mc-alogo{display:block;height:70px;width:auto;max-width:80%;object-fit:contain;margin:20px auto 0}
+.mc-hero img.mc-alogo{display:block;height:84px;width:auto;max-width:80%;object-fit:contain;margin:4px auto 0}
+.mc-hero img.mc-alogo[hidden]{display:none}
 .mc-v{--v-wax:#FADF70;--v-sea:#4A6B70;--v-ink:#3B2610}
 .mc-v .mc-aviso{background:var(--v-wax);border:2px solid var(--v-ink);border-radius:18px;padding:16px 18px;margin-top:14px;color:var(--v-ink)}
 .mc-v .mc-aviso b{display:block;font-family:var(--font-heading-family);font-size:2rem;font-weight:600;margin-bottom:4px}
@@ -172,6 +173,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   <div class='storm-wrap mc'>
     <div class='mc-hero'>
       <img class='mc-storm' src='/img/storm-logo.png' alt='Storm Surf Academy' width='400' height='216'>
+      <img class='mc-alogo' id='mc-alogo' alt='' hidden>
       <h1>Mi clase</h1>
       <div class='mc-lead'><p>Revisa las clases de tus hijos, sus días y lo que tienes pagado.</p></div>
     </div>
@@ -439,6 +441,8 @@ body:has(.mc-hero--login) .ap-top{display:none}
     const box = document.querySelector('.mc-hero'), img = box && box.querySelector('img'); if(!img) return;
     const v = vista === 'verano';
     box.classList.toggle('mc-hero--login', !auth);
+    const al = document.getElementById('mc-alogo');
+    if(al){ al.hidden = !auth || !vista; if(auth && vista){ al.src = v ? LOGO_VERANO : LOGO_ANUAL; al.alt = v ? 'Academia de Verano Storm' : 'Academia Anual Storm'; } }
     const lead = box.querySelector('.mc-lead');
     if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = !auth ? '<p>Todo lo de tus hijos en Storm: Academia Anual y Academia de Verano.</p>' : v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
   }
@@ -450,7 +454,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     if(vista === 'verano') renderVerano(D.verano); else render(D.anual);
   }
   function renderVerano(d){
-    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<img class='mc-alogo' src='${LOGO_VERANO}' alt='Academia de Verano Storm'><div class='mc-v'>`;
+    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<div class='mc-v'>`;
     if(d.aviso) h += `<div class='mc-aviso'><b>${esc(d.aviso.titulo)}</b><p>${esc(d.aviso.texto)}</p></div>`;
     d.hijos.forEach(k => {
       h += `<div class='mc-card'><div class='mc-kid'><div><h3>${esc(k.nombre)}</h3></div></div>
@@ -467,7 +471,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
   }
   function render(d){
-    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `<img class='mc-alogo' src='${LOGO_ANUAL}' alt='Academia Anual Storm'>` + msg;
+    let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `` + msg;
     const activos = d.alumnos.filter(a=>a.futuro), pasados = d.alumnos.filter(a=>!a.futuro);
     if(!d.alumnos.length){
       h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
