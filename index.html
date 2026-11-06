@@ -493,8 +493,8 @@ body:has(.mc-hero--login) .ap-top{display:none}
     });
     h += `<div class='mc-calmes mc-calv' data-calv hidden><h2 class='mc-h2'>Calendario Verano</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calv-tabs></div><div data-calv-grid></div></div></div>`;
     h += informesCard('Verano');
-    { const k = (d.hijos || [])[0] || {}; h += familiasCard(k.nivel, parseInt(k.edad, 10) || ''); }
     if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
+    { const k = (d.hijos || [])[0] || {}; h += familiasCard(k.nivel, parseInt(k.edad, 10) || ''); }
     h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     app.innerHTML = h;
     bindSw();
@@ -504,9 +504,9 @@ body:has(.mc-hero--login) .ap-top{display:none}
   // Calendario Verano de la familia: los días que viene cada hijo/a (según sus semanas), su horario y qué le toca.
   const INI_VER = {s1:'2027-01-04', s2:'2027-01-11', s3:'2027-01-18', s4:'2027-01-25', s5:'2027-02-01', s6:'2027-02-08', s7:'2027-02-15', s8:'2027-02-22'};
   const HITOS_VER = {'2027-01-04':['Inicio','¡Comenzamos enero!'], '2027-01-29':['Cierre','Cierre de mes'], '2027-02-01':['Inicio','¡Comenzamos febrero!'], '2027-02-26':['Cierre','Cierre de mes']};
-  // Viernes especiales de enero (charla del día o actividad con todo el grupo). todos: también para Federados.
+  // Viernes especiales de enero (charla del día o actividad con todo el grupo). Federados no (su viernes es video análisis).
   const ESPECIAL_VER = {'2027-01-08':{et:'Charla', txt:'Charla con Carolyne Vitta: windsurfista, entrenadora y ex Cirque du Soleil'},
-    '2027-01-15':{et:'Limpieza', txt:'Limpieza de playa con todo el grupo', todos:true},
+    '2027-01-15':{et:'Limpieza', txt:'Limpieza de playa con todo el grupo'},
     '2027-01-22':{et:'Charla', txt:'Charla con Lucas Liljesthrom, nutricionista deportivo'}};
   const especialDe = (f, cs) => { const e = ESPECIAL_VER[f]; return e && (e.todos || (cs || []).some(c => /charla/i.test(c.que))) ? e : null; };
   const sinT = x => String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
