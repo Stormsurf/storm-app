@@ -127,6 +127,9 @@
 .mc-cal__k--skate::before{background:#E9B93A}.mc-cal__k--vac::before{background:#3E9B76}.mc-cal__k--no::before{background:#E2C5BB}
 .mc-cal__k--mia::before{background:none;box-shadow:inset 0 0 0 2px var(--aa-dk)}
 .mc-calmes__tabs{display:flex;gap:8px;margin-bottom:10px}
+.mc-cal__d--ver{background:#FDF4CF}.mc-cal__d--ver i{background:#FADF70;color:#3B2610}
+.mc-calv .mc-calmes__tab.on{background:#FADF70;border-color:#FADF70;color:#3B2610}
+.mc-calv .mc-cal__det p+p{margin-top:6px}
 .mc-calmes__tabs:empty{display:none}
 .mc-calmes__tab{flex:1;padding:9px 10px;border:1px solid rgba(44,44,43,.16);border-radius:10px;background:#fff;font:inherit;font-size:1.4rem;cursor:pointer}
 .mc-calmes__tab.on{background:var(--aa);border-color:var(--aa);color:#fff}
@@ -473,12 +476,64 @@ body:has(.mc-hero--login) .ap-top{display:none}
         ${k.dias.length?`<p class='mc-lbl'>Su semana</p>${k.dias.map(x=>`<div class='mc-dia${/^sin\b/i.test(x.que)?' off':''}'><b>${esc(x.dia)}</b><span>${esc(x.que)}</span></div>`).join('')}`:''}
       </div>`;
     });
+    h += `<div class='mc-calmes mc-calv' data-calv hidden><h2 class='mc-h2'>Calendario Verano</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calv-tabs></div><div data-calv-grid></div></div></div>`;
     h += informesCard('Verano');
     if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
     h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     app.innerHTML = h;
     bindSw();
+    calendarioVerano(d.hijos);
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
+  }
+  // Calendario Verano de la familia: los días que viene cada hijo/a (según sus semanas), su horario y qué le toca.
+  const INI_VER = {s1:'2027-01-04', s2:'2027-01-11', s3:'2027-01-18', s4:'2027-01-25', s5:'2027-02-01', s6:'2027-02-08', s7:'2027-02-15', s8:'2027-02-22'};
+  const sinT = x => String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  function semanasDe(k){
+    const ids = [];
+    (k.semanas || []).forEach(t => { const m = String(t).match(/semana\s*(\d)/i);
+      if(m) ids.push('s'+m[1]); else if(/enero/i.test(t)) ids.push('s1','s2','s3','s4'); else if(/febrero/i.test(t)) ids.push('s5','s6','s7','s8'); });
+    return ids;
+  }
+  const corto = q => { const t = sinT(q).replace(/^surf\s*\+\s*/, '');
+    return /skate/.test(t) ? 'Skate' : /yoga/.test(t) ? 'Yoga' : /arte/.test(t) ? 'Arte' : /juego/.test(t) ? 'Juegos' : /charla/.test(t) ? 'Charla' : /video/.test(t) ? 'Video' : /entren/.test(t) ? 'Entreno' : 'Surf'; };
+  function calendarioVerano(hijos){
+    const box = app.querySelector('[data-calv]'); if(!box) return;
+    const dias = {}, iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    (hijos || []).forEach(k => semanasDe(k).forEach(id => {
+      const ini = new Date(INI_VER[id] + 'T12:00:00');
+      for(let i=0;i<5;i++){ const dt = new Date(ini); dt.setDate(ini.getDate()+i);
+        const x = (k.dias || []).find(z => sinT(z.dia) === sinT(DSEM[dt.getDay()]));
+        if(!x || !x.que || /^sin\b/i.test(x.que)) continue;
+        (dias[iso(dt)] = dias[iso(dt)] || []).push({nombre: String(k.nombre).split(' ')[0], que: x.que, horario: k.horario || '9:00'}); }
+    }));
+    const meses = [0,1].filter(m => Object.keys(dias).some(f => f.startsWith('2027-0'+(m+1))));
+    if(!meses.length) return;
+    const tabs = box.querySelector('[data-calv-tabs]'), grid = box.querySelector('[data-calv-grid]');
+    const hoyIso = iso(new Date()), varios = (hijos || []).length > 1;
+    const ver = m => {
+      const y = 2027, ini = (new Date(y, m, 1).getDay() + 6) % 7, total = new Date(y, m+1, 0).getDate(), pre = y + '-0' + (m+1) + '-';
+      let h = `<div class='mc-cal__sem'>${['L','M','M','J','V','S','D'].map(x=>`<span>${x}</span>`).join('')}</div><div class='mc-cal__grid'>`;
+      for(let i=0;i<ini;i++) h += `<span></span>`;
+      for(let dd=1; dd<=total; dd++){
+        const f = pre + String(dd).padStart(2,'0'), cs = dias[f];
+        const et = cs ? ([...new Set(cs.map(c => corto(c.que)))].length === 1 ? corto(cs[0].que) : 'Surf') : '';
+        h += `<button class='mc-cal__d${cs?' mc-cal__d--ver':''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}' data-f='${f}'${cs?'':' disabled'}><b>${dd}</b>${cs?`<i>${et}</i>`:''}</button>`;
+      }
+      h += `</div><div class='mc-cal__det' data-det><p class='mc-cal__tip'>Toca un día para ver el horario y qué le toca.</p></div>`;
+      grid.innerHTML = h;
+      tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.m === m));
+      grid.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+        grid.querySelectorAll('.mc-cal__d--sel').forEach(x => x.classList.remove('mc-cal__d--sel')); b.classList.add('mc-cal__d--sel');
+        const f = b.dataset.f, dt = new Date(f + 'T12:00:00');
+        grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b></p>` +
+          dias[f].map(c => `<p>${varios ? '<b>'+esc(c.nombre)+':</b> ' : ''}${esc(c.que)} · ${esc(c.horario)}</p>`).join('');
+      });
+    };
+    tabs.innerHTML = meses.length > 1 ? meses.map(m => `<button class='mc-calmes__tab' data-m='${m}'>${cap(MESES[m])}</button>`).join('') : '';
+    tabs.querySelectorAll('button').forEach(b => b.onclick = () => ver(+b.dataset.m));
+    box.querySelector('.mc-h2').textContent = meses.length > 1 ? 'Calendario Verano' : 'Calendario de ' + MESES[meses[0]];
+    const hoyM = new Date().getFullYear() === 2027 ? new Date().getMonth() : -1;
+    ver(meses.includes(hoyM) ? hoyM : meses[0]); box.hidden = false;
   }
   function render(d){
     let h = `<div class='mc-top'><span>Hola 👋 <b>${esc(auth.email)}</b></span><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + `` + msg;
