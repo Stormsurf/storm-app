@@ -197,7 +197,10 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const clp = n => '$' + Math.round(n).toLocaleString('es-CL');
   const guardar = s => { try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(_){} };
   const leer = () => { try{ return JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(_){ return null; } };
-  const borrar = () => { try{ localStorage.removeItem(KEY); }catch(_){} };
+  const borrar = () => { try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+'-datos'); }catch(_){} };
+  // Datos guardados de la última visita: se muestran al tiro mientras llega lo nuevo.
+  const leerDatos = () => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); return c && auth && c.email === auth.email ? c.D : null; }catch(_){ return null; } };
+  const guardarDatos = d => { try{ localStorage.setItem(KEY+'-datos', JSON.stringify({email: auth.email, D: d})); }catch(_){} };
 
   // Sesión: 1) vuelta del pago (link firmado), 2) la guardada en este navegador, 3) cuenta de la tienda.
   let auth = null;
@@ -529,21 +532,30 @@ body:has(.mc-hero--login) .ap-top{display:none}
   }
   async function load(){
     if(!auth) return login();
-    app.innerHTML = `<div class='mc-skel'></div><div class='mc-skel'></div>`;
+    const viejo = q.get('pago') ? null : leerDatos();
+    const elegirVista = () => {
+      let pref = ''; try{ pref = localStorage.getItem(VISTA) || ''; }catch(_){}
+      const m = new Date().getMonth();
+      vista = !hayVerano() ? 'anual' : !hayAnual() ? 'verano' : (vista || pref || (m < 2 ? 'verano' : 'anual'));
+      if(q.get('pago')) vista = hayAnual() ? 'anual' : vista;
+    };
+    if(viejo){ D = viejo; elegirVista(); mostrar(); }
+    else app.innerHTML = `<div class='mc-skel'></div><div class='mc-skel'></div>`;
     try{
       const ver = API_VERANO ? post(Object.assign({accion:'mi-verano'}, auth), API_VERANO).catch(() => null) : Promise.resolve(null);
       const anu = call({accion:'mis-clases'}).catch(x => { if(/sesión|expir/i.test(x.message)) throw x; return null; });
       const [a, v] = await Promise.all([anu, ver]);
-      D = {anual: a || {alumnos:[]}, verano: v};
-      if(!a && !hayVerano()) throw new Error('No pudimos cargar tus clases. Intenta de nuevo en un rato.');
-      let pref = ''; try{ pref = localStorage.getItem(VISTA) || ''; }catch(_){}
-      const m = new Date().getMonth();
-      vista = !hayVerano() ? 'anual' : !hayAnual() ? 'verano' : (pref || (m < 2 ? 'verano' : 'anual'));
-      if(q.get('pago')) vista = hayAnual() ? 'anual' : vista;
+      if(!a && !(v && v.hijos && v.hijos.length)){ if(viejo) return; throw new Error('No pudimos cargar tus clases. Intenta de nuevo en un rato.'); }
+      const nuevo = {anual: a || {alumnos:[]}, verano: v};
+      guardarDatos(nuevo);
+      if(viejo && JSON.stringify(viejo) === JSON.stringify(nuevo)) return;
+      D = nuevo;
+      elegirVista();
       mostrar();
     }
     catch(x){
       if(/sesión|expir/i.test(x.message)){ borrar(); const e = auth.email; auth = null; return login(e, 'Por seguridad, vuelve a entrar.'); }
+      if(viejo) return;
       app.innerHTML = msg + `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`;
     }
   }
