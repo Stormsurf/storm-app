@@ -191,6 +191,9 @@ body:has(.mc-nav) .st-app{bottom:calc(84px + env(safe-area-inset-bottom))}
 .mc-rec b{display:block;font-size:1.55rem}.mc-rec small{display:block;font-size:1.3rem;opacity:.7;margin-top:2px}
 .mc-rec>span:nth-child(2){flex:1}.mc-rec__go{font-size:2.4rem;opacity:.35}
 .mc-cal__d--ver{background:#FDF4CF}.mc-cal__d--ver i{background:#FADF70;color:#3B2610}
+.mc-cal__d--ev{background:#FBE9E3}.mc-cal__d--ev i{background:#D9674A;color:#fff}
+.mc-cal__evm{position:absolute;top:4px;right:5px;width:7px;height:7px;border-radius:50%;background:#D9674A}
+.mc-cal__k--ev::before{background:#D9674A;border-radius:50%}
 .mc-cal__d--hito{box-shadow:inset 0 0 0 2px #E9B93A}.mc-cal__d--hito i{background:#3B2610;color:#FADF70}
 .mc-calv .mc-calmes__tab.on{background:#FADF70;border-color:#FADF70;color:#3B2610}
 .mc-calv .mc-cal__det p+p{margin-top:6px}
@@ -409,6 +412,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const tipoDe = c => c.cancelada ? 'no' : /vacacion/i.test((c.grupo||'') + ' ' + (c.nota||'')) ? 'vac' : /skate/i.test(c.clase) ? 'skate' : 'surf';
   function calendariosMes(mias){
     const box = app.querySelector('[data-calmes]'); if(!box || !API) return;
+    const EV = {}; ((D.anual && D.anual.eventos) || []).forEach(e => { if(e && e.fecha) (EV[e.fecha] = EV[e.fecha] || []).push(e); });
     const hoy = new Date(), hoyIso = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
     let n = hoy.getFullYear()*12 + hoy.getMonth();
     const meses = [];
@@ -427,7 +431,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
         const y = Math.floor(k/12), m = k % 12, pre = y + '-' + String(m+1).padStart(2,'0') + '-';
         const ini = (new Date(y, m, 1).getDay() + 6) % 7, total = new Date(y, m+1, 0).getDate();
         let h = `<div class='mc-cal__sem'>${['L','M','M','J','V','S','D'].map(x=>`<span>${x}</span>`).join('')}</div><div class='mc-cal__grid'>`;
-        const sinClase = [], especiales = [], antes = [];
+        const sinClase = [], especiales = [], antes = []; let hayEv = false;
         const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         for(let i=0;i<ini;i++){
           const dt = new Date(y, m, i - ini + 1), f = iso(dt), cs = (dias[f] || []).filter(x => x.mk === k), c = cs.find(x=>!x.cancelada);
@@ -437,10 +441,11 @@ body:has(.mc-hero--login) .ap-top{display:none}
         }
         for(let dd=1; dd<=total; dd++){
           const f = pre + String(dd).padStart(2,'0'), cs = dias[f] || [], c = cs.find(x=>!x.cancelada) || cs[0];
-          const t = c ? tipoDe(c) : '', mia = mias.includes(f) && t !== 'no';
+          const t = c ? tipoDe(c) : '', mia = mias.includes(f) && t !== 'no', ev = EV[f];
+          if(ev) hayEv = true;
           if(t === 'no') sinClase.push(dd);
           if(c && !c.cancelada && t === 'vac') especiales.push(dd);
-          h += `<button class='mc-cal__d${t?' mc-cal__d--'+t:''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}${mia?' mc-cal__d--mia':''}' data-f='${f}'${c?'':' disabled'}><b>${dd}</b>${c ? `<i>${t==='no'?'Sin clase':t==='skate'?'Skate':'Surf'}</i>` : ''}</button>`;
+          h += `<button class='mc-cal__d${t?' mc-cal__d--'+t:''}${f<hoyIso?' mc-cal__d--pas':''}${f===hoyIso?' mc-cal__d--hoy':''}${mia?' mc-cal__d--mia':''}${ev&&!c?' mc-cal__d--ev':''}' data-f='${f}'${c||ev?'':' disabled'}><b>${dd}</b>${c ? `<i>${t==='no'?'Sin clase':t==='skate'?'Skate':'Surf'}</i>` : ev ? `<i>Evento</i>` : ''}${ev&&c?`<span class='mc-cal__evm'></span>`:''}</button>`;
         }
         h += `</div><div class='mc-cal__det' data-det><p class='mc-cal__tip'>Toca un día para ver el horario.</p></div>`;
         const nm = MESES[m], av = [];
@@ -448,13 +453,13 @@ body:has(.mc-hero--login) .ap-top{display:none}
         if(antes.length) av.push(`<li class='mc-cal__av--otro'>La clase del ${listaY(antes)} cuenta para ${nm}.</li>`);
         if(especiales.length) av.push(`<li class='mc-cal__av--vac'><b>Clases de vacaciones:</b> ${listaY(especiales.map(String))} de ${nm}.</li>`);
         h += (av.length ? `<ul class='mc-cal__av'>${av.join('')}</ul>` : '')
-          + `<div class='mc-cal__ley'><span class='mc-cal__k mc-cal__k--surf'>Surf</span><span class='mc-cal__k mc-cal__k--skate'>Skate</span>${especiales.length?`<span class='mc-cal__k mc-cal__k--vac'>Vacaciones</span>`:''}${sinClase.length?`<span class='mc-cal__k mc-cal__k--no'>Sin clase</span>`:''}${mias.some(f=>f.startsWith(pre))?`<span class='mc-cal__k mc-cal__k--mia'>Clase de tu hijo/a</span>`:''}</div>`;
+          + `<div class='mc-cal__ley'><span class='mc-cal__k mc-cal__k--surf'>Surf</span><span class='mc-cal__k mc-cal__k--skate'>Skate</span>${hayEv?`<span class='mc-cal__k mc-cal__k--ev'>Evento</span>`:''}${especiales.length?`<span class='mc-cal__k mc-cal__k--vac'>Vacaciones</span>`:''}${sinClase.length?`<span class='mc-cal__k mc-cal__k--no'>Sin clase</span>`:''}${mias.some(f=>f.startsWith(pre))?`<span class='mc-cal__k mc-cal__k--mia'>Clase de tu hijo/a</span>`:''}</div>`;
         grid.innerHTML = h;
         tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.m === k));
         grid.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
           grid.querySelectorAll('.mc-cal__d--sel').forEach(x => x.classList.remove('mc-cal__d--sel')); b.classList.add('mc-cal__d--sel');
           const f = b.dataset.f, dt = new Date(f + 'T12:00:00'), cs = dias[f] || [];
-          grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b></p>` + cs.map(c => c.cancelada
+          grid.querySelector('[data-det]').innerHTML = `<p><b>${cap(DSEM[dt.getDay()])} ${dt.getDate()} de ${MESES[dt.getMonth()]}</b></p>` + (EV[f] || []).map(e => `<p><span class='mc-cal__tuya' style='color:#D9674A'>★ ${esc(e.titulo)}</span>${e.hora?' · '+esc(e.hora):''}${e.lugar?' · '+esc(e.lugar):''}</p>`).join('') + cs.map(c => c.cancelada
             ? `<p>No hay clase de ${esc(c.clase)}${c.horario?' ('+esc(c.horario)+')':''}.</p>`
             : `<p>${esc(c.clase)} · ${esc(c.horario)}${tipoDe(c)==='vac'?' · clase de vacaciones':''}${c.mk !== undefined && (c.mk % 12) !== dt.getMonth() ? ' · cuenta para ' + MESES[c.mk % 12] : ''}${mias.includes(f)?' · <span class=\'mc-cal__tuya\'>Tu hijo/a tiene clase</span>':''}</p>`).join('');
         });
@@ -495,7 +500,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     }
   }
   function eventosCard(evs){
-    return `<h2 class='mc-h2'>Calendario Storm</h2><div class='mc-card' style='padding-top:8px;padding-bottom:8px'>${evs.map((e,i)=>{ const m = e.fecha.split('-');
+    return `<h2 class='mc-h2'>Calendario Storm</h2><div class='mc-card' style='padding-top:8px;padding-bottom:8px'>${evs.map((e,i)=>{ if(evs.slice(0,i).some(x => x.titulo === e.titulo)) return ''; const m = e.fecha.split('-');
       return `<div class='mc-ev'><div class='mc-ev__d'><b>${+m[2]}</b><small>${MES3[+m[1]-1]}</small></div><div><h4>${esc(e.titulo)}</h4>
         <p>${esc(e.texto)}${e.hora?' · '+esc(e.hora):''}${e.lugar?' · '+esc(e.lugar):''}</p>${e.detalle?`<p>${esc(e.detalle)}</p>`:''}
         ${e.link?`<a class='mc-link' href='${esc(e.link)}' target='_blank' rel='noopener'>Más información</a>`:''}${e.link&&e.agendar!==false?' · ':''}${e.agendar!==false?`<button class='mc-link' data-ev='${i}'>Agregar a mi calendario</button>`:''}</div></div>`; }).join('')}</div>`;
