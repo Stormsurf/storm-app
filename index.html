@@ -173,6 +173,13 @@
 .mc-duda [data-duda-go]{margin-top:12px;width:100%}.mc-duda [data-duda-go]:disabled{opacity:.45}
 .mc-duda__err{margin:8px 0 0;color:#b5523b;font-size:1.3rem}
 .mc-duda__ok{text-align:center}
+.mc-res--q{background:linear-gradient(160deg,#FADF70,#E9B93A);color:#3B2610;border:0;font:inherit;text-align:left;cursor:pointer}
+.mc-res--q i{background:rgba(59,38,16,.1)}
+.mc-sheet{--aa:#61A1C8;--aa-dk:#2d6e94;--aa-soft:#E6F1F8;--ink:#2C2C2B;--line:rgba(44,44,43,.12);color:var(--ink);position:fixed;inset:0;z-index:80;background:rgba(22,56,76,.45);display:flex;align-items:flex-end;justify-content:center}
+.mc-sheet[hidden]{display:none}
+.mc-sheet>div{position:relative;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;border-radius:24px 24px 0 0;margin:0;padding:22px 18px calc(22px + env(safe-area-inset-bottom))}
+.mc-sheet__x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:var(--aa-soft);color:var(--aa-dk);font-size:2rem;line-height:1;cursor:pointer}
+.mc-duda h3{padding-right:40px}
 .mc-res{flex:none;width:74%;max-width:300px;scroll-snap-align:start;position:relative;overflow:hidden;border-radius:24px;padding:18px;min-height:200px;display:flex;flex-direction:column;color:#fff;text-decoration:none}
 .mc-res i{width:46px;height:46px;border-radius:15px;background:rgba(255,255,255,.16);display:grid;place-items:center}
 .mc-res i svg{width:24px;height:24px}
@@ -616,15 +623,21 @@ body:has(.mc-hero--login) .ap-top{display:none}
     {url:'/familias/habla-como-surfista.html', titulo:'Habla como surfista', texto:'Frontside o backside, el lineup y el diccionario del surf.', icono:'🌊', solo:'verano', nivelesVerano:['Progress','Intermedio','Avanzado'], para:'est', nuevo:true}
   ];
   const TEMAS_DUDA = ['Cómo avanza y los niveles','Competir','Seguridad en el mar','Equipo: traje y tabla','Alimentación','Miedo y frustración','Motivación','Otro'];
+  const IC_Q = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17.5h.01"/></svg>';
+  const dudaTile = () => `<button type='button' class='mc-res mc-res--q' data-duda-open><i>${IC_Q}</i><h3>¿Qué te gustaría saber?</h3><p>Déjanos tu pregunta y la usamos para crear nuevos recursos.</p></button>`;
   function dudaCard(){
-    return `<div class='mc-card mc-duda' data-duda><h3>¿Qué te gustaría saber?</h3><p>Déjanos tu pregunta.</p>
+    return `<div class='mc-sheet' data-duda-sheet hidden><div class='mc-card mc-duda' data-duda><button type='button' class='mc-sheet__x' data-duda-x aria-label='Cerrar'>×</button><h3>¿Qué te gustaría saber?</h3><p>Déjanos tu pregunta.</p>
       <div class='mc-duda__nota'><b>No respondemos una por una:</b> las usamos para crear nuevos recursos en Para las familias. Si necesitas hablar de tu hijo, acércate al instructor a cargo al terminar la clase.</div>
       <p class='mc-duda__lbl'>Elige uno o más temas</p><div class='mc-duda__chips'>${TEMAS_DUDA.map(t => `<button type='button'>${esc(t)}</button>`).join('')}</div>
       <p class='mc-duda__lbl'>Tu pregunta (opcional)</p><textarea maxlength='1000' placeholder='Ej: me gustaría saber cómo prepararlo para su primer campeonato.'></textarea>
-      <button type='button' class='mc-go mc-go--sm' data-duda-go disabled>Enviar</button><p class='mc-duda__err' hidden></p></div>`;
+      <button type='button' class='mc-go mc-go--sm' data-duda-go disabled>Enviar</button><p class='mc-duda__err' hidden></p></div></div>`;
   }
   function bindDuda(){
-    const dc = app.querySelector('[data-duda]'); if(!dc) return;
+    const dc = app.querySelector('[data-duda]'), sh = app.querySelector('[data-duda-sheet]'), op = app.querySelector('[data-duda-open]'); if(!dc || !sh) return;
+    document.querySelectorAll('body > [data-duda-sheet]').forEach(x => x.remove()); document.body.appendChild(sh);
+    const cerrar = () => { sh.hidden = true; document.body.style.overflow = ''; };
+    if(op) op.onclick = () => { sh.hidden = false; document.body.style.overflow = 'hidden'; };
+    sh.onclick = e => { if(e.target === sh || e.target.closest('[data-duda-x]')) cerrar(); };
     const go = dc.querySelector('[data-duda-go]'), tx = dc.querySelector('textarea');
     const upd = () => { go.disabled = !dc.querySelector('.mc-duda__chips .on') && !tx.value.trim(); };
     dc.querySelectorAll('.mc-duda__chips button').forEach(b => b.onclick = () => { b.classList.toggle('on'); upd(); });
@@ -633,7 +646,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
       go.disabled = true; go.textContent = 'Enviando…';
       try{
         await call({accion:'duda', temas:[...dc.querySelectorAll('.mc-duda__chips .on')].map(b => b.textContent), pregunta:tx.value.trim()});
-        dc.innerHTML = `<div class='mc-duda__ok'><div style='font-size:3rem'>🌊</div><h3>¡Gracias!</h3><p>Lo vamos a usar para preparar los próximos recursos para las familias.</p></div>`;
+        dc.innerHTML = `<button type='button' class='mc-sheet__x' data-duda-x aria-label='Cerrar'>×</button><div class='mc-duda__ok'><div style='font-size:3rem'>🌊</div><h3>¡Gracias!</h3><p>Lo vamos a usar para preparar los próximos recursos para las familias.</p></div>`;
       }catch(x){
         go.disabled = false; go.textContent = 'Enviar';
         const e = dc.querySelector('.mc-duda__err'); e.hidden = false; e.textContent = 'No pudimos enviarla. Intenta de nuevo más tarde.';
@@ -643,13 +656,12 @@ body:has(.mc-hero--login) .ap-top{display:none}
   function familiasCard(nivel, edad, acad, todos){
     const niv = (todos && todos.length ? todos : [nivel]).map(x => String(x || ''));
     const rs = RECURSOS.filter(r => (!r.solo || r.solo === acad) && (acad !== 'verano' || !r.nivelesVerano || r.nivelesVerano.some(n => niv.includes(n))));
-    if(!rs.length) return '';
     const q = (nivel ? 'nivel=' + encodeURIComponent(nivel) : '') + (edad ? (nivel ? '&' : '') + 'edad=' + encodeURIComponent(edad) : '');
-    const fila = (lista, titulo) => { if(!lista.length) return ''; const orden = lista.filter(r => r.nuevo).concat(lista.filter(r => !r.nuevo));
+    const fila = (lista, titulo, extra) => { if(!lista.length && !extra) return ''; const orden = lista.filter(r => r.nuevo).concat(lista.filter(r => !r.nuevo)); const n = orden.length + (extra ? 1 : 0);
       return `<h2 class='mc-h2'>${titulo}</h2><div class='mc-row2'>` + orden.map(r => { const k = RECURSOS.indexOf(r) % 4;
-        return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[k]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; }).join('') +
-        `</div>` + (orden.length > 1 ? `<div class='mc-dots'>${orden.map((_,i)=>`<i${i?'':" class='on'"}></i>`).join('')}</div>` : ''); };
-    return `<div id='mc-s-fam'>` + fila(rs.filter(r => r.para !== 'est'), 'Para las familias') + dudaCard() + fila(rs.filter(r => r.para === 'est'), 'Para los estudiantes') + `</div>`;
+        return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[k]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; }).join('') + (extra || '') +
+        `</div>` + (n > 1 ? `<div class='mc-dots'>${Array.from({length:n},(_,i)=>`<i${i?'':" class='on'"}></i>`).join('')}</div>` : ''); };
+    return `<div id='mc-s-fam'>` + fila(rs.filter(r => r.para !== 'est'), 'Para las familias', dudaTile()) + dudaCard() + fila(rs.filter(r => r.para === 'est'), 'Para los estudiantes') + `</div>`;
   }
   function renderVerano(d){
     let h = saludo(nombres((d.hijos || []).map(k => k.nombre))) + selector() + `<div class='mc-v'>`;
