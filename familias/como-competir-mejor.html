@@ -100,6 +100,82 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
 .loop div{background:var(--bg);border-radius:12px;padding:10px;font-size:12.5px;line-height:1.35}
 .loop b{display:block;font-size:12px;letter-spacing:.06em;color:var(--dk)}
 .note{margin-top:12px;font-size:13.5px;color:var(--mute)}
+.xp{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:12.5px;opacity:.85}
+.xpbar{flex:1;height:6px;border-radius:6px;background:rgba(255,255,255,.15);overflow:hidden}
+.xpbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#9cc8e4,#8fd1b2,#f0a894);transition:width .5s}
+.sec{margin:22px 0 0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.mod{width:100%;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin-top:10px;text-align:left}
+.mod .n{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:17px;flex:none}
+.mod h3{margin:0;font-size:17px;font-weight:600}
+.mod small{display:block;font-size:13px;color:var(--mute)}
+.mod .st{margin-left:auto;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--bg);white-space:nowrap}
+.mod .st.ok{background:#E4F2EA;color:var(--t)}
+.big{width:100%;display:flex;align-items:center;gap:14px;border:0;border-radius:22px;padding:18px;margin-top:10px;text-align:left;background:linear-gradient(135deg,#2d6e94,#3f8f6b);color:#fff}
+.big.dark{background:linear-gradient(135deg,#2C2C2B,#b5523b)}
+.big .bi{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-size:22px;flex:none}
+.big b{display:block;font-size:17px}
+.big small{display:block;font-size:13px;opacity:.85}
+/* overlay historia */
+.ov{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;color:#fff;background:var(--ovc,#2d6e94);transition:background .3s}
+.ovtop{display:flex;align-items:center;gap:10px;padding:max(14px,env(safe-area-inset-top)) 18px 6px;max-width:560px;width:100%;margin:0 auto}
+.bars{flex:1;display:flex;gap:4px}
+.bars i{flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,.28);overflow:hidden;position:relative}
+.bars i b{position:absolute;inset:0;width:0;background:#fff;transition:width .25s}
+.x{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:15px}
+.ovbody{flex:1;overflow-y:auto;max-width:560px;width:100%;margin:0 auto;padding:12px 24px 28px;display:flex;flex-direction:column}
+.sl{flex:1;display:flex;flex-direction:column;animation:in .3s ease}
+@keyframes in{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.sl .tg{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.75;margin-top:18px}
+.sl h2{font-size:30px;line-height:1.12;font-weight:500;margin:10px 0 12px;letter-spacing:-.01em}
+.sl p{font-size:17px;line-height:1.5;margin:0 0 10px;opacity:.92}
+.sl .kq{margin-top:auto;background:rgba(255,255,255,.14);border-radius:18px;padding:16px;font-size:18px;font-weight:500}
+.sl .kq small{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;margin-bottom:4px;font-weight:700}
+.chips6{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.chips6 button{background:rgba(255,255,255,.12);border:0;border-radius:16px;padding:14px 12px;color:#fff;text-align:left;font-size:14px;line-height:1.35;min-height:88px;transition:background .2s}
+.chips6 button b{display:block;font-size:15.5px;margin-bottom:2px}
+.chips6 button span{display:none;opacity:.88}
+.chips6 button.on{background:#fff;color:var(--ink)}
+.chips6 button.on span{display:block}
+.chips6 button em{font-style:normal;font-size:12px;opacity:.6}
+.chips6 button.on em{display:none}
+.tip{margin-top:10px;font-size:13.5px;opacity:.75}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.cmp div{border-radius:16px;padding:14px;font-size:15px;line-height:1.4}
+.cmp .a{background:rgba(143,209,178,.25)}.cmp .b{background:rgba(240,168,148,.25)}
+.cmp b{display:block;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.re{display:grid;gap:8px;margin-top:8px}
+.re div{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.12);border-radius:16px;padding:12px 14px;font-size:15.5px;opacity:.35;transform:translateX(-8px);transition:all .4s}
+.re div.on{opacity:1;transform:none}
+.re b{width:32px;height:32px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;flex:none}
+.qz .o{display:block;width:100%;text-align:left;border:0;border-radius:16px;padding:15px 16px;margin-top:9px;background:rgba(255,255,255,.14);color:#fff;font-size:16px;transition:all .2s}
+.qz .o.ok{background:#E4F2EA;color:#24553f;font-weight:600}
+.qz .o.bad{background:#F8E5DF;color:#7a2f1f}
+.qz .fb2{margin-top:12px;font-size:15px;opacity:.95;min-height:44px}
+.nx{margin-top:18px;border:0;border-radius:999px;background:#fff;color:var(--ink);font-weight:700;padding:15px;font-size:16px;width:100%}
+.nx:disabled{opacity:.35}
+.ovnav{display:flex;gap:8px;margin-top:18px}
+.ovnav .bk{flex:none;width:54px;border:0;border-radius:999px;background:rgba(255,255,255,.16);color:#fff;font-size:18px}
+.ovnav .nx{margin:0}
+.fin{text-align:center;margin:auto 0}
+.fin .big2{font-size:64px;line-height:1}
+.fin h2{margin:12px 0 6px}
+/* desafio */
+.sit2{margin-top:16px;background:rgba(255,255,255,.12);border-radius:22px;padding:22px 18px;font-size:20px;line-height:1.35;font-weight:500;min-height:150px;display:flex;align-items:center}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.three button{border:0;border-radius:16px;padding:16px 4px;font-weight:700;font-size:14.5px;color:#fff}
+.three .e{background:#2d6e94}.three .t{background:#3f8f6b}.three .q{background:#b5523b}
+.three button.dim{opacity:.3}
+.three button.hit{outline:3px solid #fff}
+.timer{height:5px;border-radius:5px;background:rgba(255,255,255,.2);overflow:hidden;margin-top:10px}
+.timer i{display:block;height:100%;background:#fff;width:100%}
+.score{display:flex;justify-content:space-between;font-size:13px;opacity:.8;margin-top:14px}
+/* simulador */
+.board{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:rgba(0,0,0,.25);border-radius:18px;padding:12px}
+.board div{text-align:center;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.9}
+.board b{display:block;font-size:24px;letter-spacing:0;font-variant-numeric:tabular-nums;margin-top:2px}
+.board .tm b{color:#ffd27a}
+.sea{margin-top:12px;font-size:16px;line-height:1.5;opacity:.95}
+.sea b{color:#ffd27a}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -119,72 +195,19 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
   <section id="t-a">
     <div class="hero">
       <h2>Tus tres herramientas</h2>
-      <p>Van juntas: un buen plan no sirve sin buenas decisiones, y una buena decisión no sirve sin una buena maniobra.</p>
+      <p>Completa los 3 módulos, supera el desafío y entra a la manga.</p>
       <div class="trio"><div><b>Estrategia</b>Planificar, antes</div><div><b>Táctica</b>Decidir, durante</div><div><b>Técnica</b>Ejecutar, en cada ola</div></div>
+      <div class="xp"><div class="xpbar"><i id="xpbar"></i></div><span id="xptxt"></span></div>
     </div>
 
-    <div class="tool k-e"><button><span class="n">1</span><span><h3>Estrategia</h3><small>Tu plan, antes de competir</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="in">
-        <div class="key"><b>Pregunta clave</b>¿Cómo voy a enfrentar esta competencia?</div>
-        <p>Es tu plan para el campeonato: qué quieres lograr y cómo, según lo que haces bien y cómo estará el mar. Se arma antes de entrar al agua y se revisa entre mangas. Mira todo el campeonato, no solo una ola.</p>
-        <ol class="list">
-          <li><span><b>Objetivo.</b> ¿Qué quiero lograr? ¿Qué necesito para pasar de ronda?</span></li>
-          <li><span><b>Fortalezas.</b> ¿Qué maniobras me salen mejor? ¿En qué olas surfeo mejor?</span></li>
-          <li><span><b>Debilidades.</b> ¿Qué me cuesta? ¿Qué situaciones me complican?</span></li>
-          <li><span><b>Escenario.</b> ¿Cómo están las olas, el viento y las corrientes? ¿Cuál es el formato?</span></li>
-          <li><span><b>Tu plan.</b> ¿Cómo voy a usar mis fortalezas en este mar?</span></li>
-          <li><span><b>Plan B.</b> ¿Qué hago si cambia el mar o la manga no va como pensaba?</span></li>
-        </ol>
-        <div class="ex"><b>Ejemplo</b>Una surfista sabe que lo suyo son las maniobras fuertes en la parte más empinada de la ola. Su plan: buscar esas olas y esas secciones.</div>
-        <p>Un plan no asegura ganar, pero te ayuda a no improvisar. Arma el tuyo en <a href="#" data-go="p">Mi plan</a>.</p>
-      </div>
-    </div>
+    <p class="sec">Módulos</p>
+    <div id="mods"></div>
 
-    <div class="tool k-t"><button><span class="n">2</span><span><h3>Táctica</h3><small>Tus decisiones, durante la manga</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="in">
-        <div class="key"><b>Pregunta clave</b>¿Qué es lo mejor que puedo hacer ahora y por qué?</div>
-        <p>Es elegir qué hacer, cuándo y por qué, mirando el mar, a tus rivales y tu objetivo. No basta con surfear bien: tienes que saber qué ola tomar, dónde ponerte y cuándo.</p>
-        <ol class="list">
-          <li><span><b>Elegir la ola:</b> cuál tomar y cuál dejar pasar.</span></li>
-          <li><span><b>Ubicarte:</b> dónde esperar en el pico para tomar las mejores olas.</span></li>
-          <li><span><b>Leer el mar:</b> fijarte en las series y anticipar dónde entran las buenas.</span></li>
-          <li><span><b>Elegir maniobras</b> según lo que te da la ola.</span></li>
-          <li><span><b>Manejar el tiempo:</b> cuándo esperar y cuándo ir a buscar una ola.</span></li>
-          <li><span><b>Manejar el puntaje:</b> asegurar una nota o arriesgar por una mejor.</span></li>
-          <li><span><b>Rivales y prioridad:</b> quién tiene derecho a la ola.</span></li>
-        </ol>
-        <div class="ex"><b>Ejemplo · ¿Dejo pasar una ola regular?</b></div>
-        <div class="vs"><div class="ok"><b>Bien hecho</b> si queda tiempo y están entrando buenas olas.</div><div class="no"><b>Error</b> si queda poco tiempo o necesitas puntaje ya.</div></div>
-        <p>No hay una sola respuesta correcta: depende del mar, el tiempo, los puntajes, las oportunidades y los rivales.</p>
-      </div>
-    </div>
+    <p class="sec">Desafío</p>
+    <button class="big" id="openQ"><span class="bi">⚡</span><span><b>¿Estrategia, táctica o técnica?</b><small id="qbest">10 situaciones. Clasifícalas lo más rápido que puedas.</small></span></button>
 
-    <div class="tool k-q"><button><span class="n">3</span><span><h3>Técnica</h3><small>Tus maniobras, en cada ola</small></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="in">
-        <div class="key"><b>Pregunta clave</b>¿Cómo puedo hacer esta maniobra mejor?</div>
-        <p>Es cómo haces tus maniobras: con control, precisión y fuerza, adaptándote a cada ola.</p>
-        <div class="ex"><b>Ejemplo · Re-entry</b>Subir al labio y volver a bajar.</div>
-        <div class="steps4"><div><b>1</b>Llega a la sección</div><div><b>2</b>Controla la tabla</div><div><b>3</b>Realiza el giro</div><div><b>4</b>Reconecta con la ola</div></div>
-        <ol class="list">
-          <li><span><b>Cuerpo y equilibrio:</b> rodillas flectadas, cuerpo firme, mira hacia donde quieres ir.</span></li>
-          <li><span><b>Control de la tabla:</b> usa los cantos y tu peso.</span></li>
-          <li><span><b>Velocidad:</b> genérala y no la pierdas para llegar con energía a cada sección.</span></li>
-          <li><span><b>Adaptarte a la ola:</b> según cómo viene de verdad, no como esperabas.</span></li>
-          <li><span><b>Fluidez:</b> une una maniobra con la siguiente sin perder velocidad.</span></li>
-          <li><span><b>Fuerza y decisión:</b> con toda la fuerza que la ola permite.</span></li>
-          <li><span><b>Buen final:</b> termina con control y sigue surfeando.</span></li>
-        </ol>
-        <p><b>Difícil no siempre es mejor.</b> Una maniobra difícil sin control no sirve. Elegir bien qué maniobra hacer también es técnica.</p>
-      </div>
-    </div>
-
-    <div class="ola">
-      <h3>Las tres en una misma ola</h3>
-      <p class="sit">Una surfista es muy buena en maniobras fuertes en la parte más empinada de la ola.</p>
-      <div class="r"><i style="color:var(--e)">Estrategia</i><span>Antes del campeonato, decide buscar las olas donde mejor muestra sus maniobras fuertes.<small>Si falla, todo el campeonato parte mal.</small></span></div>
-      <div class="r"><i style="color:var(--t)">Táctica</i><span>En la manga deja pasar una ola que cierra y se ubica para la siguiente, más abierta.<small>Si falla, queda en una ola que no da puntaje.</small></span></div>
-      <div class="r"><i style="color:var(--q)">Técnica</i><span>En la ola elegida llega con velocidad a la sección y hace el re-entry con control.<small>Si falla, desperdicia una buena ola.</small></span></div>
-    </div>
+    <p class="sec">Simulador</p>
+    <button class="big dark" id="openH"><span class="bi">🏄</span><span><b>Estás en la manga</b><small id="hbest">4 momentos de una final. Tú decides.</small></span></button>
 
     <div class="remem">
       <p><b>ESTRATEGIA</b> · planifica antes de competir.</p>
@@ -193,6 +216,7 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
       <q>No controlamos las olas. Sí podemos prepararnos para enfrentarlas.</q>
     </div>
   </section>
+
 
   <!-- MI PLAN -->
   <section id="t-p" hidden>
@@ -230,6 +254,10 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
     </div>
   </section>
 </div>
+  <div class="ov" id="ov" hidden>
+    <div class="ovtop"><div class="bars" id="bars"></div><button class="x" id="ovx" aria-label="Cerrar">✕</button></div>
+    <div class="ovbody" id="ovb"></div>
+  </div>
 <script>
 (function(){
 var K='storm-competir';var S={};try{S=JSON.parse(localStorage.getItem(K)||'{}')}catch(e){}
@@ -262,6 +290,117 @@ drawChk();
 var CA=[['Espero una ola mejor','Puede ser la mejor jugada si todavía entran series y tienes tiempo para una ola completa. El riesgo: que no llegue y termines sin mejorar.'],['Me cambio de lugar','Tiene sentido si viste que las mejores secciones entran en otro pico. El riesgo: perder tiempo remando y la prioridad.'],['Tomo la siguiente ola','Sirve si queda muy poco y cualquier puntaje te ayuda. El riesgo: una ola chica no te da la nota que necesitas.']];
 $('caso').innerHTML=CA.map(function(c,i){return '<button class="opt" data-i="'+i+'">'+c[0]+'</button>'}).join('');
 $('caso').querySelectorAll('.opt').forEach(function(b){b.onclick=function(){$('caso').querySelectorAll('.opt').forEach(function(x){x.classList.remove('on')});b.classList.add('on');var fb=$('fb');fb.hidden=false;fb.innerHTML=CA[b.dataset.i][1]+'<br><br><b>No hay una sola respuesta correcta.</b> Depende del tiempo, los puntajes, las condiciones, las oportunidades y las reglas. Llega a la reunión con tu decisión y explica en qué te fijaste.'}});
+// ---------- Aprende: módulos, desafío y simulador ----------
+var MODS=[
+ {id:'e',c:'#2d6e94',n:'Estrategia',s:'Tu plan, antes de competir',sl:[
+  {k:'txt',h:'Tu plan, antes de competir',p:['Qué quieres lograr y cómo, según lo que haces bien y cómo estará el mar.','Se arma antes de entrar al agua y se revisa entre mangas. Mira todo el campeonato, no solo una ola.'],kq:'¿Cómo voy a enfrentar esta competencia?'},
+  {k:'chips',h:'Arma tu plan con 6 preguntas',tip:'Toca cada una.',it:[['Objetivo','¿Qué quiero lograr? ¿Qué necesito para pasar de ronda?'],['Fortalezas','¿Qué maniobras me salen mejor? ¿En qué olas surfeo mejor?'],['Debilidades','¿Qué me cuesta? ¿Qué situaciones me complican?'],['Escenario','¿Cómo están las olas, el viento y las corrientes? ¿Cuál es el formato?'],['Tu plan','¿Cómo voy a usar mis fortalezas en este mar?'],['Plan B','¿Qué hago si cambia el mar o la manga no va como pensaba?']]},
+  {k:'txt',h:'Ejemplo',p:['Una surfista sabe que lo suyo son las maniobras fuertes en la parte más empinada de la ola.','Su plan: buscar esas olas y esas secciones para mostrar lo que mejor hace.'],kq:'Tip: escribe tu plan en 3 líneas. Qué quiero lograr, qué hago bien y qué haré si el mar cambia.',kl:'Tip'},
+  {k:'q',q:'¿Cuándo se arma la estrategia?',o:['En la ola, mientras surfeas','Antes de entrar al agua, y se revisa entre mangas','Después del campeonato'],ok:1,w:'El plan se hace antes y se ajusta entre mangas. Lo que haces en la ola ya es técnica.'},
+  {k:'q',q:'El mar cambió y tu plan ya no sirve. ¿Qué te faltó?',o:['Un plan B','Más velocidad','Una tabla más chica'],ok:0,w:'Un plan no asegura ganar, pero con un plan B reaccionas mejor si algo cambia.'}
+ ]},
+ {id:'t',c:'#3f8f6b',n:'Táctica',s:'Tus decisiones, durante la manga',sl:[
+  {k:'txt',h:'Decidir bien en el agua',p:['Qué hacer, cuándo hacerlo y por qué, mirando el mar, a tus rivales y tu objetivo.','No basta con surfear bien: tienes que saber qué ola tomar, dónde ponerte y cuándo.'],kq:'¿Qué es lo mejor que puedo hacer ahora y por qué?'},
+  {k:'chips',h:'7 decisiones en cada manga',tip:'Toca cada una.',it:[['Elegir la ola','Cuál tomar y cuál dejar pasar.'],['Ubicarte','Dónde esperar en el pico para tomar las mejores olas.'],['Leer el mar','Fijarte en las series y anticipar dónde entran las buenas.'],['Elegir maniobras','Según lo que te da la ola.'],['Manejar el tiempo','Cuándo esperar y cuándo ir a buscar una ola.'],['Manejar el puntaje','Asegurar una nota o arriesgar por una ola mejor.'],['Rivales y prioridad','Fijarte en tus rivales y en quién tiene derecho a la ola.']]},
+  {k:'cmp',h:'¿Dejo pasar una ola regular?',a:'Si queda tiempo y están entrando buenas olas.',b:'Si queda poco tiempo o necesitas puntaje ya.',p:'No hay una sola respuesta correcta: depende del mar, el tiempo, los puntajes y los rivales.'},
+  {k:'q',q:'Quedan 2 minutos y necesitas puntaje. Viene una ola regular.',o:['La dejo pasar y espero la serie','La tomo y saco lo mejor que pueda','Remo al otro pico'],ok:1,w:'Con poco tiempo, una ola regular bien surfeada vale más que esperar una que quizás no llega.'},
+  {k:'q',q:'¿Qué decide quién tiene derecho a la ola?',o:['El que está más adentro','La prioridad','El que rema más fuerte'],ok:1,w:'En una manga manda la prioridad. Fíjate siempre quién la tiene antes de remar.'}
+ ]},
+ {id:'q',c:'#b5523b',n:'Técnica',s:'Tus maniobras, en cada ola',sl:[
+  {k:'txt',h:'Hacer bien tus maniobras',p:['Con control, precisión y fuerza, adaptándote a cada ola.','Una buena técnica te deja sacarle el máximo a cada ola.'],kq:'¿Cómo puedo hacer esta maniobra mejor?'},
+  {k:'re',h:'Re-entry: subir al labio y volver a bajar',it:['Llega a la sección','Controla la tabla','Realiza el giro','Reconecta con la ola'],p:'Fíjate en cómo llegas, cómo controlas la tabla, cómo giras y cómo vuelves a la ola.'},
+  {k:'chips',h:'7 claves de una buena maniobra',tip:'Toca cada una.',it:[['Cuerpo y equilibrio','Rodillas flectadas, cuerpo firme y mira hacia donde quieres ir.'],['Control de la tabla','Usa los cantos y tu peso para llevar la tabla donde quieres.'],['Velocidad','Genérala y no la pierdas para llegar con energía a cada sección.'],['Adaptarte a la ola','Según cómo viene de verdad, no como esperabas.'],['Fluidez','Une una maniobra con la siguiente sin perder velocidad.'],['Fuerza y decisión','Con toda la fuerza que la ola permite.'],['Buen final','Termina con control y sigue surfeando la ola.']]},
+  {k:'txt',h:'Difícil no siempre es mejor',p:['Una maniobra difícil sin control no sirve.','Elegir bien qué maniobra hacer también es técnica.']},
+  {k:'q',q:'Para una buena maniobra, lo primero es…',o:['Llegar con velocidad a la sección','Hacer la maniobra más difícil que sepas','Mirar a los jueces'],ok:0,w:'Sin velocidad no llegas con energía a la sección, y la maniobra pierde fuerza.'},
+  {k:'q',q:'Intentas un aéreo y caes sin control. ¿Qué pasa?',o:['Suma igual porque es difícil','No suma: sin control no hay maniobra','Te dan puntos extra por intentarlo'],ok:1,w:'Los jueces premian maniobras completas y con control.'}
+ ]}
+];
+var DES=[['La noche antes escribes qué harás si el viento cambia.','e'],['Dejas pasar una ola que cierra porque viene una serie mejor.','t'],['Flectas más las rodillas para no caerte en el bottom turn.','q'],['Revisas videos de tus mangas para saber en qué olas surfeas mejor.','e'],['Quedan 3 minutos: decides tomar la próxima ola sí o sí.','t'],['Usas el canto para llevar la tabla hacia el labio.','q'],['Antes del campeonato averiguas cómo rompe la playa.','e'],['Te mueves al pico donde están entrando las mejores olas.','t'],['Unes dos maniobras sin perder velocidad.','q'],['Tu rival tiene prioridad, así que esperas la siguiente.','t']];
+var SIM=[
+ {tm:'18:00',yo:'0.00',ne:'—',s:'Empieza la final. Entra una ola regular, de unos <b>3 puntos</b>. Detrás se ve una serie formándose.',o:[['La tomo para empezar a sumar',1,'No está mal tener una nota temprano, pero podrías perderte la serie que venía.'],['La dejo pasar: hay tiempo y viene la serie',2,'Bien leído. Con 18 minutos y una serie entrando, conviene esperar la ola buena.'],['Me voy al otro pico',0,'Pierdes tiempo remando justo cuando entran las buenas olas en tu pico.']]},
+ {tm:'09:30',yo:'5.20',ne:'4.80',s:'Tienes <b>prioridad</b>. Viene una ola que se ve cerrada, rompe toda de una vez.',o:[['La tomo: tengo prioridad',0,'Gastas tu prioridad en una ola que no da puntaje. Y tu rival elige la siguiente.'],['La dejo pasar y me ubico para la siguiente',2,'Exacto. La prioridad se guarda para una ola que te deje mostrar tus maniobras.'],['Remo hacia adentro sin mirar',1,'Moverse está bien, pero sin leer el mar puedes quedar mal ubicado.']]},
+ {tm:'03:00',yo:'5.20',ne:'5.10',s:'Entra una ola abierta con una <b>sección empinada</b>, justo donde te salen tus mejores maniobras.',o:[['Hago mi maniobra fuerte en la sección',2,'Plan, decisión y ejecución juntos: usas tu fortaleza en la ola correcta.'],['Hago algo seguro para no caerme',1,'No te caes, pero un 5.10 necesita algo más que una ola tranquila.'],['Pruebo un aéreo que nunca me sale',0,'Difícil no siempre es mejor. Sin control, la ola no suma.']]},
+ {tm:'00:45',yo:'5.20',ne:'3.20',s:'Mar <b>irregular</b>. Viene una ola chica, pero con pared.',o:[['La tomo y la surfeo completa con fluidez',2,'Con 45 segundos no hay espera posible. Una ola completa y fluida te da el 3.20.'],['Espero una mejor',0,'No queda tiempo. Si no remas ahora, la manga termina.'],['La tomo y voy por la maniobra más arriesgada',1,'Es la ola correcta, pero con 3.20 te basta surfearla bien. No hace falta arriesgar.']]}
+];
+var ov=$('ov'),ovb=$('ovb'),bars=$('bars');
+function openOv(c){ov.style.setProperty('--ovc',c);ov.hidden=false;document.body.style.overflow='hidden'}
+function closeOv(){ov.hidden=true;document.body.style.overflow='';clearInterval(tick);drawMods()}
+$('ovx').onclick=closeOv;
+function setBars(n,i){bars.innerHTML='';for(var j=0;j<n;j++){var e=document.createElement('i');e.innerHTML='<b style="width:'+(j<i?100:j===i?100:0)+'%"></b>';bars.appendChild(e)}}
+function xp(){var n=MODS.filter(function(m){return S['m_'+m.id]}).length+(S.d_best!=null?1:0)+(S.h_best!=null?1:0);$('xpbar').style.width=(n/5*100)+'%';$('xptxt').textContent=n+' de 5'}
+function drawMods(){
+  $('mods').innerHTML=MODS.map(function(m,i){var ok=S['m_'+m.id];return '<button class="mod" data-m="'+i+'"><span class="n" style="background:'+m.c+'">'+(i+1)+'</span><span><h3>'+m.n+'</h3><small>'+m.s+'</small></span><span class="st'+(ok?' ok':'')+'">'+(ok?'✓ '+ok:m.sl.length+' pasos')+'</span></button>'}).join('');
+  $('mods').querySelectorAll('.mod').forEach(function(b){b.onclick=function(){story(MODS[+b.dataset.m])}});
+  if(S.d_best!=null)$('qbest').textContent='Tu mejor: '+S.d_best+' de 10. ¿Lo superas?';
+  if(S.h_best!=null)$('hbest').textContent='Tu mejor: '+S.h_best+' de 8 puntos. ¿Otra final?';
+  xp();
+}
+// historia
+function story(m){
+  var i=0,pts=0,nq=m.sl.filter(function(s){return s.k==='q'}).length;openOv(m.c);
+  function nav(canNext){return '<div class="ovnav">'+(i>0?'<button class="bk" id="bk">←</button>':'')+'<button class="nx" id="nx"'+(canNext?'':' disabled')+'>'+(i===m.sl.length-1?'Terminar':'Siguiente')+'</button></div>'}
+  function go(){
+    setBars(m.sl.length+1,i);
+    if(i>=m.sl.length){var r=pts+'/'+nq;S['m_'+m.id]=r;save();
+      ovb.innerHTML='<div class="sl fin"><div class="big2">'+(pts===nq?'🏆':'💪')+'</div><h2>'+m.n+' completo</h2><p>'+pts+' de '+nq+' respuestas correctas.'+(pts<nq?' Puedes repetirlo cuando quieras.':'')+'</p><button class="nx" id="nx">Volver</button></div>';$('nx').onclick=closeOv;return}
+    var s=m.sl[i],h='<div class="sl"><div class="tg">'+m.n+' · '+(i+1)+' de '+m.sl.length+'</div>';
+    if(s.k==='txt')h+='<h2>'+s.h+'</h2>'+s.p.map(function(x){return '<p>'+x+'</p>'}).join('')+(s.kq?'<div class="kq"><small>'+(s.kl||'Pregunta clave')+'</small>'+s.kq+'</div>':'');
+    if(s.k==='chips')h+='<h2>'+s.h+'</h2><div class="chips6">'+s.it.map(function(x){return '<button><b>'+x[0]+'</b><em>Tocar</em><span>'+x[1]+'</span></button>'}).join('')+'</div><p class="tip">'+s.tip+'</p>';
+    if(s.k==='cmp')h+='<h2>'+s.h+'</h2><div class="cmp"><div class="a"><b>Bien hecho</b>'+s.a+'</div><div class="b"><b>Error</b>'+s.b+'</div></div><p style="margin-top:14px">'+s.p+'</p>';
+    if(s.k==='re')h+='<h2>'+s.h+'</h2><div class="re">'+s.it.map(function(x,j){return '<div><b>'+(j+1)+'</b>'+x+'</div>'}).join('')+'</div><p style="margin-top:14px">'+s.p+'</p>';
+    if(s.k==='q')h+='<h2>'+s.q+'</h2><div class="qz">'+s.o.map(function(x,j){return '<button class="o" data-j="'+j+'">'+x+'</button>'}).join('')+'<div class="fb2" id="fb2"></div></div>';
+    ovb.innerHTML=h+nav(s.k!=='q')+'</div>';ovb.scrollTop=0;
+    if(s.k==='chips')ovb.querySelectorAll('.chips6 button').forEach(function(b){b.onclick=function(){b.classList.add('on')}});
+    if(s.k==='re')ovb.querySelectorAll('.re div').forEach(function(d,j){setTimeout(function(){d.classList.add('on')},350+j*550)});
+    if(s.k==='q'){var done=false;ovb.querySelectorAll('.o').forEach(function(b){b.onclick=function(){if(done)return;done=true;var j=+b.dataset.j;
+      if(j===s.ok){pts++;b.classList.add('ok');$('fb2').innerHTML='<b>¡Bien!</b> '+s.w}else{b.classList.add('bad');ovb.querySelectorAll('.o')[s.ok].classList.add('ok');$('fb2').innerHTML='<b>No era esa.</b> '+s.w}
+      try{navigator.vibrate&&navigator.vibrate(j===s.ok?20:[30,40,30])}catch(e){}
+      $('nx').disabled=false}})}
+    $('nx').onclick=function(){i++;go()};if($('bk'))$('bk').onclick=function(){i--;go()};
+  }
+  go();
+}
+// desafio
+var tick=null;
+$('openQ').onclick=function(){
+  var L=DES.slice().sort(function(){return Math.random()-.5}),i=0,ok=0;openOv('#24303a');
+  var NM={e:'Estrategia',t:'Táctica',q:'Técnica'};
+  function go(){
+    setBars(L.length,i);clearInterval(tick);
+    if(i>=L.length){if(S.d_best==null||ok>S.d_best)S.d_best=ok;save();
+      ovb.innerHTML='<div class="sl fin"><div class="big2">'+(ok>=9?'🏆':ok>=6?'🔥':'💪')+'</div><h2>'+ok+' de 10</h2><p>'+(ok>=9?'Tienes muy clara la diferencia.':ok>=6?'Bien. Repasa el módulo donde fallaste.':'Repasa los módulos y vuelve a intentarlo.')+'</p><button class="nx" id="nx">Intentar de nuevo</button><button class="nx" id="cl" style="background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.4);margin-top:8px">Volver</button></div>';
+      $('nx').onclick=function(){$('openQ').onclick()};$('cl').onclick=closeOv;return}
+    var s=L[i],t=8,done=false;
+    ovb.innerHTML='<div class="sl"><div class="tg">Desafío · '+(i+1)+' de '+L.length+'</div><div class="sit2">'+s[0]+'</div><div class="timer"><i id="ti"></i></div><div class="three"><button class="e" data-v="e">Estrategia</button><button class="t" data-v="t">Táctica</button><button class="q" data-v="q">Técnica</button></div><p class="fb2" id="fb3" style="margin-top:14px;min-height:48px"></p><div class="score"><span>Correctas: '+ok+'</span><span>Planificar · Decidir · Ejecutar</span></div></div>';
+    var ti=$('ti'),st=Date.now();
+    tick=setInterval(function(){var p=1-(Date.now()-st)/(t*1000);ti.style.width=Math.max(0,p*100)+'%';if(p<=0)ans(null)},50);
+    function ans(v){if(done)return;done=true;clearInterval(tick);
+      ovb.querySelectorAll('.three button').forEach(function(b){if(b.dataset.v===s[1])b.classList.add('hit');else b.classList.add('dim')});
+      if(v===s[1]){ok++;$('fb3').innerHTML='<b>¡Correcto!</b> Es '+NM[s[1]].toLowerCase()+'.'}else $('fb3').innerHTML='<b>'+(v?'No.':'¡Se acabó el tiempo!')+'</b> Es '+NM[s[1]].toLowerCase()+'.';
+      setTimeout(function(){i++;go()},1300)}
+    ovb.querySelectorAll('.three button').forEach(function(b){b.onclick=function(){ans(b.dataset.v)}});
+  }
+  go();
+};
+// simulador
+$('openH').onclick=function(){
+  var i=0,pts=0;openOv('#1d2a33');
+  function go(){
+    setBars(SIM.length+1,i);
+    if(i>=SIM.length){if(S.h_best==null||pts>S.h_best)S.h_best=pts;save();
+      ovb.innerHTML='<div class="sl fin"><div class="big2">'+(pts>=7?'🏆':pts>=5?'🥈':'🌊')+'</div><h2>'+pts+' de 8 puntos</h2><p>'+(pts>=7?'Ganaste la final: planificaste, decidiste y ejecutaste.':pts>=5?'Muy cerca. Revisa las decisiones donde dudaste.':'Esta vez no. En la próxima manga, piensa: ¿qué es lo mejor que puedo hacer ahora?')+'</p><button class="nx" id="nx">Otra final</button><button class="nx" id="cl" style="background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.4);margin-top:8px">Volver</button></div>';
+      $('nx').onclick=function(){$('openH').onclick()};$('cl').onclick=closeOv;return}
+    var s=SIM[i];
+    ovb.innerHTML='<div class="sl"><div class="tg">Final · momento '+(i+1)+' de '+SIM.length+'</div><div class="board"><div class="tm">Tiempo<b>'+s.tm+'</b></div><div>Tu puntaje<b>'+s.yo+'</b></div><div>Necesitas<b>'+s.ne+'</b></div></div><p class="sea">'+s.s+'</p><h2 style="font-size:22px;margin-top:6px">¿Qué haces?</h2><div class="qz">'+s.o.map(function(x,j){return '<button class="o" data-j="'+j+'">'+x[0]+'</button>'}).join('')+'<div class="fb2" id="fb2"></div></div><div class="ovnav"><button class="nx" id="nx" disabled>Siguiente</button></div></div>';
+    var done=false;
+    ovb.querySelectorAll('.o').forEach(function(b){b.onclick=function(){if(done)return;done=true;var o=s.o[+b.dataset.j];pts+=o[1];
+      b.classList.add(o[1]===2?'ok':'bad');if(o[1]<2)s.o.forEach(function(x,j){if(x[1]===2)ovb.querySelectorAll('.o')[j].classList.add('ok')});
+      $('fb2').innerHTML='<b>'+(o[1]===2?'¡Buena decisión! +2':o[1]===1?'Puede ser. +1':'Mala decisión. +0')+'</b><br>'+o[2];$('nx').disabled=false}});
+    $('nx').onclick=function(){i++;go()};
+  }
+  go();
+};
+drawMods();
 var b=document.querySelector('.back');if(b)b.addEventListener('click',function(){if(document.referrer&&history.length>1)history.back();else location.href='/';});
 })();
 </script>
