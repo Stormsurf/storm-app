@@ -186,6 +186,24 @@
 .pn-gpre button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:1.3rem;font-weight:600;cursor:pointer}
 .pn-gbox .pn-acts{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:8px}
 .pn-gbox .pn-ntgo{border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;font-size:1.3rem;padding:8px 16px;cursor:pointer}
+.pn-fadd input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;font-size:1.5rem;margin-top:8px;background:#fff}
+.pn-fadd .pn-gm{margin-top:10px}
+.pn-fadd .pn-acts{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px}
+.pn-fadd .pn-ntgo{border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;font-size:1.4rem;padding:10px 20px;cursor:pointer}
+#pn-fmsg{color:var(--ok);font-weight:600;font-size:1.3rem}
+.pn-fsw{display:flex;gap:4px;margin-top:10px;padding:4px;border-radius:999px;background:#F3F1EC}
+.pn-fsw button{flex:1;border:0;border-radius:999px;padding:8px;font:inherit;font-weight:600;font-size:1.35rem;background:none;cursor:pointer;color:var(--ink)}
+.pn-fsw button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.pn-stat--main.pn-fneg{background:var(--warn)}
+.pn-farea{padding:10px 0;border-bottom:1px solid var(--line)}.pn-farea:last-child{border-bottom:0}
+.pn-fah{display:flex;justify-content:space-between;font-size:1.45rem}.pn-fah b{font-weight:600}.pn-fah span{font-weight:600;color:var(--ok)}.pn-fah span.neg{color:var(--warn)}
+.pn-fbar{height:7px;border-radius:99px;background:#F3F1EC;margin-top:5px;overflow:hidden}.pn-fbar i{display:block;height:100%;border-radius:99px}
+.pn-fbar i.in{background:var(--ok)}.pn-fbar i.out{background:var(--warn)}
+.pn-farea small{display:block;font-size:1.15rem;opacity:.6;margin-top:4px}
+.pn-gmov b.pn-fin{color:var(--ok)}
+.pn-ffij summary{cursor:pointer;display:flex;justify-content:space-between;font-size:1.5rem;list-style:none}.pn-ffij summary::-webkit-details-marker{display:none}
+.pn-ffij summary span{font-weight:600}
+.pn-vfin{display:block;width:100%;margin-top:12px;border:1.5px dashed #c9a93a;background:#FFF9E0;color:#3B2610;border-radius:14px;padding:12px;font:inherit;font-weight:600;font-size:1.4rem;cursor:pointer}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='pn-app'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
@@ -383,13 +401,14 @@
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
     LISTA = d.lista || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button><button class='pn-tab' data-tab='gastos'>Gastos</button>`}</div>`;
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button><button class='pn-tab' data-tab='gastos'>Gastos</button><button class='pn-tab' data-tab='finanzas'>Finanzas</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
         app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t);
         if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); }
-        if(t === 'gastos') cargarGastos(); };
+        if(t === 'gastos') cargarGastos();
+        if(t === 'finanzas') cargarFinanzas(); };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
@@ -431,7 +450,7 @@
       <p class='pn-note'>A los pagos con Mercado Pago se les descuenta una comisión de cerca de 3,4%; a las transferencias no. ${esc(cap(d.pasado.mes))}: ${clp(d.pasado.recaudado)} con ${d.pasado.alumnos} alumnos.</p>
     </div>`;
 
-    h += `<div class='pn-pane' data-pane='gastos'><div class='pn-skel'></div></div>`;
+    h += `<div class='pn-pane' data-pane='gastos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='finanzas'><div class='pn-skel'></div></div>`;
     h += `<div class='pn-pane' data-pane='avisos'>
       ${d.revisar.length ? `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${d.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla: ${d.revisar.map(esc).join(', ')}</p></div>` : ''}
       <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
@@ -537,6 +556,68 @@
     };
   }
   const corta = f => { const m = String(f||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + '/' + (+m[2]) : f; };
+
+  // ---------- Finanzas Storm (solo administradores) ----------
+  const AREAS = ['Verano','Anual','Escuela','Surfshop','Fijos','Otro'];
+  let FIN = null, fMes = '', fTipo = 'gasto', fArea = [0,1].includes(new Date().getMonth()) ? 'Verano' : 'Anual';
+  async function cargarFinanzas(mes){
+    const pane = app.querySelector("[data-pane='finanzas']"); if(!pane) return;
+    if(!FIN || (mes && mes !== FIN.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
+    try{ FIN = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); fMes = FIN.mes; pintarFinanzas(); }
+    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar las finanzas. ${esc(x.message)}</p></div>`; }
+  }
+  function pintarFinanzas(){
+    const pane = app.querySelector("[data-pane='finanzas']"); if(!pane || !FIN) return;
+    const f = FIN, max = Math.max(1, ...f.areas.map(a => Math.max(a.ingresos, a.gastos)));
+    let h = `<div class='pn-card pn-fadd'><h3>Anotar</h3>
+      <div class='pn-fsw'><button data-ftipo='gasto' class='${fTipo==='gasto'?'on':''}'>Gasto</button><button data-ftipo='ingreso' class='${fTipo==='ingreso'?'on':''}'>Ingreso</button></div>
+      <input inputmode='numeric' placeholder='Monto, ej: 3500' id='pn-fmonto'>
+      <input placeholder='${fTipo==='gasto'?'¿En qué fue? ej: hielo, parafina, bencina':'¿De qué? ej: clase particular, arriendo tabla'}' id='pn-fdet'>
+      <div class='pn-gm'>${AREAS.map(a => `<button class='pn-gbtn${a===fArea?' on':''}' data-farea='${a}'>${a}</button>`).join('')}</div>
+      <div class='pn-acts'><span id='pn-fmsg'></span><button class='pn-ntgo' id='pn-fgo'>Anotar ${fTipo}</button></div>
+    </div>
+    <div class='pn-gm'>${f.meses.map(m => `<button class='pn-gbtn${m===f.mes?' on':''}' data-fmes='${esc(m)}'>${esc(mesCorto(m))}</button>`).join('')}</div>
+    <div class='pn-stats'>
+      <div class='pn-stat'><small>Ingresos ${esc(mesCorto(f.mes))}</small><b>${clp(f.ingresos)}</b></div>
+      <div class='pn-stat'><small>Gastos ${esc(mesCorto(f.mes))}</small><b>${clp(f.gastos)}</b></div>
+      <div class='pn-stat pn-stat--main${f.balance<0?' pn-fneg':''}'><small>Balance del mes</small><b>${f.balance<0?'−':''}${clp(Math.abs(f.balance))}</b><em>ingresos − gastos</em></div>
+    </div>
+    <div class='pn-card'><h3>Por área</h3>
+      ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
+        <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>
+        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${a.area==='Anual'?' (incluye mensualidades y sueldos, solos)':a.area==='Fijos'?' (gastos fijos del mes, solos)':''}</small></div>`).join('')}
+    </div>
+    <div class='pn-card'><h3>Anotado en ${esc(mesCorto(f.mes))}<span class='pn-count'>${f.movs.length}</span></h3>
+      ${f.movs.length ? `<div class='pn-gmov'>${f.movs.map(m => `<div><span>${esc(m.detalle)} · ${esc(m.area)} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b><button data-fdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Aún no anotas nada este mes.</p>`}
+    </div>
+    <details class='pn-card pn-ffij'><summary><b>Gastos fijos del mes</b> <span>${clp(f.fijos.reduce((t,x)=>t+x.monto,0))}</span></summary>
+      ${f.fijos.map(x => `<div class='pn-row'><div><b>${esc(x.detalle)}</b></div><span class='pn-amt'>${clp(x.monto)}</span></div>`).join('')}
+      <p class='pn-sub' style='margin-top:8px'>Se cambian en la pestaña Fijos de la planilla.</p></details>
+    ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
+    pane.innerHTML = h;
+    pane.querySelectorAll('[data-ftipo]').forEach(b => b.onclick = () => { fTipo = b.dataset.ftipo; pintarFinanzas(); });
+    pane.querySelectorAll('[data-farea]').forEach(b => b.onclick = () => { fArea = b.dataset.farea; pane.querySelectorAll('[data-farea]').forEach(x => x.classList.toggle('on', x === b)); });
+    pane.querySelectorAll('[data-fmes]').forEach(b => b.onclick = () => cargarFinanzas(b.dataset.fmes));
+    pane.querySelector('#pn-fgo').onclick = async e => {
+      const b = e.currentTarget, monto = +String(pane.querySelector('#pn-fmonto').value).replace(/\D/g, ''), detalle = pane.querySelector('#pn-fdet').value.trim();
+      if(!monto) return pane.querySelector('#pn-fmonto').focus();
+      if(!detalle) return pane.querySelector('#pn-fdet').focus();
+      b.disabled = true; b.textContent = 'Anotando…';
+      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, tipo: fTipo, area: fArea, detalle, monto})); pintarFinanzas();
+        const m = pane.querySelector('#pn-fmsg'); if(m) m.textContent = 'Anotado ✓'; }
+      catch(x){ b.disabled = false; b.textContent = 'Anotar ' + fTipo; alert(x.message); }
+    };
+    pane.querySelectorAll('[data-fdel]').forEach(b => b.onclick = async () => {
+      if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
+      b.disabled = true;
+      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, borrar: true, fila: +b.dataset.fdel})); pintarFinanzas(); }catch(x){ alert(x.message); }
+    });
+  }
+  // Desde Verano: botón para anotar un gasto hormiga (abre Finanzas con el área Verano).
+  function irAFinanzasVerano(){
+    fArea = 'Verano'; fTipo = 'gasto'; acad = 'anual'; try{ sessionStorage.setItem(KEY + '-acad', 'anual'); }catch(_){}
+    mostrarAcad(); const t = app.querySelector(".pn-tab[data-tab='finanzas']"); if(t){ t.click(); t.scrollIntoView({block:'center'}); }
+  }
 
   // ---------- Notas internas por alumno (solo el equipo; las familias no las ven) ----------
   let NOTAS = null, ntAbierta = '', aGrupo = '', aCambio = '', aNuevo = '', aMsg = '', ES_ADMIN = false;
@@ -709,11 +790,13 @@
         : `<p class='pn-empty'>${vNiv ? 'No hay niños de '+esc(vNiv)+' esta semana.' : 'Todavía no hay niños inscritos esta semana.'}</p>`}
     </div>`;
     if(admin){
+      h += `<button class='pn-vfin' data-vfin>+ Anotar gasto de Verano</button>`;
       if(v.revisar && v.revisar.length) h += `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${v.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla de Verano: ${v.revisar.map(esc).join(', ')}</p></div>`;
       h += `<div class='pn-card'><h3>Últimos pagos web</h3>${v.ultimos.length ? v.ultimos.map(p => `<div class='pn-row'><div><b>${esc(p.alumnos.join(', '))}</b><small>${esc(p.apoderado)} · ${esc(p.fecha)}${p.codigo?" <span class='pn-tag'>"+esc(p.codigo)+'</span>':''}</small></div><span class='pn-amt'>${p.total ? clp(p.total) : 'Beca'}</span></div>`).join('') : `<p class='pn-empty'>Aún no hay pagos con Mercado Pago. Las inscripciones de antes (Shopify) ya están en la lista.</p>`}</div>`;
       if(v.planilla) h += `<p class='pn-note'><a class='pn-link' href='${esc(v.planilla)}' target='_blank' rel='noopener'>Abrir la planilla de Verano</a></p>`;
     }
     pane.innerHTML = h;
+    const vf = pane.querySelector('[data-vfin]'); if(vf) vf.onclick = irAFinanzasVerano;
     pane.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { vSem = b.dataset.vs; pintarVerano(pane); });
     pane.querySelectorAll('[data-vn]').forEach(b => b.onclick = () => { vNiv = b.dataset.vn; pintarVerano(pane); });
     bindNotas(pane, () => pintarVerano(pane));
