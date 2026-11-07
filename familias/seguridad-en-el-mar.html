@@ -212,7 +212,7 @@ document.querySelectorAll('#sig button').forEach(function(b){b.onclick=function(
 showSig(0);
 
 // ---------- antes de entrar ----------
-var OBS=[['🪨','Rocas y obstáculos','¿Hay rocas o restos de algo bajo el agua?'],['🚤','Botes','¿Pasan embarcaciones cerca de donde vas a surfear?'],['🏄','Cuántos surfistas hay','Si está lleno, respeta el espacio de los demás.'],['🌊','Cómo está el mar','Tamaño y fuerza de las olas. Si es mucho para tu nivel, espera.'],['📍','Dónde rompen las olas','Fíjate en el pico y cómo se mueve el agua.'],['↩️','Corrientes','¿Hay una zona más oscura donde no rompen las olas?']];
+var OBS=[['🪨','Rocas y obstáculos','¿Hay rocas o restos de algo bajo el agua?'],['🚤','Botes','¿Pasan embarcaciones cerca de donde vas a surfear?'],['🏄','Cuántos surfistas hay','Si está lleno, respeta el espacio de los demás.'],['🌊','Cómo está el mar','Tamaño y fuerza de las olas. Si es mucho para tu nivel, espera.'],['📍','Dónde rompen las olas','Fíjate dónde rompen y cómo se mueve el agua.'],['↩️','Corrientes','¿Hay una zona más oscura donde no rompen las olas?']];
 $('obs').innerHTML=OBS.map(function(o,i){return '<label><input type="checkbox" data-o="'+i+'"'+((S.obs||{})[i]?' checked':'')+'><span class="ic">'+o[0]+'</span><span><b>'+o[1]+'</b><span>'+o[2]+'</span></span></label>'}).join('');
 function oprog(){var n=document.querySelectorAll('#obs input:checked').length;$('oprog').style.width=(n/OBS.length*100)+'%';if(n===OBS.length&&!S.ok_obs){S.ok_obs=1;save();vib(30)}}
 document.querySelectorAll('#obs input').forEach(function(c){c.onchange=function(){S.obs=S.obs||{};if(c.checked)S.obs[c.dataset.o]=1;else delete S.obs[c.dataset.o];save();oprog()}});

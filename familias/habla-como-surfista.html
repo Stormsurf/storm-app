@@ -140,9 +140,9 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
       <div class="info" id="luInfo"><b>Toca una zona</b><span>Conocer cada parte te ayuda a ubicarte y a remar por el lugar correcto.</span></div>
       <h2 style="font-size:18px;margin-top:20px">Reglas del lineup</h2>
       <ul class="rules">
-        <li><span class="n">1</span><span><b>Una ola, un surfista</b>Tiene la prioridad quien está más cerca de donde rompe la ola (el pico).</span></li>
+        <li><span class="n">1</span><span><b>Una ola, un surfista</b>Tiene la prioridad quien está más cerca de donde rompe la ola.</span></li>
         <li><span class="n">2</span><span><b>No te cruces</b>Si alguien ya va en la ola, no remes ni te pares delante de él.</span></li>
-        <li><span class="n">3</span><span><b>No te pongas en el pico</b>Justo donde rompe, sobre todo si hay mucha gente: puede llegarte una tabla.</span></li>
+        <li><span class="n">3</span><span><b>No te quedes en la rompiente</b>Justo donde rompe la ola, sobre todo si hay mucha gente: puede llegarte una tabla.</span></li>
         <li><span class="n">4</span><span><b>Rema por el lado correcto</b>Si viene alguien en la ola, muévete hacia donde la ola ya reventó. Si hay tiempo, pasa por el agua clara.</span></li>
         <li><span class="n">5</span><span><b>No sueltes tu tabla</b>Para pasar una ola grande, usa la tortuga o el duckdive. Si la tienes que soltar, mira que no haya nadie cerca.</span></li>
       </ul>
@@ -237,7 +237,7 @@ $('fbGame').onclick=function(){
 var Z={
  fuera:['Afuera','Más allá de donde rompen las olas. Desde aquí ves venir las series.'],
  lineup:['Lineup','Donde los surfistas esperan las olas, sentados en la tabla. Aquí se respeta el orden.'],
- pico:['Pico','El punto donde la ola empieza a romper. Quien está más cerca del pico tiene la prioridad.'],
+ pico:['Rompiente','Donde la ola empieza a romper. Quien está más cerca de ahí tiene la prioridad.'],
  impacto:['Zona de impacto','Donde las olas revientan con fuerza. No te quedes ahí: pásala rápido con tortuga o duckdive.'],
  espuma:['Espumón','La ola ya reventada que viene a la orilla. Ideal para practicar el pop-up.'],
  canal:['Canal','Zona más profunda donde casi no rompen las olas. Sirve para remar hacia afuera, pero ojo: suele tener corriente de retorno.'],
@@ -252,7 +252,7 @@ function luSvg(){
   '<g class="zone" data-z="espuma"><rect y="196" width="340" height="80" fill="#8EBFDB"/><rect class="hl" y="196" width="340" height="80" fill="#FADF70"/>'+
    '<path d="M0 214 C30 206 60 222 100 212 M240 214 C270 206 300 222 340 210 M0 244 C30 236 60 252 110 240 M230 244 C270 236 300 250 340 240" stroke="#fff" stroke-width="9" fill="none" stroke-linecap="round" opacity=".9"/><text x="20" y="266" class="zt" fill="#1f4f6b">ESPUMÓN</text></g>'+
   '<g class="zone" data-z="canal"><path d="M140 276 C132 220 136 150 150 70 L196 70 C208 150 214 220 206 276Z" fill="#245C80"/><path class="hl" d="M140 276 C132 220 136 150 150 70 L196 70 C208 150 214 220 206 276Z" fill="#FADF70"/><text x="173" y="230" text-anchor="middle" class="zt">CANAL</text><path d="M173 210 L173 160 M165 170 L173 158 L181 170" stroke="#fff" stroke-width="2.5" fill="none" opacity=".7"/></g>'+
-  '<g class="zone" data-z="pico"><circle cx="96" cy="140" r="16" fill="#FADF70" opacity=".25"/><circle class="hl" cx="96" cy="140" r="22" fill="#FADF70"/><circle cx="96" cy="140" r="8" fill="#FADF70"/><text x="96" y="128" text-anchor="middle" class="zt">PICO</text></g>'+
+  '<g class="zone" data-z="pico"><circle cx="96" cy="140" r="16" fill="#FADF70" opacity=".25"/><circle class="hl" cx="96" cy="140" r="22" fill="#FADF70"/><circle cx="96" cy="140" r="8" fill="#FADF70"/><text x="96" y="128" text-anchor="middle" class="zt">ROMPIENTE</text></g>'+
   '<g class="zone" data-z="orilla"><rect y="276" width="340" height="54" fill="#E3D1AE"/><rect class="hl" y="276" width="340" height="54" fill="#FADF70"/><text x="20" y="308" class="zt" fill="#3B2610">ORILLA</text></g>'+
   '</svg>';
 }
@@ -266,9 +266,9 @@ document.querySelectorAll('#lu .zone').forEach(function(g){g.onclick=function(e)
 var D=[
  ['Tabla','Nose','La punta de adelante de la tabla.'],['Tabla','Tail','La parte de atrás. Su forma cambia el control y la velocidad.'],['Tabla','Rails','Los bordes o cantos de la tabla.'],['Tabla','Alma','La línea del centro, del nose al tail. Tus pies van sobre ella.'],['Tabla','Rocker','La curva de la tabla. Más curva, giros más rápidos; más plana, más velocidad en olas chicas.'],['Tabla','Quillas','Las aletas de abajo: dan dirección y agarre.'],['Tabla','Leash','La cuerda que une tu tobillo con la tabla.'],['Tabla','Softboard','Tabla de espuma, la mejor para empezar.'],['Tabla','Shortboard','Tabla corta y liviana para maniobras. Con ella se hace duckdive.'],['Tabla','Longboard','Tabla larga y estable. Para pasar olas se usa la tortuga.'],
  ['Postura','Regular','Pie izquierdo adelante.'],['Postura','Goofy','Pie derecho adelante.'],['Postura','Frontside','Correr la ola mirándola de frente.'],['Postura','Backside','Correr la ola de espalda a la pared.'],['Postura','Pop-up','Pararse en un solo movimiento, de acostado a de pie.'],
- ['Mar','Lineup','Donde los surfistas esperan las olas.'],['Mar','Pico','Donde la ola empieza a romper.'],['Mar','Serie','Grupo de olas más grandes que llegan seguidas.'],['Mar','Espumón','La ola ya reventada que va a la orilla.'],['Mar','Labio','La parte de arriba de la ola, la que se cae al romper.'],['Mar','Pared','La cara de la ola que todavía no rompe. Por ahí se surfea.'],['Mar','Derecha / izquierda','Hacia dónde rompe la ola, mirando desde el agua hacia la playa.'],['Mar','Corriente de retorno','El mar devolviendo el agua hacia afuera. Se ve más oscura y sin olas.'],['Mar','Período','Segundos entre una onda y otra. Más segundos, olas más fuertes y ordenadas.'],
+ ['Mar','Lineup','Donde los surfistas esperan las olas.'],['Mar','Cresta','La parte más alta de la ola, justo antes de que rompa.'],['Mar','Serie','Grupo de olas más grandes que llegan seguidas.'],['Mar','Espumón','La ola ya reventada que va a la orilla.'],['Mar','Labio','La parte de arriba de la ola, la que se cae al romper.'],['Mar','Pared','La cara de la ola que todavía no rompe. Por ahí se surfea.'],['Mar','Derecha / izquierda','Hacia dónde rompe la ola, mirando desde el agua hacia la playa.'],['Mar','Corriente de retorno','El mar devolviendo el agua hacia afuera. Se ve más oscura y sin olas.'],['Mar','Período','Segundos entre una onda y otra. Más segundos, olas más fuertes y ordenadas.'],
  ['Técnica','Remada de desplazamiento','Remada tranquila para moverte y ahorrar energía.'],['Técnica','Remada explosiva','Brazadas cortas y potentes para agarrar una ola o escapar de una serie.'],['Técnica','Tortuga','Dar vuelta la tabla agarrando los rails y dejar pasar la ola por encima.'],['Técnica','Duckdive','Hundir la tabla y pasar por debajo de la ola.'],['Técnica','Timing','El momento justo para remar y pararte.'],['Técnica','Revolcón','Cuando la ola te da vueltas bajo el agua. Calma y protege tu cabeza.'],['Técnica','Bottom turn','El giro abajo de la ola que te da velocidad para la siguiente maniobra.'],['Técnica','Cutback','Giro para volver hacia la parte que rompe de la ola.'],['Técnica','Re-entry','Subir al labio y volver a bajar.'],
- ['Lineup','Prioridad','El derecho a la ola. Lo tiene quien está más cerca del pico.'],['Lineup','Cruzarse','Pararse delante de alguien que ya va en la ola. No se hace.']
+ ['Lineup','Prioridad','El derecho a la ola. Lo tiene quien está más cerca de donde rompe.'],['Lineup','Cruzarse','Pararse delante de alguien que ya va en la ola. No se hace.']
 ];
 var cat='Todo';
 var CATS=['Todo','Tabla','Postura','Mar','Técnica','Lineup'];
@@ -293,14 +293,14 @@ segs('dm',function(v){$('dList').hidden=v!=='list';$('dFlash').hidden=v!=='flash
 var QZ=[
  ['Eres goofy y la ola va hacia la izquierda. Vas de…',['Frontside','Backside'],0],
  ['Eres regular y la ola va hacia la izquierda. Vas de…',['Frontside','Backside'],1],
- ['¿Quién tiene la prioridad en una ola?',['El que rema más rápido','El que está más cerca del pico','El que llegó primero al agua'],1],
+ ['¿Quién tiene la prioridad en una ola?',['El que rema más rápido','El que está más cerca de donde rompe la ola','El que llegó primero al agua'],1],
  ['¿Qué es una serie?',['Un grupo de olas más grandes que llegan seguidas','Un campeonato','Una fila de surfistas'],0],
  ['Viene alguien en la ola y tú vas remando hacia afuera. ¿Por dónde pasas?',['Por delante de él','Hacia donde la ola ya reventó','Me quedo quieto en el medio'],1],
  ['Con una shortboard, ¿cómo pasas una ola?',['Tortuga','Duckdive','La suelto'],1],
  ['¿Qué es el labio?',['La parte de arriba de la ola, la que se cae','La orilla','El borde de la tabla'],0],
  ['Un período alto (13 segundos o más) significa…',['Olas más fuertes y ordenadas','Olas chicas y desordenadas','Que no hay olas'],0],
  ['¿Para qué sirve la remada explosiva?',['Para ahorrar energía','Para agarrar una ola o escapar de una serie','Para girar la tabla'],1],
- ['¿Qué es cruzarse?',['Pararse delante de alguien que ya va en la ola','Cambiar de pico','Hacer un cutback'],0],
+ ['¿Qué es cruzarse?',['Pararse delante de alguien que ya va en la ola','Cambiar de tabla','Hacer un cutback'],0],
  ['¿Dónde esperan las olas los surfistas?',['En la zona de impacto','En el lineup','En el espumón'],1],
  ['El canal es útil para remar hacia afuera, pero ojo porque…',['Tiene muchas olas','Suele tener corriente de retorno','Es muy bajo'],1],
  ['¿Qué maniobra te da velocidad al bajar la ola?',['Bottom turn','Re-entry','Pop-up'],0],
