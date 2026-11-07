@@ -201,8 +201,14 @@
 .pn-fbar i.in{background:var(--ok)}.pn-fbar i.out{background:var(--warn)}
 .pn-farea small{display:block;font-size:1.15rem;opacity:.6;margin-top:4px}
 .pn-gmov b.pn-fin{color:var(--ok)}
-.pn-ffij summary{cursor:pointer;display:flex;justify-content:space-between;font-size:1.5rem;list-style:none}.pn-ffij summary::-webkit-details-marker{display:none}
-.pn-ffij summary span{font-weight:600}
+.pn-fij{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);background:none;padding:11px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.pn-fij:last-of-type{border-bottom:0}
+.pn-fij i{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);font-style:normal;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.pn-fij.on i{background:var(--ok);border-color:var(--ok)}
+.pn-fij span{flex:1}.pn-fij b{display:block;font-size:1.45rem;font-weight:600}.pn-fij small{display:block;font-size:1.2rem;opacity:.6}
+.pn-fij.on small{color:var(--ok);opacity:1}
+.pn-fij em{font-style:normal;font-weight:600;font-size:1.4rem}
+.pn-fij.on b,.pn-fij.on em{opacity:.55}
 .pn-vfin{display:block;width:100%;margin-top:12px;border:1.5px dashed #c9a93a;background:#FFF9E0;color:#3B2610;border-radius:14px;padding:12px;font:inherit;font-weight:600;font-size:1.4rem;cursor:pointer}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
@@ -590,9 +596,9 @@
     <div class='pn-card'><h3>Anotado en ${esc(mesCorto(f.mes))}<span class='pn-count'>${f.movs.length}</span></h3>
       ${f.movs.length ? `<div class='pn-gmov'>${f.movs.map(m => `<div><span>${esc(m.detalle)} · ${esc(m.area)} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b><button data-fdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Aún no anotas nada este mes.</p>`}
     </div>
-    <details class='pn-card pn-ffij'><summary><b>Gastos fijos del mes</b> <span>${clp(f.fijos.reduce((t,x)=>t+x.monto,0))}</span></summary>
-      ${f.fijos.map(x => `<div class='pn-row'><div><b>${esc(x.detalle)}</b></div><span class='pn-amt'>${clp(x.monto)}</span></div>`).join('')}
-      <p class='pn-sub' style='margin-top:8px'>Se cambian en la pestaña Fijos de la planilla.</p></details>
+    <div class='pn-card pn-ffij'><h3>Gastos fijos del mes<span class='pn-count'>${f.fijos.filter(x=>x.pagado).length} de ${f.fijos.length} pagados</span></h3>
+      ${f.fijos.map(x => `<button class='pn-fij${x.pagado?' on':''}' data-fij='${esc(x.detalle)}'><i>${x.pagado?'✓':''}</i><span><b>${esc(x.detalle)}</b><small>${x.pagado?'Pagado el '+esc(corta(x.pagado)):'Por pagar'}</small></span><em>${clp(x.monto)}</em></button>`).join('')}
+      <p class='pn-sub' style='margin-top:8px'>Tócalo cuando lo pagues. Quedan por pagar ${clp(f.fijos.filter(x=>!x.pagado).reduce((t,x)=>t+x.monto,0))}. Los montos se cambian en la pestaña Fijos de la planilla.</p></div>
     ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
     pane.innerHTML = h;
     pane.querySelectorAll('[data-ftipo]').forEach(b => b.onclick = () => { fTipo = b.dataset.ftipo; pintarFinanzas(); });
@@ -607,6 +613,10 @@
         const m = pane.querySelector('#pn-fmsg'); if(m) m.textContent = 'Anotado ✓'; }
       catch(x){ b.disabled = false; b.textContent = 'Anotar ' + fTipo; alert(x.message); }
     };
+    pane.querySelectorAll('[data-fij]').forEach(b => b.onclick = async () => {
+      b.disabled = true; b.classList.toggle('on');
+      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, fijo: b.dataset.fij})); pintarFinanzas(); }catch(x){ b.disabled = false; b.classList.toggle('on'); alert(x.message); }
+    });
     pane.querySelectorAll('[data-fdel]').forEach(b => b.onclick = async () => {
       if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
       b.disabled = true;
