@@ -155,7 +155,7 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
       <p class="sub">El lenguaje que usamos en el agua.</p>
       <div class="seg" id="dm" style="margin-top:12px"><button data-v="list" class="on">Ver todo</button><button data-v="flash">Practicar</button></div>
       <div id="dList">
-        <input class="srch" id="srch" placeholder="Buscar: tail, serie, duckdive…" autocomplete="off">
+        <input class="srch" id="srch" placeholder="Buscar: tail, set, duckdive…" autocomplete="off">
         <div class="cats" id="cats"></div>
         <div class="terms" id="terms"></div>
       </div>
@@ -298,7 +298,7 @@ $('fbGame').onclick=function(){
 
 // ---------- lineup ----------
 var Z={
- fuera:['Adentro','Más allá de donde rompen las olas. Desde aquí ves venir las series.'],
+ fuera:['Adentro','Más allá de donde rompen las olas. Desde aquí ves venir los sets.'],
  lineup:['Lineup','Donde los surfistas esperan las olas, sentados en la tabla. Aquí se respeta el orden.'],
  pico:['Rompiente','Donde la ola empieza a romper. Quien está más cerca de ahí tiene la prioridad.'],
  impacto:['Zona de impacto','Donde las olas revientan con fuerza. No te quedes ahí: pásala rápido con tortuga o duckdive.'],
@@ -356,8 +356,8 @@ $('canalBtn').onclick=function(){document.querySelectorAll('#lu .zone').forEach(
 var D=[
  ['Tabla','Nose','La punta de adelante de la tabla.'],['Tabla','Tail','La parte de atrás. Su forma cambia el control y la velocidad.'],['Tabla','Rails','Los bordes o cantos de la tabla.'],['Tabla','Alma','La línea del centro, del nose al tail. Tus pies van sobre ella.'],['Tabla','Rocker','La curva de la tabla. Más curva, giros más rápidos; más plana, más velocidad en olas chicas.'],['Tabla','Quillas','Las aletas de abajo: dan dirección y agarre.'],['Tabla','Leash','La cuerda que une tu tobillo con la tabla.'],['Tabla','Softboard','Tabla de espuma, la mejor para empezar.'],['Tabla','Shortboard','Tabla corta y liviana para maniobras. Con ella se hace duckdive.'],['Tabla','Longboard','Tabla larga y estable. Para pasar olas se usa la tortuga.'],
  ['Postura','Regular','Pie izquierdo adelante.'],['Postura','Goofy','Pie derecho adelante.'],['Postura','Frontside','Correr la ola mirándola de frente.'],['Postura','Backside','Correr la ola de espalda a la pared.'],['Postura','Pop-up','Pararse en un solo movimiento, de acostado a de pie.'],
- ['Mar','Lineup','Donde los surfistas esperan las olas.'],['Mar','Cresta','La parte más alta de la ola, justo antes de que rompa.'],['Mar','Serie','Grupo de olas más grandes que llegan seguidas.'],['Mar','Espumón','La ola ya reventada que va a la orilla.'],['Mar','Labio','La parte de arriba de la ola, la que se cae al romper.'],['Mar','Pared','La cara de la ola que todavía no rompe. Por ahí se surfea.'],['Mar','Derecha / izquierda','Hacia dónde rompe la ola, mirando desde el agua hacia la playa.'],['Mar','Corriente de retorno','El mar devolviendo el agua hacia adentro. Se ve más oscura y sin olas.'],['Mar','Período','Segundos entre una onda y otra. Más segundos, olas más fuertes y ordenadas.'],
- ['Técnica','Remada de desplazamiento','Remada tranquila para moverte y ahorrar energía.'],['Técnica','Remada explosiva','Brazadas cortas y potentes para agarrar una ola o escapar de una serie.'],['Técnica','Tortuga','Dar vuelta la tabla agarrando los rails y dejar pasar la ola por encima.'],['Técnica','Duckdive','Hundir la tabla y pasar por debajo de la ola.'],['Técnica','Timing','El momento justo para remar y pararte.'],['Técnica','Revolcón','Cuando la ola te da vueltas bajo el agua. Calma y protege tu cabeza.'],['Técnica','Bottom turn','El giro abajo de la ola que te da velocidad para la siguiente maniobra.'],['Técnica','Cutback','Giro para volver hacia la parte que rompe de la ola.'],['Técnica','Re-entry','Subir al labio y volver a bajar.'],
+ ['Mar','Lineup','Donde los surfistas esperan las olas.'],['Mar','Cresta','La parte más alta de la ola, justo antes de que rompa.'],['Mar','Set','Grupo de olas más grandes que llegan seguidas.'],['Mar','Espumón','La ola ya reventada que va a la orilla.'],['Mar','Labio','La parte de arriba de la ola, la que se cae al romper.'],['Mar','Pared','La cara de la ola que todavía no rompe. Por ahí se surfea.'],['Mar','Derecha / izquierda','Hacia dónde rompe la ola, mirando desde el agua hacia la playa.'],['Mar','Corriente de retorno','El mar devolviendo el agua hacia adentro. Se ve más oscura y sin olas.'],['Mar','Período','Segundos entre una onda y otra. Más segundos, olas más fuertes y ordenadas.'],
+ ['Técnica','Remada de desplazamiento','Remada tranquila para moverte y ahorrar energía.'],['Técnica','Remada explosiva','Brazadas cortas y potentes para agarrar una ola o escapar de un set.'],['Técnica','Tortuga','Dar vuelta la tabla agarrando los rails y dejar pasar la ola por encima.'],['Técnica','Duckdive','Hundir la tabla y pasar por debajo de la ola.'],['Técnica','Timing','El momento justo para remar y pararte.'],['Técnica','Revolcón','Cuando la ola te da vueltas bajo el agua. Calma y protege tu cabeza.'],['Técnica','Bottom turn','El giro abajo de la ola que te da velocidad para la siguiente maniobra.'],['Técnica','Cutback','Giro para volver hacia la parte que rompe de la ola.'],['Técnica','Re-entry','Subir al labio y volver a bajar.'],
  ['Lineup','Prioridad','El derecho a la ola. Lo tiene quien está más cerca de donde rompe.'],['Lineup','Cruzarse','Pararse delante de alguien que ya va en la ola. No se hace.']
 ];
 var cat='Todo';
@@ -389,7 +389,7 @@ var QZ=[
  ['Con una shortboard, ¿cómo pasas una ola?',['Tortuga','Duckdive','La suelto'],1],
  ['¿Qué es el labio?',['La parte de arriba de la ola, la que se cae','La orilla','El borde de la tabla'],0],
  ['Un período alto (13 segundos o más) significa…',['Olas más fuertes y ordenadas','Olas chicas y desordenadas','Que no hay olas'],0],
- ['¿Para qué sirve la remada explosiva?',['Para ahorrar energía','Para agarrar una ola o escapar de una serie','Para girar la tabla'],1],
+ ['¿Para qué sirve la remada explosiva?',['Para ahorrar energía','Para agarrar una ola o escapar de un set','Para girar la tabla'],1],
  ['¿Qué es cruzarse?',['Pararse delante de alguien que ya va en la ola','Cambiar de tabla','Hacer un cutback'],0],
  ['¿Dónde esperan las olas los surfistas?',['En la zona de impacto','En el lineup','En el espumón'],1],
  ['El canal es útil para remar hacia adentro, pero ojo porque…',['Tiene muchas olas','Suele tener corriente de retorno','Es muy bajo'],1],
