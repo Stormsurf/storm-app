@@ -576,7 +576,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     return `<nav class='mc-qa' aria-label='Accesos'><a href='#mc-s-cal'><i>${IC.cal}</i>Calendario</a><a href='#mc-s-msg'><i>${IC.msg}</i>Mensajes${nMsg?`<em>${nMsg}</em>`:''}</a>${pago}<a href='#mc-s-fam'><i>${IC.fam}</i>Recursos</a></nav>`;
   }
   function barra(ultimo){
-    return `<nav class='mc-nav' aria-label='Menú'><div><button class='on' data-ir='top'>${IC.home}Inicio</button><button data-ir='mc-s-cal'>${IC.cal}Calendario</button><button data-ir='mc-s-fam'>${IC.fam}Familias</button>${ultimo}</div></nav>`;
+    return `<nav class='mc-nav' aria-label='Menú'><div><button class='on' data-ir='top'>${IC.home}Inicio</button><button data-ir='mc-s-cal'>${IC.cal}Calendario</button><button data-ir='mc-s-fam'>${IC.fam}Recursos</button>${ultimo}</div></nav>`;
   }
   function bindNuevo(){
     app.querySelectorAll('.mc-nav [data-ir]').forEach(b => b.onclick = () => {
@@ -584,26 +584,27 @@ body:has(.mc-hero--login) .ap-top{display:none}
       const id = b.dataset.ir, el = id === 'top' ? null : document.getElementById(id);
       window.scrollTo({top: el ? el.getBoundingClientRect().top + scrollY - 16 : 0, behavior:'smooth'});
     });
-    const rr = app.querySelector('.mc-row2'), dots = app.querySelector('.mc-dots');
-    if(rr && dots) rr.onscroll = () => { const w = rr.children[0].offsetWidth + 12, k = Math.round(rr.scrollLeft / w); [...dots.children].forEach((d,j) => d.classList.toggle('on', j === Math.min(k, dots.children.length - 1))); };
+    app.querySelectorAll('.mc-row2').forEach(rr => { const dots = rr.nextElementSibling && rr.nextElementSibling.classList.contains('mc-dots') ? rr.nextElementSibling : null;
+    if(dots) rr.onscroll = () => { const w = rr.children[0].offsetWidth + 12, k = Math.round(rr.scrollLeft / w); [...dots.children].forEach((d,j) => d.classList.toggle('on', j === Math.min(k, dots.children.length - 1))); }; });
   }
   // ---------- Para las familias: recursos gratis de Storm ----------
   const RECURSOS = [
     {url:'/familias/preguntas-despues-del-surf.html', titulo:'Preguntas para después del surf', texto:'Para que "¿cómo te fue?" no termine en "bien".', icono:'💬'},
     {url:'/familias/cuando-se-frustra.html', titulo:'Cuando se frustra', texto:'Qué decir cuando no le sale, se compara o cree que debería estar en otro grupo.', icono:'🌊'},
-    {url:'/familias/respira-como-surfista.html', titulo:'Respira como surfista', texto:'Respiración, apnea y visualización para entrenar la calma fuera del agua.', icono:'🌬️', solo:'anual', nuevo:true},
-    {url:'/familias/cuida-tu-equipo.html', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren y rindan.', icono:'🏄'},
-    {url:'/familias/como-competir-mejor.html', titulo:'Cómo competir mejor', texto:'Estrategia, táctica y técnica: arma tu plan, decide mejor en la manga y aprende de tus videos.', icono:'🏆', niveles:['Avanzado','Federados'], nuevo:true}
+    {url:'/familias/respira-como-surfista.html', titulo:'Respira como surfista', texto:'Respiración, apnea y visualización para entrenar la calma fuera del agua.', icono:'🌬️', solo:'anual', para:'est'},
+    {url:'/familias/cuida-tu-equipo.html', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren y rindan.', icono:'🏄', para:'est'},
+    {url:'/familias/como-competir-mejor.html', titulo:'Cómo competir mejor', texto:'Estrategia, táctica y técnica: arma tu plan, decide mejor en la manga y aprende de tus videos.', icono:'🏆', niveles:['Avanzado','Federados'], para:'est', nuevo:true}
   ];
   function familiasCard(nivel, edad, acad, todos){
     const niv = (todos && todos.length ? todos : [nivel]).map(x => String(x || ''));
     const rs = RECURSOS.filter(r => (!r.solo || r.solo === acad) && (!r.niveles || r.niveles.some(n => niv.includes(n))));
     if(!rs.length) return '';
     const q = (nivel ? 'nivel=' + encodeURIComponent(nivel) : '') + (edad ? (nivel ? '&' : '') + 'edad=' + encodeURIComponent(edad) : '');
-    const orden = rs.filter(r => r.nuevo).concat(rs.filter(r => !r.nuevo));
-    return `<h2 class='mc-h2' id='mc-s-fam'>Para las familias</h2><div class='mc-row2'>` + orden.map(r => { const k = RECURSOS.indexOf(r) % 4;
-      return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[k]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; }).join('') +
-      `</div>` + (orden.length > 1 ? `<div class='mc-dots'>${orden.map((_,i)=>`<i${i?'':" class='on'"}></i>`).join('')}</div>` : '');
+    const fila = (lista, titulo) => { if(!lista.length) return ''; const orden = lista.filter(r => r.nuevo).concat(lista.filter(r => !r.nuevo));
+      return `<h2 class='mc-h2'>${titulo}</h2><div class='mc-row2'>` + orden.map(r => { const k = RECURSOS.indexOf(r) % 4;
+        return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[k]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; }).join('') +
+        `</div>` + (orden.length > 1 ? `<div class='mc-dots'>${orden.map((_,i)=>`<i${i?'':" class='on'"}></i>`).join('')}</div>` : ''); };
+    return `<div id='mc-s-fam'>` + fila(rs.filter(r => r.para !== 'est'), 'Para las familias') + fila(rs.filter(r => r.para === 'est'), 'Para los estudiantes') + `</div>`;
   }
   function renderVerano(d){
     let h = saludo(nombres((d.hijos || []).map(k => k.nombre))) + selector() + `<div class='mc-v'>`;
