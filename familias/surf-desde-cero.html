@@ -110,7 +110,8 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
     <button data-s="tabla" class="on">1 Tu tabla <i data-ok="tabla"></i></button>
     <button data-s="pie">2 Regular o goofy <i data-ok="pie"></i></button>
     <button data-s="parar">3 Pararse <i data-ok="parar"></i></button>
-    <button data-s="quiz">4 Desafío <i data-ok="quiz"></i></button>
+    <button data-s="post">4 Postura <i data-ok="post"></i></button>
+    <button data-s="quiz">5 Desafío <i data-ok="quiz"></i></button>
   </nav>
 
   <!-- 1 TABLA -->
@@ -120,34 +121,40 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
       <p class="sub">Toca cada punto amarillo.</p>
       <div class="stage" id="bstage">
         <div class="toast" id="toast"></div>
-        <svg viewBox="0 0 340 420" id="board">
-          <!-- vista de arriba -->
-          <g transform="translate(40,20)">
-            <path d="M70 0 C118 0 132 70 134 150 C136 250 128 330 112 372 L28 372 C12 330 4 250 6 150 C8 70 22 0 70 0Z" fill="#F4F1EA" stroke="#2d6e94" stroke-width="5"/>
-            <path d="M70 6 L70 366" stroke="#61A1C8" stroke-width="2" stroke-dasharray="6 6"/>
-            <path d="M24 250 C40 240 100 240 116 250 L114 340 L26 340Z" fill="#E6F1F8" opacity=".8"/>
-            <circle cx="70" cy="356" r="5" fill="#2C2C2B"/>
-            <path d="M70 356 C70 390 30 392 20 380 C8 366 -10 380 -6 396" fill="none" stroke="#2C2C2B" stroke-width="3" stroke-linecap="round"/>
-            <rect x="-14" y="392" width="20" height="10" rx="4" fill="#2C2C2B"/>
-            <text x="70" y="-6" text-anchor="middle" class="lbl" opacity=".55">VISTA DE ARRIBA</text>
-            <g class="hot" data-p="nose"><path class="hl" d="M70 0 C118 0 126 50 128 70 L12 70 C14 50 22 0 70 0Z"/><circle class="dot pulse" cx="70" cy="30" r="9"/></g>
-            <g class="hot" data-p="tail"><path class="hl" d="M14 320 L126 320 L112 372 L28 372Z"/><circle class="dot pulse" cx="100" cy="350" r="9"/></g>
-            <g class="hot" data-p="rails"><path class="hl" d="M2 100 L18 100 L18 300 L2 300Z"/><path class="hl" d="M122 100 L138 100 L138 300 L122 300Z"/><circle class="dot pulse" cx="131" cy="190" r="9"/></g>
-            <g class="hot" data-p="alma"><rect class="hl" x="56" y="90" width="28" height="220"/><circle class="dot pulse" cx="70" cy="150" r="9"/></g>
-            <g class="hot" data-p="deck"><rect class="hl" x="26" y="242" width="88" height="96"/><circle class="dot pulse" cx="45" cy="290" r="9"/></g>
-            <g class="hot" data-p="leash"><path class="hl" d="M-20 360 L70 340 L80 370 L10 410 L-20 410Z"/><circle class="dot pulse" cx="22" cy="384" r="9"/></g>
+        <svg viewBox="0 0 340 300" id="board">
+          <defs>
+            <linearGradient id="dk1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CC3E3"/><stop offset=".5" stop-color="#6FAFD6"/><stop offset="1" stop-color="#5A9CC6"/></linearGradient>
+            <linearGradient id="sd1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7F5F0"/><stop offset="1" stop-color="#D9D3C7"/></linearGradient>
+            <filter id="sh1" x="-10%" y="-30%" width="120%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#1d3a4d" flood-opacity=".25"/></filter>
+          </defs>
+          <text x="170" y="26" text-anchor="middle" class="lbl" opacity=".5">VISTA DE ARRIBA</text>
+          <g filter="url(#sh1)">
+            <path d="M22 60 C24 52 30 50 40 49 C130 40 240 42 292 62 C326 74 326 106 292 118 C240 138 130 140 40 131 C30 130 24 128 22 120Z" fill="#F7F5F0"/>
+            <path d="M32 62 C34 58 38 57 44 57 C130 49 236 51 286 68 C312 78 312 102 286 112 C236 129 130 131 44 123 C38 123 34 122 32 118Z" fill="url(#dk1)"/>
           </g>
-          <!-- vista de lado -->
-          <g transform="translate(200,40)">
-            <text x="60" y="-26" text-anchor="middle" class="lbl" opacity=".55">DE LADO</text>
-            <g transform="rotate(-90 60 170)">
-              <path d="M-80 160 C-40 168 120 170 180 168 C192 167 198 160 204 146 C200 162 196 176 182 178 C120 182 -40 182 -80 174 C-84 170 -84 164 -80 160Z" fill="#F4F1EA" stroke="#2d6e94" stroke-width="4"/>
-              <path d="M-66 180 L-50 202 L-42 180Z" fill="#2C2C2B"/>
-              <path d="M-40 181 L-28 196 L-22 181Z" fill="#2C2C2B"/>
-              <g class="hot" data-p="quillas"><rect class="hl" x="-78" y="176" width="66" height="34"/><circle class="dot pulse" cx="-46" cy="206" r="9"/></g>
-              <g class="hot" data-p="rocker"><rect class="hl" x="150" y="138" width="60" height="44"/><circle class="dot pulse" cx="190" cy="150" r="9"/></g>
-            </g>
+          <path d="M40 90 L306 90" stroke="#fff" stroke-width="2" opacity=".55"/>
+          <path d="M60 74 L240 70 M60 106 L240 110" stroke="#fff" stroke-width="1.2" opacity=".35"/>
+          <rect x="38" y="64" width="78" height="52" rx="10" fill="#4C88B0" opacity=".45"/>
+          <path d="M44 72 h66 M44 80 h66 M44 88 h66 M44 96 h66 M44 104 h66" stroke="#fff" stroke-width="1" opacity=".25"/>
+          <text x="200" y="95" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" opacity=".85" letter-spacing=".12em">STORM</text>
+          <circle cx="30" cy="90" r="4.5" fill="#2C2C2B"/>
+          <path d="M30 90 C14 96 10 120 22 134 C32 146 22 160 8 162" fill="none" stroke="#2C2C2B" stroke-width="3.5" stroke-linecap="round"/>
+          <rect x="-2" y="158" width="22" height="12" rx="5" fill="#2C2C2B"/>
+          <text x="170" y="196" text-anchor="middle" class="lbl" opacity=".5">DE LADO</text>
+          <g filter="url(#sh1)">
+            <path d="M22 222 C110 230 230 230 292 220 C306 217 316 210 324 198 C322 214 314 230 298 236 C230 248 110 248 22 240 C18 238 18 224 22 222Z" fill="url(#sd1)"/>
           </g>
+          <path d="M22 222 C110 230 230 230 292 220 C306 217 316 210 324 198" fill="none" stroke="#6FAFD6" stroke-width="5" stroke-linecap="round"/>
+          <path d="M34 242 C36 254 42 262 54 266 L54 243Z" fill="#2C2C2B"/>
+          <path d="M64 244 C66 252 70 258 78 260 L78 245Z" fill="#2C2C2B"/>
+          <g class="hot" data-p="nose"><path class="hl" d="M250 50 C300 56 330 80 324 100 C318 120 290 130 250 132Z"/><circle class="dot pulse" cx="300" cy="90" r="9"/></g>
+          <g class="hot" data-p="tail"><rect class="hl" x="18" y="46" width="40" height="88" rx="8"/><circle class="dot pulse" cx="40" cy="118" r="9"/></g>
+          <g class="hot" data-p="rails"><path class="hl" d="M120 122 L240 118 L240 138 L120 140Z"/><circle class="dot pulse" cx="180" cy="130" r="9"/></g>
+          <g class="hot" data-p="alma"><rect class="hl" x="130" y="82" width="110" height="16"/><circle class="dot pulse" cx="150" cy="90" r="9"/></g>
+          <g class="hot" data-p="deck"><rect class="hl" x="38" y="64" width="78" height="52" rx="10"/><circle class="dot pulse" cx="86" cy="76" r="9"/></g>
+          <g class="hot" data-p="leash"><path class="hl" d="M0 120 L36 120 L36 176 L-4 176Z"/><circle class="dot pulse" cx="18" cy="136" r="9"/></g>
+          <g class="hot" data-p="quillas"><rect class="hl" x="28" y="238" width="58" height="32"/><circle class="dot pulse" cx="60" cy="268" r="9"/></g>
+          <g class="hot" data-p="rocker"><rect class="hl" x="270" y="190" width="60" height="44"/><circle class="dot pulse" cx="312" cy="206" r="9"/></g>
         </svg>
       </div>
       <div class="info" id="info"><em>Parte de la tabla</em><b>Toca un punto</b><span>Cada parte cumple una función en el agua.</span></div>
@@ -166,7 +173,7 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
         <button data-v="regular"><b>Regular</b><small>Pie izquierdo adelante</small></button>
         <button data-v="goofy"><b>Goofy</b><small>Pie derecho adelante</small></button>
       </div>
-      <div class="stage sand" style="margin-top:12px"><svg viewBox="0 0 340 230" id="rgsvg"></svg></div>
+      <div class="stage sand" style="margin-top:12px" id="rgsvg"></div><p class="sub" style="margin-top:8px;font-size:13px">Mira el pie marcado: cambia el pie de adelante, pero el surfista sigue mirando hacia ti.</p>
       <h2 style="font-size:18px;margin-top:18px">Descúbrelo: la prueba del empujón</h2>
       <ol class="test">
         <li>Párate derecho con los pies juntos y los ojos cerrados.</li>
@@ -198,7 +205,36 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
     </div>
   </section>
 
-  <!-- 4 QUIZ -->
+  <!-- 4 POSTURA -->
+  <section id="s-post" hidden>
+    <div class="card">
+      <h2>Postura de balance</h2>
+      <p class="sub">Así quedas después del pop-up. Es la base para todo: remar la ola, girar y no caerte.</p>
+      <div class="rg" id="rg2">
+        <button data-v="regular"><b>Regular</b><small>Izquierdo adelante</small></button>
+        <button data-v="goofy"><b>Goofy</b><small>Derecho adelante</small></button>
+      </div>
+      <div class="stage sand" style="margin-top:12px" id="postsvg"></div>
+      <p class="sub" style="margin-top:8px;font-size:13px">Toca los números.</p>
+      <div class="stp" id="pstp"><em>Postura</em><b>Toca un número</b><span>Cada número es una parte de tu postura.</span></div>
+      <h2 style="font-size:18px;margin-top:18px">Tus pies, vistos desde arriba</h2>
+      <div class="stage" style="margin-top:10px" id="feet"></div>
+      <div class="tipk"><span>🦶</span><span><b>Pie de atrás</b> cruzado en la tabla, sobre las quillas.</span></div>
+      <div class="tipk"><span>↗️</span><span><b>Pie de adelante</b> al centro, un poco girado hacia el nose.</span></div>
+      <h2 style="font-size:18px;margin-top:18px">Pruébalo frente al espejo</h2>
+      <ol class="test" id="chk">
+        <li>Pies un poco más abiertos que tus hombros.</li>
+        <li>Rodillas flectadas, como si te fueras a sentar.</li>
+        <li>Espalda derecha y pecho hacia adelante.</li>
+        <li>Brazos abiertos y relajados, a la altura de la cintura.</li>
+        <li>Mirada al frente, hacia donde vas.</li>
+      </ol>
+      <p class="sub" style="margin-top:10px">Aguanta 20 segundos sin moverte. Después salta y vuelve a caer en tu postura.</p>
+      <button class="btn y" id="postOk">Lo hice 3 veces ✓</button>
+    </div>
+  </section>
+
+  <!-- 5 QUIZ -->
   <section id="s-quiz" hidden>
     <div class="card q" id="quiz"></div>
   </section>
@@ -210,7 +246,7 @@ function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}marks()}
 var $=function(id){return document.getElementById(id)};
 function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
 function marks(){document.querySelectorAll('[data-ok]').forEach(function(i){i.textContent=S['ok_'+i.dataset.ok]?'✓':''})}
-function go(s){document.querySelectorAll('#nav button').forEach(function(b){b.classList.toggle('on',b.dataset.s===s)});['tabla','pie','parar','quiz'].forEach(function(x){$('s-'+x).hidden=x!==s});if(s==='parar'){drawPop(0)}if(s==='pie')drawRG();window.scrollTo({top:0})}
+function go(s){document.querySelectorAll('#nav button').forEach(function(b){b.classList.toggle('on',b.dataset.s===s)});['tabla','pie','parar','post','quiz'].forEach(function(x){$('s-'+x).hidden=x!==s});if(s==='parar'){drawPop(0)}if(s==='pie')drawRG();if(s==='post')drawPost();window.scrollTo({top:0})}
 document.querySelectorAll('#nav button').forEach(function(b){b.onclick=function(){go(b.dataset.s)}});
 
 // ---------- 1 tabla ----------
@@ -256,45 +292,113 @@ $('gameBtn').onclick=function(){
   $('info').innerHTML='<em>Juego</em><b>Encuentra la parte</b><span>Toca en la tabla la parte que te pedimos.</span>';nextQ();
 };
 
-// ---------- surfista (figura) ----------
+// ---------- surfista (dibujo) ----------
+var SK='#E2B48C',SKD='#C9976F',HAIR='#3B2A1E',WS='#1F2F3B',WS2='#2B4252',WS3='#16222B',ACC='#61A1C8';
+function seg(a,b,w,c){return '<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round"/>'}
+function limb(a,b,c,w1,w2,col){return seg(a,b,w1,col)+seg(b,c,w2,col)}
 var J=['head','sh','hip','k1','f1','k2','f2','e1','h1','e2','h2'];
-// 1 = pierna/brazo de adelante (hacia el nose, a la derecha). y=176 es la tabla.
+// lado: nose a la derecha. 1 = adelante (hacia el nose).
 var FR=[
  {t:'Remando',d:'Acostado en el centro de la tabla, pies juntos tocando el tail y el nose un poco arriba del agua. Cuando sientes que la ola te lleva…',
-  p:{head:[262,158],sh:[244,164],hip:[168,168],k1:[128,170],f1:[90,170],k2:[128,170],f2:[90,170],e1:[262,182],h1:[280,198],e2:[226,150],h2:[206,160]}},
+  p:{head:[262,156],sh:[244,164],hip:[168,168],k1:[128,170],f1:[90,170],k2:[128,170],f2:[90,170],e1:[262,182],h1:[280,196],e2:[226,150],h2:[206,160]}},
  {t:'Manos al pecho',d:'Manos planas sobre la tabla, justo debajo del pecho. Codos pegados al cuerpo.',
-  p:{head:[266,156],sh:[246,164],hip:[168,168],k1:[128,170],f1:[90,170],k2:[128,170],f2:[90,170],e1:[232,150],h1:[240,174],e2:[230,152],h2:[238,174]}},
+  p:{head:[266,154],sh:[246,164],hip:[168,168],k1:[128,170],f1:[90,170],k2:[128,170],f2:[90,170],e1:[232,150],h1:[240,174],e2:[230,152],h2:[238,174]}},
  {t:'Pecho arriba',d:'Empuja y sube solo el pecho y los hombros. Caderas y piernas siguen en la tabla.',
-  p:{head:[262,122],sh:[246,134],hip:[172,166],k1:[130,170],f1:[92,170],k2:[130,170],f2:[92,170],e1:[246,154],h1:[242,174],e2:[244,155],h2:[240,174]}},
+  p:{head:[262,120],sh:[246,134],hip:[172,166],k1:[130,170],f1:[92,170],k2:[130,170],f2:[92,170],e1:[246,154],h1:[242,174],e2:[244,155],h2:[240,174]}},
  {t:'Pie de atrás',d:'Rápido: lleva el pie de atrás cerca del tail, apoyando el empeine. Las manos siguen en la tabla.',
-  p:{head:[256,112],sh:[238,124],hip:[180,148],k1:[150,170],f1:[116,172],k2:[146,132],f2:[118,174],e1:[242,148],h1:[242,174],e2:[240,149],h2:[240,174]}},
+  p:{head:[256,110],sh:[238,124],hip:[180,148],k1:[150,170],f1:[116,172],k2:[146,132],f2:[118,174],e1:[242,148],h1:[242,174],e2:[240,149],h2:[240,174]}},
  {t:'Pie de adelante',d:'Empuja con manos y pie de atrás, y desliza el pie de adelante al centro, un poco atrás de donde estaban tus manos.',
-  p:{head:[232,92],sh:[218,106],hip:[176,130],k1:[214,146],f1:[222,174],k2:[146,146],f2:[118,174],e1:[232,140],h1:[240,172],e2:[228,142],h2:[236,172]}},
- {t:'¡Arriba!',d:'Rodillas flectadas, brazos adelante y mirada al frente. Listo para surfear.',
-  p:{head:[184,62],sh:[176,82],hip:[166,128],k1:[200,150],f1:[218,174],k2:[136,150],f2:[118,174],e1:[204,96],h1:[232,104],e2:[146,102],h2:[122,112]}}
+  p:{head:[232,90],sh:[218,106],hip:[176,130],k1:[214,146],f1:[222,174],k2:[146,146],f2:[118,174],e1:[232,140],h1:[240,172],e2:[228,142],h2:[236,172]}},
+ {t:'¡Arriba!',d:'Rodillas y caderas bajas, brazos adelante y mirada al frente. Ya estás en tu postura de balance.',
+  p:{head:[186,62],sh:[176,84],hip:[164,130],k1:[200,150],f1:[218,174],k2:[134,150],f2:[118,174],e1:[204,98],h1:[232,106],e2:[146,104],h2:[122,114]}}
 ];
-function boardSide(){return '<path d="M60 178 C110 180 250 180 282 176 C292 175 298 170 304 162 C300 174 296 186 284 188 C250 190 110 190 60 186 C54 184 54 180 60 178Z" fill="#F4F1EA" stroke="#2d6e94" stroke-width="3"/><path d="M70 189 L80 202 L86 189Z" fill="#2C2C2B"/>'}
-function fig(p){
-  var L=function(a,b,w,c){return '<line x1="'+p[a][0]+'" y1="'+p[a][1]+'" x2="'+p[b][0]+'" y2="'+p[b][1]+'" stroke="'+(c||'#2C2C2B')+'" stroke-width="'+w+'" stroke-linecap="round"/>'};
-  return L('sh','e2',8,'#5a5955')+L('e2','h2',7,'#5a5955')+L('hip','k2',10,'#4f4e4a')+L('k2','f2',9,'#4f4e4a')+
-   L('sh','hip',13,'#2d6e94')+L('hip','k1',10)+L('k1','f1',9)+L('sh','e1',8)+L('e1','h1',7)+
-   '<circle cx="'+p.head[0]+'" cy="'+p.head[1]+'" r="11" fill="#2C2C2B"/>';
+function boardSide(){
+  return '<path d="M58 178 C110 182 240 182 286 176 C296 174 302 168 308 158 C306 172 300 184 288 188 C240 194 110 194 58 188 C54 186 54 180 58 178Z" fill="#F4F1EA"/>'+
+   '<path d="M58 178 C110 182 240 182 286 176 C296 174 302 168 308 158" fill="none" stroke="#6FAFD6" stroke-width="4" stroke-linecap="round"/>'+
+   '<path d="M66 190 C68 198 72 203 80 205 L80 191Z" fill="#2C2C2B"/>';
 }
-function mirror(goofy,inner){return goofy?'<g transform="translate(340,0) scale(-1,1)">'+inner+'</g>':inner}
-function scene(p,goofy,extra){return '<path d="M0 190 Q85 184 170 190 T340 190 L340 230 L0 230Z" fill="#E3D1AE"/>'+mirror(goofy,boardSide()+fig(p)+(extra||''))}
+function headSide(c,ang){ // mirando a la derecha
+  return '<g transform="rotate('+(ang||0)+' '+c[0]+' '+c[1]+')"><circle cx="'+c[0]+'" cy="'+c[1]+'" r="12.5" fill="'+SK+'"/>'+
+   '<path d="M'+(c[0]-13)+' '+(c[1]+2)+' C'+(c[0]-14)+' '+(c[1]-12)+' '+(c[0]-2)+' '+(c[1]-17)+' '+(c[0]+9)+' '+(c[1]-11)+' C'+(c[0]+4)+' '+(c[1]-8)+' '+(c[0]-2)+' '+(c[1]-4)+' '+(c[0]-4)+' '+(c[1]+6)+'Z" fill="'+HAIR+'"/>'+
+   '<circle cx="'+(c[0]+6)+'" cy="'+(c[1]-1)+'" r="1.6" fill="#2C2C2B"/></g>';
+}
+function figSide(p){
+  var neck=[p.sh[0]+(p.head[0]-p.sh[0])*.45,p.sh[1]+(p.head[1]-p.sh[1])*.45];
+  var mid=[p.sh[0]+(p.hip[0]-p.sh[0])*.35,p.sh[1]+(p.hip[1]-p.sh[1])*.35];
+  return limb(p.sh,p.e2,p.h2,10,9,WS3)+'<circle cx="'+p.h2[0]+'" cy="'+p.h2[1]+'" r="4.5" fill="'+SKD+'"/>'+
+   limb(p.hip,p.k2,p.f2,15,12,WS3)+'<ellipse cx="'+p.f2[0]+'" cy="'+(p.f2[1]+2)+'" rx="8" ry="4" fill="'+SKD+'"/>'+
+   seg(p.sh,neck,8,SK)+seg(p.sh,p.hip,25,WS)+seg(p.sh,mid,7,ACC)+
+   limb(p.hip,p.k1,p.f1,15,12,WS2)+'<ellipse cx="'+p.f1[0]+'" cy="'+(p.f1[1]+2)+'" rx="8" ry="4" fill="'+SK+'"/>'+
+   limb(p.sh,p.e1,p.h1,10,9,WS2)+'<circle cx="'+p.h1[0]+'" cy="'+p.h1[1]+'" r="4.5" fill="'+SK+'"/>'+
+   headSide(p.head,0);
+}
+function scene(p,extra){return '<path d="M0 190 Q85 184 170 190 T340 190 L340 230 L0 230Z" fill="#E3D1AE"/>'+boardSide()+figSide(p)+(extra||'')}
+
+// ---------- de frente (postura) ----------
+// Mirando hacia ti. Regular: nose a tu derecha (su pie izquierdo adelante).
+function boardFront(){
+  return '<path d="M40 186 C110 190 240 190 292 184 C302 182 310 176 316 166 C314 180 306 192 294 196 C240 202 110 202 40 196 C36 194 36 188 40 186Z" fill="#F4F1EA"/>'+
+   '<path d="M40 186 C110 190 240 190 292 184 C302 182 310 176 316 166" fill="none" stroke="#6FAFD6" stroke-width="4" stroke-linecap="round"/>';
+}
+function figFront(){
+  var hipL=[150,126],hipR=[182,124],kB=[120,150],kF=[210,148],fB=[124,182],fF=[208,182],shL=[140,84],shR=[192,80];
+  var s='';
+  s+=limb(hipL,kB,fB,17,14,WS)+'<ellipse cx="'+(fB[0]-2)+'" cy="'+(fB[1]+1)+'" rx="13" ry="4.5" fill="'+SK+'"/>';
+  s+=limb(hipR,kF,fF,17,14,WS2)+'<ellipse cx="'+(fF[0]+3)+'" cy="'+(fF[1]+1)+'" rx="13" ry="4.5" fill="'+SK+'" transform="rotate(-8 '+fF[0]+' '+fF[1]+')"/>';
+  s+='<path d="M'+shL[0]+' '+shL[1]+' C134 100 140 118 '+(hipL[0]-2)+' '+(hipL[1]+4)+' L'+(hipR[0]+4)+' '+(hipR[1]+4)+' C192 112 198 96 '+shR[0]+' '+shR[1]+' C178 74 154 76 '+shL[0]+' '+shL[1]+'Z" fill="'+WS+'"/>';
+  s+='<path d="M166 80 L166 104" stroke="'+ACC+'" stroke-width="5" stroke-linecap="round"/>';
+  s+=limb(shL,[112,100],[90,114],11,9,WS)+'<circle cx="90" cy="114" r="5" fill="'+SK+'"/>';
+  s+=limb(shR,[222,94],[250,102],11,9,WS2)+'<circle cx="250" cy="102" r="5" fill="'+SK+'"/>';
+  s+='<rect x="161" y="66" width="10" height="12" rx="4" fill="'+SK+'"/>';
+  // cabeza girada hacia el nose (derecha)
+  s+='<circle cx="168" cy="52" r="15" fill="'+SK+'"/><path d="M152 54 C150 38 164 32 176 36 C184 39 186 44 184 48 C176 42 166 44 160 50 C158 54 156 58 152 58Z" fill="'+HAIR+'"/>'+
+     '<circle cx="176" cy="53" r="1.8" fill="#2C2C2B"/><path d="M181 57 q3 1 1 4" stroke="'+SKD+'" stroke-width="1.6" fill="none"/>';
+  return s;
+}
+function frontScene(goofy,labels,marks){
+  var inner=boardFront()+figFront();
+  var g=goofy?'<g transform="translate(356,0) scale(-1,1)">'+inner+'</g>':inner;
+  var X=function(x){return goofy?356-x:x};
+  var t='<path d="M0 198 Q85 192 170 198 T340 198 L340 240 L0 240Z" fill="#E3D1AE"/>'+g;
+  if(labels){
+    t+='<circle cx="'+X(210)+'" cy="183" r="17" fill="none" stroke="#E9B93A" stroke-width="3"/>'+
+       '<text x="'+X(210)+'" y="222" text-anchor="middle" class="lbl">'+(goofy?'DERECHO':'IZQUIERDO')+'</text>'+
+       '<text x="'+X(122)+'" y="222" text-anchor="middle" class="lbl" opacity=".55">'+(goofy?'IZQUIERDO':'DERECHO')+'</text>'+
+       '<text x="'+X(300)+'" y="152" text-anchor="middle" class="lbl" fill="#2d6e94">'+(goofy?'← NOSE':'NOSE →')+'</text>';
+  }
+  if(marks){
+    var M=[[1,186,30],[2,262,90],[3,226,136],[4,166,214],[5,234,174]];
+    t+=M.map(function(m){return '<g class="mk" data-m="'+m[0]+'"><circle cx="'+X(m[1])+'" cy="'+m[2]+'" r="11" fill="#E9B93A" stroke="#fff" stroke-width="2.5"/><text x="'+X(m[1])+'" y="'+(m[2]+4)+'" text-anchor="middle" font-size="12" font-weight="800" fill="#3B2610">'+m[0]+'</text></g>'}).join('');
+  }
+  return '<svg viewBox="0 0 340 240">'+t+'</svg>';
+}
+function feetTop(goofy){
+  var inner='<path d="M20 50 C22 42 30 40 40 39 C130 30 240 32 292 52 C326 64 326 96 292 108 C240 128 130 130 40 121 C30 120 22 118 20 110Z" fill="#F7F5F0"/>'+
+   '<path d="M30 52 C34 48 38 47 44 47 C130 39 236 41 286 58 C312 68 312 92 286 102 C236 119 130 121 44 113 C38 113 34 112 30 108Z" fill="#7FB5D5"/>'+
+   '<path d="M36 80 L306 80" stroke="#fff" stroke-width="2" stroke-dasharray="5 5" opacity=".8"/>'+
+   '<g transform="rotate(0 104 80)"><path d="M96 60 C96 52 112 52 112 60 L113 100 C113 108 95 108 95 100Z" fill="#2C2C2B"/></g>'+
+   '<g transform="rotate(30 218 80)"><path d="M210 60 C210 52 226 52 226 60 L227 100 C227 108 209 108 209 100Z" fill="#E9B93A"/></g>'+
+   '<path d="M218 50 L218 40" stroke="#3B2610" stroke-width="1.5" stroke-dasharray="3 3"/><path d="M218 46 A34 34 0 0 1 236 50" stroke="#3B2610" stroke-width="2" fill="none"/>'+
+   '<path d="M104 134 L218 134" stroke="#3B2610" stroke-width="2"/><path d="M104 128 L104 140 M218 128 L218 140" stroke="#3B2610" stroke-width="2"/>';
+  var X=function(x){return goofy?340-x:x};
+  var g=goofy?'<g transform="translate(340,0) scale(-1,1)">'+inner+'</g>':inner;
+  return '<svg viewBox="0 -14 340 184">'+g+'<text x="'+X(104)+'" y="0" text-anchor="middle" class="lbl">ATRÁS</text><text x="'+X(206)+'" y="0" text-anchor="middle" class="lbl">ADELANTE</text>'+
+   '<text x="'+X(246)+'" y="38" text-anchor="middle" class="lbl">30°</text>'+
+   '<text x="'+X(161)+'" y="156" text-anchor="middle" class="lbl">UN POCO MÁS QUE TUS HOMBROS</text>'+
+   '<text x="'+X(300)+'" y="80" text-anchor="middle" class="lbl" fill="#fff">'+(goofy?'←':'→')+'</text></svg>';
+}
 
 // ---------- 2 regular / goofy ----------
 function drawRG(){
   var g=S.pie==='goofy';
   document.querySelectorAll('#rg button').forEach(function(b){b.classList.toggle('on',b.dataset.v===(S.pie||'regular'))});
-  var p=FR[5].p;
-  $('rgsvg').innerHTML=scene(p,g,'<text x="226" y="214" text-anchor="middle" class="lbl"'+(g?' transform="translate(452,0) scale(-1,1)"':'')+'>'+(g?'DERECHO':'IZQUIERDO')+' ADELANTE</text><text x="300" y="150" text-anchor="middle" class="lbl" fill="#2d6e94"'+(g?' transform="translate(600,0) scale(-1,1)"':'')+'>'+(g?'← NOSE':'NOSE →')+'</text>');
+  $('rgsvg').innerHTML=frontScene(g,true);
 }
 document.querySelectorAll('#rg button').forEach(function(b){b.onclick=function(){S.pie=b.dataset.v;save();drawRG()}});
 document.querySelectorAll('[data-me]').forEach(function(b){b.onclick=function(){
   S.pie=b.dataset.me;S.ok_pie=1;save();drawRG();vib(20);
   var g=S.pie==='goofy';$('me').hidden=false;
-  $('me').innerHTML='Eres <b>'+(g?'goofy':'regular')+'</b> 🤙<br>Tu pie '+(g?'derecho':'izquierdo')+' va adelante y el '+(g?'izquierdo':'derecho')+' atrás, cerca del tail. Así te mostramos el pop-up en el paso 3.';
+  $('me').innerHTML='Eres <b>'+(g?'goofy':'regular')+'</b> 🤙<br>Tu pie '+(g?'derecho':'izquierdo')+' va adelante y el '+(g?'izquierdo':'derecho')+' atrás, cerca del tail. Así te mostramos la postura en el paso 4.';
 }});
 if(S.pie){var g0=S.pie==='goofy';$('me').hidden=false;$('me').innerHTML='Eres <b>'+(g0?'goofy':'regular')+'</b> 🤙<br>Tu pie '+(g0?'derecho':'izquierdo')+' va adelante.'}
 
@@ -305,11 +409,11 @@ $('pips').querySelectorAll('button').forEach(function(b){b.onclick=function(){st
 document.querySelectorAll('#speed button').forEach(function(b){b.onclick=function(){slow=+b.dataset.v;document.querySelectorAll('#speed button').forEach(function(x){x.classList.toggle('on',x===b)})}});
 function lerp(a,b,t){var o={};J.forEach(function(k){o[k]=[a[k][0]+(b[k][0]-a[k][0])*t,a[k][1]+(b[k][1]-a[k][1])*t]});return o}
 function drawPop(i,p){
-  cur=i;var g=S.pie==='goofy';
-  $('pop').innerHTML=scene(p||FR[i].p,g);
+  cur=i;
+  $('pop').innerHTML=scene(p||FR[i].p);
   $('pips').querySelectorAll('button').forEach(function(b,j){b.classList.toggle('on',j<=i)});
   $('stp').innerHTML='<em>Paso '+(i+1)+' de '+FR.length+'</em><b>'+FR[i].t+'</b><span>'+FR[i].d+'</span>';
-  $('who').textContent=S.pie?'Te lo mostramos '+(g?'goofy':'regular'):'Regular (cámbialo en el paso 2)';
+  $('who').textContent='Visto de lado, nose a la derecha';
 }
 function stop(){cancelAnimationFrame(anim);anim=null;$('play').innerHTML='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z"/></svg>'}
 $('play').onclick=function(){
@@ -330,7 +434,25 @@ $('play').onclick=function(){
 };
 $('reps').onclick=function(){S.ok_parar=1;save();$('reps').textContent='¡Bien! Repite antes de cada sesión 💪';vib(30)};
 
-// ---------- 4 quiz ----------
+// ---------- 4 postura ----------
+var PM={1:['Mirada al frente','Mira hacia donde vas, no a tus pies. Tu cuerpo sigue a tu mirada.'],
+ 2:['Brazos abiertos','Relajados, a la altura de la cintura. Te ayudan a mantener el equilibrio.'],
+ 3:['Rodillas flectadas','Bajas, como si te fueras a sentar. Las piernas absorben el movimiento de la ola.'],
+ 4:['Pies sobre el alma','Al centro de la tabla, un poco más abiertos que tus hombros.'],
+ 5:['Pie de adelante','Un poco girado hacia el nose. El de atrás queda cruzado en la tabla.']};
+function drawPost(){
+  var g=S.pie==='goofy';
+  document.querySelectorAll('#rg2 button').forEach(function(b){b.classList.toggle('on',b.dataset.v===(S.pie||'regular'))});
+  $('postsvg').innerHTML=frontScene(g,false,true);
+  $('feet').innerHTML=feetTop(g);
+  $('postsvg').querySelectorAll('.mk').forEach(function(m){m.style.cursor='pointer';m.onclick=function(){var k=m.dataset.m;
+    $('pstp').innerHTML='<em>'+k+' de 5</em><b>'+PM[k][0]+'</b><span>'+PM[k][1]+'</span>';
+    $('postsvg').querySelectorAll('.mk circle').forEach(function(c){c.setAttribute('fill','#E9B93A')});m.querySelector('circle').setAttribute('fill','#7FB5D5');vib(10)}});
+}
+document.querySelectorAll('#rg2 button').forEach(function(b){b.onclick=function(){S.pie=b.dataset.v;save();drawPost()}});
+$('postOk').onclick=function(){S.ok_post=1;save();$('postOk').textContent='¡Bien! Hazlo antes de cada sesión 💪';vib(30)};
+
+// ---------- 5 quiz ----------
 var QZ=[
  ['¿Cómo se llama la punta de adelante de la tabla?',['Nose','Tail','Rail'],0],
  ['¿Para qué sirve el leash?',['Para que la tabla no se aleje si te caes','Para remar más rápido','Para que la tabla se vea bonita'],0],
@@ -339,13 +461,17 @@ var QZ=[
  ['Al pararte, ¿hacia dónde miras?',['A mis pies','Al frente','Hacia atrás'],1],
  ['¿Qué es lo último que sale de la tabla al pararte?',['Las manos','Los pies','La cabeza'],0],
  ['¿Dónde están las quillas?',['Arriba, donde pisas','Abajo de la tabla','En el nose'],1],
- ['¿Dónde van tus pies cuando estás de pie?',['Sobre el alma, al centro','En el rail','Fuera de la tabla'],0]
+ ['¿Dónde van tus pies cuando estás de pie?',['Sobre el alma, al centro','En el rail','Fuera de la tabla'],0],
+ ['En la postura de balance, tus rodillas van…',['Estiradas','Flectadas, bajas','Juntas'],1],
+ ['¿Qué tan abiertos van tus pies?',['Juntos','Un poco más que tus hombros','Lo más abierto posible'],1],
+ ['El pie de adelante va…',['Un poco girado hacia el nose','Mirando al tail','Paralelo al alma'],0],
+ ['¿Dónde van tus brazos?',['Pegados al cuerpo','Arriba de la cabeza','Abiertos y relajados'],2]
 ];
 function quiz(){
   var L=QZ.slice().sort(function(){return Math.random()-.5}).slice(0,6),i=0,ok=0;
   function draw(){
     if(i>=L.length){S.ok_quiz=ok>=5?1:S.ok_quiz;S.best=Math.max(S.best||0,ok);save();
-      $('quiz').innerHTML='<div class="ctr"><div class="big">'+(ok===6?'🏆':ok>=4?'🤙':'🌊')+'</div><h2>'+ok+' de 6</h2><p class="sub">'+(ok===6?'¡Perfecto! Ya hablas como surfista.':ok>=4?'Muy bien. Repasa lo que fallaste.':'Repasa los pasos 1, 2 y 3 y vuelve a intentarlo.')+'</p><div class="stars" style="justify-content:center">'+[0,1,2,3,4,5].map(function(j){return '<span class="'+(j<ok?'on':'')+'">⭐</span>'}).join('')+'</div><button class="btn y" id="again">Jugar otra vez</button></div>';
+      $('quiz').innerHTML='<div class="ctr"><div class="big">'+(ok===6?'🏆':ok>=4?'🤙':'🌊')+'</div><h2>'+ok+' de 6</h2><p class="sub">'+(ok===6?'¡Perfecto! Ya hablas como surfista.':ok>=4?'Muy bien. Repasa lo que fallaste.':'Repasa los pasos y vuelve a intentarlo.')+'</p><div class="stars" style="justify-content:center">'+[0,1,2,3,4,5].map(function(j){return '<span class="'+(j<ok?'on':'')+'">⭐</span>'}).join('')+'</div><button class="btn y" id="again">Jugar otra vez</button></div>';
       $('again').onclick=quiz;return}
     var q=L[i];
     $('quiz').innerHTML='<p class="sub" style="margin:0">Pregunta '+(i+1)+' de 6</p><div class="stars">'+[0,1,2,3,4,5].map(function(j){return '<span class="'+(j<ok?'on':'')+'">⭐</span>'}).join('')+'</div><h3>'+q[0]+'</h3>'+q[1].map(function(o,j){return '<button class="o" data-j="'+j+'">'+o+'</button>'}).join('');

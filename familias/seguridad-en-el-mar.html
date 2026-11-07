@@ -167,24 +167,38 @@ function go(s){document.querySelectorAll('#nav button').forEach(function(b){b.cl
 document.querySelectorAll('#nav button').forEach(function(b){b.onclick=function(){go(b.dataset.s)}});
 
 // ---------- figura en el agua ----------
-// hombros en (85,100) y (115,100). Brazos como path desde el hombro.
-function arm(d,cls,ox,oy){return '<g'+(cls?' class="'+cls+'" style="transform-origin:'+ox+'px '+oy+'px"':'')+'><path d="'+d+'" fill="none" stroke="#2C2C2B" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></g>'}
+var SK='#E2B48C',SKD='#C9976F',HAIR='#3B2A1E',WS='#1F2F3B',WS2='#2B4252',ACC='#61A1C8';
+function arm(pts,cls,ox,oy,fist){
+  var d='M'+pts.map(function(p){return p[0]+' '+p[1]}).join(' L'),e=pts[pts.length-1];
+  return '<g'+(cls?' class="'+cls+'" style="transform-origin:'+ox+'px '+oy+'px"':'')+'><path d="'+d+'" fill="none" stroke="'+WS2+'" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+e[0]+'" cy="'+e[1]+'" r="'+(fist?7:5.5)+'" fill="'+SK+'"/></g>';
+}
+function water(y){
+  return '<path d="M0 '+y+' Q25 '+(y-6)+' 50 '+y+' T100 '+y+' T150 '+y+' T200 '+y+' L200 160 L0 160Z" fill="#4C88B0" opacity=".78"/>'+
+   '<path d="M0 '+(y+10)+' Q30 '+(y+5)+' 60 '+(y+10)+' T120 '+(y+10)+' T200 '+(y+10)+' L200 160 L0 160Z" fill="#3B76A0" opacity=".55"/>'+
+   '<path d="M8 '+(y-1)+' Q25 '+(y-6)+' 42 '+(y-1)+' M108 '+(y-1)+' Q125 '+(y-6)+' 142 '+(y-1)+'" stroke="#fff" stroke-width="2.2" fill="none" opacity=".7" stroke-linecap="round"/>';
+}
 function person(arms,extra){
-  return '<svg viewBox="0 0 200 160"><g class="bob">'+(extra||'')+
-   '<path d="M78 104 Q100 92 122 104 L124 160 L76 160Z" fill="#2d6e94"/>'+arms+
-   '<circle cx="100" cy="80" r="14" fill="#2C2C2B"/></g>'+
-   '<path d="M0 118 Q25 112 50 118 T100 118 T150 118 T200 118 L200 160 L0 160Z" fill="#4C88B0" opacity=".55"/></svg>';
+  return '<svg viewBox="0 0 200 160"><path d="M128 120 C150 112 182 112 196 117 C182 124 150 126 128 122Z" fill="#F7F5F0"/><path d="M130 119 C152 114 180 114 194 117" stroke="#6FAFD6" stroke-width="2.5" fill="none"/>'+
+   '<g class="bob">'+(extra||'')+
+   '<path d="M80 108 C80 96 89 91 100 91 C111 91 120 96 120 108 L123 160 L77 160Z" fill="'+WS+'"/>'+
+   '<path d="M86 99 Q100 93 114 99" stroke="'+ACC+'" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M100 96 L100 128" stroke="'+ACC+'" stroke-width="3" stroke-linecap="round"/>'+
+   '<rect x="95" y="80" width="10" height="13" rx="4" fill="'+SK+'"/>'+arms+
+   '<circle cx="100" cy="72" r="14" fill="'+SK+'"/>'+
+   '<path d="M85 72 C84 58 94 54 102 55 C112 56 117 63 115 70 C110 64 100 63 92 66 C89 68 88 72 85 74Z" fill="'+HAIR+'"/>'+
+   '<circle cx="95" cy="74" r="1.7" fill="#2C2C2B"/><circle cx="105" cy="74" r="1.7" fill="#2C2C2B"/><path d="M96 80 Q100 82 104 80" stroke="'+SKD+'" stroke-width="1.6" fill="none" stroke-linecap="round"/>'+
+   '</g>'+water(118)+'</svg>';
 }
 var SIG=[
  {id:'bien',t:'Estoy bien',d:'Puño sobre la cabeza. Úsala siempre que salgas de un revolcón.',c:'#3f8f6b',
-  f:function(){return person(arm('M115 100 L128 74 L104 62','',0,0)+'<circle cx="104" cy="62" r="6" fill="#2C2C2B"/>'+arm('M85 100 L74 122','',0,0))}},
+  f:function(){return person(arm([[114,100],[126,72],[106,52]],'',0,0,1)+arm([[86,100],[76,122]],'',0,0))}},
  {id:'ayuda',t:'Necesito ayuda',d:'Un brazo extendido hacia arriba, moviéndose de lado a lado.',c:'#E9B93A',
-  f:function(){return person(arm('M115 100 L118 66 L120 36','wv slow',115,100)+arm('M85 100 L74 122','',0,0))}},
+  f:function(){return person(arm([[114,100],[118,66],[120,36]],'wv slow',114,100)+arm([[86,100],[76,122]],'',0,0))}},
  {id:'urgente',t:'Ayuda urgente',d:'Los dos brazos arriba, moviéndose. Es una emergencia: hay que actuar rápido.',c:'#C8462E',
-  f:function(){return person(arm('M115 100 L120 66 L124 36','wv',115,100)+arm('M85 100 L80 66 L76 36','wv2',85,100))}},
+  f:function(){return person(arm([[114,100],[120,66],[124,36]],'wv',114,100)+arm([[86,100],[80,66],[76,36]],'wv2',86,100))}},
  {id:'comp',t:'Mi compañero necesita ayuda',d:'Un brazo apunta a la persona con problemas y el otro arriba. Úsala cuando veas a alguien en dificultad.',c:'#2d6e94',
-  f:function(){return person(arm('M115 100 L118 66 L120 36','wv slow',115,100)+arm('M85 100 L58 98 L32 98','',0,0),
-   '<g><circle cx="22" cy="108" r="9" fill="#5a5955"/><path d="M10 106 L4 92 M34 106 L40 92" stroke="#5a5955" stroke-width="6" stroke-linecap="round"/></g>')}}
+  f:function(){return person(arm([[114,100],[118,66],[120,36]],'wv slow',114,100)+arm([[86,100],[58,98],[38,96]],'',0,0),
+   '<g transform="translate(2,-7)"><path d="M14 110 L8 94 M32 110 L38 94" stroke="'+WS2+'" stroke-width="6" stroke-linecap="round"/><circle cx="8" cy="93" r="3.5" fill="'+SK+'"/><circle cx="38" cy="93" r="3.5" fill="'+SK+'"/><circle cx="23" cy="112" r="10" fill="'+SK+'"/><path d="M13 111 C12 102 20 99 26 100 C32 101 34 106 33 109 C28 105 20 105 13 111Z" fill="'+HAIR+'"/>'+
+   '<path d="M2 116 l-4 -4 M44 116 l4 -4 M6 104 l-5 -1" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/></g>')}}
 ];
 var seenS=S.seen||{};
 function showSig(i){
