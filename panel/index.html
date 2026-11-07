@@ -158,6 +158,11 @@
 .pn-sw button{flex:1;border:0;border-radius:999px;padding:10px 8px;font:inherit;font-size:1.4rem;font-weight:600;background:none;color:var(--ink);cursor:pointer}
 .pn-sw button.on{background:var(--aa);color:#fff}
 .pn-sw button[data-acad='verano'].on{background:#FADF70;color:#3B2610}
+.pn-sw button[data-acad='finanzas'].on{background:var(--ink);color:#fff}
+.pn-finz[hidden],.pn-fpane[hidden]{display:none}
+.pn-fsub{display:flex;gap:6px;margin-top:14px}
+.pn-fsub button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-size:1.35rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.pn-fsub button.on{background:var(--ink);border-color:var(--ink);color:#fff}
 .pn-verano[hidden]{display:none}
 .pn-verano .pn-gbtn.on{background:#FADF70;border-color:#FADF70;color:#3B2610}
 .pn-verano .pn-day.on{background:#3B2610;border-color:#3B2610}
@@ -407,14 +412,13 @@
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
     LISTA = d.lista || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button><button class='pn-tab' data-tab='gastos'>Gastos</button><button class='pn-tab' data-tab='finanzas'>Finanzas</button>`}</div>`;
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
         app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t);
         if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); }
-        if(t === 'gastos') cargarGastos();
-        if(t === 'finanzas') cargarFinanzas(); };
+         };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
@@ -456,7 +460,7 @@
       <p class='pn-note'>A los pagos con Mercado Pago se les descuenta una comisión de cerca de 3,4%; a las transferencias no. ${esc(cap(d.pasado.mes))}: ${clp(d.pasado.recaudado)} con ${d.pasado.alumnos} alumnos.</p>
     </div>`;
 
-    h += `<div class='pn-pane' data-pane='gastos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='finanzas'><div class='pn-skel'></div></div>`;
+    h += `<div class='pn-finz' hidden><div class='pn-fsub'><button data-fsub='finanzas'>General</button><button data-fsub='gastos'>Sueldos Academia Anual</button></div><div class='pn-fpane' data-pane='finanzas'><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='gastos' hidden><div class='pn-skel'></div></div></div>`;
     h += `<div class='pn-pane' data-pane='avisos'>
       ${d.revisar.length ? `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${d.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla: ${d.revisar.map(esc).join(', ')}</p></div>` : ''}
       <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
@@ -625,10 +629,9 @@
   }
   // Desde Verano: botón para anotar un gasto hormiga (abre Finanzas con el área Verano).
   function irAFinanzasVerano(){
-    fArea = 'Verano'; fTipo = 'gasto'; acad = 'anual'; try{ sessionStorage.setItem(KEY + '-acad', 'anual'); }catch(_){}
-    mostrarAcad(); const t = app.querySelector(".pn-tab[data-tab='finanzas']"); if(t){ t.click(); t.scrollIntoView({block:'center'}); }
+    fArea = 'Verano'; fTipo = 'gasto'; fSub = 'finanzas'; acad = 'finanzas'; try{ sessionStorage.setItem(KEY + '-acad', 'finanzas'); }catch(_){}
+    mostrarAcad(); window.scrollTo(0, 0);
   }
-
   // ---------- Notas internas por alumno (solo el equipo; las familias no las ven) ----------
   let NOTAS = null, ntAbierta = '', aGrupo = '', aCambio = '', aNuevo = '', aMsg = '', ES_ADMIN = false;
   // Cajita para elegir el nivel nuevo (Anual y Verano).
@@ -731,17 +734,28 @@
   function ponerSelector(){
     if(!API_VERANO) return;
     const head = app.querySelector('.pn-head'); if(!head || app.querySelector('.pn-sw')) return;
-    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Academia Anual</button><button data-acad='verano'>Academia de Verano</button></div>`);
+    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button><button data-acad='verano'>Verano</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}</div>`);
     app.querySelectorAll('[data-acad]').forEach(b => b.onclick = () => { acad = b.dataset.acad; try{ sessionStorage.setItem(KEY + '-acad', acad); }catch(_){} mostrarAcad(); });
     mostrarAcad();
   }
+  let fSub = (() => { try{ return sessionStorage.getItem(KEY + '-fsub'); }catch(_){ return null; } })() || 'finanzas';
   function mostrarAcad(){
-    const ver = acad === 'verano';
+    if(acad === 'finanzas' && !app.querySelector('.pn-finz')) acad = 'anual';
+    const ver = acad === 'verano', fin = acad === 'finanzas';
     app.querySelectorAll('[data-acad]').forEach(b => b.classList.toggle('on', b.dataset.acad === acad));
-    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano')) el.style.display = ver ? 'none' : ''; });
+    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano,.pn-finz')) el.style.display = (ver || fin) ? 'none' : ''; });
     const pv = app.querySelector('.pn-verano'); pv.hidden = !ver;
-    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : h1.dataset.t; }
+    const pf = app.querySelector('.pn-finz'); if(pf) pf.hidden = !fin;
+    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : fin ? 'Finanzas Storm' : h1.dataset.t; }
     if(ver) loadVerano();
+    if(fin) mostrarFsub();
+  }
+  function mostrarFsub(){
+    const pf = app.querySelector('.pn-finz'); if(!pf) return;
+    try{ sessionStorage.setItem(KEY + '-fsub', fSub); }catch(_){}
+    pf.querySelectorAll('[data-fsub]').forEach(b => { b.classList.toggle('on', b.dataset.fsub === fSub); b.onclick = () => { fSub = b.dataset.fsub; mostrarFsub(); }; });
+    pf.querySelectorAll('.pn-fpane').forEach(p => p.hidden = p.dataset.pane !== fSub);
+    if(fSub === 'gastos') cargarGastos(); else cargarFinanzas();
   }
   const NIV = ['Kids','Iniciante','Progress','Intermedio','Avanzado','Federados'];
   async function loadVerano(){
