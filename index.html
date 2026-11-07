@@ -592,10 +592,12 @@ body:has(.mc-hero--login) .ap-top{display:none}
     {url:'/familias/preguntas-despues-del-surf.html', titulo:'Preguntas para después del surf', texto:'Para que "¿cómo te fue?" no termine en "bien".', icono:'💬'},
     {url:'/familias/cuando-se-frustra.html', titulo:'Cuando se frustra', texto:'Qué decir cuando no le sale, se compara o cree que debería estar en otro grupo.', icono:'🌊'},
     {url:'/familias/respira-como-surfista.html', titulo:'Respira como surfista', texto:'Respiración, apnea y visualización para entrenar la calma fuera del agua.', icono:'🌬️', solo:'anual', nuevo:true},
-    {url:'/familias/cuida-tu-equipo.html', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren y rindan.', icono:'🏄', nuevo:true}
+    {url:'/familias/cuida-tu-equipo.html', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren y rindan.', icono:'🏄'},
+    {url:'/familias/como-competir-mejor.html', titulo:'Cómo competir mejor', texto:'Estrategia, táctica y técnica: arma tu plan, decide mejor en la manga y aprende de tus videos.', icono:'🏆', niveles:['Avanzado','Federados'], nuevo:true}
   ];
-  function familiasCard(nivel, edad, acad){
-    const rs = RECURSOS.filter(r => !r.solo || r.solo === acad);
+  function familiasCard(nivel, edad, acad, todos){
+    const niv = (todos && todos.length ? todos : [nivel]).map(x => String(x || ''));
+    const rs = RECURSOS.filter(r => (!r.solo || r.solo === acad) && (!r.niveles || r.niveles.some(n => niv.includes(n))));
     if(!rs.length) return '';
     const q = (nivel ? 'nivel=' + encodeURIComponent(nivel) : '') + (edad ? (nivel ? '&' : '') + 'edad=' + encodeURIComponent(edad) : '');
     const orden = rs.filter(r => r.nuevo).concat(rs.filter(r => !r.nuevo));
@@ -617,7 +619,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     h += `<div id='mc-s-cal'></div><div class='mc-calmes mc-calv' data-calv hidden><h2 class='mc-h2'>Calendario Verano</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calv-tabs></div><div data-calv-grid></div></div></div>`;
     h += informesCard('Verano');
     if(d.traer) h += `<h2 class='mc-h2'>Qué traer</h2><div class='mc-card'><p style='margin:0;font-size:1.45rem;line-height:1.55;white-space:pre-line'>${esc(d.traer)}</p></div>`;
-    { const k = (d.hijos || [])[0] || {}; h += familiasCard(k.nivel, parseInt(k.edad, 10) || '', 'verano'); }
+    { const k = (d.hijos || [])[0] || {}; h += familiasCard(k.nivel, parseInt(k.edad, 10) || '', 'verano', (d.hijos || []).map(x => x.nivel)); }
     h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     h += barra(`<a href='https://wa.me/56977744306' target='_blank' rel='noopener'>${IC.wa}WhatsApp</a>`);
     app.innerHTML = h; bindNuevo();
@@ -715,7 +717,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
       h += `<div class='mc-card mc-cta'><p><b>¿Toca pagar el próximo mes?</b>Elige el plan y sus clases quedan agendadas.</p><a class='mc-go mc-go--sm' href='${esc(PAY)}'>Pagar mensualidad</a></div>`;
     }
     h += `<div id='mc-s-cal'></div><div class='mc-calmes' data-calmes hidden><h2 class='mc-h2'>Calendario Academia</h2><div class='mc-card mc-calmes__card'><div class='mc-calmes__tabs' data-calmes-tabs></div><div data-calmes-grid></div></div></div>`;
-    { const a = activos[0] || d.alumnos[0] || {}; h += familiasCard(a.grupo || '', parseInt(a.edad, 10) || '', 'anual'); }
+    { const a = activos[0] || d.alumnos[0] || {}; h += familiasCard(a.grupo || '', parseInt(a.edad, 10) || '', 'anual', (activos.length ? activos : d.alumnos || []).map(x => x.grupo)); }
     if((d.eventos || []).length) h += eventosCard(d.eventos);
     if(pasados.length){
       h += `<details class='mc-old'><summary>Meses anteriores (${pasados.length})</summary>` + pasados.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('') + `</details>`;
