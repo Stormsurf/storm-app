@@ -296,7 +296,9 @@ function figSide(p){
   var nb=[p.sh[0]+(p.head[0]-p.sh[0])*.28,p.sh[1]+(p.head[1]-p.sh[1])*.28],neck=[p.sh[0]+(p.head[0]-p.sh[0])*.62,p.sh[1]+(p.head[1]-p.sh[1])*.62];
   var s='';
   // lado lejano (atrás)
-  s+=cap(shB,p.e2,6,4.8,WS)+cap(p.e2,p.h2,4.8,3.8,WS)+hand(p.h2,SKD);
+  var armB=cap(shB,p.e2,6,4.8,WS)+cap(p.e2,p.h2,4.8,3.8,WS)+hand(p.h2,SKD),armF=cap(shF,p.e1,6,4.8,WS2)+cap(p.e1,p.h1,4.8,3.8,WS2)+hand(p.h1,SK);
+  if(p.cross){armF=cap(shF,p.e1,6,4.8,WS)+cap(p.e1,p.h1,4.8,3.8,WS)+hand(p.h1,SKD);armB=cap(shB,p.e2,6,4.8,WS2)+cap(p.e2,p.h2,4.8,3.8,WS2)+hand(p.h2,SK)}
+  s+=p.cross?armF:armB;
   s+=cap(hpB,p.k2,9.5,6.8,WS)+cap(p.k2,p.f2,6.8,4.4,WS)+foot(p.f2,SKD,0);
   // torso (lycra)
   s+=cap(p.sh,p.hip,12+4*w,10+3*w,LY);
@@ -304,7 +306,7 @@ function figSide(p){
   s+=cap(nb,neck,4.4,4.2,SK)+cap(nb,nb,6+2*w,6+2*w,LY);
   // lado cercano (adelante)
   s+=cap(hpF,p.k1,9.5,6.8,WS2)+cap(p.k1,p.f1,6.8,4.4,WS2)+foot(p.f1,SK,1);
-  s+=cap(shF,p.e1,6,4.8,WS2)+cap(p.e1,p.h1,4.8,3.8,WS2)+hand(p.h1,SK);
+  s+=p.cross?armB:armF;
   s+=headD(p.head,w);
   return s;
 }
@@ -316,7 +318,7 @@ function boardSide(){
    '<path d="M64 191 C66 199 70 204 78 206 L78 192Z" fill="#2C2C2B"/>';
 }
 // 1 = adelante (hacia el nose). w: 0 de perfil (acostado), 1 de frente (de pie, mirando hacia ti)
-var STANCE={head:[206,72],sh:[196,102],hip:[184,142],k1:[226,146],f1:[226,178],k2:[168,164],f2:[134,178],e1:[228,120],h1:[250,134],e2:[166,118],h2:[140,130],w:1};
+var STANCE={head:[206,72],sh:[196,102],hip:[184,142],k1:[212,150],f1:[228,178],k2:[170,164],f2:[134,178],e1:[182,124],h1:[156,136],e2:[208,126],h2:[234,140],w:1,cross:1};
 var FR=[
  {t:'Remando',d:'Acostado al centro de la tabla, pies juntos tocando el tail y el nose un poco arriba del agua. Cuando sientes que la ola te lleva…',
   p:{head:[262,154],sh:[244,164],hip:[172,168],k1:[132,170],f1:[94,170],k2:[132,170],f2:[94,170],e1:[264,182],h1:[284,194],e2:[228,148],h2:[208,158],w:0}},
@@ -328,7 +330,7 @@ var FR=[
   p:{head:[258,106],sh:[242,120],hip:[196,134],k1:[142,166],f1:[104,176],k2:[178,160],f2:[148,178],e1:[244,150],h1:[244,177],e2:[243,151],h2:[242,177],w:0}},
  {t:'Pie de adelante',d:'Lleva el pie de adelante al centro, entre tus manos. Quedas bajo, con las rodillas flectadas.',
   p:{head:[240,88],sh:[226,108],hip:[190,134],k1:[226,146],f1:[226,178],k2:[160,154],f2:[130,178],e1:[240,144],h1:[244,177],e2:[238,146],h2:[242,177],w:.35}},
- {t:'¡Arriba!',d:'Suelta las manos y quédate bajo: rodilla de adelante a 90°, mirada al frente. Ya estás en tu postura de balance.',
+ {t:'¡Arriba!',d:'Suelta las manos y quédate bajo, con la rodilla de adelante a 90°. El brazo de adelante va hacia atrás y el de atrás hacia adelante. Mirada al frente.',
   p:STANCE}
 ];
 function scene(p,extra){return '<path d="M0 190 Q85 184 170 190 T340 190 L340 230 L0 230Z" fill="#E3D1AE"/>'+boardSide()+figSide(p)+(extra||'')}

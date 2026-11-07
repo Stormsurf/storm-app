@@ -121,7 +121,7 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
       <div class="seg" id="dir"><button data-v="der" class="on">Derecha</button><button data-v="izq">Izquierda</button></div>
       <div class="vw" id="vw"></div>
       <div class="res" id="res"></div>
-      <p class="note">Derecha o izquierda se dice desde el agua, mirando hacia la playa, como la ves cuando remas para tomarla.</p>
+      <p class="note">Derecha o izquierda se dice desde el agua, mirando hacia la playa, como la ves cuando remas para tomarla. El dibujo muestra al surfista desde atrás, mientras corre la ola.</p>
       <button class="btn b" id="fbGame">Juego rápido: 8 olas</button>
       <div id="fbG" hidden>
         <div class="vw" id="gvw"></div>
@@ -136,7 +136,7 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
     <div class="card">
       <h2>El lineup</h2>
       <p class="sub">Así se ordena el mar en una playa. Toca cada zona.</p>
-      <div class="vw" id="lu"></div>
+      <div class="vw" id="lu"></div><p class="note" style="margin-top:8px">Visto de lado, desde la playa hacia mar adentro. <button type="button" id="canalBtn" style="border:0;background:#E6F1F8;color:#1f4f6b;font-weight:700;border-radius:999px;padding:6px 12px;margin-left:4px">¿Y el canal?</button></p>
       <div class="info" id="luInfo"><b>Toca una zona</b><span>Conocer cada parte te ayuda a ubicarte y a remar por el lugar correcto.</span></div>
       <h2 style="font-size:18px;margin-top:20px">Reglas del lineup</h2>
       <ul class="rules">
@@ -181,31 +181,85 @@ function go(s){clearInterval(tick);document.querySelectorAll('#nav button').forE
 document.querySelectorAll('#nav button').forEach(function(b){b.onclick=function(){go(b.dataset.s)}});
 function segs(id,cb){document.querySelectorAll('#'+id+' button').forEach(function(b){b.onclick=function(){document.querySelectorAll('#'+id+' button').forEach(function(x){x.classList.toggle('on',x===b)});cb(b.dataset.v)}})}
 
+var SK='#E3B48D',SKD='#C99670',SKL='#EFC9A6',HAIR='#2E2119',WS='#18242E',WS2='#243746',LY='#5FA3CC',LYD='#4A8CB6',ACC='#E9B93A';
+var J=['head','sh','hip','k1','f1','k2','f2','e1','h1','e2','h2','w'];
+function P2(x,y){return [Math.round(x*10)/10,Math.round(y*10)/10]}
+// segmento cónico: trapecio + círculos en las puntas
+function cap(a,b,ra,rb,c){
+  var dx=b[0]-a[0],dy=b[1]-a[1],L=Math.sqrt(dx*dx+dy*dy)||1,nx=-dy/L,ny=dx/L;
+  var A1=P2(a[0]+nx*ra,a[1]+ny*ra),B1=P2(b[0]+nx*rb,b[1]+ny*rb),B2=P2(b[0]-nx*rb,b[1]-ny*rb),A2=P2(a[0]-nx*ra,a[1]-ny*ra);
+  return '<path d="M'+A1+' L'+B1+' L'+B2+' L'+A2+'Z" fill="'+c+'"/><circle cx="'+a[0]+'" cy="'+a[1]+'" r="'+ra+'" fill="'+c+'"/><circle cx="'+b[0]+'" cy="'+b[1]+'" r="'+rb+'" fill="'+c+'"/>';
+}
+function off(p,n,k){return [p[0]+n[0]*k,p[1]+n[1]*k]}
+function foot(f,c,front){ // pie apoyado: talón y dedos hacia el nose (derecha)
+  return '<path d="M'+(f[0]-6)+' '+(f[1]-1)+' C'+(f[0]-6)+' '+(f[1]-6)+' '+(f[0]+3)+' '+(f[1]-5)+' '+(f[0]+(front?9:8))+' '+(f[1]-2)+' C'+(f[0]+11)+' '+(f[1]-1)+' '+(f[0]+11)+' '+(f[1]+2)+' '+(f[0]+8)+' '+(f[1]+2)+' L'+(f[0]-5)+' '+(f[1]+2)+'Z" fill="'+c+'"/>';
+}
+function hand(h,c){return '<ellipse cx="'+h[0]+'" cy="'+h[1]+'" rx="4.6" ry="4" fill="'+c+'"/>'}
+function headD(c,w){
+  var x=c[0],y=c[1];
+  return '<ellipse cx="'+(x-1)+'" cy="'+y+'" rx="10.5" ry="11.5" fill="'+SK+'"/>'+
+   '<ellipse cx="'+(x+8.6)+'" cy="'+(y+2)+'" rx="2.4" ry="2" fill="'+SK+'"/>'+ // nariz
+   '<path d="M'+(x-12)+' '+(y+3)+' C'+(x-14)+' '+(y-10)+' '+(x-5)+' '+(y-15)+' '+(x+3)+' '+(y-13)+' C'+(x+9)+' '+(y-12)+' '+(x+11)+' '+(y-7)+' '+(x+9)+' '+(y-5)+' C'+(x+4)+' '+(y-8)+' '+(x-1)+' '+(y-7)+' '+(x-3)+' '+(y-3)+' C'+(x-5)+' '+(y+1)+' '+(x-8)+' '+(y+4)+' '+(x-12)+' '+(y+3)+'Z" fill="'+HAIR+'"/>'+
+   '<ellipse cx="'+(x-4)+'" cy="'+(y+1)+'" rx="2.2" ry="3" fill="'+SKD+'"/>'+ // oreja
+   '<ellipse cx="'+(x+4.5)+'" cy="'+(y-1)+'" rx="1.3" ry="1.7" fill="#1E1A17"/>'+
+   '<path d="M'+(x+1.8)+' '+(y-4.6)+' l4 -.6" stroke="'+HAIR+'" stroke-width="1.3" stroke-linecap="round"/>'+
+   '<path d="M'+(x+3)+' '+(y+6.5)+' q2.5 1 4.5 -.4" stroke="#A9705A" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
+}
+function figSide(p){
+  var w=p.w||0;
+  var dx=p.hip[0]-p.sh[0],dy=p.hip[1]-p.sh[1],L=Math.sqrt(dx*dx+dy*dy)||1,n=[-dy/L,dx/L];
+  // n apunta "hacia el tail" cuando el torso está vertical; ajustamos para que front = hacia el nose
+  if(n[0]>0)n=[-n[0],-n[1]];
+  var shF=off(p.sh,n,-11*w),shB=off(p.sh,n,11*w),hpF=off(p.hip,n,-7*w),hpB=off(p.hip,n,7*w);
+  var nb=[p.sh[0]+(p.head[0]-p.sh[0])*.28,p.sh[1]+(p.head[1]-p.sh[1])*.28],neck=[p.sh[0]+(p.head[0]-p.sh[0])*.62,p.sh[1]+(p.head[1]-p.sh[1])*.62];
+  var s='';
+  // lado lejano (atrás)
+  var armB=cap(shB,p.e2,6,4.8,WS)+cap(p.e2,p.h2,4.8,3.8,WS)+hand(p.h2,SKD),armF=cap(shF,p.e1,6,4.8,WS2)+cap(p.e1,p.h1,4.8,3.8,WS2)+hand(p.h1,SK);
+  if(p.cross){armF=cap(shF,p.e1,6,4.8,WS)+cap(p.e1,p.h1,4.8,3.8,WS)+hand(p.h1,SKD);armB=cap(shB,p.e2,6,4.8,WS2)+cap(p.e2,p.h2,4.8,3.8,WS2)+hand(p.h2,SK)}
+  s+=p.cross?armF:armB;
+  s+=cap(hpB,p.k2,9.5,6.8,WS)+cap(p.k2,p.f2,6.8,4.4,WS)+foot(p.f2,SKD,0);
+  // torso (lycra)
+  s+=cap(p.sh,p.hip,12+4*w,10+3*w,LY);
+  s+='<path d="M'+off(p.sh,n,-6)+' L'+off(p.hip,n,-5)+'" stroke="'+LYD+'" stroke-width="3" stroke-linecap="round" opacity=".7"/>';
+  s+=cap(nb,neck,4.4,4.2,SK)+cap(nb,nb,6+2*w,6+2*w,LY);
+  // lado cercano (adelante)
+  s+=cap(hpF,p.k1,9.5,6.8,WS2)+cap(p.k1,p.f1,6.8,4.4,WS2)+foot(p.f1,SK,1);
+  s+=p.cross?armB:armF;
+  s+=headD(p.head,w);
+  return s;
+}
+
 // ---------- frontside / backside ----------
 // Vista desde arriba: mar arriba, playa abajo. Desde el agua mirando a la playa, "derecha" = izquierda de la pantalla.
 function isFront(st,dir){return (st==='regular')===(dir==='der')}
+// surfista visto desde atrás: la tabla va "hacia adentro" de la pantalla
+var CROUCH={f1:[4,0],f2:[-6,0],k1:[17,-22],k2:[9,-20],hip:[-8,-38],sh:[2,-70],head:[12,-90],e1:[20,-55],h1:[31,-43],e2:[-10,-55],h2:[-23,-45],w:0};
+function poseAt(P,x,y){var o={};for(var k in P){o[k]=typeof P[k]==='number'?P[k]:[P[k][0]+x,P[k][1]+y]}return o}
 function view(st,dir,hide){
-  var left=dir==='der',front=isFront(st,dir),chestUp=front; // pared de la ola arriba
-  var nx=left?70:270,tx=left?270:70,cx=170;
-  var ffx=left?120:220,bfx=left?220:120; // pie delantero cerca del nose
-  var s='<svg viewBox="0 0 340 250"><rect width="340" height="250" fill="#4C88B0"/>'+
-   '<path d="M0 0 L340 0 L340 70 C300 86 260 64 220 80 C180 96 140 66 100 82 C60 98 30 74 0 86Z" fill="#2E6A92"/>'+
-   '<path d="M0 86 C30 74 60 98 100 82 C140 66 180 96 220 80 C260 64 300 86 340 70" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>'+
-   '<text x="170" y="34" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" letter-spacing=".08em">PARED DE LA OLA · MAR</text>'+
-   '<rect y="214" width="340" height="36" fill="#E3D1AE"/><text x="170" y="237" text-anchor="middle" font-size="11" font-weight="800" fill="#3B2610" letter-spacing=".08em">PLAYA</text>'+
-   // estela y dirección
-   '<path d="M'+tx+' 150 L'+(left?320:20)+' 150" stroke="#fff" stroke-width="3" stroke-dasharray="4 8" opacity=".6"/>'+
-   '<path d="M'+(left?40:300)+' 150 l'+(left?'14 -10 0 20':'-14 -10 0 20')+'Z" fill="#fff"/>'+
-   // tabla
-   '<path d="M'+tx+' 150 C'+tx+' 136 '+cx+' 132 '+nx+' 150 C'+cx+' 168 '+tx+' 164 '+tx+' 150Z" fill="#F4F1EA" stroke="#2d6e94" stroke-width="3"/>';
-  if(!hide){
-   s+='<ellipse cx="'+ffx+'" cy="150" rx="10" ry="16" fill="#2C2C2B" transform="rotate('+(left?-20:20)+' '+ffx+' 150)"/>'+
-      '<ellipse cx="'+bfx+'" cy="150" rx="10" ry="16" fill="#5a5955"/>'+
-      '<path d="M170 150 L170 '+(chestUp?104:198)+'" stroke="'+(front?'#8fe0b5':'#FADF70')+'" stroke-width="5" stroke-linecap="round"/>'+
-      '<path d="M160 '+(chestUp?116:186)+' L170 '+(chestUp?100:202)+' L180 '+(chestUp?116:186)+'" fill="none" stroke="'+(front?'#8fe0b5':'#FADF70')+'" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'+
-      '<text x="'+(left?150:190)+'" y="'+(chestUp?122:186)+'" text-anchor="'+(left?'end':'start')+'" font-size="12" font-weight="800" fill="#fff">PECHO</text>';
+  var front=isFront(st,dir),mir=dir!=='der',X=function(x){return mir?340-x:x};
+  var cx=194,cy=168;
+  var wave='<rect width="340" height="250" fill="#E6F1F8"/>'+
+   '<defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7DB8DA"/><stop offset="1" stop-color="#2E6A92"/></linearGradient></defs>'+
+   '<path d="M0 196 L96 194 C156 190 198 168 220 128 C234 102 244 78 262 64 C280 50 306 52 318 64 C328 76 334 98 340 110 L340 250 L0 250Z" fill="url(#wg)"/>'+
+   '<path d="M318 64 C304 50 276 50 258 64 C244 76 236 90 238 104 C248 90 260 82 276 80 C268 72 290 64 318 64Z" fill="#F4FAFD"/>'+
+   '<path d="M0 196 L96 194 C156 190 198 168 220 128" fill="none" stroke="#fff" stroke-width="2" opacity=".5"/>';
+  var fig;
+  if(hide){fig='<ellipse cx="'+cx+'" cy="'+(cy+4)+'" rx="26" ry="5" fill="#F4F1EA"/><circle cx="'+cx+'" cy="'+(cy-46)+'" r="22" fill="#fff" opacity=".9"/><text x="'+cx+'" y="'+(cy-37)+'" text-anchor="middle" font-size="26" font-weight="800" fill="#2E6A92">?</text>';}
+  else{
+    var p=poseAt(CROUCH,cx,cy);
+    var body='<ellipse cx="'+cx+'" cy="'+(cy+4)+'" rx="26" ry="5" fill="#F4F1EA"/><path d="M'+(cx-3)+' '+(cy+8)+' L'+cx+' '+(cy+20)+' L'+(cx+3)+' '+(cy+8)+'Z" fill="#2C2C2B"/>'+figSide(p);
+    if(!front)body='<g transform="translate('+(2*cx)+',0) scale(-1,1)">'+body+'</g>';
+    fig='<g transform="rotate(-22 '+cx+' '+cy+') translate('+cx+','+cy+') scale(.9) translate('+(-cx)+','+(-cy)+')">'+body+'</g>';
   }
-  s+='<text x="'+ffx+'" y="'+(chestUp?182:126)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">'+(st==='regular'?'IZQ':'DER')+'</text>';
+  var inner=wave+fig;
+  var s='<svg viewBox="0 0 340 250">'+(mir?'<g transform="translate(340,0) scale(-1,1)">'+inner+'</g>':inner);
+  s+='<text x="170" y="22" text-anchor="middle" font-size="10.5" font-weight="800" fill="#5a7b90" letter-spacing=".08em">VISTO DESDE ATRÁS DEL SURFISTA</text>';
+  s+='<text x="'+X(290)+'" y="44" text-anchor="middle" font-size="11" font-weight="800" fill="#2E6A92" letter-spacing=".06em">LA OLA</text>';
+  s+='<text x="'+X(16)+'" y="236" text-anchor="'+(mir?'end':'start')+'" font-size="11" font-weight="800" fill="#fff" letter-spacing=".06em">'+(mir?'PLAYA →':'← PLAYA')+'</text>';
+  if(!hide){
+    var tx=front?X(262):X(84),lbl=front?'MIRA A LA OLA':'DE ESPALDA A LA OLA';
+    s+='<rect x="'+(tx-(front?52:72))+'" y="'+(front?182:182)+'" width="'+(front?104:144)+'" height="24" rx="12" fill="'+(front?'#3f8f6b':'#B5523B')+'"/><text x="'+tx+'" y="'+(front?198:198)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff">'+lbl+'</text>';
+  }
   return s+'</svg>';
 }
 var st='regular',dir='der';
@@ -243,24 +297,38 @@ var Z={
  canal:['Canal','Zona más profunda donde casi no rompen las olas. Sirve para remar hacia afuera, pero ojo: suele tener corriente de retorno.'],
  orilla:['Orilla','Donde entras y sales. Antes de entrar, siempre observa el mar.']};
 function luSvg(){
-  return '<svg viewBox="0 0 340 330"><rect width="340" height="330" fill="#4C88B0"/>'+
-  '<g class="zone" data-z="fuera"><rect width="340" height="70" fill="#2E6A92"/><rect class="hl" width="340" height="70" fill="#FADF70"/><text x="20" y="40" class="zt">AFUERA</text></g>'+
-  '<g class="zone" data-z="lineup"><rect y="70" width="340" height="56" fill="#3C79A2"/><rect class="hl" y="70" width="340" height="56" fill="#FADF70"/>'+
-   [40,76,300].map(function(x){return '<circle cx="'+x+'" cy="100" r="6" fill="#2C2C2B"/><rect x="'+(x-14)+'" y="104" width="28" height="6" rx="3" fill="#F4F1EA"/>'}).join('')+'<text x="214" y="96" class="zt">LINEUP</text></g>'+
-  '<g class="zone" data-z="impacto"><rect y="126" width="340" height="70" fill="#4C88B0"/><rect class="hl" y="126" width="340" height="70" fill="#FADF70"/>'+
-   '<path d="M0 150 C40 140 70 158 110 146 M230 146 C270 136 300 156 340 144" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/><text x="20" y="182" class="zt">ZONA DE IMPACTO</text></g>'+
-  '<g class="zone" data-z="espuma"><rect y="196" width="340" height="80" fill="#8EBFDB"/><rect class="hl" y="196" width="340" height="80" fill="#FADF70"/>'+
-   '<path d="M0 214 C30 206 60 222 100 212 M240 214 C270 206 300 222 340 210 M0 244 C30 236 60 252 110 240 M230 244 C270 236 300 250 340 240" stroke="#fff" stroke-width="9" fill="none" stroke-linecap="round" opacity=".9"/><text x="20" y="266" class="zt" fill="#1f4f6b">ESPUMÓN</text></g>'+
-  '<g class="zone" data-z="canal"><path d="M140 276 C132 220 136 150 150 70 L196 70 C208 150 214 220 206 276Z" fill="#245C80"/><path class="hl" d="M140 276 C132 220 136 150 150 70 L196 70 C208 150 214 220 206 276Z" fill="#FADF70"/><text x="173" y="230" text-anchor="middle" class="zt">CANAL</text><path d="M173 210 L173 160 M165 170 L173 158 L181 170" stroke="#fff" stroke-width="2.5" fill="none" opacity=".7"/></g>'+
-  '<g class="zone" data-z="pico"><circle cx="96" cy="140" r="16" fill="#FADF70" opacity=".25"/><circle class="hl" cx="96" cy="140" r="22" fill="#FADF70"/><circle cx="96" cy="140" r="8" fill="#FADF70"/><text x="96" y="128" text-anchor="middle" class="zt">ROMPIENTE</text></g>'+
-  '<g class="zone" data-z="orilla"><rect y="276" width="340" height="54" fill="#E3D1AE"/><rect class="hl" y="276" width="340" height="54" fill="#FADF70"/><text x="20" y="308" class="zt" fill="#3B2610">ORILLA</text></g>'+
-  '</svg>';
+  var Zs=[['orilla',0,60,'ORILLA',34],['espuma',60,125,'ESPUMÓN',56],['impacto',125,185,'IMPACTO',34],['pico',185,228,'ROMPIENTE',56],['lineup',228,292,'LINEUP',34],['fuera',292,340,'AFUERA',56]];
+  var s='<svg viewBox="0 0 340 250"><rect width="340" height="250" fill="#E6F1F8"/>'+
+   '<defs><linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FAFD6"/><stop offset="1" stop-color="#2E6A92"/></linearGradient></defs>'+
+   '<path d="M40 128 L340 128 L340 206 Z" fill="url(#sea)"/>'+
+   '<path d="M0 112 L40 128 L340 206 L340 250 L0 250Z" fill="#E3D1AE"/>'+
+   // espumón
+   '<path d="M62 127 C70 118 80 118 86 126 C92 118 102 118 108 126 C114 118 122 120 126 127Z" fill="#fff"/>'+
+   // ola rompiendo (impacto)
+   '<path d="M126 128 C140 128 150 118 158 100 C164 86 172 76 186 76 C196 76 200 84 198 92 C204 106 210 118 220 128Z" fill="#5A9CC6"/>'+
+   '<path d="M190 78 C178 74 166 82 160 98 C156 108 152 116 146 122 C158 116 166 104 172 96 C178 90 186 88 190 94Z" fill="#F4FAFD"/>'+
+   '<path d="M128 127 C134 118 144 118 150 126Z" fill="#fff"/>'+
+   // ola que empieza a romper
+   '<path d="M196 128 C206 126 212 110 220 104 C226 100 232 110 240 128Z" fill="#5A9CC6"/><path d="M216 106 C220 100 226 100 228 106" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+   // surfistas sentados en el lineup
+   [252,278].map(function(x){return '<g transform="translate('+x+',128) scale(.6) translate('+(-x)+',-128)"><ellipse cx="'+x+'" cy="129" rx="15" ry="3" fill="#F4F1EA"/>'+cap([x+5,128],[x+12,138],4,3,WS2)+cap([x,127],[x,108],6.5,5.5,LY)+cap([x+1,109],[x+10,120],3,2.6,WS2)+headD([x+1,98],0)+'</g>'}).join('')+
+   // mar de fondo
+   '<path d="M296 128 C304 122 312 122 320 128 C326 123 334 123 340 128" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/>';
+  Zs.forEach(function(z){
+    var cx=(z[1]+z[2])/2;
+    s+='<g class="zone" data-z="'+z[0]+'"><rect class="hl" x="'+z[1]+'" y="0" width="'+(z[2]-z[1])+'" height="250" fill="#FADF70"/><rect x="'+z[1]+'" y="0" width="'+(z[2]-z[1])+'" height="250" fill="transparent"/>'+
+       '<path d="M'+cx+' '+(z[4]+6)+' L'+cx+' '+(z[0]==='lineup'?86:z[0]==='pico'?98:z[0]==='impacto'?72:118)+'" stroke="#1f4f6b" stroke-width="1" stroke-dasharray="2 3" opacity=".45"/>'+
+       '<text x="'+cx+'" y="'+z[4]+'" text-anchor="middle" class="zt" style="fill:#1f4f6b;font-size:'+(z[3].length>8?9.5:10.5)+'px">'+z[3]+'</text></g>';
+  });
+  s+='<text x="14" y="236" font-size="10" font-weight="800" fill="#3B2610" opacity=".6">← PLAYA</text><text x="330" y="236" text-anchor="end" font-size="10" font-weight="800" fill="#3B2610" opacity=".6">MAR ADENTRO →</text>';
+  return s+'</svg>';
 }
 $('lu').innerHTML=luSvg();var luSeen=S.lu||{};
 document.querySelectorAll('#lu .zone').forEach(function(g){g.onclick=function(e){e.stopPropagation();
   document.querySelectorAll('#lu .zone').forEach(function(x){x.classList.toggle('on',x===g)});
   var z=Z[g.dataset.z];$('luInfo').innerHTML='<b>'+z[0]+'</b><span>'+z[1]+'</span>';
   luSeen[g.dataset.z]=1;S.lu=luSeen;if(Object.keys(Z).every(function(k){return luSeen[k]}))S.ok_lu=1;save();vib(10)}});
+$('canalBtn').onclick=function(){document.querySelectorAll('#lu .zone').forEach(function(x){x.classList.remove('on')});$('luInfo').innerHTML='<b>'+Z.canal[0]+'</b><span>'+Z.canal[1]+' No se ve de lado: es una franja más oscura entre dos zonas donde rompen olas.</span>';luSeen.canal=1;S.lu=luSeen;if(Object.keys(Z).every(function(k){return luSeen[k]}))S.ok_lu=1;save();vib(10)};
 
 // ---------- diccionario ----------
 var D=[
