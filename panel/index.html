@@ -584,6 +584,7 @@
       <input inputmode='numeric' placeholder='Monto, ej: 3500' id='pn-fmonto'>
       <input placeholder='${fTipo==='gasto'?'¿En qué fue? ej: hielo, parafina, bencina':'¿De qué? ej: clase particular, arriendo tabla'}' id='pn-fdet'>
       <div class='pn-gm'>${AREAS.map(a => `<button class='pn-gbtn${a===fArea?' on':''}' data-farea='${a}'>${a}</button>`).join('')}</div>
+      ${fArea==='Verano' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Comida','Premios','Sala de yoga','Materiales'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
       <div class='pn-acts'><span id='pn-fmsg'></span><button class='pn-ntgo' id='pn-fgo'>Anotar ${fTipo}</button></div>
     </div>
     <div class='pn-gm'>${f.meses.map(m => `<button class='pn-gbtn${m===f.mes?' on':''}' data-fmes='${esc(m)}'>${esc(mesCorto(m))}</button>`).join('')}</div>
@@ -606,7 +607,8 @@
     ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
     pane.innerHTML = h;
     pane.querySelectorAll('[data-ftipo]').forEach(b => b.onclick = () => { fTipo = b.dataset.ftipo; pintarFinanzas(); });
-    pane.querySelectorAll('[data-farea]').forEach(b => b.onclick = () => { fArea = b.dataset.farea; pane.querySelectorAll('[data-farea]').forEach(x => x.classList.toggle('on', x === b)); });
+    pane.querySelectorAll('[data-farea]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fArea = b.dataset.farea; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });
+    pane.querySelectorAll('[data-fqk]').forEach(b => b.onclick = () => { const i = pane.querySelector('#pn-fdet'); i.value = b.dataset.fqk + (i.value && !i.value.startsWith(b.dataset.fqk) ? ': ' + i.value : ''); i.focus(); });
     pane.querySelectorAll('[data-fmes]').forEach(b => b.onclick = () => cargarFinanzas(b.dataset.fmes));
     pane.querySelector('#pn-fgo').onclick = async e => {
       const b = e.currentTarget, monto = +String(pane.querySelector('#pn-fmonto').value).replace(/\D/g, ''), detalle = pane.querySelector('#pn-fdet').value.trim();
