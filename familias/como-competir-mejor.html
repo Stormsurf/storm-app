@@ -176,6 +176,17 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
 .board .tm b{color:#ffd27a}
 .sea{margin-top:12px;font-size:16px;line-height:1.5;opacity:.95}
 .sea b{color:#ffd27a}
+.tbl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.tbl div{background:rgba(255,255,255,.1);border-radius:14px;padding:12px 10px;font-size:13.5px;line-height:1.35}
+.tbl b{display:block;font-size:15px;margin-bottom:4px}
+.tbl small{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.6;margin-top:10px;margin-bottom:2px;font-weight:700}
+.olas{display:grid;gap:8px;margin-top:6px}
+.olas button{display:flex;gap:12px;text-align:left;border:0;border-radius:16px;padding:14px;background:rgba(255,255,255,.1);color:#fff;font-size:15px;line-height:1.4}
+.olas i{font-style:normal;width:28px;height:28px;border-radius:50%;color:#2C2C2B;font-weight:700;display:grid;place-items:center;flex:none}
+.olas b{display:block;font-size:12px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
+.olas em{display:block;font-style:normal;font-size:12.5px;opacity:.55;margin-top:6px}
+.olas .sf{display:none;margin-top:8px;font-size:14px;color:#f0a894}
+.olas button.on em{display:none}.olas button.on .sf{display:block}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -195,7 +206,7 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
   <section id="t-a">
     <div class="hero">
       <h2>Tus tres herramientas</h2>
-      <p>Completa los 3 módulos, supera el desafío y entra a la manga.</p>
+      <p>Completa los 4 módulos, supera el desafío y entra a la manga.</p>
       <div class="trio"><div><b>Estrategia</b>Planificar, antes</div><div><b>Táctica</b>Decidir, durante</div><div><b>Técnica</b>Ejecutar, en cada ola</div></div>
       <div class="xp"><div class="xpbar"><i id="xpbar"></i></div><span id="xptxt"></span></div>
     </div>
@@ -301,7 +312,7 @@ var MODS=[
  ]},
  {id:'t',c:'#3f8f6b',n:'Táctica',s:'Tus decisiones, durante la manga',sl:[
   {k:'txt',h:'Decidir bien en el agua',p:['Qué hacer, cuándo hacerlo y por qué, mirando el mar, a tus rivales y tu objetivo.','No basta con surfear bien: tienes que saber qué ola tomar, dónde ponerte y cuándo.'],kq:'¿Qué es lo mejor que puedo hacer ahora y por qué?'},
-  {k:'chips',h:'7 decisiones en cada manga',tip:'Toca cada una.',it:[['Elegir la ola','Cuál tomar y cuál dejar pasar.'],['Ubicarte','Dónde esperar en el pico para tomar las mejores olas.'],['Leer el mar','Fijarte en las series y anticipar dónde entran las buenas.'],['Elegir maniobras','Según lo que te da la ola.'],['Manejar el tiempo','Cuándo esperar y cuándo ir a buscar una ola.'],['Manejar el puntaje','Asegurar una nota o arriesgar por una ola mejor.'],['Rivales y prioridad','Fijarte en tus rivales y en quién tiene derecho a la ola.']]},
+  {k:'chips',h:'7 decisiones en cada manga',tip:'Toca cada una. Cuando veas un video tuyo, pregúntate: ¿qué otra cosa pude hacer?',it:[['Elegir la ola','Cuál tomar y cuál dejar pasar.'],['Ubicarte','Dónde esperar en el pico para tomar las mejores olas.'],['Leer el mar','Fijarte en las series y anticipar dónde entran las buenas.'],['Elegir maniobras','Según lo que te da la ola.'],['Manejar el tiempo','Cuándo esperar y cuándo ir a buscar una ola.'],['Manejar el puntaje','Asegurar una nota o arriesgar por una ola mejor.'],['Rivales y prioridad','Fijarte en tus rivales y en quién tiene derecho a la ola.']]},
   {k:'cmp',h:'¿Dejo pasar una ola regular?',a:'Si queda tiempo y están entrando buenas olas.',b:'Si queda poco tiempo o necesitas puntaje ya.',p:'No hay una sola respuesta correcta: depende del mar, el tiempo, los puntajes y los rivales.'},
   {k:'q',q:'Quedan 2 minutos y necesitas puntaje. Viene una ola regular.',o:['La dejo pasar y espero la serie','La tomo y saco lo mejor que pueda','Remo al otro pico'],ok:1,w:'Con poco tiempo, una ola regular bien surfeada vale más que esperar una que quizás no llega.'},
   {k:'q',q:'¿Qué decide quién tiene derecho a la ola?',o:['El que está más adentro','La prioridad','El que rema más fuerte'],ok:1,w:'En una manga manda la prioridad. Fíjate siempre quién la tiene antes de remar.'}
@@ -313,9 +324,17 @@ var MODS=[
   {k:'txt',h:'Difícil no siempre es mejor',p:['Una maniobra difícil sin control no sirve.','Elegir bien qué maniobra hacer también es técnica.']},
   {k:'q',q:'Para una buena maniobra, lo primero es…',o:['Llegar con velocidad a la sección','Hacer la maniobra más difícil que sepas','Mirar a los jueces'],ok:0,w:'Sin velocidad no llegas con energía a la sección, y la maniobra pierde fuerza.'},
   {k:'q',q:'Intentas un aéreo y caes sin control. ¿Qué pasa?',o:['Suma igual porque es difícil','No suma: sin control no hay maniobra','Te dan puntos extra por intentarlo'],ok:1,w:'Los jueces premian maniobras completas y con control.'}
+ ]},
+ {id:'j',c:'#2C2C2B',n:'Las tres juntas',s:'Planificar, decidir y ejecutar',sl:[
+  {k:'tbl',h:'Las tres, lado a lado',cols:[['Estrategia','#9cc8e4','Tu plan para el campeonato.','¿Cómo voy a competir?','Antes del campeonato y entre mangas.'],['Táctica','#8fd1b2','Lo que decides en cada momento de la manga.','¿Qué hago ahora?','Durante la manga, ola a ola.'],['Técnica','#f0a894','Qué tan bien haces tus maniobras.','¿Cómo lo hago mejor?','En cada ola, en cada maniobra.']]},
+  {k:'re',h:'Van en orden, pero se mezclan',it:['Planificar','Decidir','Ejecutar','Ajustar ↺'],p:'Si algo sale distinto en el agua, puedes cambiar tu decisión e incluso tu plan.'},
+  {k:'ola',h:'Las tres en una misma ola',sit:'Una surfista es muy buena en maniobras fuertes en la parte más empinada de la ola.',it:[['Estrategia','#9cc8e4','Antes del campeonato decide buscar las olas donde mejor muestra sus maniobras fuertes.','Con un mal plan, todo el campeonato parte mal.'],['Táctica','#8fd1b2','En la manga deja pasar una ola que cierra y se ubica para la siguiente, más abierta.','Una mala decisión la deja en una ola que no da puntaje.'],['Técnica','#f0a894','En la ola elegida llega con velocidad a la sección y hace el re-entry con control.','Una mala maniobra desperdicia una buena ola.']]},
+  {k:'q',q:'Tenías buen plan y buenas maniobras, pero tomaste olas que cerraban. ¿Qué falló?',o:['La estrategia','La táctica','La técnica'],ok:1,w:'Elegir la ola es una decisión durante la manga: eso es táctica.'},
+  {k:'q',q:'Elegiste bien la ola, pero te caíste en la sección clave. ¿Qué toca entrenar?',o:['La estrategia','La táctica','La técnica'],ok:2,w:'La decisión fue buena; faltó ejecutar. Eso se trabaja con tu instructor en el agua.'},
+  {k:'txt',h:'El objetivo',p:['No es solo ganar. Es aprender a competir mejor, decidir bien y mejorar en cada campeonato.','El resultado importa, pero también cómo te preparaste, cómo decidiste y cómo surfeaste.'],kq:'Para que te vaya bien necesitas las tres: planificar, decidir y ejecutar, en la misma ola.',kl:'Recuerda'}
  ]}
 ];
-var DES=[['La noche antes escribes qué harás si el viento cambia.','e'],['Dejas pasar una ola que cierra porque viene una serie mejor.','t'],['Flectas más las rodillas para no caerte en el bottom turn.','q'],['Revisas videos de tus mangas para saber en qué olas surfeas mejor.','e'],['Quedan 3 minutos: decides tomar la próxima ola sí o sí.','t'],['Usas el canto para llevar la tabla hacia el labio.','q'],['Antes del campeonato averiguas cómo rompe la playa.','e'],['Te mueves al pico donde están entrando las mejores olas.','t'],['Unes dos maniobras sin perder velocidad.','q'],['Tu rival tiene prioridad, así que esperas la siguiente.','t']];
+var DES=[['La noche antes escribes qué harás si el viento cambia.','e'],['Dejas pasar una ola que cierra porque viene una serie mejor.','t'],['Flectas más las rodillas para no caerte en el bottom turn.','q'],['Revisas videos de tus mangas para saber en qué olas surfeas mejor.','e'],['Quedan 3 minutos: decides tomar la próxima ola sí o sí.','t'],['Usas el canto para llevar la tabla hacia el labio.','q'],['Antes del campeonato averiguas cómo rompe la playa.','e'],['Te mueves al pico donde están entrando las mejores olas.','t'],['Unes dos maniobras sin perder velocidad.','q'],['Tu rival tiene prioridad, así que esperas la siguiente.','t'],['Te pones como objetivo pasar a semifinal.','e'],['Miras hacia donde quieres ir antes de girar.','q'],['Tienes una nota de 6 y decides asegurar otra en vez de arriesgar.','t'],['Sabes que te cuestan las olas chicas y piensas cómo enfrentarlas.','e'],['Terminas la maniobra con control y sigues surfeando.','q'],['Ves que las series entran cada 5 minutos y esperas la próxima.','t'],['Haces la maniobra según cómo viene la ola, no como esperabas.','q'],['Entre mangas cambias tu plan porque subió el viento.','e'],['Quedan 8 minutos y vas a buscar una ola al pico de al lado.','t'],['Llegas con velocidad para tener energía en la sección.','q']];
 var SIM=[
  {tm:'18:00',yo:'0.00',ne:'—',s:'Empieza la final. Entra una ola regular, de unos <b>3 puntos</b>. Detrás se ve una serie formándose.',o:[['La tomo para empezar a sumar',1,'No está mal tener una nota temprano, pero podrías perderte la serie que venía.'],['La dejo pasar: hay tiempo y viene la serie',2,'Bien leído. Con 18 minutos y una serie entrando, conviene esperar la ola buena.'],['Me voy al otro pico',0,'Pierdes tiempo remando justo cuando entran las buenas olas en tu pico.']]},
  {tm:'09:30',yo:'5.20',ne:'4.80',s:'Tienes <b>prioridad</b>. Viene una ola que se ve cerrada, rompe toda de una vez.',o:[['La tomo: tengo prioridad',0,'Gastas tu prioridad en una ola que no da puntaje. Y tu rival elige la siguiente.'],['La dejo pasar y me ubico para la siguiente',2,'Exacto. La prioridad se guarda para una ola que te deje mostrar tus maniobras.'],['Remo hacia adentro sin mirar',1,'Moverse está bien, pero sin leer el mar puedes quedar mal ubicado.']]},
@@ -327,7 +346,7 @@ function openOv(c){ov.style.setProperty('--ovc',c);ov.hidden=false;document.body
 function closeOv(){ov.hidden=true;document.body.style.overflow='';clearInterval(tick);drawMods()}
 $('ovx').onclick=closeOv;
 function setBars(n,i){bars.innerHTML='';for(var j=0;j<n;j++){var e=document.createElement('i');e.innerHTML='<b style="width:'+(j<i?100:j===i?100:0)+'%"></b>';bars.appendChild(e)}}
-function xp(){var n=MODS.filter(function(m){return S['m_'+m.id]}).length+(S.d_best!=null?1:0)+(S.h_best!=null?1:0);$('xpbar').style.width=(n/5*100)+'%';$('xptxt').textContent=n+' de 5'}
+function xp(){var n=MODS.filter(function(m){return S['m_'+m.id]}).length+(S.d_best!=null?1:0)+(S.h_best!=null?1:0);$('xpbar').style.width=(n/6*100)+'%';$('xptxt').textContent=n+' de 6'}
 function drawMods(){
   $('mods').innerHTML=MODS.map(function(m,i){var ok=S['m_'+m.id];return '<button class="mod" data-m="'+i+'"><span class="n" style="background:'+m.c+'">'+(i+1)+'</span><span><h3>'+m.n+'</h3><small>'+m.s+'</small></span><span class="st'+(ok?' ok':'')+'">'+(ok?'✓ '+ok:m.sl.length+' pasos')+'</span></button>'}).join('');
   $('mods').querySelectorAll('.mod').forEach(function(b){b.onclick=function(){story(MODS[+b.dataset.m])}});
@@ -348,9 +367,12 @@ function story(m){
     if(s.k==='chips')h+='<h2>'+s.h+'</h2><div class="chips6">'+s.it.map(function(x){return '<button><b>'+x[0]+'</b><em>Tocar</em><span>'+x[1]+'</span></button>'}).join('')+'</div><p class="tip">'+s.tip+'</p>';
     if(s.k==='cmp')h+='<h2>'+s.h+'</h2><div class="cmp"><div class="a"><b>Bien hecho</b>'+s.a+'</div><div class="b"><b>Error</b>'+s.b+'</div></div><p style="margin-top:14px">'+s.p+'</p>';
     if(s.k==='re')h+='<h2>'+s.h+'</h2><div class="re">'+s.it.map(function(x,j){return '<div><b>'+(j+1)+'</b>'+x+'</div>'}).join('')+'</div><p style="margin-top:14px">'+s.p+'</p>';
+    if(s.k==='tbl')h+='<h2>'+s.h+'</h2><div class="tbl">'+s.cols.map(function(c){return '<div><b style="color:'+c[1]+'">'+c[0]+'</b><small>Qué es</small>'+c[2]+'<small>Pregunta</small>'+c[3]+'<small>Cuándo</small>'+c[4]+'</div>'}).join('')+'</div>';
+    if(s.k==='ola')h+='<h2>'+s.h+'</h2><p>'+s.sit+'</p><div class="olas">'+s.it.map(function(x,j){return '<button><i style="background:'+x[1]+'">'+(j+1)+'</i><span><b style="color:'+x[1]+'">'+x[0]+'</b>'+x[2]+'<em>Toca: ¿y si falla?</em><span class="sf">Si falla: '+x[3]+'</span></span></button>'}).join('')+'</div>';
     if(s.k==='q')h+='<h2>'+s.q+'</h2><div class="qz">'+s.o.map(function(x,j){return '<button class="o" data-j="'+j+'">'+x+'</button>'}).join('')+'<div class="fb2" id="fb2"></div></div>';
     ovb.innerHTML=h+nav(s.k!=='q')+'</div>';ovb.scrollTop=0;
     if(s.k==='chips')ovb.querySelectorAll('.chips6 button').forEach(function(b){b.onclick=function(){b.classList.add('on')}});
+    if(s.k==='ola')ovb.querySelectorAll('.olas button').forEach(function(b){b.onclick=function(){b.classList.add('on')}});
     if(s.k==='re')ovb.querySelectorAll('.re div').forEach(function(d,j){setTimeout(function(){d.classList.add('on')},350+j*550)});
     if(s.k==='q'){var done=false;ovb.querySelectorAll('.o').forEach(function(b){b.onclick=function(){if(done)return;done=true;var j=+b.dataset.j;
       if(j===s.ok){pts++;b.classList.add('ok');$('fb2').innerHTML='<b>¡Bien!</b> '+s.w}else{b.classList.add('bad');ovb.querySelectorAll('.o')[s.ok].classList.add('ok');$('fb2').innerHTML='<b>No era esa.</b> '+s.w}
@@ -363,7 +385,7 @@ function story(m){
 // desafio
 var tick=null;
 $('openQ').onclick=function(){
-  var L=DES.slice().sort(function(){return Math.random()-.5}),i=0,ok=0;openOv('#24303a');
+  var L=DES.slice().sort(function(){return Math.random()-.5}).slice(0,10),i=0,ok=0;openOv('#24303a');
   var NM={e:'Estrategia',t:'Táctica',q:'Técnica'};
   function go(){
     setBars(L.length,i);clearInterval(tick);
