@@ -131,9 +131,9 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
   <section id="s-cor" hidden>
     <div class="card">
       <h2>La corriente de retorno</h2>
-      <p class="sub">Es el mar devolviendo el agua hacia afuera. Se ve como una zona <b>más oscura</b> donde las olas casi no rompen.</p>
+      <p class="sub">Es el mar devolviendo el agua hacia adentro. Se ve como una zona <b>más oscura</b> donde las olas casi no rompen.</p>
       <div class="beach" id="beach"></div>
-      <div class="fb" id="cfb">Estás en la corriente (el punto rojo) y te está llevando hacia afuera. <b>¿Hacia dónde nadas?</b> Toca una flecha.</div>
+      <div class="fb" id="cfb">Estás en la corriente (el punto rojo) y te está llevando hacia adentro. <b>¿Hacia dónde nadas?</b> Toca una flecha.</div>
       <div class="rule" style="background:var(--soft);color:#1f4f6b"><b>Tu tabla es tu mejor aliada</b>Agárrate a ella: te mantiene a flote y hace que te vean.</div>
     </div>
   </section>
@@ -244,7 +244,7 @@ function bindBeach(){
     if(a==='side'){f.className='fb ok';f.innerHTML='<b>¡Exacto!</b> Nada hacia un costado, paralelo a la orilla, hasta que el agua ya no te jale. Después vuelve por donde rompen las olas. Y si no puedes, haz la señal de ayuda.';$('beach').innerHTML=beach('side');S.ok_cor=1;save();vib(30);
       setTimeout(function(){f.innerHTML+='<br><button class="btn" id="again" style="margin-top:10px">Probar otra vez</button>';$('again').onclick=function(){f.className='fb';f.innerHTML='Estás en la corriente (el punto rojo). <b>¿Hacia dónde nadas?</b>';bindBeach()}},400);}
     else if(a==='down'){f.className='fb no';f.innerHTML='<b>No.</b> Nadar contra la corriente directo a la orilla solo te cansa: ella es más fuerte. Prueba otra flecha.';vib([30,40,30])}
-    else{f.className='fb no';f.innerHTML='<b>No.</b> Eso te lleva más afuera. Prueba otra flecha.';vib([30,40,30])}
+    else{f.className='fb no';f.innerHTML='<b>No.</b> Eso te lleva más adentro. Prueba otra flecha.';vib([30,40,30])}
   }});
 }
 bindBeach();
@@ -257,7 +257,7 @@ var QZ=[
  {f:3,q:'¿Qué significa esta señal?',o:['Mira esa ola','Mi compañero necesita ayuda','Vamos a la orilla'],a:1},
  {q:'Sales de un revolcón y estás bien. ¿Qué haces?',o:['Puño sobre la cabeza','Nada, sigo remando','Grito fuerte'],a:0},
  {q:'Ves a un compañero en problemas y no sabes rescatar. ¿Qué es lo más valioso?',o:['Ir a buscarlo igual','Avisar con la señal','Esperar a que salga solo'],a:1},
- {q:'Una corriente te lleva hacia afuera. ¿Hacia dónde nadas?',o:['Directo a la orilla, contra la corriente','Hacia un costado, paralelo a la orilla','Más hacia afuera'],a:1},
+ {q:'Una corriente te lleva hacia adentro. ¿Hacia dónde nadas?',o:['Directo a la orilla, contra la corriente','Hacia un costado, paralelo a la orilla','Más hacia adentro'],a:1},
  {q:'¿Cómo reconoces una corriente de retorno?',o:['Agua más oscura donde casi no rompen las olas','Mucha espuma blanca','Agua más clara y calmada en la orilla'],a:0},
  {q:'Al caer de la tabla, ¿qué proteges primero?',o:['La tabla','La cabeza y la cara, con los brazos','El leash'],a:1},
  {q:'Después de un revolcón, ¿cómo sabes dónde está arriba?',o:['Sigo las burbujas','Nado hacia abajo','Abro los ojos y grito'],a:0}

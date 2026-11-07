@@ -205,6 +205,12 @@ function headD(c,w){
    '<path d="M'+(x+1.8)+' '+(y-4.6)+' l4 -.6" stroke="'+HAIR+'" stroke-width="1.3" stroke-linecap="round"/>'+
    '<path d="M'+(x+3)+' '+(y+6.5)+' q2.5 1 4.5 -.4" stroke="#A9705A" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
 }
+function headBack(c){var x=c[0],y=c[1];
+  return '<ellipse cx="'+(x-9.5)+'" cy="'+(y+1)+'" rx="2.4" ry="3.2" fill="'+SKD+'"/><ellipse cx="'+(x+9.5)+'" cy="'+(y+1)+'" rx="2.4" ry="3.2" fill="'+SKD+'"/>'+
+   '<ellipse cx="'+x+'" cy="'+y+'" rx="10" ry="11.5" fill="'+SK+'"/>'+
+   '<path d="M'+(x-10.5)+' '+(y+4)+' C'+(x-12)+' '+(y-10)+' '+(x-5)+' '+(y-14)+' '+x+' '+(y-14)+' C'+(x+5)+' '+(y-14)+' '+(x+12)+' '+(y-10)+' '+(x+10.5)+' '+(y+4)+' C'+(x+6)+' '+(y+9)+' '+(x-6)+' '+(y+9)+' '+(x-10.5)+' '+(y+4)+'Z" fill="'+HAIR+'"/>'+
+   '<path d="M'+(x-4)+' '+(y-9)+' q4 3 8 0" stroke="#4a3628" stroke-width="1.2" fill="none"/>';
+}
 function figSide(p){
   var w=p.w||0;
   var dx=p.hip[0]-p.sh[0],dy=p.hip[1]-p.sh[1],L=Math.sqrt(dx*dx+dy*dy)||1,n=[-dy/L,dx/L];
@@ -225,7 +231,7 @@ function figSide(p){
   // lado cercano (adelante)
   s+=cap(hpF,p.k1,9.5,6.8,WS2)+cap(p.k1,p.f1,6.8,4.4,WS2)+foot(p.f1,SK,1);
   s+=p.cross?armB:armF;
-  s+=headD(p.head,w);
+  s+=p.back?headBack(p.head):headD(p.head,w);
   return s;
 }
 
@@ -233,7 +239,7 @@ function figSide(p){
 // Vista desde arriba: mar arriba, playa abajo. Desde el agua mirando a la playa, "derecha" = izquierda de la pantalla.
 function isFront(st,dir){return (st==='regular')===(dir==='der')}
 // surfista visto desde atrás: la tabla va "hacia adentro" de la pantalla
-var CROUCH={f1:[4,0],f2:[-6,0],k1:[17,-22],k2:[9,-20],hip:[-8,-38],sh:[2,-70],head:[12,-90],e1:[20,-55],h1:[31,-43],e2:[-10,-55],h2:[-23,-45],w:0};
+var CROUCH={f1:[4,0],f2:[-6,0],k1:[17,-22],k2:[9,-20],hip:[-8,-38],sh:[2,-70],head:[6,-91],e1:[20,-55],h1:[31,-43],e2:[-10,-55],h2:[-23,-45],w:0,back:1};
 function poseAt(P,x,y){var o={};for(var k in P){o[k]=typeof P[k]==='number'?P[k]:[P[k][0]+x,P[k][1]+y]}return o}
 function view(st,dir,hide){
   var front=isFront(st,dir),mir=dir!=='der',X=function(x){return mir?340-x:x};
@@ -247,7 +253,10 @@ function view(st,dir,hide){
   if(hide){fig='<ellipse cx="'+cx+'" cy="'+(cy+4)+'" rx="26" ry="5" fill="#F4F1EA"/><circle cx="'+cx+'" cy="'+(cy-46)+'" r="22" fill="#fff" opacity=".9"/><text x="'+cx+'" y="'+(cy-37)+'" text-anchor="middle" font-size="26" font-weight="800" fill="#2E6A92">?</text>';}
   else{
     var p=poseAt(CROUCH,cx,cy);
-    var body='<ellipse cx="'+cx+'" cy="'+(cy+4)+'" rx="26" ry="5" fill="#F4F1EA"/><path d="M'+(cx-3)+' '+(cy+8)+' L'+cx+' '+(cy+20)+' L'+(cx+3)+' '+(cy+8)+'Z" fill="#2C2C2B"/>'+figSide(p);
+    var fin=function(x,ang,len){return '<path transform="rotate('+ang+' '+x+' '+(cy+7)+')" d="M'+(x-2.6)+' '+(cy+7)+' C'+(x-2.4)+' '+(cy+7+len*.5)+' '+(x-1)+' '+(cy+7+len*.85)+' '+x+' '+(cy+7+len)+' C'+(x+1)+' '+(cy+7+len*.85)+' '+(x+2.4)+' '+(cy+7+len*.5)+' '+(x+2.6)+' '+(cy+7)+'Z" fill="#33424D"/>'};
+    var body=fin(cx-14,14,14)+fin(cx+14,-14,14)+fin(cx,0,19)+
+      '<path d="M'+(cx-28)+' '+(cy+4)+' C'+(cx-24)+' '+(cy-2)+' '+(cx+24)+' '+(cy-2)+' '+(cx+28)+' '+(cy+4)+' C'+(cx+22)+' '+(cy+9)+' '+(cx-22)+' '+(cy+9)+' '+(cx-28)+' '+(cy+4)+'Z" fill="#F4F1EA"/>'+
+      '<path d="M'+(cx-28)+' '+(cy+4)+' C'+(cx-22)+' '+(cy+8)+' '+(cx+22)+' '+(cy+8)+' '+(cx+28)+' '+(cy+4)+'" stroke="#6FAFD6" stroke-width="2" fill="none"/>'+figSide(p);
     if(!front)body='<g transform="translate('+(2*cx)+',0) scale(-1,1)">'+body+'</g>';
     fig='<g transform="rotate(-22 '+cx+' '+cy+') translate('+cx+','+cy+') scale(.9) translate('+(-cx)+','+(-cy)+')">'+body+'</g>';
   }
@@ -289,38 +298,51 @@ $('fbGame').onclick=function(){
 
 // ---------- lineup ----------
 var Z={
- fuera:['Afuera','Más allá de donde rompen las olas. Desde aquí ves venir las series.'],
+ fuera:['Adentro','Más allá de donde rompen las olas. Desde aquí ves venir las series.'],
  lineup:['Lineup','Donde los surfistas esperan las olas, sentados en la tabla. Aquí se respeta el orden.'],
  pico:['Rompiente','Donde la ola empieza a romper. Quien está más cerca de ahí tiene la prioridad.'],
  impacto:['Zona de impacto','Donde las olas revientan con fuerza. No te quedes ahí: pásala rápido con tortuga o duckdive.'],
  espuma:['Espumón','La ola ya reventada que viene a la orilla. Ideal para practicar el pop-up.'],
- canal:['Canal','Zona más profunda donde casi no rompen las olas. Sirve para remar hacia afuera, pero ojo: suele tener corriente de retorno.'],
+ canal:['Canal','Zona más profunda donde casi no rompen las olas. Sirve para remar hacia adentro, pero ojo: suele tener corriente de retorno.'],
  orilla:['Orilla','Donde entras y sales. Antes de entrar, siempre observa el mar.']};
 function luSvg(){
-  var Zs=[['orilla',0,60,'ORILLA',34],['espuma',60,125,'ESPUMÓN',56],['impacto',125,185,'IMPACTO',34],['pico',185,228,'ROMPIENTE',56],['lineup',228,292,'LINEUP',34],['fuera',292,340,'AFUERA',56]];
-  var s='<svg viewBox="0 0 340 250"><rect width="340" height="250" fill="#E6F1F8"/>'+
-   '<defs><linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FAFD6"/><stop offset="1" stop-color="#2E6A92"/></linearGradient></defs>'+
-   '<path d="M40 128 L340 128 L340 206 Z" fill="url(#sea)"/>'+
-   '<path d="M0 112 L40 128 L340 206 L340 250 L0 250Z" fill="#E3D1AE"/>'+
-   // espumón
-   '<path d="M62 127 C70 118 80 118 86 126 C92 118 102 118 108 126 C114 118 122 120 126 127Z" fill="#fff"/>'+
-   // ola rompiendo (impacto)
-   '<path d="M126 128 C140 128 150 118 158 100 C164 86 172 76 186 76 C196 76 200 84 198 92 C204 106 210 118 220 128Z" fill="#5A9CC6"/>'+
-   '<path d="M190 78 C178 74 166 82 160 98 C156 108 152 116 146 122 C158 116 166 104 172 96 C178 90 186 88 190 94Z" fill="#F4FAFD"/>'+
-   '<path d="M128 127 C134 118 144 118 150 126Z" fill="#fff"/>'+
-   // ola que empieza a romper
-   '<path d="M196 128 C206 126 212 110 220 104 C226 100 232 110 240 128Z" fill="#5A9CC6"/><path d="M216 106 C220 100 226 100 228 106" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>'+
-   // surfistas sentados en el lineup
-   [252,278].map(function(x){return '<g transform="translate('+x+',128) scale(.6) translate('+(-x)+',-128)"><ellipse cx="'+x+'" cy="129" rx="15" ry="3" fill="#F4F1EA"/>'+cap([x+5,128],[x+12,138],4,3,WS2)+cap([x,127],[x,108],6.5,5.5,LY)+cap([x+1,109],[x+10,120],3,2.6,WS2)+headD([x+1,98],0)+'</g>'}).join('')+
-   // mar de fondo
-   '<path d="M296 128 C304 122 312 122 320 128 C326 123 334 123 340 128" stroke="#fff" stroke-width="2" fill="none" opacity=".6"/>';
+  var Zs=[['orilla',0,58,'ORILLA',30],['espuma',58,122,'ESPUMÓN',50],['impacto',122,186,'IMPACTO',30],['pico',186,230,'ROMPIENTE',50],['lineup',230,292,'LINEUP',30],['fuera',292,340,'ADENTRO',50]];
+  var W=function(x,y){return '<path d="M'+x+' '+y+'" />'};
+  var s='<svg viewBox="0 0 340 250"><defs>'+
+   '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCEBF5"/><stop offset="1" stop-color="#F3F8FB"/></linearGradient>'+
+   '<linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#78B6DA"/><stop offset=".5" stop-color="#3F82AE"/><stop offset="1" stop-color="#245C80"/></linearGradient>'+
+   '<linearGradient id="wv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8CC6E4"/><stop offset="1" stop-color="#3A7DAA"/></linearGradient>'+
+   '<linearGradient id="snd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8D7B5"/><stop offset="1" stop-color="#CDB68C"/></linearGradient></defs>'+
+   '<rect width="340" height="250" fill="url(#sky)"/>'+
+   '<path d="M40 130 L340 130 L340 210 Z" fill="url(#sea)"/>'+
+   '<path d="M0 108 L40 130 L340 210 L340 250 L0 250Z" fill="url(#snd)"/>'+
+   '<path d="M80 152 q6 -3 12 0 M130 166 q6 -3 12 0 M190 182 q6 -3 12 0 M250 198 q6 -3 12 0" stroke="#B89D6E" stroke-width="1.5" fill="none" opacity=".6"/>'+
+   // orilla: espuma en la arena
+   '<path d="M30 126 C36 122 44 124 50 128 L40 130Z" fill="#fff" opacity=".8"/>'+
+   // espumón: bore de espuma
+   '<path d="M58 130 C60 120 68 116 76 120 C80 112 92 112 96 120 C102 114 112 116 114 124 C118 122 122 126 122 130Z" fill="#fff"/>'+
+   '<path d="M64 124 a3 3 0 1 0 .1 0 M84 118 a2.5 2.5 0 1 0 .1 0 M104 122 a2 2 0 1 0 .1 0" fill="#DCEEF7"/>'+
+   '<path d="M58 130 L122 130 L122 136 C100 134 80 136 58 134Z" fill="#CFE6F2" opacity=".8"/>'+
+   // impacto: ola reventando con tubo
+   '<path d="M122 130 C134 130 144 124 150 110 C156 94 166 80 182 78 C194 77 200 86 196 94 C206 108 212 122 222 130Z" fill="url(#wv)"/>'+
+   '<path d="M184 79 C170 78 158 88 152 104 C148 114 142 122 134 126 C150 124 158 112 164 100 C170 90 178 86 186 90 C190 86 190 81 184 79Z" fill="#F4FAFD"/>'+
+   '<path d="M128 130 C130 120 140 116 148 122 C150 116 158 116 160 124 C164 120 170 124 170 130Z" fill="#fff"/>'+
+   '<circle cx="138" cy="114" r="2" fill="#fff"/><circle cx="132" cy="120" r="1.5" fill="#fff"/><circle cx="144" cy="110" r="1.4" fill="#fff"/>'+
+   // rompiente: ola que empieza a romper
+   '<path d="M198 130 C208 128 214 116 220 106 C224 100 230 100 234 106 C238 114 242 124 250 130Z" fill="url(#wv)"/>'+
+   '<path d="M216 110 C220 102 226 100 230 104 C226 104 222 106 220 112Z" fill="#fff"/><circle cx="223" cy="99" r="1.4" fill="#fff"/><circle cx="228" cy="97" r="1.1" fill="#fff"/>'+
+   // lineup: surfistas sentados
+   [256,282].map(function(x){return '<g transform="translate('+x+',130) scale(.58) translate('+(-x)+',-130)"><ellipse cx="'+x+'" cy="131" rx="18" ry="3.2" fill="#F4F1EA"/>'+cap([x+3,128],[x+11,136],4.5,3.6,WS)+cap([x+11,136],[x+9,148],3.6,3,WS)+cap([x,128],[x,106],7,6,LY)+cap([x+2,108],[x+10,118],3.2,2.8,WS2)+cap([x+10,118],[x+14,126],2.8,2.4,WS2)+headD([x+2,95],0)+'</g>'}).join('')+
+   '<path d="M232 131 C246 129 300 129 340 131" stroke="#fff" stroke-width="1.2" opacity=".5" fill="none"/>'+
+   // adentro: mar de fondo (swell)
+   '<path d="M294 130 C300 124 308 124 314 130 C320 124 328 124 334 130" stroke="#fff" stroke-width="2" fill="none" opacity=".7"/><path d="M296 140 C302 135 310 135 316 140 C322 135 330 135 336 140" stroke="#fff" stroke-width="1.5" fill="none" opacity=".4"/>';
   Zs.forEach(function(z){
-    var cx=(z[1]+z[2])/2;
+    var cx=(z[1]+z[2])/2,tip={orilla:118,espuma:112,impacto:74,pico:96,lineup:104,fuera:120}[z[0]];
     s+='<g class="zone" data-z="'+z[0]+'"><rect class="hl" x="'+z[1]+'" y="0" width="'+(z[2]-z[1])+'" height="250" fill="#FADF70"/><rect x="'+z[1]+'" y="0" width="'+(z[2]-z[1])+'" height="250" fill="transparent"/>'+
-       '<path d="M'+cx+' '+(z[4]+6)+' L'+cx+' '+(z[0]==='lineup'?86:z[0]==='pico'?98:z[0]==='impacto'?72:118)+'" stroke="#1f4f6b" stroke-width="1" stroke-dasharray="2 3" opacity=".45"/>'+
-       '<text x="'+cx+'" y="'+z[4]+'" text-anchor="middle" class="zt" style="fill:#1f4f6b;font-size:'+(z[3].length>8?9.5:10.5)+'px">'+z[3]+'</text></g>';
+       '<path d="M'+cx+' '+(z[4]+6)+' L'+cx+' '+tip+'" stroke="#1f4f6b" stroke-width="1" stroke-dasharray="2 3" opacity=".4"/><circle cx="'+cx+'" cy="'+tip+'" r="2.2" fill="#1f4f6b" opacity=".5"/>'+
+       '<text x="'+(z[0]==='fuera'?cx-6:z[0]==='orilla'?cx+4:cx)+'" y="'+z[4]+'" text-anchor="middle" class="zt" style="fill:#1f4f6b;font-size:'+(z[3].length>8?9.5:10.5)+'px">'+z[3]+'</text></g>';
   });
-  s+='<text x="14" y="236" font-size="10" font-weight="800" fill="#3B2610" opacity=".6">← PLAYA</text><text x="330" y="236" text-anchor="end" font-size="10" font-weight="800" fill="#3B2610" opacity=".6">MAR ADENTRO →</text>';
+  s+='<text x="12" y="238" font-size="10" font-weight="800" fill="#6b5634">← PLAYA (AFUERA)</text><text x="330" y="238" text-anchor="end" font-size="10" font-weight="800" fill="#6b5634">MAR ADENTRO →</text>';
   return s+'</svg>';
 }
 $('lu').innerHTML=luSvg();var luSeen=S.lu||{};
@@ -334,7 +356,7 @@ $('canalBtn').onclick=function(){document.querySelectorAll('#lu .zone').forEach(
 var D=[
  ['Tabla','Nose','La punta de adelante de la tabla.'],['Tabla','Tail','La parte de atrás. Su forma cambia el control y la velocidad.'],['Tabla','Rails','Los bordes o cantos de la tabla.'],['Tabla','Alma','La línea del centro, del nose al tail. Tus pies van sobre ella.'],['Tabla','Rocker','La curva de la tabla. Más curva, giros más rápidos; más plana, más velocidad en olas chicas.'],['Tabla','Quillas','Las aletas de abajo: dan dirección y agarre.'],['Tabla','Leash','La cuerda que une tu tobillo con la tabla.'],['Tabla','Softboard','Tabla de espuma, la mejor para empezar.'],['Tabla','Shortboard','Tabla corta y liviana para maniobras. Con ella se hace duckdive.'],['Tabla','Longboard','Tabla larga y estable. Para pasar olas se usa la tortuga.'],
  ['Postura','Regular','Pie izquierdo adelante.'],['Postura','Goofy','Pie derecho adelante.'],['Postura','Frontside','Correr la ola mirándola de frente.'],['Postura','Backside','Correr la ola de espalda a la pared.'],['Postura','Pop-up','Pararse en un solo movimiento, de acostado a de pie.'],
- ['Mar','Lineup','Donde los surfistas esperan las olas.'],['Mar','Cresta','La parte más alta de la ola, justo antes de que rompa.'],['Mar','Serie','Grupo de olas más grandes que llegan seguidas.'],['Mar','Espumón','La ola ya reventada que va a la orilla.'],['Mar','Labio','La parte de arriba de la ola, la que se cae al romper.'],['Mar','Pared','La cara de la ola que todavía no rompe. Por ahí se surfea.'],['Mar','Derecha / izquierda','Hacia dónde rompe la ola, mirando desde el agua hacia la playa.'],['Mar','Corriente de retorno','El mar devolviendo el agua hacia afuera. Se ve más oscura y sin olas.'],['Mar','Período','Segundos entre una onda y otra. Más segundos, olas más fuertes y ordenadas.'],
+ ['Mar','Lineup','Donde los surfistas esperan las olas.'],['Mar','Cresta','La parte más alta de la ola, justo antes de que rompa.'],['Mar','Serie','Grupo de olas más grandes que llegan seguidas.'],['Mar','Espumón','La ola ya reventada que va a la orilla.'],['Mar','Labio','La parte de arriba de la ola, la que se cae al romper.'],['Mar','Pared','La cara de la ola que todavía no rompe. Por ahí se surfea.'],['Mar','Derecha / izquierda','Hacia dónde rompe la ola, mirando desde el agua hacia la playa.'],['Mar','Corriente de retorno','El mar devolviendo el agua hacia adentro. Se ve más oscura y sin olas.'],['Mar','Período','Segundos entre una onda y otra. Más segundos, olas más fuertes y ordenadas.'],
  ['Técnica','Remada de desplazamiento','Remada tranquila para moverte y ahorrar energía.'],['Técnica','Remada explosiva','Brazadas cortas y potentes para agarrar una ola o escapar de una serie.'],['Técnica','Tortuga','Dar vuelta la tabla agarrando los rails y dejar pasar la ola por encima.'],['Técnica','Duckdive','Hundir la tabla y pasar por debajo de la ola.'],['Técnica','Timing','El momento justo para remar y pararte.'],['Técnica','Revolcón','Cuando la ola te da vueltas bajo el agua. Calma y protege tu cabeza.'],['Técnica','Bottom turn','El giro abajo de la ola que te da velocidad para la siguiente maniobra.'],['Técnica','Cutback','Giro para volver hacia la parte que rompe de la ola.'],['Técnica','Re-entry','Subir al labio y volver a bajar.'],
  ['Lineup','Prioridad','El derecho a la ola. Lo tiene quien está más cerca de donde rompe.'],['Lineup','Cruzarse','Pararse delante de alguien que ya va en la ola. No se hace.']
 ];
@@ -363,14 +385,14 @@ var QZ=[
  ['Eres regular y la ola va hacia la izquierda. Vas de…',['Frontside','Backside'],1],
  ['¿Quién tiene la prioridad en una ola?',['El que rema más rápido','El que está más cerca de donde rompe la ola','El que llegó primero al agua'],1],
  ['¿Qué es una serie?',['Un grupo de olas más grandes que llegan seguidas','Un campeonato','Una fila de surfistas'],0],
- ['Viene alguien en la ola y tú vas remando hacia afuera. ¿Por dónde pasas?',['Por delante de él','Hacia donde la ola ya reventó','Me quedo quieto en el medio'],1],
+ ['Viene alguien en la ola y tú vas remando hacia adentro. ¿Por dónde pasas?',['Por delante de él','Hacia donde la ola ya reventó','Me quedo quieto en el medio'],1],
  ['Con una shortboard, ¿cómo pasas una ola?',['Tortuga','Duckdive','La suelto'],1],
  ['¿Qué es el labio?',['La parte de arriba de la ola, la que se cae','La orilla','El borde de la tabla'],0],
  ['Un período alto (13 segundos o más) significa…',['Olas más fuertes y ordenadas','Olas chicas y desordenadas','Que no hay olas'],0],
  ['¿Para qué sirve la remada explosiva?',['Para ahorrar energía','Para agarrar una ola o escapar de una serie','Para girar la tabla'],1],
  ['¿Qué es cruzarse?',['Pararse delante de alguien que ya va en la ola','Cambiar de tabla','Hacer un cutback'],0],
  ['¿Dónde esperan las olas los surfistas?',['En la zona de impacto','En el lineup','En el espumón'],1],
- ['El canal es útil para remar hacia afuera, pero ojo porque…',['Tiene muchas olas','Suele tener corriente de retorno','Es muy bajo'],1],
+ ['El canal es útil para remar hacia adentro, pero ojo porque…',['Tiene muchas olas','Suele tener corriente de retorno','Es muy bajo'],1],
  ['¿Qué maniobra te da velocidad al bajar la ola?',['Bottom turn','Re-entry','Pop-up'],0],
  ['¿Qué parte de la tabla es el rocker?',['La curva del nose al tail','Las aletas','El borde'],0]
 ];

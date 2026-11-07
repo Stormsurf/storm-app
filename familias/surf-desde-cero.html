@@ -104,13 +104,12 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
   </div>
   <span class="eyebrow">Kids · Iniciante</span>
   <h1>Surf desde cero</h1>
-  <p class="lead">Conoce tu tabla, descubre si eres regular o goofy y aprende a pararte como surfista.</p>
+  <p class="lead">Conoce las partes de tu tabla y descubre si eres regular o goofy.</p>
 
   <nav class="steps" id="nav">
     <button data-s="tabla" class="on">1 Tu tabla <i data-ok="tabla"></i></button>
     <button data-s="pie">2 Regular o goofy <i data-ok="pie"></i></button>
-    <button data-s="parar">3 Pararse <i data-ok="parar"></i></button>
-    <button data-s="quiz">4 Desafío <i data-ok="quiz"></i></button>
+    <button data-s="quiz">3 Desafío <i data-ok="quiz"></i></button>
   </nav>
 
   <!-- 1 TABLA -->
@@ -172,7 +171,7 @@ h1{font-weight:500;font-size:31px;line-height:1.1;margin:8px 0 10px;letter-spaci
         <button data-v="regular"><b>Regular</b><small>Pie izquierdo adelante</small></button>
         <button data-v="goofy"><b>Goofy</b><small>Pie derecho adelante</small></button>
       </div>
-      <div class="stage sand" style="margin-top:12px" id="rgsvg"></div><p class="sub" style="margin-top:8px;font-size:13px">Mira el pie marcado: cambia el pie de adelante, pero el surfista sigue mirando hacia ti.</p>
+      <div class="stage" style="margin-top:12px" id="rgsvg"></div><p class="sub" style="margin-top:8px;font-size:13px">Tu tabla vista desde arriba. El pie amarillo es el que va adelante, más cerca del nose.</p>
       <h2 style="font-size:18px;margin-top:18px">Descúbrelo: la prueba del empujón</h2>
       <ol class="test">
         <li>Párate derecho con los pies juntos y los ojos cerrados.</li>
@@ -367,11 +366,33 @@ function feetTop(goofy){
    '<text x="'+X(300)+'" y="80" text-anchor="middle" class="lbl" fill="#fff">'+(goofy?'←':'→')+'</text></svg>';
 }
 
+// regular / goofy: solo los pies, vista de arriba (nose a la derecha en regular)
+function footprint(x,y,ang,fill,left){
+  // dedos hacia abajo; dedo gordo al lado interno
+  var t=left?[[-5,21,3.2],[-0.5,22.5,2.4],[3,22,2.1],[5.8,20.5,1.8],[7.8,18,1.5]]:[[5,21,3.2],[0.5,22.5,2.4],[-3,22,2.1],[-5.8,20.5,1.8],[-7.8,18,1.5]];
+  return '<g transform="translate('+x+','+y+') rotate('+ang+')"><path d="M-7 -16 C-10 -8 -9 2 -7 9 C-6 15 -2 18 1 18 C6 18 9 13 8 5 C7 -3 7 -10 5 -16 C3 -22 -5 -22 -7 -16Z" fill="'+fill+'"/>'+
+   t.map(function(c){return '<circle cx="'+c[0]+'" cy="'+c[1]+'" r="'+c[2]+'" fill="'+fill+'"/>'}).join('')+'</g>';
+}
+function feetRG(goofy){
+  var X=function(x){return goofy?340-x:x};
+  var inner='<g transform="translate(0,-10)"><path d="M26 76 C26 71 30 69 38 67 C110 46 232 44 292 64 C314 72 324 84 326 90 C324 96 314 108 292 116 C232 136 110 134 38 113 C30 111 26 109 26 104Z" fill="#F7F5F0"/>'+
+   '<path d="M34 79 C34 76 38 75 44 73 C112 54 230 52 288 71 C306 78 314 86 317 90 C314 94 306 102 288 109 C230 128 112 126 44 107 C38 105 34 104 34 101Z" fill="#7FB5D5"/><path d="M40 90 L306 90" stroke="#fff" stroke-width="1.6" opacity=".6"/></g>'+
+   footprint(112,78,0,'#2C2C2B',!goofy?false:false)+footprint(214,78,-25,'#E9B93A',true);
+  var g=goofy?'<g transform="translate(340,0) scale(-1,1)">'+inner+'</g>':inner;
+  return '<svg viewBox="0 0 340 170">'+g+
+   '<text x="'+X(112)+'" y="140" text-anchor="middle" class="lbl" opacity=".6">'+(goofy?'IZQUIERDO':'DERECHO')+'</text>'+
+   '<text x="'+X(112)+'" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#6b6a66">ATRÁS</text>'+
+   '<text x="'+X(214)+'" y="140" text-anchor="middle" class="lbl">'+(goofy?'DERECHO':'IZQUIERDO')+'</text>'+
+   '<text x="'+X(214)+'" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#8a6a10">ADELANTE</text>'+
+   '<text x="'+X(296)+'" y="24" text-anchor="middle" class="lbl" fill="#2d6e94">'+(goofy?'← NOSE':'NOSE →')+'</text>'+
+   '<text x="'+X(44)+'" y="24" text-anchor="middle" class="lbl" opacity=".5">TAIL</text></svg>';
+}
+
 // ---------- 2 regular / goofy ----------
 function drawRG(){
   var g=S.pie==='goofy';
   document.querySelectorAll('#rg button').forEach(function(b){b.classList.toggle('on',b.dataset.v===(S.pie||'regular'))});
-  $('rgsvg').innerHTML=frontScene(g,true);
+  $('rgsvg').innerHTML=feetRG(g);
 }
 document.querySelectorAll('#rg button').forEach(function(b){b.onclick=function(){S.pie=b.dataset.v;save();drawRG()}});
 document.querySelectorAll('[data-me]').forEach(function(b){b.onclick=function(){
@@ -418,12 +439,11 @@ var QZ=[
  ['¿Cómo se llama la punta de adelante de la tabla?',['Nose','Tail','Rail'],0],
  ['¿Para qué sirve el leash?',['Para que la tabla no se aleje si te caes','Para remar más rápido','Para que la tabla se vea bonita'],0],
  ['Si pones el pie derecho adelante, eres…',['Regular','Goofy'],1],
- ['Al remar, tus pies van…',['Abiertos, uno a cada lado','Juntos, tocando el tail','Colgando en el agua'],1],
- ['Al pararte, ¿hacia dónde miras?',['A mis pies','Al frente','Hacia atrás'],1],
- ['¿Qué es lo último que sale de la tabla al pararte?',['Las manos','Los pies','La cabeza'],0],
  ['¿Dónde están las quillas?',['Arriba, donde pisas','Abajo de la tabla','En el nose'],1],
  ['¿Dónde van tus pies cuando estás de pie?',['Sobre el alma, al centro','En el rail','Fuera de la tabla'],0],
- ['En la postura de balance, tus rodillas apuntan…',['Hacia los lados','Hacia el nose','Hacia el tail'],1],
+ ['¿Cómo se llama la parte de atrás de la tabla?',['Nose','Tail','Quilla'],1],
+ ['Si pones el pie izquierdo adelante, eres…',['Regular','Goofy'],0],
+ ['¿Para qué sirve la cera?',['Para no resbalar','Para que la tabla flote','Para ir más rápido'],0],
 ];
 function quiz(){
   var L=QZ.slice().sort(function(){return Math.random()-.5}).slice(0,6),i=0,ok=0;
