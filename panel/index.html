@@ -163,6 +163,29 @@
 .pn-verano .pn-day.on{background:#3B2610;border-color:#3B2610}
 .pn-salud{display:block;margin-top:4px;font-size:1.25rem;color:var(--warn)}
 .pn-sent p{margin:4px 0 0;font-size:1.4rem;line-height:1.45;white-space:pre-line}
+.pn-gm{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.pn-gp h3 .pn-gsal{font-size:1.7rem;color:var(--warn);text-align:right;line-height:1.1}
+.pn-gp h3 .pn-gsal small{display:block;font-size:1.1rem;font-weight:500;opacity:.75}
+.pn-gok{font-size:1.3rem;color:var(--ok);background:var(--ok-soft);padding:4px 10px;border-radius:999px}
+.pn-gcl{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.pn-gc{border:1.5px solid var(--ok);background:var(--ok-soft);color:var(--ink);border-radius:12px;padding:6px 10px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;line-height:1.15;text-align:center}
+.pn-gc small{display:block;font-size:1.05rem;font-weight:500;opacity:.65}
+.pn-gc.no{border-color:var(--warn);background:var(--warn-soft);color:var(--warn);text-decoration:line-through}
+.pn-gc.no small{text-decoration:none}
+.pn-gc.ask{background:var(--ink);border-color:var(--ink);color:#fff;text-decoration:none}
+.pn-hint{font-size:1.15rem;opacity:.55;margin:6px 0 0}
+.pn-gmov{margin-top:10px;border-top:1px solid var(--line)}
+.pn-gmov div{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:1.3rem}
+.pn-gmov span{flex:1;opacity:.8}
+.pn-gmov button{border:0;background:none;font:inherit;font-size:1.5rem;opacity:.45;cursor:pointer;padding:0 4px}
+.pn-gmov button.ask{font-size:1.15rem;opacity:1;color:var(--warn);font-weight:600}
+.pn-gbox{background:#F3F1EC;border-radius:14px;padding:12px;margin-top:10px}
+.pn-gbox p{margin:0 0 8px;font-size:1.4rem}
+.pn-gbox input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:1.5rem;margin-top:6px;background:#fff}
+.pn-gpre{display:flex;flex-wrap:wrap;gap:6px}
+.pn-gpre button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:1.3rem;font-weight:600;cursor:pointer}
+.pn-gbox .pn-acts{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:8px}
+.pn-gbox .pn-ntgo{border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;font-size:1.3rem;padding:8px 16px;cursor:pointer}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='pn-app'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
@@ -360,12 +383,13 @@
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
     LISTA = d.lista || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button><button class='pn-tab' data-tab='gastos'>Gastos</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
         app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t);
-        if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); } };
+        if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); }
+        if(t === 'gastos') cargarGastos(); };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
@@ -407,6 +431,7 @@
       <p class='pn-note'>A los pagos con Mercado Pago se les descuenta una comisión de cerca de 3,4%; a las transferencias no. ${esc(cap(d.pasado.mes))}: ${clp(d.pasado.recaudado)} con ${d.pasado.alumnos} alumnos.</p>
     </div>`;
 
+    h += `<div class='pn-pane' data-pane='gastos'><div class='pn-skel'></div></div>`;
     h += `<div class='pn-pane' data-pane='avisos'>
       ${d.revisar.length ? `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${d.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla: ${d.revisar.map(esc).join(', ')}</p></div>` : ''}
       <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
@@ -435,6 +460,83 @@
     });
   }
 
+
+  // ---------- Gastos de la Academia Anual (solo administradores) ----------
+  let GAS = null, gMes = '', gAbierto = '', gOtro = false;
+  const mesCorto = m => cap(String(m).split(' ')[0]);
+  async function cargarGastos(mes){
+    const pane = app.querySelector("[data-pane='gastos']"); if(!pane) return;
+    if(!GAS || (mes && mes !== GAS.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
+    try{ GAS = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); gMes = GAS.mes; pintarGastos(); }
+    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar los gastos. ${esc(x.message)}</p></div>`; }
+  }
+  async function gasto(body, btn){
+    if(btn){ btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = 'Anotando…'; }
+    try{ GAS = await post(Object.assign({}, auth, {accion:'gasto', mes: gMes}, body)); gAbierto = ''; gOtro = false; pintarGastos(); }
+    catch(x){ if(btn){ btn.disabled = false; btn.textContent = btn.dataset.t; } alert(x.message); }
+  }
+  function pintarGastos(){
+    const pane = app.querySelector("[data-pane='gastos']"); if(!pane || !GAS) return;
+    const g = GAS, queda = g.recaudado - g.gastos;
+    let h = `<div class='pn-gm'>${g.meses.map(m => `<button class='pn-gbtn${m===g.mes?' on':''}' data-gmes='${esc(m)}'>${esc(mesCorto(m))}</button>`).join('')}</div>
+      <div class='pn-stats'>
+        <div class='pn-stat'><small>Gastos de ${esc(mesCorto(g.mes))}</small><b>${clp(g.gastos)}</b><em>${g.clasesSurf} clases de surf · ${g.clasesSkate} de skate</em></div>
+        <div class='pn-stat${g.gastos - g.pagado > 0 ? ' pn-stat--warn' : ''}'><small>Falta pagar</small><b>${clp(g.gastos - g.pagado)}</b><em>ya pagaste ${clp(g.pagado)}</em></div>
+        <div class='pn-stat pn-stat--main'><small>Recaudado − gastos</small><b>${queda < 0 ? '−' : ''}${clp(Math.abs(queda))}</b><em>recaudado ${clp(g.recaudado)} (antes de comisión)</em></div>
+      </div>`;
+    h += g.personas.map((p, pi) => {
+      const det = p.fijo ? `Pago mensual ${clp(p.fijo)}` : [p.surf ? `${p.nSurf} surf × ${clp(p.surf)}` : '', p.skate ? `${p.nSkate} skate × ${clp(p.skate)}` : ''].filter(Boolean).join(' + ');
+      const valorClase = p.surf || p.skate;
+      const abierto = gAbierto === p.nombre;
+      return `<div class='pn-card pn-gp'>
+        <h3><span>${esc(p.nombre)}</span>${p.total && p.saldo <= 0 ? `<span class='pn-gok'>Pagado ✓</span>` : `<span class='pn-gsal'>${clp(p.saldo)}<small>por pagar</small></span>`}</h3>
+        <p class='pn-sub'>${det} = <b>${clp(p.total)}</b>${p.pagado ? ` · pagado ${clp(p.pagado)}` : ''}</p>
+        ${p.fijo ? '' : `<div class='pn-gcl'>${p.clases.map(c => `<button class='pn-gc${c.falto?' no':''}' data-gp='${pi}' data-gcl='${c.fecha}' title='${c.falto?'No vino':'Vino'}'>${esc(c.texto)}<small>${c.clase}</small></button>`).join('')}</div>
+          <p class='pn-hint'>Toca una clase si no vino (se descuenta). Tócala de nuevo para deshacer.</p>`}
+        ${p.movs.length ? `<div class='pn-gmov'>${p.movs.map(m => `<div><span>${esc(m.tipo)} · ${esc(corta(m.fecha))}${m.detalle ? ' · ' + esc(m.detalle) : ''}</span><b>${clp(m.monto)}</b><button data-gdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : ''}
+        ${abierto ? `<div class='pn-gbox'>
+            <p>¿Cuánto le pagaste a <b>${esc(p.nombre.split(' ')[0])}</b>?</p>
+            <div class='pn-gpre'>${!p.fijo && valorClase ? [1,2,3].map(n => `<button data-gpre='${n*valorClase}'>${n} clase${n>1?'s':''}</button>`).join('') : ''}${p.saldo > 0 ? `<button data-gpre='${p.saldo}'>Todo (${clp(p.saldo)})</button>` : ''}</div>
+            <input inputmode='numeric' placeholder='Monto, ej: 25000' id='pn-gmonto'>
+            <input placeholder='Nota (opcional), ej: adelanto' id='pn-gnota'>
+            <div class='pn-acts'><button class='pn-link' data-gcan>Cancelar</button><button class='pn-ntgo' data-gsave='${pi}'>Anotar pago</button></div>
+          </div>` : `<button class='pn-nt' data-gopen='${pi}'>+ Anotar pago o adelanto</button>`}
+      </div>`;
+    }).join('');
+    h += `<div class='pn-card'><h3>Otros gastos<span class='pn-count'>${clp(g.otrosTotal)}</span></h3>
+      ${g.otros.length ? `<div class='pn-gmov'>${g.otros.map(o => `<div><span>${esc(o.detalle)} · ${esc(corta(o.fecha))}</span><b>${clp(o.monto)}</b><button data-gdel='${o.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Nada anotado este mes.</p>`}
+      ${gOtro ? `<div class='pn-gbox'><input placeholder='¿En qué fue? ej: parafina, bencina' id='pn-godet'><input inputmode='numeric' placeholder='Monto' id='pn-gomonto'>
+        <div class='pn-acts'><button class='pn-link' data-gcan>Cancelar</button><button class='pn-ntgo' data-gosave>Anotar gasto</button></div></div>` : `<button class='pn-nt' data-gonew>+ Anotar otro gasto</button>`}
+    </div>
+    <p class='pn-note'>Los valores por clase y los pagos fijos están en la pestaña Sueldos de la planilla. Las clases canceladas en el Calendario no se pagan.</p>`;
+    pane.innerHTML = h;
+    pane.querySelectorAll('[data-gmes]').forEach(b => b.onclick = () => { gAbierto = ''; gOtro = false; cargarGastos(b.dataset.gmes); });
+    pane.querySelectorAll('[data-gopen]').forEach(b => b.onclick = () => { gAbierto = g.personas[+b.dataset.gopen].nombre; gOtro = false; pintarGastos(); const i = pane.querySelector('#pn-gmonto'); i && i.focus(); });
+    pane.querySelectorAll('[data-gcan]').forEach(b => b.onclick = () => { gAbierto = ''; gOtro = false; pintarGastos(); });
+    pane.querySelectorAll('[data-gpre]').forEach(b => b.onclick = () => { pane.querySelector('#pn-gmonto').value = b.dataset.gpre; });
+    pane.querySelectorAll('[data-gsave]').forEach(b => b.onclick = () => {
+      const monto = +String(pane.querySelector('#pn-gmonto').value).replace(/\D/g, '');
+      if(!monto) return pane.querySelector('#pn-gmonto').focus();
+      gasto({tipo:'pago', persona: g.personas[+b.dataset.gsave].nombre, monto, detalle: pane.querySelector('#pn-gnota').value.trim()}, b);
+    });
+    pane.querySelectorAll('[data-gcl]').forEach(b => b.onclick = () => {
+      const p = g.personas[+b.dataset.gp], c = p.clases.find(x => x.fecha === b.dataset.gcl);
+      if(!b.dataset.ok){ b.dataset.ok = 1; b.classList.add('ask'); b.firstChild.textContent = c.falto ? '¿Sí vino?' : '¿No vino?'; return; }
+      gasto(c.falto ? {tipo:'borrar', fila: c.falto} : {tipo:'falta', persona: p.nombre, clase: c.fecha}, b);
+    });
+    pane.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => {
+      if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
+      gasto({tipo:'borrar', fila: +b.dataset.gdel}, b);
+    });
+    const ng = pane.querySelector('[data-gonew]'); if(ng) ng.onclick = () => { gOtro = true; gAbierto = ''; pintarGastos(); pane.querySelector('#pn-godet').focus(); };
+    const og = pane.querySelector('[data-gosave]'); if(og) og.onclick = () => {
+      const detalle = pane.querySelector('#pn-godet').value.trim(), monto = +String(pane.querySelector('#pn-gomonto').value).replace(/\D/g, '');
+      if(!detalle) return pane.querySelector('#pn-godet').focus();
+      if(!monto) return pane.querySelector('#pn-gomonto').focus();
+      gasto({tipo:'otro', detalle, monto}, og);
+    };
+  }
+  const corta = f => { const m = String(f||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + '/' + (+m[2]) : f; };
 
   // ---------- Notas internas por alumno (solo el equipo; las familias no las ven) ----------
   let NOTAS = null, ntAbierta = '', aGrupo = '', aCambio = '', aNuevo = '', aMsg = '', ES_ADMIN = false;
