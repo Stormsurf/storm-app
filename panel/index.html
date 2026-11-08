@@ -648,31 +648,58 @@
   function pintarAnio(){
     const pane = app.querySelector("[data-pane='anio']"); if(!pane || !ANIO) return;
     const a = ANIO, neg = n => (n<0?'−':'') + clp(Math.abs(n));
-    const form = `<div class='pn-card pn-fadd'><h3>${a.inicio ? 'Actualizar saldo de partida' : '¿Cuánto hay hoy en la cuenta de Storm?'}</h3>
-      <p class='pn-sub'>Anótalo el primer día del mes (por ejemplo el 1 de enero). Desde ahí se suma solo lo que entra y sale cada mes.</p>
+    const partida = `<div class='pn-card pn-fadd'><h3>¿Cuánto hay en la cuenta de Storm?</h3>
+      <p class='pn-sub'>Se anota una sola vez (el 1 de enero). Desde ahí se suma solo lo que entra y sale cada mes.</p>
       <input inputmode='numeric' placeholder='Banco, ej: 2195000' id='pn-abanco'>
       <div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-ago'>Guardar saldo</button></div></div>`;
-    if(!a.inicio){ pane.innerHTML = form; bindAnio(pane); return; }
+    const grandes = `<div class='pn-card pn-fadd'><h3>Gastos grandes que vienen<span class='pn-count'>${clp(a.porPagar||0)}</span></h3>
+      <p class='pn-sub'>Trajes, certificaciones, operación renta… Anótalos antes, así sabes cuánto tienes libre. Tócalo cuando lo pagues y se anota solo como gasto.</p>
+      ${(a.grandes||[]).length ? (a.grandes||[]).map(g => `<button class='pn-fij${g.pagado?' on':''}' data-gr='${g.fila}'><i>${g.pagado?'✓':''}</i><span><b>${esc(g.detalle)}</b><small>${esc(cap(g.mes))}${g.pagado?' · pagado':''}</small></span><em>${clp(g.monto)}</em></button>`).join('') : ''}
+      <input placeholder='¿Qué es? ej: trajes nuevos' id='pn-grdet'>
+      <input inputmode='numeric' placeholder='Monto, ej: 900000' id='pn-grmonto'>
+      <input placeholder='¿Para qué mes? ej: diciembre 2026' id='pn-grmes'>
+      <div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-grgo'>Anotar gasto grande</button></div></div>`;
+    if(!a.inicio){ pane.innerHTML = partida + grandes; bindAnio(pane); return; }
     const max = Math.max(1, ...a.meses.map(m => Math.abs(m.balance)));
     pane.innerHTML = `<div class='pn-stats'>
-      <div class='pn-stat pn-stat--main${a.saldo<0?' pn-fneg':''}'><small>Hay hoy (aprox.)</small><b>${neg(a.saldo)}</b><em>partiste con ${clp(a.inicio.total)} el ${esc(corta(a.inicio.fecha))}</em></div>
-      <div class='pn-stat'><small>Gastos fijos al mes</small><b>${clp(a.fijosMes)}</b></div>
-      <div class='pn-stat'><small>Te alcanza para</small><b>${String(a.colchon).replace('.',',')} meses</b><em>de gastos fijos</em></div>
+      <div class='pn-stat pn-stat--main${a.saldo<0?' pn-fneg':''}'><small>Debería haber hoy</small><b>${neg(a.saldo)}</b><em>partiste con ${clp(a.inicio.total)} el ${esc(corta(a.inicio.fecha))}</em></div>
+      <div class='pn-stat${a.libre<0?' pn-fneg':''}'><small>Libre para usar</small><b>${neg(a.libre)}</b><em>después de los gastos grandes</em></div>
+      <div class='pn-stat'><small>Te alcanza para</small><b>${String(a.colchon).replace('.',',')} meses</b><em>de gastos fijos (${clp(a.fijosMes)})</em></div>
     </div>
     <div class='pn-card'><h3>Mes a mes</h3>
       ${a.meses.map(m => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(m.mes))}</b><span class='${m.balance<0?'neg':''}'>${neg(m.balance)}</span></div>
         <div class='pn-fbar'><i class='${m.balance<0?'out':'in'}' style='width:${Math.abs(m.balance)/max*100}%'></i></div>
         <small>entró ${clp(m.ingresos)} · salió ${clp(m.gastos)} · ${m.cuenta ? 'queda ' + neg(m.saldo) : 'ya está dentro del saldo de partida'}</small></div>`).join('')}
-      <p class='pn-sub' style='margin-top:8px'>Si un mes queda en negativo, se descuenta del saldo y pasa al siguiente.</p></div>
-    ${form}`;
+      <p class='pn-sub' style='margin-top:8px'>Si un mes queda en negativo, se descuenta y pasa al siguiente.</p></div>
+    ${grandes}
+    <div class='pn-card pn-fadd'><h3>Comparar con el banco</h3>
+      <p class='pn-sub'>Una vez al mes mira el banco y escríbelo aquí. No cambia nada, solo te muestra si falta anotar algo.</p>
+      <input inputmode='numeric' placeholder='Lo que dice el banco hoy' id='pn-acmp'><p class='pn-sub' id='pn-acmpr'></p></div>`;
     bindAnio(pane);
   }
   function bindAnio(pane){
-    pane.querySelector('#pn-ago').onclick = async e => {
-      const banco = String(pane.querySelector('#pn-abanco').value).replace(/\D/g, ''), mp = '';
+    const go = pane.querySelector('#pn-ago');
+    if(go) go.onclick = async e => {
+      const banco = String(pane.querySelector('#pn-abanco').value).replace(/\D/g, '');
       if(!banco) return pane.querySelector('#pn-abanco').focus();
       e.currentTarget.disabled = true; e.currentTarget.textContent = 'Guardando…';
-      await cargarAnio({banco: +banco, mp: +mp || 0});
+      await cargarAnio({banco: +banco});
+    };
+    const gg = pane.querySelector('#pn-grgo');
+    if(gg) gg.onclick = async e => {
+      const detalle = pane.querySelector('#pn-grdet').value.trim(), monto = +String(pane.querySelector('#pn-grmonto').value).replace(/\D/g, ''), mes = pane.querySelector('#pn-grmes').value.trim();
+      if(!detalle) return pane.querySelector('#pn-grdet').focus();
+      if(!monto) return pane.querySelector('#pn-grmonto').focus();
+      e.currentTarget.disabled = true; e.currentTarget.textContent = 'Anotando…';
+      await cargarAnio({grande:'nuevo', detalle, monto, mes});
+    };
+    pane.querySelectorAll('[data-gr]').forEach(b => b.onclick = async () => { b.disabled = true; await cargarAnio({grande:'pagar', fila: +b.dataset.gr}); });
+    const cmp = pane.querySelector('#pn-acmp');
+    if(cmp) cmp.oninput = () => {
+      const v = +String(cmp.value).replace(/\D/g, ''), r = pane.querySelector('#pn-acmpr');
+      if(!v){ r.textContent = ''; return; }
+      const dif = v - ANIO.saldo;
+      r.innerHTML = Math.abs(dif) < 1000 ? '✓ Cuadra.' : dif < 0 ? `En el banco hay <b>${clp(-dif)}</b> menos. Falta anotar algún gasto.` : `En el banco hay <b>${clp(dif)}</b> más. Falta anotar algún ingreso.`;
     };
   }
   // Desde Verano: botón para anotar un gasto hormiga (abre Finanzas con el área Verano).
