@@ -651,16 +651,14 @@
     const form = `<div class='pn-card pn-fadd'><h3>${a.inicio ? 'Actualizar saldo de partida' : '¿Cuánto hay hoy en la cuenta de Storm?'}</h3>
       <p class='pn-sub'>Anótalo el primer día del mes (por ejemplo el 1 de enero). Desde ahí se suma solo lo que entra y sale cada mes.</p>
       <input inputmode='numeric' placeholder='Banco, ej: 2195000' id='pn-abanco'>
-      <input inputmode='numeric' placeholder='Mercado Pago (opcional)' id='pn-amp'>
       <div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-ago'>Guardar saldo</button></div></div>`;
     if(!a.inicio){ pane.innerHTML = form; bindAnio(pane); return; }
     const max = Math.max(1, ...a.meses.map(m => Math.abs(m.balance)));
     pane.innerHTML = `<div class='pn-stats'>
       <div class='pn-stat pn-stat--main${a.saldo<0?' pn-fneg':''}'><small>Hay hoy (aprox.)</small><b>${neg(a.saldo)}</b><em>partiste con ${clp(a.inicio.total)} el ${esc(corta(a.inicio.fecha))}</em></div>
       <div class='pn-stat'><small>Gastos fijos al mes</small><b>${clp(a.fijosMes)}</b></div>
-      <div class='pn-stat'><small>Te alcanza para</small><b>${String(a.colchon).replace('.',',')} meses</b><em>de gastos fijos${a.hastaVerano?` · faltan ${a.hastaVerano} para el verano`:''}</em></div>
+      <div class='pn-stat'><small>Te alcanza para</small><b>${String(a.colchon).replace('.',',')} meses</b><em>de gastos fijos</em></div>
     </div>
-    ${a.hastaVerano && a.colchon < a.hastaVerano ? `<div class='pn-card'><p class='pn-msg'>Ojo: con lo que hay no alcanzas a cubrir los fijos hasta enero. Cada mes tiene que entrar al menos ${clp(a.fijosMes)}.</p></div>` : ''}
     <div class='pn-card'><h3>Mes a mes</h3>
       ${a.meses.map(m => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(m.mes))}</b><span class='${m.balance<0?'neg':''}'>${neg(m.balance)}</span></div>
         <div class='pn-fbar'><i class='${m.balance<0?'out':'in'}' style='width:${Math.abs(m.balance)/max*100}%'></i></div>
@@ -671,7 +669,7 @@
   }
   function bindAnio(pane){
     pane.querySelector('#pn-ago').onclick = async e => {
-      const banco = String(pane.querySelector('#pn-abanco').value).replace(/\D/g, ''), mp = String(pane.querySelector('#pn-amp').value).replace(/\D/g, '');
+      const banco = String(pane.querySelector('#pn-abanco').value).replace(/\D/g, ''), mp = '';
       if(!banco) return pane.querySelector('#pn-abanco').focus();
       e.currentTarget.disabled = true; e.currentTarget.textContent = 'Guardando…';
       await cargarAnio({banco: +banco, mp: +mp || 0});
