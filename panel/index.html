@@ -675,6 +675,11 @@
         <div class='pn-fbar'><i class='${m.balance<0?'out':'in'}' style='width:${Math.abs(m.balance)/max*100}%'></i></div>
         <small>entró ${clp(m.ingresos)} · salió ${clp(m.gastos)} · ${m.cuenta ? 'queda ' + neg(m.saldo) : 'ya está dentro del saldo de partida'}</small></div>`).join('')}
       <p class='pn-sub' style='margin-top:8px'>Si un mes queda en negativo, se descuenta y pasa al siguiente.</p></div>
+    ${(() => { const u = a.meses[a.meses.length-1]; if(!u) return ''; const falta = Math.max(0, u.ahorroSugerido - u.ahorrado);
+      return `<div class='pn-card pn-fadd'><h3>Cuenta de ahorro<span class='pn-count'>${clp(a.ahorroTotal||0)}</span></h3>
+      <p class='pn-sub'>A fin de mes pasa a la cuenta de ahorro el ${Math.round((a.ahorroPct||0.1)*100)}% de lo que entró. Es la reserva para trajes, certificaciones y operación renta.</p>
+      <div class='pn-gmov'><div><span>${esc(cap(u.mes))}: entró ${clp(u.ingresos)}</span><b>${clp(u.ahorroSugerido)}</b></div>${u.ahorrado?`<div><span>Ya pasaste</span><b class='pn-fin'>${clp(u.ahorrado)}</b></div>`:''}</div>
+      ${falta ? `<input inputmode='numeric' id='pn-ahmonto' value='${falta}'><div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-ahgo' data-mes='${esc(u.mes)}'>Ya lo pasé a ahorro</button></div>` : `<p class='pn-ok'>✓ Listo este mes.</p>`}</div>`; })()}
     ${grandes}
     <div class='pn-card pn-fadd'><h3>Comparar con el banco</h3>
       <p class='pn-sub'>Una vez al mes mira el banco y escríbelo aquí. No cambia nada, solo te muestra si falta anotar algo.</p>
@@ -698,6 +703,8 @@
       await cargarAnio({grande:'nuevo', detalle, monto, mes});
     };
     pane.querySelectorAll('[data-gr]').forEach(b => b.onclick = async () => { b.disabled = true; await cargarAnio({grande:'pagar', fila: +b.dataset.gr}); });
+    const ahg = pane.querySelector('#pn-ahgo');
+    if(ahg) ahg.onclick = async e => { const monto = +String(pane.querySelector('#pn-ahmonto').value).replace(/\D/g, ''); if(!monto) return; e.currentTarget.disabled = true; e.currentTarget.textContent = 'Anotando…'; await cargarAnio({ahorro: 1, monto, mes: e.currentTarget.dataset.mes}); };
     const cmp = pane.querySelector('#pn-acmp');
     if(cmp) cmp.oninput = () => {
       const v = +String(cmp.value).replace(/\D/g, ''), r = pane.querySelector('#pn-acmpr');
