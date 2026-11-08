@@ -673,6 +673,17 @@
       <div class='pn-gmov' style='margin-top:8px'>${a.ganancia.areas.map(x => `<div><span>${esc(x.area)}</span><b class='${x.balance<0?'':'pn-fin'}'>${x.balance<0?'−':'+'}${clp(Math.abs(x.balance))}</b></div>`).join('')}</div></div>` : ''}
     ${a.fondo && a.fondo.aporte ? `<div class='pn-card'><h3>Fondo de Verano</h3>
       <p class='pn-sub'>${a.fondo.desdeFebrero ? 'Lo que quedó al cerrar el verano' : 'Lo que hay hoy'} (${clp(a.fondo.base)}) se reparte en ${a.fondo.meses} ${a.fondo.meses===1?'mes':'meses'} hasta diciembre: cada mes recibe <b>${clp(a.fondo.aporte)}</b>. Si el mes queda en verde, vas bien aunque sea invierno. Si queda en rojo, ese mes gastaste más de lo que te tocaba.</p></div>` : ''}
+    ${a.utilidades ? (() => { const u = a.utilidades; return `<div class='pn-card'><h3>Utilidades del verano</h3>
+      <p class='pn-sub'>La ganancia de ustedes por el trabajo del verano, aparte del sueldo. Se calcula al cerrar febrero, dejando cubierto el resto del año.</p>
+      <div class='pn-gmov' style='margin-top:6px'>
+        <div><span>Gastos fijos al mes</span><b>${clp(a.fijosMes)}</b></div>
+        <div><span>Lo que dejan la Anual y la escuela al mes (aprox.)</span><b class='pn-fin'>+${clp(u.esperado)}</b></div>
+        <div><span>Falta cubrir al mes, de marzo a diciembre</span><b>${clp(u.faltaPorMes)}</b></div>
+        <div><span>Storm necesita guardar (10 meses + gastos grandes)</span><b>${clp(u.necesita)}</b></div>
+        ${u.listo ? `<div><span>Había al cerrar febrero</span><b>${clp(u.saldoFeb)}</b></div>
+        <div><span><b>Pueden retirar como utilidades</b></span><b class='${u.disponible>0?'pn-fin':''}'>${u.disponible>0?clp(u.disponible):'$0'}</b></div>` : ''}
+      </div>
+      <p class='pn-sub' style='margin-top:8px'>${u.listo ? (u.disponible>0 ? 'Si lo retiran, anótenlo en General como gasto "Utilidades socios".' : 'Este año no conviene retirar: lo que hay se necesita para llegar al próximo verano.') : 'El 1 de marzo, con lo que haya en la cuenta, aquí aparece cuánto pueden retirar.'}</p></div>`; })() : ''}
     <div class='pn-card'><h3>Mes a mes</h3>
       ${a.meses.map(m => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(m.mes))}</b><span class='${val(m)<0?'neg':''}'>${neg(val(m))}</span></div>
         <div class='pn-fbar'><i class='${val(m)<0?'out':'in'}' style='width:${Math.abs(val(m))/max*100}%'></i></div>
