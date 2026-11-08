@@ -569,7 +569,7 @@
 
   // ---------- Finanzas Storm (solo administradores) ----------
   const AREAS = ['Verano','Anual','Adultos','Escuela','Rentas','Surfshop','Casa'];
-  const AREA_TXT = {Surfshop:'Surf Shop', Casa:'Casa Storm'};
+  const AREA_TXT = {Verano:'Academia de Verano', Anual:'Academia Anual', Adultos:'Academia Adultos', Surfshop:'Surf Shop', Casa:'Casa Storm'};
   const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
   let fCorr = 'enero';
   let FIN = null, fMes = '', fTipo = 'gasto', fArea = [10,11,0,1].includes(new Date().getMonth()) ? 'Verano' : 'Anual';
