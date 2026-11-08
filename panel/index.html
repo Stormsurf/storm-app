@@ -666,6 +666,10 @@
       <div class='pn-stat${a.libre<0?' pn-fneg':''}'><small>Libre para usar</small><b>${neg(a.libre)}</b><em>después de los gastos grandes</em></div>
       <div class='pn-stat'><small>Te alcanza para</small><b>${String(a.colchon).replace('.',',')} meses</b><em>de gastos fijos (${clp(a.fijosMes)})</em></div>
     </div>
+    ${a.ganancia ? `<div class='pn-card'><h3>Ganancia real ${esc(a.ganancia.anio)}<span class='pn-count'>${a.ganancia.meses} ${a.ganancia.meses===1?'mes':'meses'}</span></h3>
+      <div class='pn-fah' style='font-size:1.6em;margin:4px 0 2px'><b class='${a.ganancia.total<0?'neg':''}'>${neg(a.ganancia.total)}</b></div>
+      <p class='pn-sub'>Todo lo que entró (${clp(a.ganancia.ingresos)}) menos todo lo que salió (${clp(a.ganancia.gastos)}): comisiones, instructores, fijos y retiro de socios.</p>
+      <div class='pn-gmov' style='margin-top:8px'>${a.ganancia.areas.map(x => `<div><span>${esc(x.area)}</span><b class='${x.balance<0?'':'pn-fin'}'>${x.balance<0?'−':'+'}${clp(Math.abs(x.balance))}</b></div>`).join('')}</div></div>` : ''}
     <div class='pn-card'><h3>Mes a mes</h3>
       ${a.meses.map(m => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(m.mes))}</b><span class='${m.balance<0?'neg':''}'>${neg(m.balance)}</span></div>
         <div class='pn-fbar'><i class='${m.balance<0?'out':'in'}' style='width:${Math.abs(m.balance)/max*100}%'></i></div>
