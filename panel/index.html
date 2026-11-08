@@ -596,8 +596,16 @@
     <div class='pn-card'><h3>Por área</h3>
       ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
         <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>
-        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${a.area==='Anual'?' (incluye mensualidades y sueldos, solos)':a.area==='Fijos'?' (gastos fijos del mes, solos)':''}</small></div>`).join('')}
+        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${a.area==='Anual'?' (mensualidades, sueldos'+(f.anual&&f.anual.comision?' y '+clp(f.anual.comision)+' de comisión Mercado Pago':'')+', solos)':a.area==='Fijos'?' (gastos fijos del mes, solos)':a.area==='Escuela'&&f.ventas?' (clases, comisión e instructores de tu planilla, solos)':a.area==='Surfshop'&&f.ventas?' (tienda y renta de tu planilla, solos)':''}</small></div>`).join('')}
     </div>
+    ${f.ventas ? `<div class='pn-card'><h3>Escuela y tienda (de tu planilla 2026)</h3><div class='pn-gmov'>
+      <div><span>Clases</span><b class='pn-fin'>+${clp(f.ventas.clases)}</b></div>
+      <div><span>Comisión AgendaPro/TUU (${String(Math.round(f.ventas.pct*1000)/10).replace('.',',')}%)</span><b>−${clp(f.ventas.comision)}</b></div>
+      <div><span>Instructores</span><b>−${clp(f.ventas.instructores)}</b></div>
+      <div><span><b>Quedó de clases</b></span><b>${f.ventas.escuela<0?'−':''}${clp(Math.abs(f.ventas.escuela))}</b></div>
+      <div><span>Tienda</span><b class='pn-fin'>+${clp(f.ventas.tiendaSola)}</b></div>
+      <div><span>Renta</span><b class='pn-fin'>+${clp(f.ventas.renta)}</b></div>
+      </div><p class='pn-sub' style='margin-top:8px'>Se lee sola de la pestaña Ventas Diarias 2026. Clases va en Escuela; tienda y renta en Surfshop. <a class='pn-link' href='${esc(f.ventas.planilla)}' target='_blank' rel='noopener'>Abrir planilla</a></p></div>` : ''}
     <div class='pn-card'><h3>Anotado en ${esc(mesCorto(f.mes))}<span class='pn-count'>${f.movs.length}</span></h3>
       ${f.movs.length ? `<div class='pn-gmov'>${f.movs.map(m => `<div><span>${esc(m.detalle)} · ${esc(m.area)} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b><button data-fdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Aún no anotas nada este mes.</p>`}
     </div>
