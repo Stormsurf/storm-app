@@ -173,8 +173,8 @@
 .mc-duda [data-duda-go]{margin-top:12px;width:100%}.mc-duda [data-duda-go]:disabled{opacity:.45}
 .mc-duda__err{margin:8px 0 0;color:#b5523b;font-size:1.3rem}
 .mc-duda__ok{text-align:center}
-.mc-res--q{background:linear-gradient(160deg,#FADF70,#E9B93A);color:#3B2610;border:0;font:inherit;text-align:left;cursor:pointer}
-.mc-res--q i{background:rgba(59,38,16,.1)}
+.mc-res.mc-res--q{background:linear-gradient(160deg,#FADF70,#E9B93A);color:#3B2610;border:0;font:inherit;text-align:left;cursor:pointer}
+.mc-res.mc-res--q i{background:rgba(59,38,16,.1)}
 .mc-sheet{--aa:#61A1C8;--aa-dk:#2d6e94;--aa-soft:#E6F1F8;--ink:#2C2C2B;--line:rgba(44,44,43,.12);color:var(--ink);position:fixed;inset:0;z-index:80;background:rgba(22,56,76,.45);display:flex;align-items:flex-end;justify-content:center}
 .mc-sheet[hidden]{display:none}
 .mc-sheet>div{position:relative;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;border-radius:24px 24px 0 0;margin:0;padding:22px 18px calc(22px + env(safe-area-inset-bottom))}
@@ -186,7 +186,21 @@
 .mc-res h3{margin:auto 0 0;font-size:2rem;font-weight:600;line-height:1.2;position:relative}
 .mc-res p{margin:6px 0 0;font-size:1.35rem;opacity:.88;position:relative}
 .mc-res em{position:absolute;top:18px;right:18px;font-style:normal;font-size:1.15rem;font-weight:700;background:#FADF70;color:#3B2610;border-radius:999px;padding:3px 10px}
-.mc-res--0{background:linear-gradient(160deg,#2d6e94,#16384c)}.mc-res--1{background:linear-gradient(160deg,#4A6B70,#2b4549)}.mc-res--2{background:linear-gradient(160deg,#61A1C8,#2d6e94)}.mc-res--3{background:linear-gradient(160deg,#C98A4B,#8f5a2b)}
+.mc-res--0{background:linear-gradient(160deg,#2d6e94,#16384c)}
+.mc-res--1{background:linear-gradient(160deg,#8EC0DD,#4F8DB6)}
+.mc-res--2{background:linear-gradient(160deg,#6F9EA2,#3F6569)}
+.mc-res--3{background:linear-gradient(160deg,#E4F0F6,#B5D5E6);color:#16384c}
+.mc-res--4{background:linear-gradient(160deg,#F1E8D6,#DCCBA6);color:#3B2610}
+.mc-res--5{background:linear-gradient(160deg,#4A6B70,#22383B)}
+.mc-res--3 i,.mc-res--4 i{background:rgba(22,56,76,.08)}
+.mc-page{position:fixed;inset:0;z-index:45;overflow-y:auto;background:#EFECE8;padding:0 16px calc(96px + env(safe-area-inset-bottom))}
+.mc-page[hidden]{display:none}
+.mc-page__in{max-width:680px;margin:0 auto}
+.mc-page__top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:16px 0 10px;background:#EFECE8}
+.mc-page__top h2{margin:0;font-size:2.4rem;font-weight:600}
+.mc-page__back{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--aa-dk);font-size:2rem;line-height:1;cursor:pointer}
+.mc-col{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.mc-col .mc-res{width:auto;max-width:none;min-height:150px}
 .mc-dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
 .mc-dots i{width:6px;height:6px;border-radius:3px;background:rgba(44,44,43,.18);transition:all .2s}
 .mc-dots i.on{width:18px;background:var(--aa-dk)}
@@ -599,13 +613,21 @@ body:has(.mc-hero--login) .ap-top{display:none}
     return `<nav class='mc-qa' aria-label='Accesos'><a href='#mc-s-cal'><i>${IC.cal}</i>Calendario</a><a href='#mc-s-msg'><i>${IC.msg}</i>Mensajes${nMsg?`<em>${nMsg}</em>`:''}</a>${pago}<a href='#mc-s-fam'><i>${IC.fam}</i>Recursos</a></nav>`;
   }
   function barra(ultimo){
-    return `<nav class='mc-nav' aria-label='Menú'><div><button class='on' data-ir='top'>${IC.home}Inicio</button><button data-ir='mc-s-cal'>${IC.cal}Calendario</button><button data-ir='mc-s-fam'>${IC.fam}Recursos</button>${ultimo}</div></nav>`;
+    return `<nav class='mc-nav' aria-label='Menú'><div><button class='on' data-ir='top'>${IC.home}Inicio</button><button data-ir='mc-s-cal'>${IC.cal}Calendario</button><button data-ir='recursos'>${IC.fam}Recursos</button>${ultimo}</div></nav>`;
   }
   function bindNuevo(){
     bindDuda();
+    const pg = app.querySelector('[data-recpage]');
+    if(pg){ const nav = id => app.querySelectorAll('.mc-nav [data-ir]').forEach(x => x.classList.toggle('on', x.dataset.ir === id));
+      pg.querySelector('[data-recback]').onclick = () => { if(location.hash === '#recursos') history.back(); else { pg.hidden = true; nav('top'); } };
+      window.onpopstate = () => { if(location.hash !== '#recursos' && !pg.hidden){ pg.hidden = true; nav('top'); } };
+      if(location.hash === '#recursos'){ pg.hidden = false; nav('recursos'); } }
     app.querySelectorAll('.mc-nav [data-ir]').forEach(b => b.onclick = () => {
       app.querySelectorAll('.mc-nav [data-ir]').forEach(x => x.classList.toggle('on', x === b));
-      const id = b.dataset.ir, el = id === 'top' ? null : document.getElementById(id);
+      const id = b.dataset.ir, pg = app.querySelector('[data-recpage]');
+      if(id === 'recursos'){ if(pg){ pg.hidden = false; pg.scrollTop = 0; if(location.hash !== '#recursos') history.pushState({rec:1}, '', '#recursos'); } return; }
+      if(pg && !pg.hidden){ pg.hidden = true; if(location.hash === '#recursos') history.replaceState(null, '', location.pathname + location.search); }
+      const el = id === 'top' ? null : document.getElementById(id);
       window.scrollTo({top: el ? el.getBoundingClientRect().top + scrollY - 16 : 0, behavior:'smooth'});
     });
     app.querySelectorAll('.mc-row2').forEach(rr => { const dots = rr.nextElementSibling && rr.nextElementSibling.classList.contains('mc-dots') ? rr.nextElementSibling : null;
@@ -618,7 +640,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     {url:'/familias/respira-como-surfista.html', titulo:'Respira como surfista', texto:'Respiración, apnea y visualización para entrenar la calma fuera del agua.', icono:'🌬️', solo:'anual', para:'est'},
     {url:'/familias/cuida-tu-equipo.html', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren y rindan.', icono:'🏄', para:'est'},
     {url:'/familias/como-competir-mejor.html', titulo:'Cómo competir mejor', texto:'Para quienes compiten: arma tu plan, decide mejor en la manga y aprende de tus videos.', icono:'🏆', solo:'anual', para:'est', nuevo:true},
-    {url:'/familias/seguridad-en-el-mar.html', titulo:'Seguro en el mar', texto:'Las 4 señales del agua, corrientes y qué hacer si te caes.', icono:'🛟', para:'est', nuevo:true},
+    {url:'/familias/seguridad-en-el-mar.html', titulo:'Seguridad en el mar', texto:'Las 4 señales del agua, corrientes y qué hacer si te caes.', icono:'🛟', para:'est', nuevo:true},
     {url:'/familias/surf-desde-cero.html', titulo:'Surf desde cero', texto:'Conoce las partes de tu tabla y descubre si eres regular o goofy.', icono:'🏄', solo:'verano', nivelesVerano:['Kids','Iniciante'], para:'est', nuevo:true},
     {url:'/familias/habla-como-surfista.html', titulo:'Habla como surfista', texto:'Frontside o backside, el lineup y el diccionario del surf.', icono:'🌊', solo:'verano', nivelesVerano:['Progress','Intermedio','Avanzado'], para:'est', nuevo:true}
   ];
@@ -633,10 +655,10 @@ body:has(.mc-hero--login) .ap-top{display:none}
       <button type='button' class='mc-go mc-go--sm' data-duda-go disabled>Enviar</button><p class='mc-duda__err' hidden></p></div></div>`;
   }
   function bindDuda(){
-    const dc = app.querySelector('[data-duda]'), sh = app.querySelector('[data-duda-sheet]'), op = app.querySelector('[data-duda-open]'); if(!dc || !sh) return;
+    const dc = app.querySelector('[data-duda]'), sh = app.querySelector('[data-duda-sheet]'), ops = app.querySelectorAll('[data-duda-open]'); if(!dc || !sh) return;
     document.querySelectorAll('body > [data-duda-sheet]').forEach(x => x.remove()); document.body.appendChild(sh);
     const cerrar = () => { sh.hidden = true; document.body.style.overflow = ''; };
-    if(op) op.onclick = () => { sh.hidden = false; document.body.style.overflow = 'hidden'; };
+    ops.forEach(op => op.onclick = () => { sh.hidden = false; document.body.style.overflow = 'hidden'; });
     sh.onclick = e => { if(e.target === sh || e.target.closest('[data-duda-x]')) cerrar(); };
     const go = dc.querySelector('[data-duda-go]'), tx = dc.querySelector('textarea');
     const upd = () => { go.disabled = !dc.querySelector('.mc-duda__chips .on') && !tx.value.trim(); };
@@ -657,11 +679,17 @@ body:has(.mc-hero--login) .ap-top{display:none}
     const niv = (todos && todos.length ? todos : [nivel]).map(x => String(x || ''));
     const rs = RECURSOS.filter(r => (!r.solo || r.solo === acad) && (acad !== 'verano' || !r.nivelesVerano || r.nivelesVerano.some(n => niv.includes(n))));
     const q = (nivel ? 'nivel=' + encodeURIComponent(nivel) : '') + (edad ? (nivel ? '&' : '') + 'edad=' + encodeURIComponent(edad) : '');
+    const tarjeta = r => { const k = RECURSOS.indexOf(r) % 6; return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[RECURSOS.indexOf(r) % 4]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; };
+    const ord = lista => lista.filter(r => r.nuevo).concat(lista.filter(r => !r.nuevo));
+    const fam = rs.filter(r => r.para !== 'est'), est = rs.filter(r => r.para === 'est');
+    const pagina = `<div class='mc-page' data-recpage hidden><div class='mc-page__in'><div class='mc-page__top'><button type='button' class='mc-page__back' data-recback aria-label='Volver'>‹</button><h2>Recursos</h2></div>` +
+      `<h2 class='mc-h2'>Para las familias</h2><div class='mc-col'>${ord(fam).map(tarjeta).join('')}${dudaTile()}</div>` +
+      (est.length ? `<h2 class='mc-h2'>Para los estudiantes</h2><div class='mc-col'>${ord(est).map(tarjeta).join('')}</div>` : '') + `</div></div>`;
     const fila = (lista, titulo, extra) => { if(!lista.length && !extra) return ''; const orden = lista.filter(r => r.nuevo).concat(lista.filter(r => !r.nuevo)); const n = orden.length + (extra ? 1 : 0);
-      return `<h2 class='mc-h2'>${titulo}</h2><div class='mc-row2'>` + orden.map(r => { const k = RECURSOS.indexOf(r) % 4;
-        return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[k]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; }).join('') + (extra || '') +
+      return `<h2 class='mc-h2'>${titulo}</h2><div class='mc-row2'>` + orden.map(r => { const k = RECURSOS.indexOf(r) % 6;
+        return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[RECURSOS.indexOf(r) % 4]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; }).join('') + (extra || '') +
         `</div>` + (n > 1 ? `<div class='mc-dots'>${Array.from({length:n},(_,i)=>`<i${i?'':" class='on'"}></i>`).join('')}</div>` : ''); };
-    return `<div id='mc-s-fam'>` + fila(rs.filter(r => r.para !== 'est'), 'Para las familias', dudaTile()) + dudaCard() + fila(rs.filter(r => r.para === 'est'), 'Para los estudiantes') + `</div>`;
+    return `<div id='mc-s-fam'>` + fila(fam, 'Para las familias', dudaTile()) + dudaCard() + fila(est, 'Para los estudiantes') + `</div>` + pagina;
   }
   function renderVerano(d){
     let h = saludo(nombres((d.hijos || []).map(k => k.nombre))) + selector() + `<div class='mc-v'>`;
@@ -780,7 +808,8 @@ body:has(.mc-hero--login) .ap-top{display:none}
     if(pasados.length){
       h += `<details class='mc-old'><summary>Meses anteriores (${pasados.length})</summary>` + pasados.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('') + `</details>`;
     }
-    h += barra(`<button data-ir='mc-s-pago'>${IC.pay}Pagos</button>`);
+    { const payHref = ren ? PAY + (PAY.indexOf('?')<0?'?':'&') + 'renovar=' + encodeURIComponent(JSON.stringify(ren)) : PAY;
+      h += (d.alumnos.length && !ren && d.alumnos.every(a => a.beca && a.beca.valor === 0)) ? barra(`<button data-ir='mc-s-pago'>${IC.pay}Pagos</button>`) : barra(`<a href='${esc(payHref)}'>${IC.pay}Pagos</a>`); }
     app.innerHTML = h;
     bindSw(); bindProxima(proximas); bindNuevo();
     marcarVistos(d.mensajes || []);
