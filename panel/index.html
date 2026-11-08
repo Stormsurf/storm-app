@@ -596,7 +596,7 @@
     <div class='pn-card'><h3>Por área</h3>
       ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
         <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>
-        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${a.area==='Anual'?' (mensualidades, sueldos'+(f.anual&&f.anual.comision?' y '+clp(f.anual.comision)+' de comisión Mercado Pago':'')+', solos)':a.area==='Fijos'?' (gastos fijos del mes, solos)':a.area==='Escuela'&&f.ventas?' (clases, comisión e instructores de tu planilla, solos)':a.area==='Surfshop'&&f.ventas?' (tienda y renta de tu planilla, solos)':''}</small></div>`).join('')}
+        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${a.area==='Anual'?' (mensualidades, sueldos'+(f.anual&&f.anual.comision?' y '+clp(f.anual.comision)+' de comisión Mercado Pago':'')+', solos)':a.area==='Fijos'?' (gastos fijos del mes, solos)':a.area==='Verano'&&/^(enero|febrero) /.test(f.mes)?' (incluye $1.200.000 de sueldo Isidora y Diego, solo)':a.area==='Escuela'&&f.ventas?' (clases, comisión e instructores de tu planilla, solos)':a.area==='Surfshop'&&f.ventas?' (tienda y renta de tu planilla, solos)':''}</small></div>`).join('')}
     </div>
     ${f.ventas ? `<div class='pn-card'><h3>Escuela y tienda (de tu planilla 2026)</h3><div class='pn-gmov'>
       <div><span>Clases</span><b class='pn-fin'>+${clp(f.ventas.clases)}</b></div>
