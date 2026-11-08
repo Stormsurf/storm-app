@@ -460,7 +460,7 @@
       <p class='pn-note'>A los pagos con Mercado Pago se les descuenta una comisión de cerca de 3,4%; a las transferencias no. ${esc(cap(d.pasado.mes))}: ${clp(d.pasado.recaudado)} con ${d.pasado.alumnos} alumnos.</p>
     </div>`;
 
-    h += `<div class='pn-finz' hidden><div class='pn-fsub'><button data-fsub='finanzas'>General</button><button data-fsub='gastos'>Sueldos Academia Anual</button></div><div class='pn-fpane' data-pane='finanzas'><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='gastos' hidden><div class='pn-skel'></div></div></div>`;
+    h += `<div class='pn-finz' hidden><div class='pn-fsub'><button data-fsub='finanzas'>General</button><button data-fsub='anio'>Mi año</button><button data-fsub='gastos'>Sueldos Academia Anual</button></div><div class='pn-fpane' data-pane='finanzas'><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='anio' hidden><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='gastos' hidden><div class='pn-skel'></div></div></div>`;
     h += `<div class='pn-pane' data-pane='avisos'>
       ${d.revisar.length ? `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${d.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla: ${d.revisar.map(esc).join(', ')}</p></div>` : ''}
       <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
@@ -637,6 +637,46 @@
       try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, borrar: true, fila: +b.dataset.fdel})); pintarFinanzas(); }catch(x){ alert(x.message); }
     });
   }
+  // ---------- Mi año: saldo real de partida + balance de cada mes ----------
+  let ANIO = null;
+  async function cargarAnio(extra){
+    const pane = app.querySelector("[data-pane='anio']"); if(!pane) return;
+    if(!ANIO) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
+    try{ ANIO = await post(Object.assign({}, auth, {accion:'anio'}, extra || {})); pintarAnio(); }
+    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudo cargar. ${esc(x.message)}</p></div>`; }
+  }
+  function pintarAnio(){
+    const pane = app.querySelector("[data-pane='anio']"); if(!pane || !ANIO) return;
+    const a = ANIO, neg = n => (n<0?'−':'') + clp(Math.abs(n));
+    const form = `<div class='pn-card pn-fadd'><h3>${a.inicio ? 'Actualizar saldo de partida' : '¿Cuánto hay hoy en la cuenta de Storm?'}</h3>
+      <p class='pn-sub'>Anótalo el primer día del mes (por ejemplo el 1 de enero). Desde ahí se suma solo lo que entra y sale cada mes.</p>
+      <input inputmode='numeric' placeholder='Banco, ej: 2195000' id='pn-abanco'>
+      <input inputmode='numeric' placeholder='Mercado Pago (opcional)' id='pn-amp'>
+      <div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-ago'>Guardar saldo</button></div></div>`;
+    if(!a.inicio){ pane.innerHTML = form; bindAnio(pane); return; }
+    const max = Math.max(1, ...a.meses.map(m => Math.abs(m.balance)));
+    pane.innerHTML = `<div class='pn-stats'>
+      <div class='pn-stat pn-stat--main${a.saldo<0?' pn-fneg':''}'><small>Hay hoy (aprox.)</small><b>${neg(a.saldo)}</b><em>partiste con ${clp(a.inicio.total)} el ${esc(corta(a.inicio.fecha))}</em></div>
+      <div class='pn-stat'><small>Gastos fijos al mes</small><b>${clp(a.fijosMes)}</b></div>
+      <div class='pn-stat'><small>Te alcanza para</small><b>${String(a.colchon).replace('.',',')} meses</b><em>de gastos fijos${a.hastaVerano?` · faltan ${a.hastaVerano} para el verano`:''}</em></div>
+    </div>
+    ${a.hastaVerano && a.colchon < a.hastaVerano ? `<div class='pn-card'><p class='pn-msg'>Ojo: con lo que hay no alcanzas a cubrir los fijos hasta enero. Cada mes tiene que entrar al menos ${clp(a.fijosMes)}.</p></div>` : ''}
+    <div class='pn-card'><h3>Mes a mes</h3>
+      ${a.meses.map(m => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(m.mes))}</b><span class='${m.balance<0?'neg':''}'>${neg(m.balance)}</span></div>
+        <div class='pn-fbar'><i class='${m.balance<0?'out':'in'}' style='width:${Math.abs(m.balance)/max*100}%'></i></div>
+        <small>entró ${clp(m.ingresos)} · salió ${clp(m.gastos)} · ${m.cuenta ? 'queda ' + neg(m.saldo) : 'ya está dentro del saldo de partida'}</small></div>`).join('')}
+      <p class='pn-sub' style='margin-top:8px'>Si un mes queda en negativo, se descuenta del saldo y pasa al siguiente.</p></div>
+    ${form}`;
+    bindAnio(pane);
+  }
+  function bindAnio(pane){
+    pane.querySelector('#pn-ago').onclick = async e => {
+      const banco = String(pane.querySelector('#pn-abanco').value).replace(/\D/g, ''), mp = String(pane.querySelector('#pn-amp').value).replace(/\D/g, '');
+      if(!banco) return pane.querySelector('#pn-abanco').focus();
+      e.currentTarget.disabled = true; e.currentTarget.textContent = 'Guardando…';
+      await cargarAnio({banco: +banco, mp: +mp || 0});
+    };
+  }
   // Desde Verano: botón para anotar un gasto hormiga (abre Finanzas con el área Verano).
   function irAFinanzasVerano(){
     fArea = 'Verano'; fTipo = 'gasto'; fSub = 'finanzas'; acad = 'finanzas'; try{ sessionStorage.setItem(KEY + '-acad', 'finanzas'); }catch(_){}
@@ -765,7 +805,7 @@
     try{ sessionStorage.setItem(KEY + '-fsub', fSub); }catch(_){}
     pf.querySelectorAll('[data-fsub]').forEach(b => { b.classList.toggle('on', b.dataset.fsub === fSub); b.onclick = () => { fSub = b.dataset.fsub; mostrarFsub(); }; });
     pf.querySelectorAll('.pn-fpane').forEach(p => p.hidden = p.dataset.pane !== fSub);
-    if(fSub === 'gastos') cargarGastos(); else cargarFinanzas();
+    if(fSub === 'gastos') cargarGastos(); else if(fSub === 'anio') cargarAnio(); else cargarFinanzas();
   }
   const NIV = ['Kids','Iniciante','Progress','Intermedio','Avanzado','Federados'];
   async function loadVerano(){
