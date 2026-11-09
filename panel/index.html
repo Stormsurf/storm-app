@@ -232,7 +232,11 @@
   const clp = n => '$' + Math.round(n || 0).toLocaleString('es-CL');
   const guardar = s => { try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(_){} };
   const leer = () => { try{ return JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(_){ return null; } };
-  const borrar = () => { try{ localStorage.removeItem(KEY); }catch(_){} };
+  const borrar = () => { try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+'-datos'); }catch(_){} };
+  // Datos de la última visita: se muestran al tiro mientras llega lo nuevo de la planilla.
+  const cacheLeer = k => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); return c && auth && c.email === auth.email ? c[k] || null : null; }catch(_){ return null; } };
+  const cacheGuardar = (k, v) => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); const n = c && auth && c.email === auth.email ? c : {email: auth.email}; n[k] = v; localStorage.setItem(KEY+'-datos', JSON.stringify(n)); }catch(_){} };
+  const escribiendo = el => { const a = document.activeElement; return !!(a && el && el.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
   const wa = t => { let n = String(t || '').replace(/\D/g, ''); if(n.length === 9 && n[0] === '9') n = '56' + n; if(n.length === 8) n = '569' + n; return n.length >= 10 ? n : ''; };
   const dm = f => { const m = String(f||'').match(/(\d{4})-(\d{2})-(\d{2})/) || String(f||'').match(/(\d{2})-(\d{2})-(\d{4})/); if(!m) return f; return m[1].length===4 ? 'pagó el ' + (+m[3]) + '/' + (+m[2]) : 'pagó el ' + (+m[1]) + '/' + (+m[2]); };
   const q0 = new URLSearchParams(location.search);
@@ -871,12 +875,16 @@
   async function loadVerano(){
     const pane = app.querySelector('.pn-verano'); if(!pane) return;
     if(VER) return pintarVerano(pane);
+    const viejo = cacheLeer('verano');
+    if(viejo){ VER = viejo; pintarVerano(pane); }
     try{
       const r = await (await fetch(API_VERANO, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({}, auth, {accion:'panel'}))})).json();
       if(!r.ok) throw new Error(r.error || 'No se pudo cargar Verano.');
-      VER = r; pintarVerano(pane);
-      cargarNotas().then(() => pintarVerano(pane));
-    }catch(x){ pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
+      cacheGuardar('verano', r);
+      const igual = viejo && JSON.stringify(viejo) === JSON.stringify(r);
+      VER = r; if(!igual && !escribiendo(pane)) pintarVerano(pane);
+      cargarNotas().then(() => { if(!escribiendo(pane)) pintarVerano(pane); });
+    }catch(x){ if(!viejo) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
   }
   // Cuánto va el niño en el mes de la semana elegida: mes completo o cuántas semanas.
   const MES_SEM = {ene:['s1','s2','s3','s4'], feb:['s5','s6','s7','s8']};
@@ -953,11 +961,23 @@
 
   async function load(){
     if(!auth) return login();
-    app.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div><div class='pn-skel'></div>`;
-    try{ render(await post(Object.assign({}, auth, {accion:'panel'}))); }
+    const viejo = cacheLeer('anual');
+    let tocado = false;
+    const tocar = () => { tocado = true; };
+    if(viejo){ render(viejo); app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); }
+    else app.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div><div class='pn-skel'></div>`;
+    try{
+      const d = await post(Object.assign({}, auth, {accion:'panel'}));
+      cacheGuardar('anual', d);
+      if(viejo && JSON.stringify(viejo) === JSON.stringify(d)) return;
+      if(!viejo || !tocado) return render(d);
+      // Ya estás usando el Panel: no te cambiamos la pantalla, te dejamos el botón para actualizar.
+      if(!app.querySelector('.pn-nuevo')) app.insertAdjacentHTML('afterbegin', `<button class='pn-nuevo' style='display:block;width:100%;margin:0 0 10px;padding:10px;border:0;border-radius:12px;background:#0f6e74;color:#fff;font:inherit;cursor:pointer'>Hay datos nuevos · Toca para actualizar</button>`);
+      app.querySelector('.pn-nuevo').onclick = () => render(d);
+    }
     catch(x){
       if(/sesión|expir|acceso/i.test(x.message)){ const e = auth.email; borrar(); auth = null; return login(e, /acceso/.test(x.message) ? x.message : 'Por seguridad, vuelve a entrar.'); }
-      app.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
+      if(!viejo) app.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
     }
   }
   load();
