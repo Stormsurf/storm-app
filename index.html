@@ -590,6 +590,9 @@ body:has(.mc-hero--login) .ap-top{display:none}
     const t = new Date();
     return `<div class='mc-hi'><div><small>${DSEM[t.getDay()]} ${t.getDate()} de ${MESES[t.getMonth()]}</small><h2>${ns ? 'Hola, familia de ' + esc(ns) : 'Hola 👋'}</h2></div><button class='mc-link' id='mc-out'>Salir</button></div>`;
   }
+  // Una clase de hoy deja de ser "próxima" cuando termina su horario (ej. "9:00 - 11:00"; si dice una sola hora, se cuentan 2 horas).
+  const terminada = c => { const hs = String(c.horario || '').match(/\d{1,2}[:.]\d{2}/g); if(!hs) return false;
+    const [h, m] = hs[hs.length-1].split(/[:.]/).map(Number), fin = h*60 + m + (hs.length > 1 ? 0 : 120), d = new Date(); return d.getHours()*60 + d.getMinutes() >= fin; };
   const isoHoy = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
   function cuentaDias(f){ const a = new Date(isoHoy() + 'T12:00:00'), b = new Date(f + 'T12:00:00'), n = Math.round((b - a) / 864e5); return n <= 0 ? 'Hoy' : n === 1 ? 'Mañana' : 'En ' + n + ' días'; }
   function proximaCard(items){
@@ -774,7 +777,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     const activos = d.alumnos.filter(a=>a.futuro), pasados = d.alumnos.filter(a=>!a.futuro);
     let h = saludo(nombres((activos.length ? activos : d.alumnos).map(a => a.alumno))) + selector() + msg;
     const hoyI = isoHoy(), proximas = [];
-    activos.forEach(a => { const ai = d.alumnos.indexOf(a); const ci = (a.clases||[]).findIndex(c => c.fecha && c.fecha >= hoyI); if(ci < 0) return; const c = a.clases[ci];
+    activos.forEach(a => { const ai = d.alumnos.indexOf(a); const ci = (a.clases||[]).findIndex(c => c.fecha && (c.fecha > hoyI || (c.fecha === hoyI && !terminada(c)))); if(ci < 0) return; const c = a.clases[ci];
       if(proximas.some(x => x.nombre === String(a.alumno).split(' ')[0])) return;
       proximas.push({nombre: String(a.alumno).split(' ')[0], fecha: c.fecha, dia: cap(c.texto), que: [c.clase, c.horario].filter(Boolean).join(' · '), mover: c.recupera && c.movible ? ai + '-' + ci : ''}); });
     proximas.sort((x,y) => x.fecha < y.fecha ? -1 : 1);
