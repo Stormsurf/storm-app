@@ -588,7 +588,7 @@
       <input placeholder='${fTipo==='gasto'?'¿En qué fue? ej: hielo, parafina, bencina':'¿De qué? ej: clase particular, arriendo tabla'}' id='pn-fdet'>
       <div class='pn-gm'>${AREAS.map(a => `<button class='pn-gbtn${a===fArea?' on':''}' data-farea='${a}'>${AREA_TXT[a]||a}</button>`).join('')}</div>
       ${fArea==='Verano' ? `<p class='pn-sub' style='margin:10px 0 4px'>¿A qué corresponde?</p><div class='pn-fsw'>${['enero','febrero','ambos'].map(c => `<button data-fcorr='${c}' class='${fCorr===c?'on':''}'>${c==='ambos'?'Enero y febrero':cap(c)+' '+anioVer}</button>`).join('')}</div>` : ''}
-      ${fArea==='Casa' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Mantención oficina','Crecimiento'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
+      ${fArea==='Casa' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Mantención oficina','Crecimiento','Marketing'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
       ${fArea==='Verano' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Comida','Premios','Sala de yoga','Materiales'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
       <div class='pn-acts'><span id='pn-fmsg'></span><button class='pn-ntgo' id='pn-fgo'>Anotar ${fTipo}</button></div>
     </div>
@@ -605,7 +605,7 @@
     <div class='pn-card'><h3>Por área</h3>
       ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(AREA_TXT[a.area]||a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
         <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>
-        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${({Verano:' (inscripciones solas, menos comisión, sueldos de ustedes en ene/feb y lo que anotes)', Anual:' (mensualidades, instructores y comisión, solos)', Escuela:' (clases de tu planilla menos comisión e instructores, solos)', Rentas:' (arriendos de tu planilla y del Verano, solos)', Surfshop:' (tienda de tu planilla, sola)', Casa:' (gastos fijos solos, más mantención y crecimiento)'})[a.area]||''}</small></div>`).join('')}
+        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${({Verano:' (inscripciones solas, menos comisión, sueldos de ustedes en ene/feb y lo que anotes)', Anual:' (mensualidades, instructores y comisión, solos)', Escuela:' (clases de tu planilla menos comisión e instructores, solos)', Rentas:' (arriendos de tu planilla y del Verano, solos)', Surfshop:' (tienda de tu planilla, sola)', Casa:' (gastos fijos solos, más mantención, crecimiento y marketing)'})[a.area]||''}</small></div>`).join('')}
     </div>
     ${f.ventas ? `<div class='pn-card'><h3>Escuela y tienda (de tu planilla 2026)</h3><div class='pn-gmov'>
       <div><span>Clases</span><b class='pn-fin'>+${clp(f.ventas.clases)}</b></div>
