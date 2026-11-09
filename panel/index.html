@@ -158,11 +158,63 @@
 .pn-sw button{flex:1;border:0;border-radius:999px;padding:10px 8px;font:inherit;font-size:1.4rem;font-weight:600;background:none;color:var(--ink);cursor:pointer}
 .pn-sw button.on{background:var(--aa);color:#fff}
 .pn-sw button[data-acad='verano'].on{background:#FADF70;color:#3B2610}
+.pn-sw button[data-acad='finanzas'].on{background:var(--ink);color:#fff}
+.pn-finz[hidden],.pn-fpane[hidden]{display:none}
+.pn-fsub{display:flex;gap:6px;margin-top:14px}
+.pn-fsub button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-size:1.35rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.pn-fsub button.on{background:var(--ink);border-color:var(--ink);color:#fff}
 .pn-verano[hidden]{display:none}
 .pn-verano .pn-gbtn.on{background:#FADF70;border-color:#FADF70;color:#3B2610}
 .pn-verano .pn-day.on{background:#3B2610;border-color:#3B2610}
 .pn-salud{display:block;margin-top:4px;font-size:1.25rem;color:var(--warn)}
 .pn-sent p{margin:4px 0 0;font-size:1.4rem;line-height:1.45;white-space:pre-line}
+.pn-gm{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.pn-gp h3 .pn-gsal{font-size:1.7rem;color:var(--warn);text-align:right;line-height:1.1}
+.pn-gp h3 .pn-gsal small{display:block;font-size:1.1rem;font-weight:500;opacity:.75}
+.pn-gok{font-size:1.3rem;color:var(--ok);background:var(--ok-soft);padding:4px 10px;border-radius:999px}
+.pn-gcl{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.pn-gc{border:1.5px solid var(--ok);background:var(--ok-soft);color:var(--ink);border-radius:12px;padding:6px 10px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;line-height:1.15;text-align:center}
+.pn-gc small{display:block;font-size:1.05rem;font-weight:500;opacity:.65}
+.pn-gc.no{border-color:var(--warn);background:var(--warn-soft);color:var(--warn);text-decoration:line-through}
+.pn-gc.no small{text-decoration:none}
+.pn-gc.ask{background:var(--ink);border-color:var(--ink);color:#fff;text-decoration:none}
+.pn-hint{font-size:1.15rem;opacity:.55;margin:6px 0 0}
+.pn-gmov{margin-top:10px;border-top:1px solid var(--line)}
+.pn-gmov div{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:1.3rem}
+.pn-gmov span{flex:1;opacity:.8}
+.pn-gmov button{border:0;background:none;font:inherit;font-size:1.5rem;opacity:.45;cursor:pointer;padding:0 4px}
+.pn-gmov button.ask{font-size:1.15rem;opacity:1;color:var(--warn);font-weight:600}
+.pn-gbox{background:#F3F1EC;border-radius:14px;padding:12px;margin-top:10px}
+.pn-gbox p{margin:0 0 8px;font-size:1.4rem}
+.pn-gbox input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:1.5rem;margin-top:6px;background:#fff}
+.pn-gpre{display:flex;flex-wrap:wrap;gap:6px}
+.pn-gpre button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:1.3rem;font-weight:600;cursor:pointer}
+.pn-gbox .pn-acts{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:8px}
+.pn-gbox .pn-ntgo{border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;font-size:1.3rem;padding:8px 16px;cursor:pointer}
+.pn-fadd input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;font-size:1.5rem;margin-top:8px;background:#fff}
+.pn-fadd .pn-gm{margin-top:10px}
+.pn-fadd .pn-acts{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:12px}
+.pn-fadd .pn-ntgo{border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;font-size:1.4rem;padding:10px 20px;cursor:pointer}
+#pn-fmsg{color:var(--ok);font-weight:600;font-size:1.3rem}
+.pn-fsw{display:flex;gap:4px;margin-top:10px;padding:4px;border-radius:999px;background:#F3F1EC}
+.pn-fsw button{flex:1;border:0;border-radius:999px;padding:8px;font:inherit;font-weight:600;font-size:1.35rem;background:none;cursor:pointer;color:var(--ink)}
+.pn-fsw button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.pn-stat--main.pn-fneg{background:var(--warn)}
+.pn-farea{padding:10px 0;border-bottom:1px solid var(--line)}.pn-farea:last-child{border-bottom:0}
+.pn-fah{display:flex;justify-content:space-between;font-size:1.45rem}.pn-fah b{font-weight:600}.pn-fah span{font-weight:600;color:var(--ok)}.pn-fah span.neg{color:var(--warn)}
+.pn-fbar{height:7px;border-radius:99px;background:#F3F1EC;margin-top:5px;overflow:hidden}.pn-fbar i{display:block;height:100%;border-radius:99px}
+.pn-fbar i.in{background:var(--ok)}.pn-fbar i.out{background:var(--warn)}
+.pn-farea small{display:block;font-size:1.15rem;opacity:.6;margin-top:4px}
+.pn-gmov b.pn-fin{color:var(--ok)}
+.pn-fij{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);background:none;padding:11px 0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.pn-fij:last-of-type{border-bottom:0}
+.pn-fij i{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);font-style:normal;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.pn-fij.on i{background:var(--ok);border-color:var(--ok)}
+.pn-fij span{flex:1}.pn-fij b{display:block;font-size:1.45rem;font-weight:600}.pn-fij small{display:block;font-size:1.2rem;opacity:.6}
+.pn-fij.on small{color:var(--ok);opacity:1}
+.pn-fij em{font-style:normal;font-weight:600;font-size:1.4rem}
+.pn-fij.on b,.pn-fij.on em{opacity:.55}
+.pn-vfin{display:block;width:100%;margin-top:12px;border:1.5px dashed #c9a93a;background:#FFF9E0;color:#3B2610;border-radius:14px;padding:12px;font:inherit;font-weight:600;font-size:1.4rem;cursor:pointer}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='pn-app'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
@@ -365,7 +417,8 @@
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
         app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t);
-        if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); } };
+        if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); }
+         };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
@@ -407,6 +460,7 @@
       <p class='pn-note'>A los pagos con Mercado Pago se les descuenta una comisión de cerca de 3,4%; a las transferencias no. ${esc(cap(d.pasado.mes))}: ${clp(d.pasado.recaudado)} con ${d.pasado.alumnos} alumnos.</p>
     </div>`;
 
+    h += `<div class='pn-finz' hidden><div class='pn-fsub'><button data-fsub='finanzas'>General</button><button data-fsub='anio'>Mi año</button><button data-fsub='gastos'>Sueldos Academia Anual</button></div><div class='pn-fpane' data-pane='finanzas'><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='anio' hidden><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='gastos' hidden><div class='pn-skel'></div></div></div>`;
     h += `<div class='pn-pane' data-pane='avisos'>
       ${d.revisar.length ? `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${d.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla: ${d.revisar.map(esc).join(', ')}</p></div>` : ''}
       <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
@@ -436,6 +490,258 @@
   }
 
 
+  // ---------- Gastos de la Academia Anual (solo administradores) ----------
+  let GAS = null, gMes = '', gAbierto = '', gOtro = false;
+  const mesCorto = m => cap(String(m).split(' ')[0]);
+  async function cargarGastos(mes){
+    const pane = app.querySelector("[data-pane='gastos']"); if(!pane) return;
+    if(!GAS || (mes && mes !== GAS.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
+    try{ GAS = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); gMes = GAS.mes; pintarGastos(); }
+    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar los gastos. ${esc(x.message)}</p></div>`; }
+  }
+  async function gasto(body, btn){
+    if(btn){ btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = 'Anotando…'; }
+    try{ GAS = await post(Object.assign({}, auth, {accion:'gasto', mes: gMes}, body)); gAbierto = ''; gOtro = false; pintarGastos(); }
+    catch(x){ if(btn){ btn.disabled = false; btn.textContent = btn.dataset.t; } alert(x.message); }
+  }
+  function pintarGastos(){
+    const pane = app.querySelector("[data-pane='gastos']"); if(!pane || !GAS) return;
+    const g = GAS, queda = g.recaudado - g.gastos;
+    let h = `<div class='pn-gm'>${g.meses.map(m => `<button class='pn-gbtn${m===g.mes?' on':''}' data-gmes='${esc(m)}'>${esc(mesCorto(m))}</button>`).join('')}</div>
+      <div class='pn-stats'>
+        <div class='pn-stat'><small>Gastos de ${esc(mesCorto(g.mes))}</small><b>${clp(g.gastos)}</b><em>${g.clasesSurf} clases de surf · ${g.clasesSkate} de skate</em></div>
+        <div class='pn-stat${g.gastos - g.pagado > 0 ? ' pn-stat--warn' : ''}'><small>Falta pagar</small><b>${clp(g.gastos - g.pagado)}</b><em>ya pagaste ${clp(g.pagado)}</em></div>
+        <div class='pn-stat pn-stat--main'><small>Recaudado − gastos</small><b>${queda < 0 ? '−' : ''}${clp(Math.abs(queda))}</b><em>recaudado ${clp(g.recaudado)} (antes de comisión)</em></div>
+      </div>`;
+    h += g.personas.map((p, pi) => {
+      const det = p.fijo ? `Pago mensual ${clp(p.fijo)}` : [p.surf ? `${p.nSurf} surf × ${clp(p.surf)}` : '', p.skate ? `${p.nSkate} skate × ${clp(p.skate)}` : ''].filter(Boolean).join(' + ');
+      const valorClase = p.surf || p.skate;
+      const abierto = gAbierto === p.nombre;
+      return `<div class='pn-card pn-gp'>
+        <h3><span>${esc(p.nombre)}</span>${p.total && p.saldo <= 0 ? `<span class='pn-gok'>Pagado ✓</span>` : `<span class='pn-gsal'>${clp(p.saldo)}<small>por pagar</small></span>`}</h3>
+        <p class='pn-sub'>${det} = <b>${clp(p.total)}</b>${p.pagado ? ` · pagado ${clp(p.pagado)}` : ''}</p>
+        ${p.fijo ? '' : `<div class='pn-gcl'>${p.clases.map(c => `<button class='pn-gc${c.falto?' no':''}' data-gp='${pi}' data-gcl='${c.fecha}' title='${c.falto?'No vino':'Vino'}'>${esc(c.texto)}<small>${c.clase}</small></button>`).join('')}</div>
+          <p class='pn-hint'>Toca una clase si no vino (se descuenta). Tócala de nuevo para deshacer.</p>`}
+        ${p.movs.length ? `<div class='pn-gmov'>${p.movs.map(m => `<div><span>${esc(m.tipo)} · ${esc(corta(m.fecha))}${m.detalle ? ' · ' + esc(m.detalle) : ''}</span><b>${clp(m.monto)}</b><button data-gdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : ''}
+        ${abierto ? `<div class='pn-gbox'>
+            <p>¿Cuánto le pagaste a <b>${esc(p.nombre.split(' ')[0])}</b>?</p>
+            <div class='pn-gpre'>${!p.fijo && valorClase ? [1,2,3].map(n => `<button data-gpre='${n*valorClase}'>${n} clase${n>1?'s':''}</button>`).join('') : ''}${p.saldo > 0 ? `<button data-gpre='${p.saldo}'>Todo (${clp(p.saldo)})</button>` : ''}</div>
+            <input inputmode='numeric' placeholder='Monto, ej: 25000' id='pn-gmonto'>
+            <input placeholder='Nota (opcional), ej: adelanto' id='pn-gnota'>
+            <div class='pn-acts'><button class='pn-link' data-gcan>Cancelar</button><button class='pn-ntgo' data-gsave='${pi}'>Anotar pago</button></div>
+          </div>` : `<button class='pn-nt' data-gopen='${pi}'>+ Anotar pago o adelanto</button>`}
+      </div>`;
+    }).join('');
+    h += `<div class='pn-card'><h3>Otros gastos<span class='pn-count'>${clp(g.otrosTotal)}</span></h3>
+      ${g.otros.length ? `<div class='pn-gmov'>${g.otros.map(o => `<div><span>${esc(o.detalle)} · ${esc(corta(o.fecha))}</span><b>${clp(o.monto)}</b><button data-gdel='${o.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Nada anotado este mes.</p>`}
+      ${gOtro ? `<div class='pn-gbox'><input placeholder='¿En qué fue? ej: parafina, bencina' id='pn-godet'><input inputmode='numeric' placeholder='Monto' id='pn-gomonto'>
+        <div class='pn-acts'><button class='pn-link' data-gcan>Cancelar</button><button class='pn-ntgo' data-gosave>Anotar gasto</button></div></div>` : `<button class='pn-nt' data-gonew>+ Anotar otro gasto</button>`}
+    </div>
+    <p class='pn-note'>Los valores por clase y los pagos fijos están en la pestaña Sueldos de la planilla. Las clases canceladas en el Calendario no se pagan.</p>`;
+    pane.innerHTML = h;
+    pane.querySelectorAll('[data-gmes]').forEach(b => b.onclick = () => { gAbierto = ''; gOtro = false; cargarGastos(b.dataset.gmes); });
+    pane.querySelectorAll('[data-gopen]').forEach(b => b.onclick = () => { gAbierto = g.personas[+b.dataset.gopen].nombre; gOtro = false; pintarGastos(); const i = pane.querySelector('#pn-gmonto'); i && i.focus(); });
+    pane.querySelectorAll('[data-gcan]').forEach(b => b.onclick = () => { gAbierto = ''; gOtro = false; pintarGastos(); });
+    pane.querySelectorAll('[data-gpre]').forEach(b => b.onclick = () => { pane.querySelector('#pn-gmonto').value = b.dataset.gpre; });
+    pane.querySelectorAll('[data-gsave]').forEach(b => b.onclick = () => {
+      const monto = +String(pane.querySelector('#pn-gmonto').value).replace(/\D/g, '');
+      if(!monto) return pane.querySelector('#pn-gmonto').focus();
+      gasto({tipo:'pago', persona: g.personas[+b.dataset.gsave].nombre, monto, detalle: pane.querySelector('#pn-gnota').value.trim()}, b);
+    });
+    pane.querySelectorAll('[data-gcl]').forEach(b => b.onclick = () => {
+      const p = g.personas[+b.dataset.gp], c = p.clases.find(x => x.fecha === b.dataset.gcl);
+      if(!b.dataset.ok){ b.dataset.ok = 1; b.classList.add('ask'); b.firstChild.textContent = c.falto ? '¿Sí vino?' : '¿No vino?'; return; }
+      gasto(c.falto ? {tipo:'borrar', fila: c.falto} : {tipo:'falta', persona: p.nombre, clase: c.fecha}, b);
+    });
+    pane.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => {
+      if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
+      gasto({tipo:'borrar', fila: +b.dataset.gdel}, b);
+    });
+    const ng = pane.querySelector('[data-gonew]'); if(ng) ng.onclick = () => { gOtro = true; gAbierto = ''; pintarGastos(); pane.querySelector('#pn-godet').focus(); };
+    const og = pane.querySelector('[data-gosave]'); if(og) og.onclick = () => {
+      const detalle = pane.querySelector('#pn-godet').value.trim(), monto = +String(pane.querySelector('#pn-gomonto').value).replace(/\D/g, '');
+      if(!detalle) return pane.querySelector('#pn-godet').focus();
+      if(!monto) return pane.querySelector('#pn-gomonto').focus();
+      gasto({tipo:'otro', detalle, monto}, og);
+    };
+  }
+  const corta = f => { const m = String(f||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + '/' + (+m[2]) : f; };
+
+  // ---------- Finanzas Storm (solo administradores) ----------
+  const AREAS = ['Verano','Anual','Adultos','Escuela','Rentas','Surfshop','Casa'];
+  const AREA_TXT = {Verano:'Academia de Verano', Anual:'Academia Anual', Adultos:'Academia Adultos', Surfshop:'Surf Shop', Casa:'Casa Storm'};
+  const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
+  let fCorr = 'enero';
+  let FIN = null, fMes = '', fTipo = 'gasto', fArea = [10,11,0,1].includes(new Date().getMonth()) ? 'Verano' : 'Anual';
+  async function cargarFinanzas(mes){
+    const pane = app.querySelector("[data-pane='finanzas']"); if(!pane) return;
+    if(!FIN || (mes && mes !== FIN.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
+    try{ FIN = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); fMes = FIN.mes; pintarFinanzas(); }
+    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar las finanzas. ${esc(x.message)}</p></div>`; }
+  }
+  function pintarFinanzas(){
+    const pane = app.querySelector("[data-pane='finanzas']"); if(!pane || !FIN) return;
+    const f = FIN, max = Math.max(1, ...f.areas.map(a => Math.max(a.ingresos, a.gastos)));
+    let h = `<div class='pn-card pn-fadd'><h3>Anotar</h3>
+      <div class='pn-fsw'><button data-ftipo='gasto' class='${fTipo==='gasto'?'on':''}'>Gasto</button><button data-ftipo='ingreso' class='${fTipo==='ingreso'?'on':''}'>Ingreso</button></div>
+      <input inputmode='numeric' placeholder='Monto, ej: 3500' id='pn-fmonto'>
+      <input placeholder='${fTipo==='gasto'?'¿En qué fue? ej: hielo, parafina, bencina':'¿De qué? ej: clase particular, arriendo tabla'}' id='pn-fdet'>
+      <div class='pn-gm'>${AREAS.map(a => `<button class='pn-gbtn${a===fArea?' on':''}' data-farea='${a}'>${AREA_TXT[a]||a}</button>`).join('')}</div>
+      ${fArea==='Verano' ? `<p class='pn-sub' style='margin:10px 0 4px'>¿A qué corresponde?</p><div class='pn-fsw'>${['enero','febrero','ambos'].map(c => `<button data-fcorr='${c}' class='${fCorr===c?'on':''}'>${c==='ambos'?'Enero y febrero':cap(c)+' '+anioVer}</button>`).join('')}</div>` : ''}
+      ${fArea==='Casa' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Mantención oficina','Crecimiento','Marketing'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
+      ${fArea==='Verano' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Comida','Premios','Sala de yoga','Materiales'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
+      <div class='pn-acts'><span id='pn-fmsg'></span><button class='pn-ntgo' id='pn-fgo'>Anotar ${fTipo}</button></div>
+    </div>
+    <div class='pn-gm'>${f.meses.map(m => `<button class='pn-gbtn${m===f.mes?' on':''}' data-fmes='${esc(m)}'>${esc(mesCorto(m))}</button>`).join('')}</div>
+    <div class='pn-stats'>
+      <div class='pn-stat'><small>Ingresos ${esc(mesCorto(f.mes))}</small><b>${clp(f.ingresos)}</b></div>
+      <div class='pn-stat'><small>Gastos ${esc(mesCorto(f.mes))}</small><b>${clp(f.gastos)}</b></div>
+      <div class='pn-stat pn-stat--main${f.balance<0?' pn-fneg':''}'><small>Balance del mes</small><b>${f.balance<0?'−':''}${clp(Math.abs(f.balance))}</b><em>ingresos − gastos</em></div>
+    </div>
+    ${f.verano && (f.verano.meses[0].ingresos || f.verano.meses[1].ingresos || f.verano.meses[0].gastosAnotados || f.verano.meses[1].gastosAnotados) ? `<div class='pn-card'><h3>Academia de Verano ${f.verano.anio}<span class='pn-count'>deja ${f.verano.deja<0?'−':''}${clp(Math.abs(f.verano.deja))}</span></h3>
+      ${f.verano.meses.map(v => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(v.mes))}</b><span class='${v.deja<0?'neg':''}'>${v.deja<0?'−':''}${clp(Math.abs(v.deja))}</span></div>
+        <small>${v.ninos} niños · inscripciones ${clp(v.ingresos)} · gastos anotados ${clp(v.gastosAnotados)} · comisión ${clp(v.comision)} · sueldos ustedes ${clp(v.sueldos)}${v.ninos?' · deja '+clp(v.porNino)+' por niño':''}</small></div>`).join('')}
+      <p class='pn-sub' style='margin-top:8px'>Cuenta todos los gastos del Verano, aunque los pagues antes (ej. la sala de yoga en diciembre).</p></div>` : ''}
+    <div class='pn-card'><h3>Por área</h3>
+      ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(AREA_TXT[a.area]||a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
+        <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>
+        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${({Verano:' (inscripciones solas, menos comisión, sueldos de ustedes en ene/feb y lo que anotes)', Anual:' (mensualidades, instructores y comisión, solos)', Escuela:' (clases de tu planilla menos comisión e instructores, solos)', Rentas:' (arriendos de tu planilla y del Verano, solos)', Surfshop:' (tienda de tu planilla, sola)', Casa:' (gastos fijos solos, más mantención, crecimiento y marketing)'})[a.area]||''}</small></div>`).join('')}
+    </div>
+    ${f.ventas ? `<div class='pn-card'><h3>Escuela y tienda (de tu planilla 2026)</h3><div class='pn-gmov'>
+      <div><span>Clases</span><b class='pn-fin'>+${clp(f.ventas.clases)}</b></div>
+      <div><span>Comisión AgendaPro/TUU (${String(Math.round(f.ventas.pct*1000)/10).replace('.',',')}%)</span><b>−${clp(f.ventas.comision)}</b></div>
+      <div><span>Instructores</span><b>−${clp(f.ventas.instructores)}</b></div>
+      <div><span><b>Quedó de clases</b></span><b>${f.ventas.escuela<0?'−':''}${clp(Math.abs(f.ventas.escuela))}</b></div>
+      <div><span>Tienda</span><b class='pn-fin'>+${clp(f.ventas.tiendaSola)}</b></div>
+      <div><span>Renta</span><b class='pn-fin'>+${clp(f.ventas.renta)}</b></div>
+      </div><p class='pn-sub' style='margin-top:8px'>Se lee sola de la pestaña Ventas Diarias 2026. Clases va en Escuela; tienda y renta en Surfshop. <a class='pn-link' href='${esc(f.ventas.planilla)}' target='_blank' rel='noopener'>Abrir planilla</a></p></div>` : ''}
+    <div class='pn-card'><h3>Anotado en ${esc(mesCorto(f.mes))}<span class='pn-count'>${f.movs.length}</span></h3>
+      ${f.movs.length ? `<div class='pn-gmov'>${f.movs.map(m => `<div><span>${esc(m.detalle)} · ${esc(AREA_TXT[m.area]||m.area)}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b><button data-fdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Aún no anotas nada este mes.</p>`}
+    </div>
+    <div class='pn-card pn-ffij'><h3>Gastos fijos del mes<span class='pn-count'>${f.fijos.filter(x=>x.pagado).length} de ${f.fijos.length} pagados</span></h3>
+      ${f.fijos.map(x => `<button class='pn-fij${x.pagado?' on':''}' data-fij='${esc(x.detalle)}'><i>${x.pagado?'✓':''}</i><span><b>${esc(x.detalle)}</b><small>${x.pagado?'Pagado el '+esc(corta(x.pagado)):'Por pagar'}</small></span><em>${clp(x.monto)}</em></button>`).join('')}
+      <p class='pn-sub' style='margin-top:8px'>Tócalo cuando lo pagues. Quedan por pagar ${clp(f.fijos.filter(x=>!x.pagado).reduce((t,x)=>t+x.monto,0))}. Los montos se cambian en la pestaña Fijos de la planilla.</p></div>
+    ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
+    pane.innerHTML = h;
+    pane.querySelectorAll('[data-ftipo]').forEach(b => b.onclick = () => { fTipo = b.dataset.ftipo; pintarFinanzas(); });
+    pane.querySelectorAll('[data-farea]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fArea = b.dataset.farea; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });
+    pane.querySelectorAll('[data-fcorr]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fCorr = b.dataset.fcorr; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });
+    pane.querySelectorAll('[data-fqk]').forEach(b => b.onclick = () => { const i = pane.querySelector('#pn-fdet'); i.value = b.dataset.fqk + (i.value && !i.value.startsWith(b.dataset.fqk) ? ': ' + i.value : ''); i.focus(); });
+    pane.querySelectorAll('[data-fmes]').forEach(b => b.onclick = () => cargarFinanzas(b.dataset.fmes));
+    pane.querySelector('#pn-fgo').onclick = async e => {
+      const b = e.currentTarget, monto = +String(pane.querySelector('#pn-fmonto').value).replace(/\D/g, ''), detalle = pane.querySelector('#pn-fdet').value.trim();
+      if(!monto) return pane.querySelector('#pn-fmonto').focus();
+      if(!detalle) return pane.querySelector('#pn-fdet').focus();
+      b.disabled = true; b.textContent = 'Anotando…';
+      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, tipo: fTipo, area: fArea, detalle, monto, corresponde: fArea==='Verano' ? (fCorr==='ambos' ? 'verano '+anioVer : fCorr+' '+anioVer) : ''})); pintarFinanzas();
+        const m = pane.querySelector('#pn-fmsg'); if(m) m.textContent = 'Anotado ✓'; }
+      catch(x){ b.disabled = false; b.textContent = 'Anotar ' + fTipo; alert(x.message); }
+    };
+    pane.querySelectorAll('[data-fij]').forEach(b => b.onclick = async () => {
+      b.disabled = true; b.classList.toggle('on');
+      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, fijo: b.dataset.fij})); pintarFinanzas(); }catch(x){ b.disabled = false; b.classList.toggle('on'); alert(x.message); }
+    });
+    pane.querySelectorAll('[data-fdel]').forEach(b => b.onclick = async () => {
+      if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
+      b.disabled = true;
+      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, borrar: true, fila: +b.dataset.fdel})); pintarFinanzas(); }catch(x){ alert(x.message); }
+    });
+  }
+  // ---------- Mi año: saldo real de partida + balance de cada mes ----------
+  let ANIO = null;
+  async function cargarAnio(extra){
+    const pane = app.querySelector("[data-pane='anio']"); if(!pane) return;
+    if(!ANIO) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
+    try{ ANIO = await post(Object.assign({}, auth, {accion:'anio'}, extra || {})); pintarAnio(); }
+    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudo cargar. ${esc(x.message)}</p></div>`; }
+  }
+  function pintarAnio(){
+    const pane = app.querySelector("[data-pane='anio']"); if(!pane || !ANIO) return;
+    const a = ANIO, neg = n => (n<0?'−':'') + clp(Math.abs(n));
+    const partida = `<div class='pn-card pn-fadd'><h3>¿Cuánto hay en la cuenta de Storm?</h3>
+      <p class='pn-sub'>Se anota una sola vez (el 1 de enero). Desde ahí se suma solo lo que entra y sale cada mes.</p>
+      <input inputmode='numeric' placeholder='Banco, ej: 2195000' id='pn-abanco'>
+      <div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-ago'>Guardar saldo</button></div></div>`;
+    const grandes = `<div class='pn-card pn-fadd'><h3>Gastos grandes que vienen<span class='pn-count'>${clp(a.porPagar||0)}</span></h3>
+      <p class='pn-sub'>Trajes, certificaciones, operación renta… Anótalos antes, así sabes cuánto tienes libre. Tócalo cuando lo pagues y se anota solo como gasto.</p>
+      ${(a.grandes||[]).length ? (a.grandes||[]).map(g => `<button class='pn-fij${g.pagado?' on':''}' data-gr='${g.fila}'><i>${g.pagado?'✓':''}</i><span><b>${esc(g.detalle)}</b><small>${esc(cap(g.mes))}${g.pagado?' · pagado':''}</small></span><em>${clp(g.monto)}</em></button>`).join('') : ''}
+      <input placeholder='¿Qué es? ej: trajes nuevos' id='pn-grdet'>
+      <input inputmode='numeric' placeholder='Monto, ej: 900000' id='pn-grmonto'>
+      <input placeholder='¿Para qué mes? ej: diciembre 2026' id='pn-grmes'>
+      <div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-grgo'>Anotar gasto grande</button></div></div>`;
+    if(!a.inicio){ pane.innerHTML = partida + grandes; bindAnio(pane); return; }
+    const val = m => m.aporte ? m.conFondo : m.balance;
+    const max = Math.max(1, ...a.meses.map(m => Math.abs(val(m))));
+    pane.innerHTML = `<div class='pn-stats'>
+      <div class='pn-stat pn-stat--main${a.saldo<0?' pn-fneg':''}'><small>Debería haber hoy</small><b>${neg(a.saldo)}</b><em>partiste con ${clp(a.inicio.total)} el ${esc(corta(a.inicio.fecha))}</em></div>
+      <div class='pn-stat${a.libre<0?' pn-fneg':''}'><small>Libre para usar</small><b>${neg(a.libre)}</b><em>después de los gastos grandes</em></div>
+      <div class='pn-stat'><small>Te alcanza para</small><b>${String(a.colchon).replace('.',',')} meses</b><em>de gastos fijos (${clp(a.fijosMes)})</em></div>
+    </div>
+    ${a.ganancia ? `<div class='pn-card'><h3>Ganancia real ${esc(a.ganancia.anio)}<span class='pn-count'>${a.ganancia.meses} ${a.ganancia.meses===1?'mes':'meses'}</span></h3>
+      <div class='pn-fah' style='font-size:1.6em;margin:4px 0 2px'><b class='${a.ganancia.total<0?'neg':''}'>${neg(a.ganancia.total)}</b></div>
+      <p class='pn-sub'>Todo lo que entró (${clp(a.ganancia.ingresos)}) menos todo lo que salió (${clp(a.ganancia.gastos)}): comisiones, instructores, fijos y retiro de socios.</p>
+      <div class='pn-gmov' style='margin-top:8px'>${a.ganancia.areas.map(x => `<div><span>${esc(x.area)}</span><b class='${x.balance<0?'':'pn-fin'}'>${x.balance<0?'−':'+'}${clp(Math.abs(x.balance))}</b></div>`).join('')}</div></div>` : ''}
+    ${a.fondo && a.fondo.aporte ? `<div class='pn-card'><h3>Fondo de Verano</h3>
+      <p class='pn-sub'>${a.fondo.desdeFebrero ? 'Lo que quedó al cerrar el verano' : 'Lo que hay hoy'} (${clp(a.fondo.base)}) se reparte en ${a.fondo.meses} ${a.fondo.meses===1?'mes':'meses'} hasta diciembre: cada mes recibe <b>${clp(a.fondo.aporte)}</b>. Si el mes queda en verde, vas bien aunque sea invierno. Si queda en rojo, ese mes gastaste más de lo que te tocaba.</p></div>` : ''}
+    ${a.utilidades ? (() => { const u = a.utilidades; return `<div class='pn-card'><h3>Utilidades del verano</h3>
+      <p class='pn-sub'>La ganancia de ustedes por el trabajo del verano, aparte del sueldo. Se calcula al cerrar febrero, dejando cubierto el resto del año.</p>
+      <div class='pn-gmov' style='margin-top:6px'>
+        <div><span>Gastos fijos al mes</span><b>${clp(a.fijosMes)}</b></div>
+        <div><span>Lo que dejan la Anual y la escuela al mes (aprox.)</span><b class='pn-fin'>+${clp(u.esperado)}</b></div>
+        <div><span>Falta cubrir al mes, de marzo a diciembre</span><b>${clp(u.faltaPorMes)}</b></div>
+        <div><span>Storm necesita guardar (10 meses + gastos grandes)</span><b>${clp(u.necesita)}</b></div>
+        ${u.listo ? `<div><span>Había al cerrar febrero</span><b>${clp(u.saldoFeb)}</b></div>
+        <div><span><b>Pueden retirar como utilidades</b></span><b class='${u.disponible>0?'pn-fin':''}'>${u.disponible>0?clp(u.disponible):'$0'}</b></div>` : ''}
+      </div>
+      <p class='pn-sub' style='margin-top:8px'>${u.listo ? (u.disponible>0 ? 'Si lo retiran, anótenlo en General como gasto "Utilidades socios".' : 'Este año no conviene retirar: lo que hay se necesita para llegar al próximo verano.') : 'El 1 de marzo, con lo que haya en la cuenta, aquí aparece cuánto pueden retirar.'}</p></div>`; })() : ''}
+    <div class='pn-card'><h3>Mes a mes</h3>
+      ${a.meses.map(m => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(m.mes))}</b><span class='${val(m)<0?'neg':''}'>${neg(val(m))}</span></div>
+        <div class='pn-fbar'><i class='${val(m)<0?'out':'in'}' style='width:${Math.abs(val(m))/max*100}%'></i></div>
+        <small>entró ${clp(m.ingresos)}${m.aporte?' + fondo de verano '+clp(m.aporte):''} · salió ${clp(m.gastos)} · ${m.cuenta ? 'en la cuenta ' + neg(m.saldo) : 'ya está dentro del saldo de partida'}</small></div>`).join('')}
+      <p class='pn-sub' style='margin-top:8px'>Enero y febrero no reciben fondo: son los meses que lo llenan.</p></div>
+    ${(() => { const u = a.meses[a.meses.length-1]; if(!u) return ''; const falta = Math.max(0, u.ahorroSugerido - u.ahorrado);
+      return `<div class='pn-card pn-fadd'><h3>Cuenta de ahorro<span class='pn-count'>${clp(a.ahorroTotal||0)}</span></h3>
+      <p class='pn-sub'>A fin de mes pasa a la cuenta de ahorro el ${Math.round((a.ahorroPct||0.1)*100)}% de lo que entró. Es la reserva para trajes, certificaciones y operación renta.</p>
+      <div class='pn-gmov'><div><span>${esc(cap(u.mes))}: entró ${clp(u.ingresos)}</span><b>${clp(u.ahorroSugerido)}</b></div>${u.ahorrado?`<div><span>Ya pasaste</span><b class='pn-fin'>${clp(u.ahorrado)}</b></div>`:''}</div>
+      ${falta ? `<input inputmode='numeric' id='pn-ahmonto' value='${falta}'><div class='pn-acts'><span></span><button class='pn-ntgo' id='pn-ahgo' data-mes='${esc(u.mes)}'>Ya lo pasé a ahorro</button></div>` : `<p class='pn-ok'>✓ Listo este mes.</p>`}</div>`; })()}
+    ${grandes}
+    <div class='pn-card pn-fadd'><h3>Comparar con el banco</h3>
+      <p class='pn-sub'>Una vez al mes mira el banco y escríbelo aquí. No cambia nada, solo te muestra si falta anotar algo.</p>
+      <input inputmode='numeric' placeholder='Lo que dice el banco hoy' id='pn-acmp'><p class='pn-sub' id='pn-acmpr'></p></div>`;
+    bindAnio(pane);
+  }
+  function bindAnio(pane){
+    const go = pane.querySelector('#pn-ago');
+    if(go) go.onclick = async e => {
+      const banco = String(pane.querySelector('#pn-abanco').value).replace(/\D/g, '');
+      if(!banco) return pane.querySelector('#pn-abanco').focus();
+      e.currentTarget.disabled = true; e.currentTarget.textContent = 'Guardando…';
+      await cargarAnio({banco: +banco});
+    };
+    const gg = pane.querySelector('#pn-grgo');
+    if(gg) gg.onclick = async e => {
+      const detalle = pane.querySelector('#pn-grdet').value.trim(), monto = +String(pane.querySelector('#pn-grmonto').value).replace(/\D/g, ''), mes = pane.querySelector('#pn-grmes').value.trim();
+      if(!detalle) return pane.querySelector('#pn-grdet').focus();
+      if(!monto) return pane.querySelector('#pn-grmonto').focus();
+      e.currentTarget.disabled = true; e.currentTarget.textContent = 'Anotando…';
+      await cargarAnio({grande:'nuevo', detalle, monto, mes});
+    };
+    pane.querySelectorAll('[data-gr]').forEach(b => b.onclick = async () => { b.disabled = true; await cargarAnio({grande:'pagar', fila: +b.dataset.gr}); });
+    const ahg = pane.querySelector('#pn-ahgo');
+    if(ahg) ahg.onclick = async e => { const monto = +String(pane.querySelector('#pn-ahmonto').value).replace(/\D/g, ''); if(!monto) return; e.currentTarget.disabled = true; e.currentTarget.textContent = 'Anotando…'; await cargarAnio({ahorro: 1, monto, mes: e.currentTarget.dataset.mes}); };
+    const cmp = pane.querySelector('#pn-acmp');
+    if(cmp) cmp.oninput = () => {
+      const v = +String(cmp.value).replace(/\D/g, ''), r = pane.querySelector('#pn-acmpr');
+      if(!v){ r.textContent = ''; return; }
+      const dif = v - ANIO.saldo;
+      r.innerHTML = Math.abs(dif) < 1000 ? '✓ Cuadra.' : dif < 0 ? `En el banco hay <b>${clp(-dif)}</b> menos. Falta anotar algún gasto.` : `En el banco hay <b>${clp(dif)}</b> más. Falta anotar algún ingreso.`;
+    };
+  }
+  // Desde Verano: botón para anotar un gasto hormiga (abre Finanzas con el área Verano).
+  function irAFinanzasVerano(){
+    fArea = 'Verano'; fTipo = 'gasto'; fSub = 'finanzas'; acad = 'finanzas'; try{ sessionStorage.setItem(KEY + '-acad', 'finanzas'); }catch(_){}
+    mostrarAcad(); window.scrollTo(0, 0);
+  }
   // ---------- Notas internas por alumno (solo el equipo; las familias no las ven) ----------
   let NOTAS = null, ntAbierta = '', aGrupo = '', aCambio = '', aNuevo = '', aMsg = '', ES_ADMIN = false;
   // Cajita para elegir el nivel nuevo (Anual y Verano).
@@ -538,17 +844,28 @@
   function ponerSelector(){
     if(!API_VERANO) return;
     const head = app.querySelector('.pn-head'); if(!head || app.querySelector('.pn-sw')) return;
-    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Academia Anual</button><button data-acad='verano'>Academia de Verano</button></div>`);
+    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button><button data-acad='verano'>Verano</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}</div>`);
     app.querySelectorAll('[data-acad]').forEach(b => b.onclick = () => { acad = b.dataset.acad; try{ sessionStorage.setItem(KEY + '-acad', acad); }catch(_){} mostrarAcad(); });
     mostrarAcad();
   }
+  let fSub = (() => { try{ return sessionStorage.getItem(KEY + '-fsub'); }catch(_){ return null; } })() || 'finanzas';
   function mostrarAcad(){
-    const ver = acad === 'verano';
+    if(acad === 'finanzas' && !app.querySelector('.pn-finz')) acad = 'anual';
+    const ver = acad === 'verano', fin = acad === 'finanzas';
     app.querySelectorAll('[data-acad]').forEach(b => b.classList.toggle('on', b.dataset.acad === acad));
-    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano')) el.style.display = ver ? 'none' : ''; });
+    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano,.pn-finz')) el.style.display = (ver || fin) ? 'none' : ''; });
     const pv = app.querySelector('.pn-verano'); pv.hidden = !ver;
-    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : h1.dataset.t; }
+    const pf = app.querySelector('.pn-finz'); if(pf) pf.hidden = !fin;
+    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : fin ? 'Finanzas Storm' : h1.dataset.t; }
     if(ver) loadVerano();
+    if(fin) mostrarFsub();
+  }
+  function mostrarFsub(){
+    const pf = app.querySelector('.pn-finz'); if(!pf) return;
+    try{ sessionStorage.setItem(KEY + '-fsub', fSub); }catch(_){}
+    pf.querySelectorAll('[data-fsub]').forEach(b => { b.classList.toggle('on', b.dataset.fsub === fSub); b.onclick = () => { fSub = b.dataset.fsub; mostrarFsub(); }; });
+    pf.querySelectorAll('.pn-fpane').forEach(p => p.hidden = p.dataset.pane !== fSub);
+    if(fSub === 'gastos') cargarGastos(); else if(fSub === 'anio') cargarAnio(); else cargarFinanzas();
   }
   const NIV = ['Kids','Iniciante','Progress','Intermedio','Avanzado','Federados'];
   async function loadVerano(){
@@ -607,11 +924,13 @@
         : `<p class='pn-empty'>${vNiv ? 'No hay niños de '+esc(vNiv)+' esta semana.' : 'Todavía no hay niños inscritos esta semana.'}</p>`}
     </div>`;
     if(admin){
+      h += `<button class='pn-vfin' data-vfin>+ Anotar gasto de Verano</button>`;
       if(v.revisar && v.revisar.length) h += `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${v.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla de Verano: ${v.revisar.map(esc).join(', ')}</p></div>`;
       h += `<div class='pn-card'><h3>Últimos pagos web</h3>${v.ultimos.length ? v.ultimos.map(p => `<div class='pn-row'><div><b>${esc(p.alumnos.join(', '))}</b><small>${esc(p.apoderado)} · ${esc(p.fecha)}${p.codigo?" <span class='pn-tag'>"+esc(p.codigo)+'</span>':''}</small></div><span class='pn-amt'>${p.total ? clp(p.total) : 'Beca'}</span></div>`).join('') : `<p class='pn-empty'>Aún no hay pagos con Mercado Pago. Las inscripciones de antes (Shopify) ya están en la lista.</p>`}</div>`;
       if(v.planilla) h += `<p class='pn-note'><a class='pn-link' href='${esc(v.planilla)}' target='_blank' rel='noopener'>Abrir la planilla de Verano</a></p>`;
     }
     pane.innerHTML = h;
+    const vf = pane.querySelector('[data-vfin]'); if(vf) vf.onclick = irAFinanzasVerano;
     pane.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { vSem = b.dataset.vs; pintarVerano(pane); });
     pane.querySelectorAll('[data-vn]').forEach(b => b.onclick = () => { vNiv = b.dataset.vn; pintarVerano(pane); });
     bindNotas(pane, () => pintarVerano(pane));
