@@ -644,8 +644,8 @@ body:has(.mc-hero--login) .ap-top{display:none}
     {url:'/familias/cuida-tu-equipo.html', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren y rindan.', icono:'🏄', para:'est'},
     {url:'/familias/como-competir-mejor.html', titulo:'Cómo competir mejor', texto:'Para quienes compiten: arma tu plan, decide mejor en la manga y aprende de tus videos.', icono:'🏆', solo:'anual', para:'est', nuevo:true},
     {url:'/familias/seguridad-en-el-mar.html', titulo:'Seguridad en el mar', texto:'Las 4 señales del agua, corrientes y qué hacer si te caes.', icono:'🛟', para:'est', nuevo:true},
-    {url:'/familias/surf-desde-cero.html', titulo:'Surf desde cero', texto:'Conoce las partes de tu tabla y descubre si eres regular o goofy.', icono:'🏄', solo:'verano', nivelesVerano:['Kids','Iniciante'], para:'est', nuevo:true},
-    {url:'/familias/habla-como-surfista.html', titulo:'Habla como surfista', texto:'Frontside o backside, el lineup y el diccionario del surf.', icono:'🌊', solo:'verano', nivelesVerano:['Progress','Intermedio','Avanzado'], para:'est', nuevo:true}
+    {url:'/familias/surf-desde-cero.html', titulo:'Surf desde cero', texto:'Conoce las partes de tu tabla y descubre si eres regular o goofy.', icono:'🏄', niveles:['Kids','Iniciante'], para:'est', nuevo:true},
+    {url:'/familias/habla-como-surfista.html', titulo:'Habla como surfista', texto:'Frontside o backside, el lineup y el diccionario del surf.', icono:'🌊', niveles:['Progress','Intermedio','Avanzado'], para:'est', nuevo:true}
   ];
   const TEMAS_DUDA = ['Cómo avanza y los niveles','Competir','Seguridad en el mar','Equipo: traje y tabla','Alimentación','Miedo y frustración','Motivación','Otro'];
   const IC_Q = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17.5h.01"/></svg>';
@@ -680,7 +680,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   }
   function familiasCard(nivel, edad, acad, todos){
     const niv = (todos && todos.length ? todos : [nivel]).map(x => String(x || ''));
-    const rs = RECURSOS.filter(r => (!r.solo || r.solo === acad) && (acad !== 'verano' || !r.nivelesVerano || r.nivelesVerano.some(n => niv.includes(n))));
+    const rs = RECURSOS.filter(r => (!r.solo || r.solo === acad) && (!r.niveles || !niv.some(Boolean) || r.niveles.some(n => niv.includes(n))));
     const q = (nivel ? 'nivel=' + encodeURIComponent(nivel) : '') + (edad ? (nivel ? '&' : '') + 'edad=' + encodeURIComponent(edad) : '');
     const tarjeta = r => { const k = RECURSOS.indexOf(r) % 6; return `<a class='mc-res mc-res--${k}' href='${r.url}${q ? '?' + q : ''}'>${r.nuevo?'<em>Nuevo</em>':''}<i>${IC.res[RECURSOS.indexOf(r) % 4]}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`; };
     const ord = lista => lista.filter(r => r.nuevo).concat(lista.filter(r => !r.nuevo));
