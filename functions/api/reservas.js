@@ -109,7 +109,7 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
  *  - menores de 8: de a 2 por instructor; si sobra uno, va con los demás (o, si no hay más, con el último par: 3 niños = 1 instructor) (menores de 5: clase individual, aviso en la página);
  *  - (ninos: reservado por si se vuelve a separar por edades; hoy siempre 0)
  *  - desde 12 años cuenta como adulto; máximo 5 por instructor.
- *  Ej.: 4 niños = 2+2; 3 niños = 3; 5 niños = 2+3; 3 niños + 1 adulto = 2+2; 3 niños + 2 adultos = 2+3; 4 adultos + 1 niño = 5. */
+ *  Ej.: 4 niños = 2+2; 3 niños = 3; 5 niños = 2+3; 3 niños + 1 adulto = 2+2; 3 niños + 2 adultos = 2+3; 4 niños + 1 adulto = 2+3; 4 adultos + 1 niño = 5. */
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return t.length ? ' (' + t.join(', ') + ')' : ''; };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 function cotizar(a, personas, menores, ninos) {
@@ -120,7 +120,7 @@ function cotizar(a, personas, menores, ninos) {
   const pares = Math.floor(menores / MAX_MENORES);
   for (let k = 0; k < pares; k++) grupos.push({ personas: MAX_MENORES, ninos: true });
   let resto = personas - pares * MAX_MENORES; // incluye al niño que sobra
-  if (pares && resto === menores % MAX_MENORES && resto > 0) { grupos[grupos.length - 1].personas += resto; resto = 0; } // si no hay más, va con el último par
+  if (pares && resto === 1) { grupos[grupos.length - 1].personas += 1; resto = 0; } // una sola persona suelta (niño o adulto) va con el último par
   if (resto > 0) {
     // cuántos instructores para el resto: hasta 5 por grupo y hasta 3 niños de 7-11 por grupo; repartidos parejo
     const n = personas > a.maxWeb && !ninos ? 1 : Math.max(Math.ceil(resto / MAX_GRUPO), Math.ceil(ninos / MAX_NINOS), 1);
