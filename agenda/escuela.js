@@ -29,6 +29,26 @@
   .es-btn[disabled]{opacity:.5}
   .es-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
   .es-chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font:inherit;font-size:1.3rem;cursor:pointer;color:var(--ink)}
+  .es-dia-wrap{overflow-x:auto;margin:0 -4px;padding:0 4px 6px}
+  .es-dia{display:grid;gap:0 4px;min-width:min-content}
+  .es-dh{text-align:center;padding:4px 2px 8px;font-size:1.25rem;line-height:1.2;text-transform:none;letter-spacing:0;color:var(--ink)}
+  .es-dh *{text-transform:none;letter-spacing:0}
+  .es-dh b{display:block;margin-top:4px;color:var(--ink);font-size:1.3rem}
+  .es-dh small{display:block;color:#8a8986;font-size:1.1rem;font-weight:500}
+  .es-av{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#9a9893;color:#fff;font-weight:700;font-size:1.2rem}
+  .es-dcol{position:relative;background:#fff;border-radius:10px}
+  .es-dhoras{background:transparent}
+  .es-dhoras span{position:absolute;right:4px;transform:translateY(-50%);font-size:1.1rem;color:#8a8986;font-weight:500;letter-spacing:0;text-transform:none}
+  .es-dhoras span:first-child{transform:none}
+  .es-dc{position:absolute;left:0;right:0;border:0;border-top:1px solid #f0eee9;background:transparent;padding:0;cursor:pointer}
+  .es-dc.no{background:#ECEAE6;cursor:default}
+  .es-dc:not(.no):hover{background:#E3F1F1}
+  .es-db{position:absolute;left:3px;right:3px;border:0;border-radius:8px;background:#0f6e74;color:#fff;text-align:left;padding:4px 6px;font:inherit;font-size:1.15rem;line-height:1.25;overflow:hidden;cursor:pointer;z-index:2}
+  .es-db b{display:block;font-size:1.2rem;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .es-db small{display:block;opacity:.9}
+  .es-db.pend{background:#E3F1F1;color:#0f6e74;border:1.5px dashed #0f6e74}
+  .es-db.otra{background:#F3F1EC;color:#6b6a67;border:1.5px dashed #c9c5bd;cursor:default;z-index:1}
+  .es-ahora{position:absolute;left:0;right:0;border-top:2px solid #e0484e;z-index:3}
   .es-chip.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
   .es-chip small{opacity:.65;margin-left:4px}
   .es-dia{margin:18px 0 6px;font-size:1.3rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#0f6e74}
@@ -76,7 +96,7 @@
   .es-aviso{background:#fbeee2;color:#7a4317;border-radius:14px;padding:12px 14px;font-size:1.35rem;line-height:1.45;margin-top:12px}
   `;
 
-  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'reservas', filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false;
+  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false;
   const KEY = 'storm-agenda-datos';
 
   async function post(body) {
@@ -118,8 +138,9 @@
     if (linkNuevo) { const L = linkNuevo;
       h += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
-    h += `<div class='es-sub'><button data-sub='reservas'>Reservas</button><button data-sub='calendario'>${admin ? 'Calendario instructores' : 'Mi calendario'}</button><button data-sub='pagos'>${admin ? 'Pagos' : 'Mis pagos'}</button>${admin ? `<button data-sub='ajustes'>Ajustes</button>` : ''}</div>`;
-    if (sub === 'calendario') h += calendario(admin);
+    h += `<div class='es-sub'><button data-sub='dia'>Día</button><button data-sub='reservas'>Reservas</button><button data-sub='calendario'>${admin ? 'Calendario instructores' : 'Mi calendario'}</button><button data-sub='pagos'>${admin ? 'Pagos' : 'Mis pagos'}</button>${admin ? `<button data-sub='ajustes'>Ajustes</button>` : ''}</div>`;
+    if (sub === 'dia') h += diaVista(admin);
+    else if (sub === 'calendario') h += calendario(admin);
     else if (sub === 'pagos') h += pagosVista(admin);
     else if (sub === 'ajustes' && admin) h += ajustes();
     else h += reservas(admin);
@@ -240,6 +261,49 @@
     return h + `</div>`;
   }
 
+  // ---------- vista del día: una columna por instructor (como AgendaPro) ----------
+  const D_INI = 7 * 60, D_FIN = 20 * 60, D_ROW = 26; // cada 30 min = 26 px
+  function diaVista(admin) {
+    if (!diaVer) diaVer = E.hoy;
+    const f = diaVer, activos = E.instructores.filter(i => i.activo).map(i => i.nombre).filter(n => admin || n === E.yo);
+    const top = m => (m - D_INI) / 30 * D_ROW, alto = min => min / 30 * D_ROW;
+    let h = `<div class='es-wk' style='margin:6px 0 10px'><button data-dv='-1'>‹</button><b style='font-size:1.45rem'>${f === E.hoy ? 'Hoy · ' : f === sumar(E.hoy, 1) ? 'Mañana · ' : ''}${esc(flarga(f))}</b><button data-dv='1'>›</button></div>`;
+    if (f !== E.hoy) h += `<p style='text-align:center;margin:-4px 0 10px'><button class='pn-link' data-dv='hoy'>Volver a hoy</button></p>`;
+    h += `<div class='es-dia-wrap'><div class='es-dia' style='grid-template-columns:44px repeat(${activos.length}, minmax(80px, 1fr))'>`;
+    // cabecera
+    h += `<div></div>` + activos.map(n => {
+      const nRes = E.reservas.filter(r => r.fecha === f && r.instructores.includes(n)).length;
+      const libre = E.horarios.some(x => dispo(n, f, x) && !otraCosa(n, f, x) && !reservaEn(n, f, x));
+      return `<div class='es-dh'><span class='es-av'>${esc(n.slice(0, 2).toUpperCase())}</span><b>${esc(n)}</b><small>${nRes ? nRes + ' clase' + (nRes === 1 ? '' : 's') : ''}${nRes && libre ? ' · ' : ''}${libre ? '<i style="color:#2f7a4d;font-style:normal">disponible</i>' : nRes ? '' : 'no disponible'}</small></div>`; }).join('');
+    // columna de horas
+    let horas = `<div class='es-dcol es-dhoras' style='height:${top(D_FIN)}px'>`;
+    for (let m = D_INI; m < D_FIN; m += 60) horas += `<span style='top:${top(m)}px'>${deMin(m)}</span>`;
+    h += horas + `</div>`;
+    activos.forEach(n => {
+      // tramos disponibles = bloques de la web que marcó como disponible
+      const cubre = []; E.horarios.forEach(x => { if (dispo(n, f, x)) cubre.push([aMin(x), aMin(x) + E.duracion]); });
+      let col = `<div class='es-dcol' style='height:${top(D_FIN)}px'>`;
+      for (let m = D_INI; m < D_FIN; m += 30) {
+        const ok = cubre.some(([a, b]) => m >= a && m < b);
+        col += `<button class='es-dc${ok ? '' : ' no'}' style='top:${top(m)}px;height:${D_ROW}px' ${admin ? `data-dn='${esc(n)}' data-dh='${deMin(m)}'` : 'disabled'} aria-label='${esc(n)} ${deMin(m)}'></button>`;
+      }
+      (E.ocupaciones || []).filter(o => (o.instructor === '*' || o.instructor === n) && (o.fecha ? o.fecha === f : o.dia === dsem(f))).forEach(o => {
+        const a = Math.max(D_INI, aMin(o.desde)), b = Math.min(D_FIN, aMin(o.hasta)); if (b <= a) return;
+        col += `<div class='es-db otra' style='top:${top(a)}px;height:${alto(b - a) - 2}px'><b>${esc(o.motivo || 'Ocupado')}</b><small>${esc(o.desde)} - ${esc(o.hasta)}</small></div>`;
+      });
+      E.reservas.filter(r => r.fecha === f && r.instructores.includes(n)).forEach(r => {
+        const a = aMin(r.hora);
+        col += `<button class='es-db${r.estado === 'pendiente' ? ' pend' : ''}' data-dr='${esc(r.ref)}' style='top:${top(a)}px;height:${alto(E.duracion) - 2}px'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' <7' : ''}</small><small>${esc(r.hora)} - ${esc(fin(r.hora))}${r.estado === 'pendiente' ? ' · esperando pago' : ''}</small></button>`;
+      });
+      if (f === E.hoy) { const ahora = new Date(), m = ahora.getHours() * 60 + ahora.getMinutes(); if (m > D_INI && m < D_FIN) col += `<div class='es-ahora' style='top:${top(m)}px'></div>`; }
+      h += col + `</div>`;
+    });
+    h += `</div></div>`;
+    h += `<div class='es-ley' style='margin-top:10px'><span><i style='background:#0f6e74'></i>Clase</span><span><i style='background:#fff;border:1.5px solid #ddd'></i>Disponible</span><span><i style='background:#ECEAE6'></i>No disponible</span><span><i style='background:#F3F1EC;border:1.5px dashed #c9c5bd'></i>Academia Anual u otra cosa</span></div>`;
+    if (admin) h += `<p class='pn-note'>Toca un espacio libre para anotar una clase a mano con ese instructor y esa hora. Toca una clase para verla en Reservas.</p>`;
+    return h;
+  }
+
   // ---------- pago semanal (lunes a domingo; Isidora transfiere los domingos) ----------
   let PS = null, psLunes = '', psCargando = false, psAbierto = '';
   async function cargarPagos(extra) {
@@ -335,6 +399,10 @@
     $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
     const nomIn = $('[name=nombre][list=es-clientes]');
     if (nomIn) nomIn.onchange = () => { const c = (E.clientes || []).find(x => x.nombre.toLowerCase() === nomIn.value.trim().toLowerCase()); if (!c) return; const f = nomIn.closest('.pn-card'); const t = f.querySelector('[name=telefono]'), m = f.querySelector('[name=correo]'); if (t && !t.value) t.value = c.telefono; if (m && !m.value) m.value = c.correo; };
+    $$('[data-dv]').forEach(b => b.onclick = () => { diaVer = b.dataset.dv === 'hoy' ? E.hoy : sumar(diaVer, +b.dataset.dv); pintar(); });
+    $$('[data-dr]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.dr); sub = 'reservas'; verPasadas = r && r.fecha < E.hoy; filtroIns = ''; pintar(); const el = pane.querySelector(`[data-abre='${CSS.escape(b.dataset.dr)}']`); if (el) el.closest('.es-r').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+    $$('[data-dn]').forEach(b => b.onclick = () => { if (b.classList.contains('no') && !confirm(b.dataset.dn + ' no marcó disponible a esa hora. ¿Anotar igual?')) return; manualPre = { fecha: diaVer, hora: b.dataset.dh, ins: b.dataset.dn }; sub = 'reservas'; manualOn = true; pintar(); });
+    if (manualPre) { const c = pane.querySelector('.pn-card:has([data-manual-go])'); if (c) { c.querySelector('[name=fecha]').value = manualPre.fecha; c.querySelector('[name=hora]').value = manualPre.hora; const ch = c.querySelector(`[data-mi="${CSS.escape(manualPre.ins)}"]`); if (ch) ch.classList.add('on'); c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } manualPre = null; }
     $$('[data-psw]').forEach(b => b.onclick = () => { psLunes = sumar(PS.lunes, +b.dataset.psw); psAbierto = ''; cargarPagos(); });
     $$('[data-psa]').forEach(b => b.onclick = () => { psAbierto = psAbierto === b.dataset.psa ? '' : b.dataset.psa; pintar(); });
     $$('[data-psr]').forEach(b => b.onclick = () => { PS = null; cargarPagos(); });
