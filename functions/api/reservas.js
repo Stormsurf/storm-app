@@ -38,7 +38,8 @@ const AJUSTES_BASE = {
   maxWeb: 5,             // más personas = por WhatsApp
   maxSeguidas: 2,
   // Enero y febrero: la Academia de Verano usa lun, mar, jue y vie de 9:00 a 12:00; en ese rato queda 1 instructor para particulares
-  verano: { meses: [1, 2], dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', instructores: 1 },
+  // Esos días la primera clase parte 9:30 (no llegar junto con los niños de la Academia): 9:00 → 9:30 y 10:30 → 11:00
+  verano: { meses: [1, 2], dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', instructores: 1, cambios: { '09:00': '09:30', '10:30': '11:00' } },
   horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
@@ -191,7 +192,7 @@ async function estadoAgenda(db, a, desde, hasta) {
     const k = inst + '|' + fecha + '|';
     if ((k + hora) in excep) return excep[k + hora];
     if (k in excep) return excep[k];
-    return ((semana[inst] || {})[diaSemana(fecha)] || []).includes(hora);
+    return ((semana[inst] || {})[diaSemana(fecha)] || []).includes(horaBase(a, fecha, hora));
   };
   const enOtraCosa = (inst, fecha, hora) => cruce(ocu, inst, fecha, hora, a.duracion);
   const sinChoque = (inst, fecha, hora) => !enOtraCosa(inst, fecha, hora) && bloquesDe(hora, a.duracion).every(b => !ocupado.has(inst + '|' + fecha + '|' + b));
@@ -210,9 +211,14 @@ function permitido(a, fecha, hora, ahora = ahoraChile()) {
 
 /** Tope de la Academia de Verano: si la clase cae en ese rato, solo pueden darla los instructores que ya tienen particulares ahí,
  *  más los que falten para llegar al tope (1). lista = nombres ya ordenados; devuelve la lista recortada. */
+const esVerano = (a, fecha) => { const v = a.verano; return !!v && (v.meses || []).includes(+fecha.slice(5, 7)) && (v.dias || []).includes(diaSemana(fecha)); };
+/** Horarios de ese día (en días de Academia de Verano, corridos según verano.cambios) */
+const horasDia = (a, fecha) => esVerano(a, fecha) ? [...new Set(a.horarios.map(h => (a.verano.cambios || {})[h] || h))].sort() : a.horarios;
+/** Hora de la semana tipo que corresponde (11:00 de verano = 10:30 de la semana tipo) */
+const horaBase = (a, fecha, hora) => { if (!esVerano(a, fecha)) return hora; const c = a.verano.cambios || {}; return Object.keys(c).find(k => c[k] === hora) || hora; };
 function topeVerano(a, ag, fecha, hora, lista) {
   const v = a.verano;
-  if (!v || !(v.meses || []).includes(+fecha.slice(5, 7)) || !(v.dias || []).includes(diaSemana(fecha))) return lista;
+  if (!esVerano(a, fecha)) return lista;
   const ini = aMin(hora), fin = ini + a.duracion, d = aMin(v.desde), h = aMin(v.hasta);
   if (fin <= d || ini >= h) return lista;
   const usados = new Set(ag.bloques.filter(b => b.fecha === fecha && aMin(b.hora) >= d && aMin(b.hora) < h).map(b => b.instructor));
@@ -230,7 +236,7 @@ async function disponibilidad(db, d) {
   const activos = ag.ins.filter(i => i.activo);
   const dias = {};
   for (let f = hoy.fecha; f <= hasta; f = sumarDias(f, 1)) {
-    const horas = a.horarios.filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
+    const horas = horasDia(a, f).filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
     if (horas.length) dias[f] = horas;
   }
   return { ok: true, precios: a.precios, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
@@ -301,7 +307,7 @@ const limpiarRetenciones = db => db.prepare('DELETE FROM bloques WHERE hasta > 0
 async function reservar(env, d) {
   const db = env.DB, a = await ajustes(db);
   const fecha = String(d.fecha || ''), hora = normHora(d.hora);
-  if (!esFecha(fecha) || !hora || !a.horarios.includes(hora)) throw err('Elige un día y un horario.');
+  if (!esFecha(fecha) || !hora || !horasDia(a, fecha).includes(hora)) throw err('Elige un día y un horario.');
   const personas = Math.floor(Number(d.personas));
   if (!(personas >= 1 && personas <= a.maxWeb)) throw err('Para más de ' + a.maxWeb + ' personas escríbenos por WhatsApp.');
   const c = cotizar(a, personas, d.menores, d.ninos);
