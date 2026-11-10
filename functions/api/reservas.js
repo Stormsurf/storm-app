@@ -28,7 +28,7 @@ const BLOQUE = 30; // minutos
 const AJUSTES_BASE = {
   precios: { 1: 35000, 2: 60000, 3: 75000, 4: 100000, 5: 100000 },
   pagos: { 1: 15000, 2: 20000, 3: 25000, 4: 25000, 5: 30000, grupo: 25000 }, // pago al instructor por clase
-  horarios: ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00'], // bloques seguidos de 1:30
+  horarios: ['08:30', '09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00'], // bloques seguidos de 1:30 (08:30 solo domingo en la semana tipo, antes de la Academia de las 10:00)
   duracion: 90,          // minutos
   minHoras: 3,           // anticipación mínima
   horaTarde: '13:00',    // clases antes de esta hora son "de la mañana"
@@ -74,6 +74,8 @@ function normHora(h) {
 const esFecha = f => /^\d{4}-\d{2}-\d{2}$/.test(String(f || ''));
 const diaUTC = f => { const [y, m, d] = f.split('-').map(Number); return Date.UTC(y, m - 1, d); };
 const diaSemana = f => new Date(diaUTC(f)).getUTCDay();
+// Semana tipo de un instructor nuevo: todos los horarios; los antes de las 9:00 solo el domingo
+const horasBase = (a, dia) => a.horarios.filter(h => dia === 0 || h >= '09:00');
 const sumarDias = (f, n) => new Date(diaUTC(f) + n * 86400000).toISOString().slice(0, 10);
 /** minutos "de reloj de Chile" desde 1970: sirven para comparar fechas y horas locales */
 const minLocal = (f, h) => diaUTC(f) / 60000 + aMin(h);
@@ -95,7 +97,7 @@ async function instructores(db) {
     const st = [];
     INSTRUCTORES_BASE.forEach((n, i) => {
       st.push(db.prepare('INSERT OR IGNORE INTO instructores (nombre, orden) VALUES (?, ?)').bind(n, i));
-      for (let d = 0; d < 7; d++) st.push(db.prepare('INSERT OR IGNORE INTO semana (instructor, dia, horas) VALUES (?, ?, ?)').bind(n, d, JSON.stringify(a.horarios)));
+      for (let d = 0; d < 7; d++) st.push(db.prepare('INSERT OR IGNORE INTO semana (instructor, dia, horas) VALUES (?, ?, ?)').bind(n, d, JSON.stringify(horasBase(a, d))));
     });
     FIJOS_BASE.forEach(f => st.push(db.prepare("INSERT INTO ocupaciones (origen, instructor, dia, desde, hasta, motivo) VALUES ('fijo', ?, ?, ?, ?, ?)").bind(...f)));
     await db.batch(st);
@@ -690,7 +692,7 @@ async function guardarInstructor(env, q, d) {
     if (d.tarifas && typeof d.tarifas === 'object') { const t = {}; ['1', '2', '3', '4', '5', 'grupo'].forEach(k => { const v = Math.round(Number(String(d.tarifas[k] == null ? '' : d.tarifas[k]).replace(/\D/g, '')) || 0); if (v) t[k] = v; }); tar = Object.keys(t).length ? JSON.stringify(t) : null; }
     const st = [db.prepare('INSERT INTO instructores (nombre, correo, telefono, rut, activo, tarifas, orden) VALUES (?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(orden),0)+1 FROM instructores)) ON CONFLICT(nombre) DO UPDATE SET correo = excluded.correo, telefono = excluded.telefono, rut = excluded.rut, activo = excluded.activo' + (d.tarifas ? ', tarifas = excluded.tarifas' : ''))
       .bind(nombre, norm(d.correo), String(d.telefono || '').trim(), String(d.rut || '').trim(), d.activo === false ? 0 : 1, tar)];
-    if (!existe) for (let i = 0; i < 7; i++) st.push(db.prepare('INSERT OR IGNORE INTO semana (instructor, dia, horas) VALUES (?, ?, ?)').bind(nombre, i, JSON.stringify(a.horarios)));
+    if (!existe) for (let i = 0; i < 7; i++) st.push(db.prepare('INSERT OR IGNORE INTO semana (instructor, dia, horas) VALUES (?, ?, ?)').bind(nombre, i, JSON.stringify(horasBase(a, i))));
     await db.batch(st);
   }
   await anotar(db, q, 'instructor ' + nombre + (d.borrar ? ' borrado' : ''));
