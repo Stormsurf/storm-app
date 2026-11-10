@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reserva tu clase de surf · Storm</title>
+<meta name="description" content="Reserva y paga tu clase de surf con Storm en Playa de Matanzas. 1 hora y 30 minutos, con tabla, traje e instructor.">
+<meta name="theme-color" content="#EFECE8">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="apple-touch-icon" href="/icons/storm-app-180.png">
+<meta property="og:title" content="Reserva tu clase de surf · Storm">
+<meta property="og:description" content="Elige el día y la hora, y paga en línea. Tabla, traje e instructor incluidos.">
+<meta property="og:image" content="https://app.stormsurf.cl/icons/storm-app-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1">
+<style>
+.rs{--ac:#61A1C8;--ac-dk:#2d6e94;--ac-soft:#E6F1F8;--ink:#2C2C2B;--mute:#6b6a67;--line:rgba(44,44,43,.1);--ok:#3f8f5f;max-width:560px;margin:0 auto;color:var(--ink)}
+.rs *{box-sizing:border-box}
+.rs-hero{text-align:center;padding:6px 4px 4px}
+.rs-hero h1{margin:0;font-size:3rem;line-height:1.1;font-weight:600;letter-spacing:-.01em}
+.rs-hero p{margin:8px auto 0;max-width:420px;color:var(--mute);font-size:1.5rem}
+.rs-inc{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:12px}
+.rs-inc span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:1.3rem;font-weight:500}
+.rs-card{background:#fff;border-radius:22px;padding:20px 18px;margin-top:14px;box-shadow:0 1px 2px rgba(44,44,43,.04)}
+.rs-step{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.rs-step i{font-style:normal;flex:none;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:1.35rem}
+.rs-step h2{margin:0;font-size:1.9rem;font-weight:600;line-height:1.2}
+.rs-card.off{opacity:.45;pointer-events:none}
+.rs-ppl{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.rs-ppl button,.rs-more{border:1.5px solid var(--line);background:#fff;border-radius:16px;padding:12px 0 10px;font:inherit;cursor:pointer;color:var(--ink);text-align:center}
+.rs-ppl button b{display:block;font-size:2.2rem;line-height:1;font-weight:600}
+.rs-ppl button small{display:block;font-size:1.15rem;color:var(--mute);margin-top:4px}
+.rs-ppl button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rs-ppl button.on small{color:#cfcdc9}
+.rs-more{display:block;width:100%;margin-top:8px;padding:11px;font-size:1.4rem;font-weight:500;text-decoration:none;color:var(--ac-dk)}
+.rs-kids{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.rs-kids p{margin:0;font-size:1.45rem;line-height:1.35}.rs-kids small{display:block;color:var(--mute);font-size:1.25rem}
+.rs-num{display:flex;align-items:center;gap:4px;flex:none}
+.rs-num button{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:2rem;line-height:1;cursor:pointer;color:var(--ink)}
+.rs-num button:disabled{opacity:.3}
+.rs-num b{min-width:28px;text-align:center;font-size:1.8rem;font-weight:600}
+.rs-price{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:16px;padding:14px 16px;border-radius:16px;background:var(--ac-soft)}
+.rs-price span{font-size:1.4rem;color:var(--ac-dk);font-weight:500}
+.rs-price b{font-size:2.6rem;font-weight:700;letter-spacing:-.01em}
+.rs-note{margin:10px 0 0;font-size:1.25rem;color:var(--mute);line-height:1.45}
+.rs-cal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.rs-cal-h b{font-size:1.6rem;font-weight:600;text-transform:capitalize}
+.rs-cal-h button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;font:inherit;font-size:1.8rem;cursor:pointer;color:var(--ink)}
+.rs-cal-h button:disabled{opacity:.25}
+.rs-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.rs-cal .wd{font-size:1.15rem;color:var(--mute);font-weight:600;padding:2px 0 4px}
+.rs-cal button{aspect-ratio:1;border:0;border-radius:12px;background:none;font:inherit;font-size:1.5rem;color:#bdbbb6;cursor:default;position:relative}
+.rs-cal button.si{color:var(--ink);font-weight:600;background:var(--ac-soft);cursor:pointer}
+.rs-cal button.si::after{content:'';position:absolute;left:50%;bottom:6px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--ac)}
+.rs-cal button.on{background:var(--ink);color:#fff}.rs-cal button.on::after{background:#fff}
+.rs-cal button.hoy{outline:1.5px solid var(--line);outline-offset:-1.5px}
+.rs-horas{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.rs-horas button{border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px 4px;font:inherit;font-size:1.6rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.rs-horas button small{display:block;font-size:1.1rem;font-weight:500;color:var(--mute)}
+.rs-horas button.on{background:var(--ink);border-color:var(--ink);color:#fff}.rs-horas button.on small{color:#cfcdc9}
+.rs-dia{margin:16px 0 0;font-size:1.5rem;font-weight:600}
+.rs-empty{margin:12px 0 0;font-size:1.4rem;color:var(--mute)}
+.rs-f label{display:block;font-size:1.3rem;font-weight:600;margin:12px 0 5px}
+.rs-f label:first-child{margin-top:0}
+.rs-f input,.rs-f textarea{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;font:inherit;font-size:1.6rem;background:#fff;color:var(--ink)}
+.rs-f input:focus,.rs-f textarea:focus{outline:none;border-color:var(--ac)}
+.rs-f textarea{min-height:76px;resize:vertical}
+.rs-chk{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:1.3rem;line-height:1.45;color:var(--mute);cursor:pointer}
+.rs-chk input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--ink)}
+.rs-sum{margin:16px 0 0;padding:14px 16px;border-radius:16px;background:#F5F3EF;font-size:1.4rem;line-height:1.55}
+.rs-sum b{font-weight:600}
+.rs-go{display:block;width:100%;margin-top:14px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:inherit;font-size:1.7rem;font-weight:600;padding:16px;cursor:pointer}
+.rs-go:disabled{opacity:.4;cursor:default}
+.rs-err{margin:10px 0 0;color:#a12c1c;font-size:1.4rem}
+.rs-mp{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-size:1.2rem;color:var(--mute)}
+.rs-skel{height:220px;border-radius:16px;background:linear-gradient(90deg,#f3f1ed 25%,#ebe8e3 50%,#f3f1ed 75%);background-size:200% 100%;animation:rs-sk 1.2s infinite}
+@keyframes rs-sk{to{background-position:-200% 0}}
+.rs-done{text-align:center;padding:28px 20px}
+.rs-done .ic{width:64px;height:64px;border-radius:50%;background:#e5f2ea;color:var(--ok);display:grid;place-items:center;margin:0 auto 12px;font-size:3rem}
+.rs-done h2{margin:0;font-size:2.6rem}
+.rs-done p{margin:8px 0 0;font-size:1.5rem;color:var(--mute);line-height:1.5}
+.rs-done .big{color:var(--ink);font-size:1.8rem;font-weight:600;margin-top:14px}
+.rs-btn2{display:inline-block;margin-top:14px;border:1.5px solid var(--ink);border-radius:999px;padding:11px 20px;font:inherit;font-weight:600;font-size:1.4rem;color:var(--ink);text-decoration:none;background:#fff;cursor:pointer}
+.rs-wa{display:block;text-align:center;margin:18px 0 0;font-size:1.4rem;color:var(--mute)}
+</style>
+</head>
+<body>
+<header class="ap-top"><a href="https://www.stormsurf.cl" aria-label="Storm"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></a></header>
+<main class="storm-section"><div class="rs" id="rs"></div></main>
+<script>
+(()=>{
+  const API = '/api/reservas';
+  const WA = '56977744306';
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const clp = n => '$' + Math.round(n || 0).toLocaleString('es-CL');
+  const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const fd = f => { const [y,m,d] = f.split('-').map(Number); const x = new Date(Date.UTC(y,m-1,d)); const t = DIAS[x.getUTCDay()] + ' ' + d + ' de ' + MESES[m-1]; return t[0].toUpperCase() + t.slice(1); };
+  const fin = h => { const [a,b] = h.split(':').map(Number), t = a*60 + b + (D ? D.duracion : 90); return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0'); };
+  async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.'); } if(!d.ok) throw new Error(d.error || 'Algo falló.'); return d; }
+  const root = $('#rs');
+  const S = { personas: 0, menores: 0, fecha: '', hora: '', mes: '' };
+  let D = null, cargando = false, errCarga = '', pidiendo = 0;
+  const precioDe = p => D && D.precios ? Number(D.precios[p]) : 0;
+  const necesita = () => Math.max(1, Math.ceil(S.menores / 2));
+  const waLink = t => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(t);
+
+  async function cargar(){
+    const id = ++pidiendo; cargando = true; errCarga = ''; pintar();
+    try{ const d = await post({accion:'disponibilidad', personas: S.personas || 1, menores: S.menores}); if(id !== pidiendo) return; D = d; }
+    catch(x){ if(id !== pidiendo) return; errCarga = x.message; }
+    cargando = false;
+    if(D && S.fecha && !(D.dias[S.fecha] || []).includes(S.hora)) S.hora = '';
+    if(D && S.fecha && !D.dias[S.fecha]) { S.fecha = ''; S.hora = ''; }
+    pintar();
+  }
+
+  function calendario(){
+    if(cargando && !D) return `<div class='rs-skel'></div>`;
+    if(errCarga && !D) return `<p class='rs-err'>${esc(errCarga)}</p><button class='rs-btn2' id='rs-retry'>Intentar de nuevo</button>`;
+    const dias = Object.keys(D.dias).sort();
+    if(!dias.length) return `<p class='rs-empty'>No quedan horarios disponibles en los próximos días. <a href='${waLink('Hola Storm, quiero reservar una clase de surf')}' target='_blank' rel='noopener'>Escríbenos por WhatsApp</a>.</p>`;
+    const primero = D.hoy.slice(0,7), ultimo = D.hasta.slice(0,7);
+    if(!S.mes) S.mes = dias[0].slice(0,7);
+    const [y, m] = S.mes.split('-').map(Number);
+    const ini = new Date(Date.UTC(y, m-1, 1)).getUTCDay(), largo = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const off = (ini + 6) % 7; // semana parte el lunes
+    let h = `<div class='rs-cal-h'><button id='rs-prev' aria-label='Mes anterior'${S.mes <= primero ? ' disabled' : ''}>‹</button><b>${MESES[m-1]} ${y}</b><button id='rs-next' aria-label='Mes siguiente'${S.mes >= ultimo ? ' disabled' : ''}>›</button></div><div class='rs-cal'>`;
+    h += ['L','M','M','J','V','S','D'].map(x => `<span class='wd'>${x}</span>`).join('');
+    for(let i = 0; i < off; i++) h += '<span></span>';
+    for(let d = 1; d <= largo; d++){
+      const f = S.mes + '-' + String(d).padStart(2,'0'), si = !!D.dias[f];
+      h += `<button ${si ? `class='si${S.fecha===f?' on':''}${f===D.hoy?' hoy':''}' data-f='${f}' aria-label='${fd(f)}'` : `class='${f===D.hoy?'hoy':''}' disabled`}>${d}</button>`;
+    }
+    h += '</div>';
+    if(S.fecha){
+      const horas = D.dias[S.fecha] || [];
+      h += `<p class='rs-dia'>${fd(S.fecha)}</p>` + (horas.length ? `<div class='rs-horas'>${horas.map(x => `<button data-h='${x}' class='${S.hora===x?'on':''}'>${x}<small>a ${fin(x)}</small></button>`).join('')}</div>` : `<p class='rs-empty'>Ese día ya no quedan horarios.</p>`);
+    } else h += `<p class='rs-note'>Los días en azul tienen horarios libres. Toca uno para ver las horas.</p>`;
+    return h;
+  }
+
+  function pintar(){
+    const p = S.personas, precio = precioDe(p), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
+    const kids = p ? `<div class='rs-kids'><p>¿Cuántos son menores de 7 años?<small>Por seguridad, va 1 instructor por cada 2 niños menores de 7.</small></p>
+      <div class='rs-num'><button data-k='-1' aria-label='Menos'${S.menores<=0?' disabled':''}>−</button><b>${S.menores}</b><button data-k='1' aria-label='Más'${S.menores>=p?' disabled':''}>+</button></div></div>` : '';
+    const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
+    root.innerHTML = `
+      <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
+        <div class='rs-inc'><span>1 hora y 30 minutos</span><span>Tabla y traje incluidos</span><span>Todos los niveles</span></div></div>
+      <div class='rs-card'><div class='rs-step'><i>1</i><h2>¿Cuántas personas son?</h2></div>
+        <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
+        <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
+        ${kids}
+        ${p ? `<div class='rs-price'><span>Clase para ${p} persona${p===1?'':'s'}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
+      </div>
+      <div class='rs-card${listo1?'':' off'}' id='rs-paso2'><div class='rs-step'><i>2</i><h2>Elige el día y la hora</h2></div>${listo1 ? calendario() : `<p class='rs-note'>Primero elige cuántas personas son.</p>`}</div>
+      <div class='rs-card${listo2?'':' off'}' id='rs-paso3'><div class='rs-step'><i>3</i><h2>Tus datos</h2></div>
+        <div class='rs-f'>
+          <label for='rs-n'>Nombre y apellido</label><input id='rs-n' name='nombre' autocomplete='name' required>
+          <label for='rs-t'>Teléfono (WhatsApp)</label><input id='rs-t' name='telefono' type='tel' inputmode='tel' autocomplete='tel' placeholder='+56 9 …' required>
+          <label for='rs-c'>Correo (te llega el comprobante)</label><input id='rs-c' name='correo' type='email' inputmode='email' autocomplete='email' required>
+          <label for='rs-x'>¿Algo que debamos saber? <span style='font-weight:400;color:var(--mute)'>(opcional)</span></label><textarea id='rs-x' name='comentario' placeholder='Edades, si ya surfearon antes, alguna lesión…'></textarea>
+          <label class='rs-chk'><input type='checkbox' name='acepta'> Sé que el surf es un deporte en el mar. Si el mar no está apto, Storm me avisa por WhatsApp para cambiar la hora.</label>
+        </div>
+        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 7' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
+        <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
+        <p class='rs-err' id='rs-err' hidden></p>
+        <p class='rs-mp'>🔒 Pago seguro con Mercado Pago</p>
+      </div>
+      <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tengo una pregunta sobre las clases de surf')}'>¿Dudas? Escríbenos por WhatsApp</a>`;
+    root.querySelectorAll('.rs-f [name]').forEach(i => { if(i.name in guardado){ if(i.type === 'checkbox') i.checked = guardado[i.name]; else i.value = guardado[i.name]; } });
+    root.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const antes = necesita(); S.personas = +b.dataset.p; S.menores = Math.min(S.menores, S.personas); if(!D || necesita() !== antes) cargar(); else pintar(); });
+    root.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const antes = necesita(); S.menores = Math.max(0, Math.min(S.personas, S.menores + +b.dataset.k)); if(necesita() !== antes) cargar(); else pintar(); });
+    root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.fecha = b.dataset.f; S.hora = ''; pintar(); const h = $('.rs-dia'); if(h) h.scrollIntoView({behavior:'smooth', block:'start'}); });
+    root.querySelectorAll('[data-h]').forEach(b => b.onclick = () => { S.hora = b.dataset.h; pintar(); $('#rs-paso3').scrollIntoView({behavior:'smooth', block:'start'}); });
+    const mv = n => { const [y,m] = S.mes.split('-').map(Number), x = new Date(Date.UTC(y, m-1+n, 1)); S.mes = x.toISOString().slice(0,7); pintar(); };
+    const pv = $('#rs-prev'), nx = $('#rs-next'), rt = $('#rs-retry');
+    if(pv) pv.onclick = () => mv(-1); if(nx) nx.onclick = () => mv(1); if(rt) rt.onclick = cargar;
+    const go = $('#rs-go');
+    if(go) go.onclick = async () => {
+      const f = {}; root.querySelectorAll('.rs-f [name]').forEach(i => f[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
+      const e = $('#rs-err'), msg = t => { e.hidden = false; e.textContent = t; };
+      if(f.nombre.length < 2) return msg('Escribe tu nombre.');
+      if(f.telefono.replace(/\D/g,'').length < 8) return msg('Revisa tu teléfono.');
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.correo)) return msg('Revisa tu correo.');
+      if(!f.acepta) return msg('Marca la casilla para seguir.');
+      go.disabled = true; go.textContent = 'Conectando con Mercado Pago…'; e.hidden = true;
+      try{
+        const r = await post(Object.assign({accion:'reservar', personas: S.personas, menores: S.menores, fecha: S.fecha, hora: S.hora}, f));
+        try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
+        location.href = r.url;
+      }catch(x){ go.disabled = false; go.textContent = 'Pagar ' + clp(precioDe(S.personas)); msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
+    };
+  }
+
+  // Vuelta desde Mercado Pago
+  async function vuelta(ref, pago){
+    root.innerHTML = `<div class='rs-card rs-done'><div class='rs-skel' style='height:120px'></div><p>Revisando tu pago…</p></div>`;
+    let r = null;
+    for(let i = 0; i < 20; i++){
+      try{ r = await post({accion:'estado', ref}); }catch(x){ r = {error: x.message}; }
+      if(r.estado === 'pagada' || r.estado === 'revisar' || pago === 'error' || r.error) break;
+      await new Promise(ok => setTimeout(ok, 3000));
+    }
+    if(r && (r.estado === 'pagada' || r.estado === 'revisar')){
+      const ini = r.fecha.replace(/-/g,'') + 'T' + r.hora.replace(':','') + '00', fn = r.fecha.replace(/-/g,'') + 'T' + fin(r.hora).replace(':','') + '00';
+      const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Clase de surf Storm') + '&dates=' + ini + '/' + fn + '&ctz=America/Santiago&location=' + encodeURIComponent('Playa de Matanzas') + '&details=' + encodeURIComponent('Llega 10 minutos antes. Trae traje de baño, toalla y bloqueador.');
+      root.innerHTML = `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>¡Clase reservada!</h2>
+        <p class='big'>${esc(fd(r.fecha))}, ${esc(r.hora)} hrs</p>
+        <p>${r.personas} persona${r.personas===1?'':'s'} · Playa de Matanzas<br>Te enviamos el comprobante a ${esc(r.correo)}.</p>
+        <p>Nosotros ponemos tabla y traje. Trae traje de baño, toalla y bloqueador, y llega 10 minutos antes.</p>
+        <a class='rs-btn2' href='${gcal}' target='_blank' rel='noopener'>Agregar a mi calendario</a></div>
+        <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, reservé una clase (' + ref + ')')}'>¿Necesitas cambiar algo? Escríbenos por WhatsApp</a>`;
+      return;
+    }
+    const pendiente = r && r.estado === 'pendiente' && pago !== 'error';
+    root.innerHTML = `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>${pendiente ? '…' : '!'}</div>
+      <h2>${pendiente ? 'Tu pago está en revisión' : 'El pago no se completó'}</h2>
+      <p>${pendiente ? 'Apenas Mercado Pago lo confirme te llega el comprobante por correo. Guardamos tu horario por unos minutos.' : 'No se hizo ningún cobro. Puedes intentarlo de nuevo.'}</p>
+      <a class='rs-btn2' href='/reservar/'>${pendiente ? 'Volver' : 'Intentar de nuevo'}</a></div>
+      <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tuve un problema al pagar mi clase (' + ref + ')')}'>¿Problemas? Escríbenos por WhatsApp</a>`;
+  }
+
+  const q = new URLSearchParams(location.search);
+  if(q.get('ref')) vuelta(q.get('ref'), q.get('pago'));
+  else { pintar(); cargar(); }
+})();
+</script>
+</body>
+</html>
