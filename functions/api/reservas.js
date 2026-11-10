@@ -217,7 +217,9 @@ function elegir(ag, a, fecha, hora) {
     for (let m = aMin(despues); tiene(n, m); m += BLOQUE) blo++;
     return blo / Math.ceil(a.duracion / BLOQUE) > (a.maxSeguidas || 2) ? -1 : 1;
   };
-  return shuffle(ag.ins.filter(i => i.activo && ag.libre(i.nombre, fecha, hora)).map(i => i.nombre)).sort((x, y) => pegado(y) - pegado(x));
+  // clases que ya tiene ese día: si nadie tiene una pegada, va al que tiene menos (así trabajan todos)
+  const nDia = n => new Set(ag.bloques.filter(b => b.instructor === n && b.fecha === fecha).map(b => b.ref)).size;
+  return shuffle(ag.ins.filter(i => i.activo && ag.libre(i.nombre, fecha, hora)).map(i => i.nombre)).sort((x, y) => pegado(y) - pegado(x) || nDia(x) - nDia(y));
 }
 /** Guarda la reserva y ocupa los bloques en un solo paso: si alguien tomó el horario un segundo antes, falla entera. */
 async function guardarReserva(db, a, r, hastaMs) {
