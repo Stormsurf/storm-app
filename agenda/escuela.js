@@ -76,7 +76,7 @@
   .es-aviso{background:#fbeee2;color:#7a4317;border-radius:14px;padding:12px 14px;font-size:1.35rem;line-height:1.45;margin-top:12px}
   `;
 
-  let E = null, auth = null, pane = null, sub = 'reservas', filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false;
+  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'reservas', filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false;
   const KEY = 'storm-agenda-datos';
 
   async function post(body) {
@@ -106,12 +106,16 @@
     return o ? o.motivo || 'Ocupado' : ''; };
   const reservaEn = (inst, fecha, hora) => E.reservas.find(r => r.fecha === fecha && r.instructores.includes(inst) && Math.abs(aMin(r.hora) - aMin(hora)) < E.duracion);
 
+  const msgLink = L => 'Hola ' + L.nombre.split(' ')[0] + '! Te dejo el link para pagar tu clase de surf con Storm: ' + flarga(L.fecha).toLowerCase() + ' a las ' + L.hora + ', ' + L.personas + (L.personas === 1 ? ' persona' : ' personas') + ', ' + clp(L.total) + '. Al pagar te llega el comprobante y la ficha para llenar.\n' + L.url;
   // ---------- pintar ----------
   function pintar() {
     if (!pane || !E) return;
     const admin = E.rol === 'admin';
     let h = `<style>${css}</style>`;
     if (msg) h += `<div class='pn-ok'>${esc(msg)}</div>`;
+    if (linkNuevo) { const L = linkNuevo;
+      h += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
+        <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
     h += `<div class='es-sub'><button data-sub='reservas'>Reservas</button><button data-sub='calendario'>${admin ? 'Calendario instructores' : 'Mi calendario'}</button>${admin ? `<button data-sub='ajustes'>Ajustes</button>` : ''}</div>`;
     if (sub === 'calendario') h += calendario(admin);
     else if (sub === 'ajustes' && admin) h += ajustes();
@@ -148,14 +152,15 @@
   }
 
   function tarjeta(r, admin) {
-    const est = r.estado === 'pendiente' ? `<span class='es-est'>Pagando en este momento</span>` : r.estado === 'revisar' ? `<span class='es-est'>Revisar: ${esc(r.nota)}</span>` : '';
+    const est = r.estado === 'pendiente' ? `<span class='es-est'>${r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago (link enviado)' : 'Pagando en este momento'}</span>` : r.estado === 'revisar' ? `<span class='es-est'>Revisar: ${esc(r.nota)}</span>` : '';
     let h = `<div class='es-r'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora)}</small></div>
       <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 7' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
       ${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}${est}
       <span class='es-est' style='${(r.fichas || []).length >= r.personas ? 'background:#e5f2ea;color:#2f7a4d' : ''}'>Fichas ${(r.fichas || []).length}/${r.personas}</span></div>
       ${wa(r.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}'>WhatsApp</a>` : ''}</div>
       ${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}
-      <div class='es-acc'>${(r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${(r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
+      ${admin && r.linkPago ? `<div class='es-acc'><button class='es-btn' data-lf='${esc(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Copiar link de pago</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Reenviar por WhatsApp</a>` : ''}</div>` : ''}
+      <div class='es-acc'>${r.estado === 'pendiente' ? '' : (r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${r.estado !== 'pendiente' && (r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
     if (admin && r.fecha >= E.hoy) {
       if (abierta !== r.ref) h += `<div class='es-acc'><button class='es-btn sec' data-abre='${r.ref}' data-modo='ins'>Cambiar instructor</button><button class='es-btn sec' data-abre='${r.ref}' data-modo='mover'>Mover</button><button class='es-btn peligro' data-abre='${r.ref}' data-modo='cancelar'>Cancelar</button></div>`;
       else if (modo === 'ins') {
@@ -189,13 +194,13 @@
         <label>Correo (opcional)<input name='correo' type='email'></label>
         <label>Total cobrado<input name='total' inputmode='numeric' placeholder='según la tabla'></label>
         <label>Pago instructores<input name='pagoInstructor' inputmode='numeric' placeholder='según la tabla'></label>
-        <label>Cómo pagó<select name='medio'><option>Transferencia</option><option>Efectivo</option><option>Por pagar</option><option>Mercado Pago</option></select></label>
+        <label>Pago<select name='medio'><option value='Link de pago'>Mandar link de pago</option><option>Transferencia</option><option>Efectivo</option><option>Por pagar</option><option value='Mercado Pago'>Ya pagó por Mercado Pago</option></select></label>
         <label>Instructor<select name='instructor'><option value=''>Al azar (los libres)</option>${E.instructores.filter(i => i.activo).map(i => `<option>${esc(i.nombre)}</option>`).join('')}</select></label>
         <label>N° de instructores<input type='number' name='nInstructores' min='1' value='1' inputmode='numeric'></label>
         <label class='w'>Comentario<textarea name='comentario' rows='2'></textarea></label>
-        <label class='w' style='font-weight:500'><input type='checkbox' name='avisar' style='display:inline;width:auto;margin:0 6px 0 0'>Mandarle el comprobante por correo</label>
+        <label class='w' style='font-weight:500'><input type='checkbox' name='avisar' style='display:inline;width:auto;margin:0 6px 0 0'>Si ya pagó: mandarle el comprobante por correo</label>
       </div>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Si dejas vacíos el total y el pago, se usa la tabla (${clp(a.precios && a.precios[2])} para 2 personas; grupos de más de 5: ${clp(a.pagos && a.pagos.grupo)} por instructor).</p>
+      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Con "Mandar link de pago" el horario queda guardado 24 horas (o hasta la clase) y te damos el link para mandarlo por WhatsApp. Si no paga, se libera solo. Si dejas vacíos el total y el pago, se usa la tabla (${clp(a.precios && a.precios[2])} para 2 personas; grupos de más de 5: ${clp(a.pagos && a.pagos.grupo)} por instructor).</p>
       <div class='es-acc'><button class='es-btn' data-manual-go>Guardar reserva</button><button class='pn-link' data-manual>Cerrar</button></div><p class='es-err vivo'></p></div>`;
   }
 
@@ -276,6 +281,7 @@
     const $$ = s => pane.querySelectorAll(s), $ = s => pane.querySelector(s);
     $$('[data-fi]').forEach(b => b.onclick = () => { filtroIns = b.dataset.fi; pintar(); });
     $$('[data-pasadas]').forEach(b => b.onclick = () => { verPasadas = !verPasadas; pintar(); });
+    $$('[data-lnx]').forEach(b => b.onclick = () => { linkNuevo = null; pintar(); });
     $$('[data-lf]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.lf); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', b.dataset.lf); } });
     $$('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(E.link); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', E.link); } });
     $$('[data-manual]').forEach(b => b.onclick = () => { manualOn = !manualOn; pintar(); });
@@ -297,7 +303,7 @@
     if (mg) mg.onclick = () => {
       const c = mg.closest('.pn-card'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
       const body = Object.assign({ accion: 'manual' }, v, { instructores: v.instructor ? [v.instructor] : [] });
-      accion(body, mg).then(ok => { if (ok) { manualOn = false; msg = 'Reserva de ' + v.nombre + ' guardada.'; pintar(); } });
+      accion(body, mg).then(ok => { if (ok) { manualOn = false; msg = E.nuevoLink ? '' : 'Reserva de ' + v.nombre + ' guardada.'; linkNuevo = E.nuevoLink || null; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
     };
     // calendario
     $$('[data-ci]').forEach(b => b.onclick = () => { calIns = b.dataset.ci; pintar(); });

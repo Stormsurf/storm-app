@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS reservas (
   orden_mp TEXT NOT NULL DEFAULT '',
   recordatorio INTEGER NOT NULL DEFAULT 0,
   nota TEXT NOT NULL DEFAULT '',
-  clave TEXT NOT NULL DEFAULT ''   -- llave del link de la ficha
+  clave TEXT NOT NULL DEFAULT '',  -- llave del link de la ficha
+  link_pago TEXT NOT NULL DEFAULT '' -- link de Mercado Pago (reservas anotadas a mano)
 );
 CREATE INDEX IF NOT EXISTS reservas_fecha ON reservas(fecha);
 CREATE INDEX IF NOT EXISTS reservas_estado ON reservas(estado);

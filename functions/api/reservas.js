@@ -34,7 +34,8 @@ const AJUSTES_BASE = {
   diasAdelante: 60,
   retencionMin: 30,      // minutos que se guarda el horario mientras pagan
   maxWeb: 5,             // más personas = por WhatsApp
-  maxSeguidas: 2,        // se juntan las clases en el mismo instructor hasta 2 seguidas
+  maxSeguidas: 2,
+  horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
 };
@@ -260,24 +261,31 @@ async function reservar(env, d) {
     catch (x) { if (!/UNIQUE|constraint/i.test(String(x.message))) throw x; }
   }
   if (!elegido) throw err('Ese horario se acaba de ocupar. Elige otro.');
-  const vuelta = PAGINA + '?ref=' + encodeURIComponent(ref) + '&pago=';
+  const o = await crearOrden(env, elegido);
+  if (!o) {
+    await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = ? WHERE ref = ?").bind('Mercado Pago no respondió', ref)]);
+    throw err('No pudimos conectar con Mercado Pago. Intenta de nuevo en un momento.');
+  }
+  return { ok: true, url: o.url, ref, total: c.precio };
+}
+
+/** Crea el cobro en Mercado Pago y lo deja anotado en la reserva. Devuelve { id, url } o null si Mercado Pago no respondió. */
+async function crearOrden(env, r) {
+  const vuelta = PAGINA + '?ref=' + encodeURIComponent(r.ref) + '&pago=';
   const orden = {
-    type: 'online', processing_mode: 'manual', total_amount: String(c.precio), external_reference: ref,
-    description: 'Clase de surf Storm', payer: { email: correo },
-    items: [{ title: 'Clase de surf Storm · ' + personas + (personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(fecha) + ' ' + hora, quantity: 1, unit_price: String(c.precio) }],
+    type: 'online', processing_mode: 'manual', total_amount: String(r.total), external_reference: r.ref,
+    description: 'Clase de surf Storm', ...(r.correo ? { payer: { email: r.correo } } : {}),
+    items: [{ title: 'Clase de surf Storm · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(r.fecha) + ' ' + r.hora, quantity: 1, unit_price: String(r.total) }],
     config: { online: { success_url: vuelta + 'ok', pending_url: vuelta + 'pendiente', failure_url: vuelta + 'error', auto_return: 'approved' } }
   };
   let res = {}, code = 0;
   try {
-    const r = await fetch((env.MP_API || MP_API) + '/v1/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + env.MP_TOKEN, 'X-Idempotency-Key': ref }, body: JSON.stringify(orden) });
-    code = r.status; res = await r.json().catch(() => ({}));
+    const x = await fetch((env.MP_API || MP_API) + '/v1/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + env.MP_TOKEN, 'X-Idempotency-Key': r.ref }, body: JSON.stringify(orden) });
+    code = x.status; res = await x.json().catch(() => ({}));
   } catch (_) {}
-  if (code >= 300 || !res.checkout_url) {
-    await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = ? WHERE ref = ?").bind('Mercado Pago no respondió (' + code + ')', ref)]);
-    throw err('No pudimos conectar con Mercado Pago. Intenta de nuevo en un momento.');
-  }
-  await db.prepare('UPDATE reservas SET orden_mp = ? WHERE ref = ?').bind(String(res.id || ''), ref).run();
-  return { ok: true, url: res.checkout_url, ref, total: c.precio };
+  if (code >= 300 || !res.checkout_url) return null;
+  await env.DB.prepare('UPDATE reservas SET orden_mp = ?, link_pago = ? WHERE ref = ?').bind(String(res.id || ''), res.checkout_url, r.ref).run();
+  return { id: res.id, url: res.checkout_url };
 }
 
 /** Consulta la orden en Mercado Pago y, si está pagada, confirma la reserva. */
@@ -388,7 +396,10 @@ async function revisionAutomatica(env, ctx) {
   for (const r of results) {
     const e = await revisarPago(env, r, null);
     if (e === 'pagada') pagadas++;
-    else if (e === 'pendiente' && Date.now() - r.creada_ms > 3 * 3600000) await db.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref).run();
+    else if (e === 'pendiente') {
+      const guarda = await db.prepare('SELECT COUNT(*) AS n FROM bloques WHERE ref = ?').bind(r.ref).first();
+      if (!(guarda && guarda.n)) await db.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref).run();
+    }
   }
   let anual = null; try { anual = await sincronizarAnual(env); } catch (x) { console.error(x); anual = { error: x.message }; }
   const rec = await recordatorios(env, a);
@@ -413,7 +424,7 @@ async function quien(env, d) {
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
 const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, instructores: parseLista(r.instructores),
-  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, medio: r.medio, creada: r.creada } : {}) });
+  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? r.link_pago : '' } : {}) });
 
 async function panel(env, q) {
   const db = env.DB, a = await ajustes(db), hoy = ahoraChile().fecha, admin = q.rol === 'admin';
@@ -429,7 +440,8 @@ async function panel(env, q) {
   ]);
   const fic = await db.prepare('SELECT ref, n, nombre FROM fichas WHERE ref IN (SELECT ref FROM reservas WHERE fecha BETWEEN ? AND ?)').bind(desde, hasta).all();
   const fichasPor = {}; fic.results.forEach(f => (fichasPor[f.ref] = fichasPor[f.ref] || []).push(f.nombre));
-  let reservas = res.results.filter(r => r.estado !== 'pendiente' || Date.now() - r.creada_ms < a.retencionMin * 60000);
+  const guardadas = new Set((await db.prepare('SELECT DISTINCT ref FROM bloques WHERE hasta > 0').all()).results.map(x => x.ref));
+  let reservas = res.results.filter(r => r.estado !== 'pendiente' || guardadas.has(r.ref));
   if (!admin) reservas = reservas.filter(r => parseLista(r.instructores).includes(q.yo));
   const out = { ok: true, rol: q.rol, yo: q.yo, hoy, duracion: a.duracion, horarios: a.horarios,
     instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono, rut: i.rut } : {}) })),
@@ -512,16 +524,31 @@ async function manual(env, q, d, ctx) {
   const total = d.total === '' || d.total == null ? c.precio : Math.round(Number(String(d.total).replace(/\D/g, '')) || 0);
   const pago = d.pagoInstructor === '' || d.pagoInstructor == null ? c.pagoInstructor : Math.round(Number(String(d.pagoInstructor).replace(/\D/g, '')) || 0);
   const nIns = Math.max(c.instructores, Math.floor(Number(d.nInstructores) || 0));
-  const medio = ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : 'Transferencia';
+  const conLink = d.medio === 'Link de pago';
+  const medio = conLink ? 'Mercado Pago' : ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : 'Transferencia';
+  if (conLink && !(total > 0)) throw err('Escribe el total a cobrar.');
+  if (conLink && !env.MP_TOKEN) throw err('Falta conectar Mercado Pago (MP_TOKEN).');
   const ag = await estadoAgenda(db, a, fecha, fecha);
   let ins = Array.isArray(d.instructores) && d.instructores.length ? d.instructores.map(String) : elegir(ag, a, fecha, hora).slice(0, nIns);
   if (!ins.length) throw err('No hay instructores libres a esa hora. Elige uno a mano.');
   const t = ahoraChile();
-  const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pagada', fecha, hora, personas, menores, instructores: ins, nombre,
+  const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conLink ? 'pendiente' : 'pagada', fecha, hora, personas, menores, instructores: ins, nombre,
     telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pago_instructor: pago, medio, nota: 'Agregada a mano por ' + q.email };
-  try { await guardarReserva(db, a, r, 0); }
+  // Con link: el horario se guarda hasta que paguen (máximo las horas de "horasLink", y nunca después de que empiece la clase).
+  const desfase = minLocal(t.fecha, t.hora) - Math.floor(Date.now() / 60000);
+  const inicioMs = (minLocal(fecha, hora) - desfase) * 60000;
+  const hasta = conLink ? Math.min(Date.now() + (a.horasLink || 24) * 3600000, inicioMs) : 0;
+  if (conLink && hasta <= Date.now()) throw err('Esa clase ya empezó.');
+  try { await guardarReserva(db, a, r, hasta); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Ese instructor ya tiene otra clase a esa hora.'); throw x; }
-  await anotar(db, q, 'manual ' + r.ref);
+  await anotar(db, q, 'manual ' + r.ref + (conLink ? ' con link' : ''));
+  if (conLink) {
+    const o = await crearOrden(env, r);
+    if (!o) { await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = 'Mercado Pago no respondió' WHERE ref = ?").bind(r.ref)]); throw err('Mercado Pago no respondió. Intenta de nuevo.'); }
+    const out = await panel(env, q);
+    out.nuevoLink = { ref: r.ref, url: o.url, nombre: r.nombre, telefono: r.telefono, fecha, hora, personas, total, hasta: ahoraChile(hasta) };
+    return out;
+  }
   if (d.avisar && r.correo) tarea(ctx, avisarReserva(env, Object.assign({}, r, { instructores: JSON.stringify(ins) }), a));
   return panel(env, q);
 }
