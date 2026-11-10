@@ -235,11 +235,12 @@
     h += `<div class='pn-card'><h3>Horarios y reglas</h3>
       <div class='es-f' style='margin-top:10px'><label class='w'>Horas de inicio de clase (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>
       <label>Anticipación mínima (horas)<input id='es-min' type='number' min='0' value='${a.minHoras}'></label>
+      <label>Clases seguidas por instructor (máximo)<input id='es-seg' type='number' min='1' value='${a.maxSeguidas || 3}'></label>
       <label>Se puede reservar hasta (días adelante)<input id='es-dias' type='number' min='1' value='${a.diasAdelante}'></label>
       <label>Las clases antes de las…<input id='es-tarde' value='${esc(a.horaTarde)}'></label>
       <label>…se reservan hasta las (día anterior)<input id='es-noche' value='${esc(a.cierreNoche)}'></label>
       <label class='w'>Lugar (sale en el comprobante)<input id='es-lugar' value='${esc(a.lugar)}'></label></div>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Así nadie reserva de noche para la mañana siguiente. Para la tarde se puede reservar el mismo día, con la anticipación mínima.</p>
+      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Los horarios van seguidos cada 1:30 para que el instructor haga sus clases una tras otra. La app le da la clase nueva al instructor que ya tiene una justo antes o después (hasta el máximo de seguidas). Así nadie reserva de noche para la mañana siguiente. Para la tarde se puede reservar el mismo día, con la anticipación mínima.</p>
       <div class='es-acc'><button class='es-btn' data-aj='reglas'>Guardar</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Instructores de la Escuela</h3><p class='pn-sub'>Con su correo pueden entrar a Agenda Storm y ver su calendario. Inactivo = no recibe clases nuevas (por ejemplo, fuera de temporada).</p>
       ${E.instructores.map(i => `<div class='es-insrow'><b>${esc(i.nombre)}</b><input data-ic='${esc(i.nombre)}' type='email' placeholder='correo' value='${esc(i.correo || '')}'>
@@ -304,7 +305,7 @@
         const precios = {}, pagos = {}; $$('[data-pr]').forEach(i => precios[i.dataset.pr] = i.value); $$('[data-pa]').forEach(i => pagos[i.dataset.pa] = i.value);
         if (await accion({ accion: 'ajustes', precios, pagos }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
       }
-      if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-tarde').value, cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
+      if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, maxSeguidas: $('#es-seg').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-tarde').value, cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
       if (t === 'admins' && await accion({ accion: 'ajustes', admins: $('#es-adm').value.split(/[,\s]+/).filter(Boolean) }, b)) { msg = 'Administradores guardados.'; pintar(); }
       if (t === 'instructores') {
         b.disabled = true; b.textContent = 'Guardando…';

@@ -26,7 +26,7 @@ const BLOQUE = 30; // minutos
 const AJUSTES_BASE = {
   precios: { 1: 35000, 2: 60000, 3: 75000, 4: 100000, 5: 100000 },
   pagos: { 1: 15000, 2: 20000, 3: 25000, 4: 25000, 5: 30000, grupo: 25000 }, // pago al instructor por clase
-  horarios: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'], // a la hora en punto
+  horarios: ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00'], // bloques seguidos de 1:30
   duracion: 90,          // minutos
   minHoras: 3,           // anticipación mínima
   horaTarde: '13:00',    // clases antes de esta hora son "de la mañana"
@@ -34,6 +34,7 @@ const AJUSTES_BASE = {
   diasAdelante: 60,
   retencionMin: 30,      // minutos que se guarda el horario mientras pagan
   maxWeb: 5,             // más personas = por WhatsApp
+  maxSeguidas: 3,        // se juntan las clases en el mismo instructor hasta 3 seguidas
   lugar: 'Playa de Matanzas',
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
 };
@@ -161,6 +162,21 @@ async function disponibilidad(db, d) {
 const nuevaRef = () => { const t = ahoraChile(); return 'ES-' + t.fecha.slice(2).replace(/-/g, '') + '-' + t.hora.replace(':', '') + '-' + Math.floor(Math.random() * 9000 + 1000); };
 const shuffle = arr => { const x = arr.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 
+/** Instructores libres a esa hora: primero los que ya tienen una clase justo antes o justo después (clases seguidas, sin esperar en el agua);
+ *  entre iguales, al azar. */
+function elegir(ag, a, fecha, hora) {
+  const antes = deMin(aMin(hora) - BLOQUE), despues = deMin(Math.floor(aMin(hora) / BLOQUE) * BLOQUE + Math.ceil(a.duracion / BLOQUE) * BLOQUE);
+  const tiene = (n, m) => ag.ocupado.has(n + '|' + fecha + '|' + deMin(m));
+  const pegado = n => {
+    if (!tiene(n, aMin(antes)) && !tiene(n, aMin(despues))) return 0;
+    // cuántas clases seguidas quedaría haciendo (bloques ocupados pegados + esta)
+    let blo = Math.ceil(a.duracion / BLOQUE);
+    for (let m = aMin(antes); tiene(n, m); m -= BLOQUE) blo++;
+    for (let m = aMin(despues); tiene(n, m); m += BLOQUE) blo++;
+    return blo / Math.ceil(a.duracion / BLOQUE) > (a.maxSeguidas || 3) ? -1 : 1;
+  };
+  return shuffle(ag.ins.filter(i => i.activo && ag.libre(i.nombre, fecha, hora)).map(i => i.nombre)).sort((x, y) => pegado(y) - pegado(x));
+}
 /** Guarda la reserva y ocupa los bloques en un solo paso: si alguien tomó el horario un segundo antes, falla entera. */
 async function guardarReserva(db, a, r, hastaMs) {
   const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota)
@@ -193,7 +209,7 @@ async function reservar(env, d) {
   let elegido = null;
   for (let intento = 0; intento < 3 && !elegido; intento++) {
     const ag = await estadoAgenda(db, a, fecha, fecha);
-    const libres = shuffle(ag.ins.filter(i => i.activo && ag.libre(i.nombre, fecha, hora)).map(i => i.nombre));
+    const libres = elegir(ag, a, fecha, hora);
     if (libres.length < c.instructores) break;
     const r = Object.assign({}, base, { instructores: libres.slice(0, c.instructores) });
     try { await guardarReserva(db, a, r, Date.now() + a.retencionMin * 60000); elegido = r; }
@@ -369,7 +385,7 @@ async function panel(env, q) {
     excepciones: exc.results.filter(e => admin || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
     reservas: reservas.map(r => filaPanel(r, admin)), link: PAGINA };
   if (admin) {
-    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins };
+    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins };
     const mes = hoy.slice(0, 7);
     const m = await db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS total, COALESCE(SUM(pago_instructor),0) AS pago FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).first();
     const porIns = await db.prepare("SELECT instructores, pago_instructor FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all();
@@ -444,7 +460,7 @@ async function manual(env, q, d, ctx) {
   const nIns = Math.max(c.instructores, Math.floor(Number(d.nInstructores) || 0));
   const medio = ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : 'Transferencia';
   const ag = await estadoAgenda(db, a, fecha, fecha);
-  let ins = Array.isArray(d.instructores) && d.instructores.length ? d.instructores.map(String) : shuffle(ag.ins.filter(i => i.activo && ag.libre(i.nombre, fecha, hora)).map(i => i.nombre)).slice(0, nIns);
+  let ins = Array.isArray(d.instructores) && d.instructores.length ? d.instructores.map(String) : elegir(ag, a, fecha, hora).slice(0, nIns);
   if (!ins.length) throw err('No hay instructores libres a esa hora. Elige uno a mano.');
   const t = ahoraChile();
   const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pagada', fecha, hora, personas, menores, instructores: ins, nombre,
@@ -478,7 +494,7 @@ async function guardarAjustes(env, q, d) {
   if (d.precios) { const p = {}; for (let i = 1; i <= 5; i++) p[i] = n(d.precios[i]) || a.precios[i]; st.push(['precios', p]); }
   if (d.pagos) { const p = {}; for (let i = 1; i <= 5; i++) p[i] = n(d.pagos[i]) || 0; p.grupo = n(d.pagos.grupo) || 0; st.push(['pagos', p]); }
   if (d.horarios) { const h = [...new Set(d.horarios.map(normHora).filter(Boolean))].sort(); if (!h.length) throw err('Deja al menos un horario.'); st.push(['horarios', h]); }
-  ['minHoras', 'diasAdelante', 'maxWeb'].forEach(k => { if (d[k] != null && d[k] !== '') st.push([k, Math.max(0, Number(d[k]) || 0)]); });
+  ['minHoras', 'diasAdelante', 'maxWeb', 'maxSeguidas'].forEach(k => { if (d[k] != null && d[k] !== '') st.push([k, Math.max(0, Number(d[k]) || 0)]); });
   ['horaTarde', 'cierreNoche'].forEach(k => { if (d[k]) { const h = normHora(d[k]); if (h) st.push([k, h]); } });
   if (d.lugar) st.push(['lugar', String(d.lugar).trim()]);
   if (d.admins) { const l = d.admins.map(norm).filter(x => /@/.test(x)); if (!l.includes(q.email)) l.push(q.email); st.push(['admins', l]); }
