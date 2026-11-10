@@ -117,7 +117,9 @@
   const precioDe = p => D && D.precios ? Number(D.precios[p]) : 0;
   const necesita = () => grupos(S.personas, S.menores, S.ninos).length;
   // Igual que el servidor: los menores de 8 van de a 2 por instructor; si sobra uno va con los demás (o con el último par)
-  const grupos = (p, k, c) => { c = c || 0; const g = []; const pr = Math.floor(k / 2); for(let i = 0; i < pr; i++) g.push({n: 2, ninos: true}); let r = p - pr * 2; if(pr && r === k % 2 && r > 0){ g[g.length - 1].n += r; r = 0; } if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), ninos: false}); } return g; };
+  const grupos = (p, k, c) => { c = c || 0; const g = []; const pr = Math.floor(k / 2); for(let i = 0; i < pr; i++) g.push({n: 2, k: 2, ninos: true}); let r = p - pr * 2, suelto = k - pr * 2; if(pr && r === suelto && r > 0){ g[g.length - 1].n += r; g[g.length - 1].k += r; r = 0; } if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), k: i === 0 ? suelto : 0, ninos: false}); } return g; };
+  // Con niños se habla de adultos y niños ("Clase para 2 adultos y 1 niño"); sin niños, de personas
+  const quienes = g => { if(!S.menores) return g.n + (g.n===1?' persona':' personas'); const a = g.n - g.k, t = []; if(a) t.push(a + (a===1?' adulto':' adultos')); if(g.k) t.push(g.k + (g.k===1?' niño':' niños') + (a ? '' : ' menor' + (g.k===1?'':'es') + ' de 8')); return t.join(' y '); };
   const totalDe = (p, k, c) => grupos(p, k, c).reduce((t, g) => t + precioDe(g.n), 0);
   const waLink = t => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(t);
 
@@ -169,7 +171,7 @@
         <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(p===n ? totalDe(n, S.menores, S.ninos) : precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
         <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
         ${kids}
-        ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>Clase para ${g.n} ${g.ninos ? (g.n===1?'niño':'niños') + ' menor' + (g.n===1?'':'es') + ' de 8' : (g.n===1?'persona':'personas')}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? 'Total · ' + G.length + ' instructores' : 'Clase para ' + p + ' persona' + (p===1?'':'s')}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
+        ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>Clase para ${quienes(g)}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? 'Total · ' + G.length + ' instructores' : 'Clase para ' + (G[0] ? quienes(G[0]) : p + ' persona' + (p===1?'':'s'))}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
       </div>
       <div class='rs-card${listo1?'':' off'}' id='rs-paso2'><div class='rs-step'><i>2</i><h2>Elige el día y la hora</h2></div>${listo1 ? calendario() : `<p class='rs-note'>Primero elige cuántas personas son.</p>`}</div>
       <div class='rs-card${listo2?'':' off'}' id='rs-paso3'><div class='rs-step'><i>3</i><h2>Tus datos</h2></div>
