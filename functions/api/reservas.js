@@ -393,7 +393,6 @@ function correoReservada(r, a, ins) {
     seccion('🎒 Qué traer', '<p style="margin:0;font-size:15px;line-height:1.9">' + TRAER.map(t => '✅ ' + esc(t)).join('<br>') + '</p>') +
     seccion('💙 Nosotros ponemos', '<p style="margin:0;font-size:15px;line-height:1.9">🏄 Tabla de surf y leash<br>🌊 Traje de agua (wetsuit)<br>🤙 Instructor certificado</p>') +
     seccion('🌊 Si el mar no está apto', '<p style="margin:0;font-size:15px;line-height:1.5">El surf es un deporte en el mar. Si las condiciones no son seguras, te escribimos por WhatsApp para cambiar la hora sin costo.</p>') +
-    seccion('📅 Cambios', '<p style="margin:0;font-size:15px;line-height:1.5">Una vez reservada, la clase no tiene cambios de día ni de hora, salvo casos excepcionales.</p>') +
     '<tr><td style="padding:16px 26px 0">' + boton(gcal, 'Agregar a mi calendario', '#EFECE8', '#2C2C2B') + boton('https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Hola Storm, reservé una clase (' + r.ref + ')'), '¿Dudas? Escríbenos por WhatsApp', '#25D366', '#ffffff') + '</td></tr>' +
     '<tr><td style="padding:24px 26px 28px;text-align:center"><p style="margin:0;font-size:17px">¡Nos vemos en el agua! 🌊<br><b>Equipo Storm</b></p></td></tr></table>' +
     '<p style="text-align:center;margin:16px 0 0;font-size:12px;color:#8a8986">Storm Surf Academy · Playa de Matanzas, Navidad · <a href="https://www.stormsurf.cl" style="color:#2d6e94">stormsurf.cl</a></p></div>';
