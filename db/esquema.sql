@@ -63,3 +63,16 @@ CREATE TABLE IF NOT EXISTS registro (
   quien TEXT NOT NULL,
   que TEXT NOT NULL
 );
+-- Horas en que el instructor ya está ocupado en otra cosa: Academia Anual (se lee sola del calendario Storm) o algo fijo semanal
+-- (por ejemplo, el taller municipal de Francisco). instructor '*' = todos. fecha '' + dia = se repite cada semana.
+CREATE TABLE IF NOT EXISTS ocupaciones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  origen TEXT NOT NULL,           -- anual | fijo
+  instructor TEXT NOT NULL,
+  fecha TEXT NOT NULL DEFAULT '',
+  dia INTEGER NOT NULL DEFAULT -1,
+  desde TEXT NOT NULL,
+  hasta TEXT NOT NULL,
+  motivo TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ocupaciones_fecha ON ocupaciones(fecha);

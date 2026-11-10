@@ -101,6 +101,9 @@
     const s = E.semana.find(s => s.instructor === inst && s.dia === dsem(fecha));
     return !!(s && s.horas.includes(hora));
   }
+  const otraCosa = (inst, fecha, hora) => { const ini = aMin(hora), f = ini + E.duracion, d = dsem(fecha);
+    const o = (E.ocupaciones || []).find(o => (o.instructor === '*' || o.instructor === inst) && (o.fecha ? o.fecha === fecha : o.dia === d) && aMin(o.desde) < f && aMin(o.hasta) > ini);
+    return o ? o.motivo || 'Ocupado' : ''; };
   const reservaEn = (inst, fecha, hora) => E.reservas.find(r => r.fecha === fecha && r.instructores.includes(inst) && Math.abs(aMin(r.hora) - aMin(hora)) < E.duracion);
 
   // ---------- pintar ----------
@@ -156,8 +159,8 @@
       else if (modo === 'ins') {
         const n = r.instructores.length;
         h += `<div class='es-box'><p>Elige ${n === 1 ? 'el instructor' : n + ' instructores'} para esta clase:</p><div class='es-chips' style='margin-top:0'>${E.instructores.filter(i => i.activo).map(i => {
-          const otra = reservaEn(i.nombre, r.fecha, r.hora); const ocup = otra && otra.ref !== r.ref;
-          return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>ocupado</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
+          const otra = reservaEn(i.nombre, r.fecha, r.hora); const ocup = (otra && otra.ref !== r.ref) || !!otraCosa(i.nombre, r.fecha, r.hora);
+          return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>' + esc(otraCosa(i.nombre, r.fecha, r.hora) || 'ocupado') + '</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
           <div class='es-acc'><button class='es-btn' data-go='ins'${sel.length === n ? '' : ' disabled'}>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'mover') {
         h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' min='${E.hoy}'></label><label>Hora<select id='es-mh'>${E.horarios.map(x => `<option${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
@@ -202,7 +205,7 @@
     if (admin) h += `<div class='es-chips'>${activos.map(n => `<button class='es-chip${inst === n ? ' on' : ''}' data-ci='${esc(n)}'>${esc(n)}</button>`).join('')}</div>`;
     if (!inst) return h + `<div class='pn-card'><p class='pn-empty'>Agrega instructores en Ajustes.</p></div>`;
     h += `<div class='pn-card'><h3>${admin ? 'Calendario de ' + esc(inst) : 'Mi calendario'}</h3><p class='pn-sub'>Toca una hora para marcar si ${admin ? esc(inst) + ' puede' : 'puedes'} o no. Las clases reservadas salen en azul.</p>
-      <div class='es-ley'><span><i style='background:#effaf3;border:1.5px solid #bfe0cc'></i>Disponible</span><span><i style='background:#fff;border:1.5px solid #ddd'></i>No disponible</span><span><i style='background:#0f6e74'></i>Clase reservada</span></div>
+      <div class='es-ley'><span><i style='background:#effaf3;border:1.5px solid #bfe0cc'></i>Disponible</span><span><i style='background:#fff;border:1.5px solid #ddd'></i>No disponible</span><span><i style='background:#0f6e74'></i>Clase reservada</span><span><i style='background:#F3F1EC;border:1.5px solid #e3e0da'></i>Academia Anual u otra cosa</span></div>
       <div class='es-wk'><button data-wk='-7'${calDesde <= E.hoy ? ' disabled style="opacity:.3"' : ''}>‹ Antes</button><b style='font-size:1.35rem'>${fcorta(calDesde)} – ${fcorta(sumar(calDesde, 6))}</b><button data-wk='7'>Después ›</button></div><div class='es-cal'>`;
     for (let k = 0; k < 7; k++) {
       const f = sumar(calDesde, k), diaEx = E.excepciones.find(e => e.instructor === inst && e.fecha === f && e.hora === '');
@@ -211,6 +214,7 @@
       E.horarios.forEach(x => {
         const r = reservaEn(inst, f, x), ok = dispo(inst, f, x);
         if (r) h += r.hora === x ? `<span class='es-s res'>${x}<small>${esc(r.nombre.split(' ')[0])} · ${r.personas}p</small></span>` : `<span class='es-s res' style='opacity:.55'>${x}<small>sigue clase ${esc(r.hora)}</small></span>`;
+        else if (otraCosa(inst, f, x)) h += `<span class='es-s pas' style='background:#F3F1EC;border-color:#e3e0da;color:#6b6a67'>${x}<small>${esc(otraCosa(inst, f, x).replace('Academia Anual · ', 'Anual '))}</small></span>`;
         else h += `<button class='es-s${ok ? '' : ' no'}' data-sf='${f}' data-sh='${x}' data-ok='${ok ? 1 : 0}'>${x}</button>`;
       });
       h += `</div></div>`;
@@ -235,7 +239,7 @@
     h += `<div class='pn-card'><h3>Horarios y reglas</h3>
       <div class='es-f' style='margin-top:10px'><label class='w'>Horas de inicio de clase (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>
       <label>Anticipación mínima (horas)<input id='es-min' type='number' min='0' value='${a.minHoras}'></label>
-      <label>Clases seguidas por instructor (máximo)<input id='es-seg' type='number' min='1' value='${a.maxSeguidas || 3}'></label>
+      <label>Clases seguidas por instructor (máximo)<input id='es-seg' type='number' min='1' value='${a.maxSeguidas || 2}'></label>
       <label>Se puede reservar hasta (días adelante)<input id='es-dias' type='number' min='1' value='${a.diasAdelante}'></label>
       <label>Las clases antes de las…<input id='es-tarde' value='${esc(a.horaTarde)}'></label>
       <label>…se reservan hasta las (día anterior)<input id='es-noche' value='${esc(a.cierreNoche)}'></label>
@@ -247,6 +251,18 @@
         <label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}>Activo</label></div>`).join('')}
       <div class='es-insrow'><input id='es-nn' placeholder='Nombre nuevo'><input id='es-nc' type='email' placeholder='correo'><span></span></div>
       <div class='es-acc'><button class='es-btn' data-aj='instructores'>Guardar instructores</button></div><p class='es-err vivo'></p></div>`;
+    const sy = E.anualSync;
+    h += `<div class='pn-card'><h3>Horas que los instructores ya tienen ocupadas</h3>
+      <p class='pn-sub'>A esas horas no se les asigna clase particular.</p>
+      <div class='es-cd'><div class='es-cdh'><span>Academia Anual (todos)</span><button data-sync>Actualizar ahora</button></div>
+        <p style='margin:4px 0 0;font-size:1.25rem;opacity:.7'>Se lee sola del calendario Storm cada hora (las clases canceladas no bloquean). ${sy && sy.cuando ? 'Última vez: ' + esc(sy.cuando) + ' · ' + sy.clases + ' clases.' : 'Todavía no se ha leído.'}</p></div>
+      ${(E.ocupaciones || []).filter(o => o.origen === 'fijo').map(o => `<div class='es-cd'><div class='es-cdh'><span>${esc(o.instructor === '*' ? 'Todos' : o.instructor)} · ${DIAS[o.dia]} ${esc(o.desde)} a ${esc(o.hasta)}</span><button data-fdel='${o.id}'>Quitar</button></div><p style='margin:2px 0 0;font-size:1.25rem;opacity:.7'>${esc(o.motivo)} · cada semana</p></div>`).join('')}
+      <div class='es-f' style='margin-top:10px'>
+        <label>Instructor<select id='es-fi'>${E.instructores.map(i => `<option>${esc(i.nombre)}</option>`).join('')}<option value='*'>Todos</option></select></label>
+        <label>Día<select id='es-fd'>${[1, 2, 3, 4, 5, 6, 0].map(d => `<option value='${d}'>${DIAS[d]}</option>`).join('')}</select></label>
+        <label>Desde<input id='es-fdes' placeholder='09:00'></label><label>Hasta<input id='es-fhas' placeholder='11:00'></label>
+        <label class='w'>Qué es<input id='es-fmot' placeholder='Taller municipal'></label></div>
+      <div class='es-acc'><button class='es-btn' data-fadd>Agregar</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Administradores</h3><p class='pn-sub'>Ven todo, cambian instructores, precios y ajustes.</p>
       <div class='es-f' style='margin-top:10px'><label class='w'>Correos (separados por coma)<input id='es-adm' value='${esc((a.admins || []).join(', '))}'></label></div>
       <div class='es-acc'><button class='es-btn' data-aj='admins'>Guardar</button></div><p class='es-err vivo'></p></div>`;
@@ -299,6 +315,9 @@
     });
     $$('[data-semtodo]').forEach(b => b.onclick = () => accion({ accion: 'semana', instructor: inst, dia: +b.dataset.semtodo, horas: b.dataset.v === '1' ? E.horarios : [] }, b));
     // ajustes
+    $$('[data-sync]').forEach(b => b.onclick = () => accion({ accion: 'sincronizar' }, b).then(ok => { if (ok) { msg = 'Academia Anual actualizada.'; pintar(); } }));
+    $$('[data-fdel]').forEach(b => b.onclick = () => accion({ accion: 'fijo', borrar: b.dataset.fdel }, b));
+    $$('[data-fadd]').forEach(b => b.onclick = () => accion({ accion: 'fijo', instructor: $('#es-fi').value, dia: $('#es-fd').value, desde: $('#es-fdes').value, hasta: $('#es-fhas').value, motivo: $('#es-fmot').value }, b).then(ok => { if (ok) { msg = 'Guardado.'; pintar(); } }));
     $$('[data-aj]').forEach(b => b.onclick = async () => {
       const t = b.dataset.aj;
       if (t === 'precios') {

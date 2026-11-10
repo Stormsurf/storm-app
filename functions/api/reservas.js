@@ -34,11 +34,13 @@ const AJUSTES_BASE = {
   diasAdelante: 60,
   retencionMin: 30,      // minutos que se guarda el horario mientras pagan
   maxWeb: 5,             // más personas = por WhatsApp
-  maxSeguidas: 3,        // se juntan las clases en el mismo instructor hasta 3 seguidas
+  maxSeguidas: 2,        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
 };
 const INSTRUCTORES_BASE = ['Diego', 'Iñaki', 'Francisco', 'Emerson'];
+const FIJOS_BASE = [['Francisco', 6, '09:00', '11:00', 'Taller municipal'], ['Francisco', 0, '12:00', '14:00', 'Taller municipal']];
+const ANUAL_API = 'https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec';
 
 // ---------- utilidades ----------
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -92,6 +94,7 @@ async function instructores(db) {
       st.push(db.prepare('INSERT OR IGNORE INTO instructores (nombre, orden) VALUES (?, ?)').bind(n, i));
       for (let d = 0; d < 7; d++) st.push(db.prepare('INSERT OR IGNORE INTO semana (instructor, dia, horas) VALUES (?, ?, ?)').bind(n, d, JSON.stringify(a.horarios)));
     });
+    FIJOS_BASE.forEach(f => st.push(db.prepare("INSERT INTO ocupaciones (origen, instructor, dia, desde, hasta, motivo) VALUES ('fijo', ?, ?, ?, ?, ?)").bind(...f)));
     await db.batch(st);
     results = (await db.prepare('SELECT * FROM instructores ORDER BY orden, nombre').all()).results;
   }
@@ -111,14 +114,50 @@ function cotizar(a, personas, menores) {
   return { personas, menores, instructores: n, precio: precio || 0, pagoInstructor: pagoUno * n };
 }
 
+/** Academia Anual (todos los instructores) y horas fijas de cada uno (talleres, etc.). */
+async function leerOcupaciones(db, desde, hasta) {
+  const { results } = await db.prepare("SELECT * FROM ocupaciones WHERE fecha = '' OR fecha BETWEEN ? AND ?").bind(desde, hasta).all();
+  return results;
+}
+/** ¿La clase (hora + duración) se cruza con algo que el instructor ya tiene ese día? Devuelve el motivo. */
+function cruce(ocu, inst, fecha, hora, duracion) {
+  const ini = aMin(hora), fin = ini + duracion, dia = diaSemana(fecha);
+  const o = ocu.find(o => (o.instructor === '*' || o.instructor === inst) && (o.fecha ? o.fecha === fecha : o.dia === dia) && aMin(o.desde) < fin && aMin(o.hasta) > ini);
+  return o ? o.motivo || 'Ocupado' : '';
+}
+/** Copia las clases de la Academia Anual desde el calendario Storm (planilla Anual). Si Google no responde, quedan las de la última vez. */
+async function sincronizarAnual(env, forzar) {
+  const db = env.DB, ultimo = await db.prepare("SELECT valor FROM ajustes WHERE clave = 'anualSync'").first();
+  const ult = ultimo ? JSON.parse(ultimo.valor) : {};
+  if (!forzar && ult.ms && Date.now() - ult.ms < 3600000) return ult;
+  const hoy = ahoraChile().fecha, [y, m] = hoy.split('-').map(Number), filas = [];
+  for (let k = 0; k < 3; k++) {
+    const mm = (m - 1 + k) % 12, yy = y + Math.floor((m - 1 + k) / 12);
+    const r = await fetch(env.ANUAL_API || ANUAL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow', body: JSON.stringify({ accion: 'calendario', mes: MESES[mm] + ' ' + yy }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error('Calendario Anual: ' + (d.error || r.status));
+    (d.clases || []).forEach(c => {
+      const h = String(c.horario || '').match(/\d{1,2}[:.]\d{2}/g) || [];
+      if (esFecha(c.fecha) && h.length >= 2 && c.fecha >= hoy) filas.push([c.fecha, normHora(h[0]), normHora(h[1]), 'Academia Anual · ' + (c.clase || '')]);
+    });
+  }
+  const st = [db.prepare("DELETE FROM ocupaciones WHERE origen = 'anual'")];
+  filas.forEach(f => st.push(db.prepare("INSERT INTO ocupaciones (origen, instructor, fecha, desde, hasta, motivo) VALUES ('anual', '*', ?, ?, ?, ?)").bind(...f)));
+  const info = { ms: Date.now(), cuando: hoy + ' ' + ahoraChile().hora, clases: filas.length };
+  st.push(db.prepare("INSERT OR REPLACE INTO ajustes (clave, valor) VALUES ('anualSync', ?)").bind(JSON.stringify(info)));
+  await db.batch(st);
+  return info;
+}
+
 /** Ocupación y disponibilidad de los próximos días. */
 async function estadoAgenda(db, a, desde, hasta) {
   const ahoraMs = Date.now();
   const ins = await instructores(db);
-  const [sem, exc, blo] = await Promise.all([
+  const [sem, exc, blo, ocu] = await Promise.all([
     db.prepare('SELECT * FROM semana').all(),
     db.prepare('SELECT * FROM excepciones WHERE fecha BETWEEN ? AND ?').bind(desde, hasta).all(),
-    db.prepare('SELECT instructor, fecha, hora, ref, hasta FROM bloques WHERE fecha BETWEEN ? AND ? AND (hasta = 0 OR hasta > ?)').bind(desde, hasta, ahoraMs).all()
+    db.prepare('SELECT instructor, fecha, hora, ref, hasta FROM bloques WHERE fecha BETWEEN ? AND ? AND (hasta = 0 OR hasta > ?)').bind(desde, hasta, ahoraMs).all(),
+    leerOcupaciones(db, desde, hasta)
   ]);
   const semana = {}; sem.results.forEach(r => { (semana[r.instructor] = semana[r.instructor] || {})[r.dia] = parseLista(r.horas); });
   const excep = {}; exc.results.forEach(r => { excep[r.instructor + '|' + r.fecha + '|' + r.hora] = !!r.libre; });
@@ -129,7 +168,8 @@ async function estadoAgenda(db, a, desde, hasta) {
     if (k in excep) return excep[k];
     return ((semana[inst] || {})[diaSemana(fecha)] || []).includes(hora);
   };
-  const libre = (inst, fecha, hora) => disponible(inst, fecha, hora) && bloquesDe(hora, a.duracion).every(b => !ocupado.has(inst + '|' + fecha + '|' + b));
+  const enOtraCosa = (inst, fecha, hora) => cruce(ocu, inst, fecha, hora, a.duracion);
+  const libre = (inst, fecha, hora) => disponible(inst, fecha, hora) && !enOtraCosa(inst, fecha, hora) && bloquesDe(hora, a.duracion).every(b => !ocupado.has(inst + '|' + fecha + '|' + b));
   return { ins, semana, excep, ocupado, disponible, libre, bloques: blo.results };
 }
 
@@ -173,7 +213,7 @@ function elegir(ag, a, fecha, hora) {
     let blo = Math.ceil(a.duracion / BLOQUE);
     for (let m = aMin(antes); tiene(n, m); m -= BLOQUE) blo++;
     for (let m = aMin(despues); tiene(n, m); m += BLOQUE) blo++;
-    return blo / Math.ceil(a.duracion / BLOQUE) > (a.maxSeguidas || 3) ? -1 : 1;
+    return blo / Math.ceil(a.duracion / BLOQUE) > (a.maxSeguidas || 2) ? -1 : 1;
   };
   return shuffle(ag.ins.filter(i => i.activo && ag.libre(i.nombre, fecha, hora)).map(i => i.nombre)).sort((x, y) => pegado(y) - pegado(x));
 }
@@ -343,8 +383,9 @@ async function revisionAutomatica(env, ctx) {
     if (e === 'pagada') pagadas++;
     else if (e === 'pendiente' && Date.now() - r.creada_ms > 3 * 3600000) await db.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref).run();
   }
+  let anual = null; try { anual = await sincronizarAnual(env); } catch (x) { console.error(x); anual = { error: x.message }; }
   const rec = await recordatorios(env, a);
-  return { ok: true, revisadas: results.length, pagadas, recordatorios: rec };
+  return { ok: true, revisadas: results.length, pagadas, recordatorios: rec, anual };
 }
 
 // ---------- Panel ----------
@@ -372,16 +413,20 @@ async function panel(env, q) {
   await limpiarRetenciones(db);
   const desde = sumarDias(hoy, -45), hasta = sumarDias(hoy, a.diasAdelante);
   const ins = await instructores(db);
-  const [sem, exc, res] = await Promise.all([
+  const [sem, exc, res, ocu, sync] = await Promise.all([
     db.prepare('SELECT * FROM semana').all(),
     db.prepare('SELECT * FROM excepciones WHERE fecha >= ?').bind(hoy).all(),
-    db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta).all()
+    db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta).all(),
+    leerOcupaciones(db, hoy, hasta),
+    db.prepare("SELECT valor FROM ajustes WHERE clave = 'anualSync'").first()
   ]);
   let reservas = res.results.filter(r => r.estado !== 'pendiente' || Date.now() - r.creada_ms < a.retencionMin * 60000);
   if (!admin) reservas = reservas.filter(r => parseLista(r.instructores).includes(q.yo));
   const out = { ok: true, rol: q.rol, yo: q.yo, hoy, duracion: a.duracion, horarios: a.horarios,
     instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono } : {}) })),
     semana: sem.results.map(s => ({ instructor: s.instructor, dia: s.dia, horas: parseLista(s.horas) })).filter(s => admin || s.instructor === q.yo),
+    ocupaciones: ocu.filter(o => admin || o.instructor === '*' || o.instructor === q.yo).map(o => ({ id: o.id, origen: o.origen, instructor: o.instructor, fecha: o.fecha, dia: o.dia, desde: o.desde, hasta: o.hasta, motivo: o.motivo })),
+    anualSync: sync ? JSON.parse(sync.valor) : null,
     excepciones: exc.results.filter(e => admin || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
     reservas: reservas.map(r => filaPanel(r, admin)), link: PAGINA };
   if (admin) {
@@ -503,6 +548,18 @@ async function guardarAjustes(env, q, d) {
   return panel(env, q);
 }
 
+async function guardarFijo(env, q, d) {
+  const db = env.DB;
+  if (d.borrar) await db.prepare("DELETE FROM ocupaciones WHERE id = ? AND origen = 'fijo'").bind(Number(d.borrar)).run();
+  else {
+    const inst = String(d.instructor || ''), dia = Math.floor(Number(d.dia)), desde = normHora(d.desde), hasta = normHora(d.hasta);
+    if (!inst || !(dia >= 0 && dia <= 6) || !desde || !hasta || aMin(hasta) <= aMin(desde)) throw err('Revisa el instructor, el día y las horas.');
+    await db.prepare("INSERT INTO ocupaciones (origen, instructor, dia, desde, hasta, motivo) VALUES ('fijo', ?, ?, ?, ?, ?)").bind(inst, dia, desde, hasta, String(d.motivo || 'Ocupado').trim().slice(0, 60)).run();
+  }
+  await anotar(db, q, 'fijo ' + JSON.stringify(d));
+  return panel(env, q);
+}
+
 // ---------- entrada ----------
 export async function onRequest(context) {
   const { request, env } = context;
@@ -537,6 +594,8 @@ export async function onRequest(context) {
     if (acc === 'manual') return json(await manual(env, q, d, context));
     if (acc === 'instructor') return json(await guardarInstructor(env, q, d));
     if (acc === 'ajustes') return json(await guardarAjustes(env, q, d));
+    if (acc === 'fijo') return json(await guardarFijo(env, q, d));
+    if (acc === 'sincronizar') { await sincronizarAnual(env, true); return json(await panel(env, q)); }
     if (acc === 'revisar') return json(await revisionAutomatica(env, context));
     throw err('Acción desconocida');
   } catch (x) {
