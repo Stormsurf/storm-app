@@ -118,8 +118,9 @@
     if (linkNuevo) { const L = linkNuevo;
       h += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
-    h += `<div class='es-sub'><button data-sub='reservas'>Reservas</button><button data-sub='calendario'>${admin ? 'Calendario instructores' : 'Mi calendario'}</button>${admin ? `<button data-sub='ajustes'>Ajustes</button>` : ''}</div>`;
+    h += `<div class='es-sub'><button data-sub='reservas'>Reservas</button><button data-sub='calendario'>${admin ? 'Calendario instructores' : 'Mi calendario'}</button><button data-sub='pagos'>${admin ? 'Pagos' : 'Mis pagos'}</button>${admin ? `<button data-sub='ajustes'>Ajustes</button>` : ''}</div>`;
     if (sub === 'calendario') h += calendario(admin);
+    else if (sub === 'pagos') h += pagosVista(admin);
     else if (sub === 'ajustes' && admin) h += ajustes();
     else h += reservas(admin);
     pane.innerHTML = h;
@@ -239,6 +240,33 @@
     return h + `</div>`;
   }
 
+  // ---------- pago semanal (lunes a domingo; Isidora transfiere los domingos) ----------
+  let PS = null, psLunes = '', psCargando = false, psAbierto = '';
+  async function cargarPagos(extra) {
+    psCargando = true; if (!extra) pintar();
+    try { PS = await post(Object.assign({ accion: 'pagos-semana', lunes: psLunes }, extra || {})); psLunes = PS.lunes; }
+    catch (x) { PS = { error: x.message }; }
+    psCargando = false; pintar();
+  }
+  function pagosVista(admin) {
+    if (!PS && !psCargando) { setTimeout(() => cargarPagos(), 0); return `<div class='pn-card'><p class='pn-empty'>Cargando…</p></div>`; }
+    if (psCargando && !PS) return `<div class='pn-card'><p class='pn-empty'>Cargando…</p></div>`;
+    if (PS.error) return `<div class='pn-card'><p class='es-err'>${esc(PS.error)}</p><button class='es-btn' data-psr>Intentar de nuevo</button></div>`;
+    const esEsta = PS.hoy >= PS.lunes && PS.hoy <= PS.domingo;
+    let h = `<div class='es-wk' style='margin:6px 0 10px'><button data-psw='-7'>‹ Antes</button><b style='font-size:1.35rem'>${esEsta ? 'Esta semana · ' : ''}${esc(fcorta(PS.lunes))} – ${esc(fcorta(PS.domingo))}</b><button data-psw='7'>Después ›</button></div>`;
+    if (admin) {
+      const pend = PS.instructores.filter(x => !x.pagado).reduce((t, x) => t + x.total, 0);
+      h += `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Total a transferir el domingo</small><b>${clp(PS.total)}</b><em>${pend && pend !== PS.total ? 'falta pagar ' + clp(pend) : pend ? 'clases particulares de la semana' : PS.total ? 'todo pagado ✓' : 'sin clases esta semana'}</em></div></div>`;
+    }
+    if (!PS.instructores.length) return h + `<div class='pn-card'><p class='pn-empty'>No hay clases pagadas esta semana.</p></div>`;
+    h += PS.instructores.map(x => `<div class='pn-card'><div style='display:flex;justify-content:space-between;align-items:center;gap:10px'>
+        <div><b style='font-size:1.6rem'>${esc(x.instructor)}</b><br><small style='opacity:.7'>${x.clases.length} clase${x.clases.length === 1 ? '' : 's'}${x.pagado ? ' · ✓ pagado el ' + esc(fcorta(x.pagado.el)) : ''}</small></div>
+        <b style='font-size:2rem${x.pagado ? ';color:#2f7a4d' : ''}'>${clp(x.total)}</b></div>
+        ${psAbierto === x.instructor ? `<div style='margin-top:8px'>${x.clases.map(c => `<div style='display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:1.3rem'><span>${esc(fcorta(c.fecha))} ${esc(c.hora)} · ${esc(c.cliente)} · ${c.personas}p${c.menores ? ' (' + c.menores + ' menor' + (c.menores === 1 ? '' : 'es') + ' de 7)' : ''}</span><b>${clp(c.monto)}</b></div>`).join('')}</div>` : ''}
+        <div class='es-acc'><button class='es-btn sec' data-psa='${esc(x.instructor)}'>${psAbierto === x.instructor ? 'Ocultar clases' : 'Ver clases'}</button>${admin ? (x.pagado ? `<button class='pn-link' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='0'>Desmarcar pagado</button>` : x.total ? `<button class='es-btn' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='1'>Marcar pagado</button>` : '') : ''}</div></div>`).join('');
+    return h + `<p class='pn-note'>Cuenta las clases pagadas de lunes a domingo. Cada instructor gana según su tarifa (en Ajustes) y el tamaño de su grupo.</p>`;
+  }
+
   function ajustes() {
     const a = E.ajustes;
     let h = `<div class='pn-card'><h3>Precios y pago a instructores</h3><p class='pn-sub'>Lo que paga el cliente y lo que se le paga al instructor por clase.</p>
@@ -259,7 +287,9 @@
     h += `<div class='pn-card'><h3>Instructores de la Escuela</h3><p class='pn-sub'>Con su correo pueden entrar a Agenda Storm y ver su calendario. Inactivo = no recibe clases nuevas (por ejemplo, fuera de temporada).</p>
       ${E.instructores.map(i => `<div class='es-insrow'><b>${esc(i.nombre)}</b><input data-ic='${esc(i.nombre)}' type='email' placeholder='correo' value='${esc(i.correo || '')}'>
         <label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}>Activo</label>
-        <span></span><input data-ir='${esc(i.nombre)}' placeholder='RUT (sale en la ficha)' value='${esc(i.rut || '')}'><span></span></div>`).join('')}
+        <span></span><input data-ir='${esc(i.nombre)}' placeholder='RUT (sale en la ficha)' value='${esc(i.rut || '')}'><span></span>
+        <div style='grid-column:1/-1;font-size:1.2rem'><span style='opacity:.7'>Pago propio por clase (vacío = tabla general):</span>
+          <div style='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 6px;margin-top:4px'>${['1', '2', '3', '4', '5', 'grupo'].map(k => `<label style='font-size:1.1rem;min-width:0;display:block'>${k === 'grupo' ? 'Grupo' : k + 'p'}<input data-it='${esc(i.nombre)}' data-k='${k}' inputmode='numeric' placeholder='${esc(String((E.ajustes.pagos || {})[k] || ''))}' value='${esc(String((i.tarifas || {})[k] || ''))}' style='padding:6px 8px;width:100%;min-width:0;box-sizing:border-box'></label>`).join('')}</div></div></div>`).join('')}
       <div class='es-insrow'><input id='es-nn' placeholder='Nombre nuevo'><input id='es-nc' type='email' placeholder='correo'><span></span></div>
       <div class='es-acc'><button class='es-btn' data-aj='instructores'>Guardar instructores</button></div><p class='es-err vivo'></p></div>`;
     const sy = E.anualSync;
@@ -305,6 +335,10 @@
     $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
     const nomIn = $('[name=nombre][list=es-clientes]');
     if (nomIn) nomIn.onchange = () => { const c = (E.clientes || []).find(x => x.nombre.toLowerCase() === nomIn.value.trim().toLowerCase()); if (!c) return; const f = nomIn.closest('.pn-card'); const t = f.querySelector('[name=telefono]'), m = f.querySelector('[name=correo]'); if (t && !t.value) t.value = c.telefono; if (m && !m.value) m.value = c.correo; };
+    $$('[data-psw]').forEach(b => b.onclick = () => { psLunes = sumar(PS.lunes, +b.dataset.psw); psAbierto = ''; cargarPagos(); });
+    $$('[data-psa]').forEach(b => b.onclick = () => { psAbierto = psAbierto === b.dataset.psa ? '' : b.dataset.psa; pintar(); });
+    $$('[data-psr]').forEach(b => b.onclick = () => { PS = null; cargarPagos(); });
+    $$('[data-psp]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = 'Guardando…'; cargarPagos({ marcar: { instructor: b.dataset.psp, monto: +b.dataset.pm, pagado: b.dataset.pv === '1' } }); });
     const mg = $('[data-manual-go]');
     if (mg) mg.onclick = () => {
       const c = mg.closest('.pn-card'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
@@ -348,7 +382,9 @@
         try {
           for (const i of E.instructores) {
             const c = pane.querySelector(`[data-ic="${CSS.escape(i.nombre)}"]`).value.trim(), a = pane.querySelector(`[data-ia="${CSS.escape(i.nombre)}"]`).checked, rt = pane.querySelector(`[data-ir="${CSS.escape(i.nombre)}"]`).value.trim();
-            if (c !== (i.correo || '') || a !== i.activo || rt !== (i.rut || '')) E = await post({ accion: 'instructor', nombre: i.nombre, correo: c, telefono: i.telefono || '', rut: rt, activo: a });
+            const tar = {}; pane.querySelectorAll(`[data-it="${CSS.escape(i.nombre)}"]`).forEach(x => { const v = x.value.replace(/\D/g, ''); if (v) tar[x.dataset.k] = +v; });
+            const cambiaTar = JSON.stringify(tar) !== JSON.stringify(Object.fromEntries(Object.entries(i.tarifas || {}).map(([k, v]) => [k, +v])));
+            if (c !== (i.correo || '') || a !== i.activo || rt !== (i.rut || '') || cambiaTar) E = await post({ accion: 'instructor', nombre: i.nombre, correo: c, telefono: i.telefono || '', rut: rt, activo: a, tarifas: tar });
           }
           const nn = $('#es-nn').value.trim(); if (nn) E = await post({ accion: 'instructor', nombre: nn, correo: $('#es-nc').value.trim(), activo: true });
           guardarCache(E); msg = 'Instructores guardados.'; pintar();

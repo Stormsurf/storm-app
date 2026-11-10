@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS reservas (
   recordatorio INTEGER NOT NULL DEFAULT 0,
   nota TEXT NOT NULL DEFAULT '',
   clave TEXT NOT NULL DEFAULT '',  -- llave del link de la ficha
-  link_pago TEXT NOT NULL DEFAULT '' -- link de Mercado Pago (reservas anotadas a mano)
+  link_pago TEXT NOT NULL DEFAULT '', -- link de Mercado Pago (reservas anotadas a mano)
+  pagos TEXT -- JSON {instructor: monto} (lo que gana cada uno en esta clase)
 );
 CREATE INDEX IF NOT EXISTS reservas_fecha ON reservas(fecha);
 CREATE INDEX IF NOT EXISTS reservas_estado ON reservas(estado);
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS instructores (
   correo TEXT NOT NULL DEFAULT '',
   telefono TEXT NOT NULL DEFAULT '',
   rut TEXT NOT NULL DEFAULT '',
+  tarifas TEXT, -- JSON {1..5, grupo}: pago propio por clase (vacío = tabla general)
   activo INTEGER NOT NULL DEFAULT 1,
   orden INTEGER NOT NULL DEFAULT 0
 );
@@ -89,4 +91,14 @@ CREATE TABLE IF NOT EXISTS fichas (
   creada TEXT NOT NULL,
   ip TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (ref, n)
+);
+
+-- Pago semanal a instructores (se transfiere los domingos)
+CREATE TABLE IF NOT EXISTS pagos_semana (
+  instructor TEXT NOT NULL,
+  lunes TEXT NOT NULL,
+  monto INTEGER NOT NULL DEFAULT 0,
+  pagado_el TEXT NOT NULL,
+  por TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (instructor, lunes)
 );
