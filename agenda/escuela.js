@@ -178,7 +178,7 @@
   function tarjeta(r, admin) {
     const est = r.estado === 'pendiente' ? `<span class='es-est'>${r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago (link enviado)' : 'Pagando en este momento'}</span>` : r.estado === 'revisar' ? `<span class='es-est'>Revisar: ${esc(r.nota)}</span>` : '';
     let h = `<div class='es-r'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora)}</small></div>
-      <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 7' : ''}${r.ninos ? ' · ' + r.ninos + ' de 7 a 11' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
+      <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 7 a 11' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
       ${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}${est}
       <span class='es-est' style='${(r.fichas || []).length >= r.personas ? 'background:#e5f2ea;color:#2f7a4d' : ''}'>Fichas ${(r.fichas || []).length}/${r.personas}</span></div>
       ${wa(r.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}'>WhatsApp</a>` : ''}</div>
@@ -212,8 +212,7 @@
         <label>Día<input type='date' name='fecha' min='${E.hoy}' value='${E.hoy}'></label>
         <label>Hora<select name='hora'>${horasMano().map(x => `<option value='${x}'${x === E.horarios[0] ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
         <label>Personas<input type='number' name='personas' min='1' value='2' inputmode='numeric'></label>
-        <label>Menores de 7<input type='number' name='menores' min='0' value='0' inputmode='numeric'></label>
-        <label>Niños de 7 a 11<input type='number' name='ninos' min='0' value='0' inputmode='numeric'></label>
+        <label>Menores de 8<input type='number' name='menores' min='0' value='0' inputmode='numeric'></label>
         <label class='w'>Nombre del cliente<input name='nombre' list='es-clientes' autocomplete='off' placeholder='Escribe y elige si ya reservó antes'></label><datalist id='es-clientes'>${(E.clientes || []).map(c => `<option value='${esc(c.nombre)}'>${esc([c.telefono, c.clases + (c.clases === 1 ? ' clase' : ' clases')].filter(Boolean).join(' · '))}</option>`).join('')}</datalist>
         <label>Teléfono<input name='telefono' type='tel'></label>
         <label>Correo (opcional)<input name='correo' type='email'></label>
@@ -337,7 +336,7 @@
     let h = `<div class='pn-card'><h3>Precios y pago a instructores</h3><p class='pn-sub'>Lo que paga el cliente y lo que se le paga al instructor por clase.</p>
       <table class='es-tab'><tr><th>Personas</th><th>Precio</th><th>Pago instructor</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
       <tr><td colspan='2'>Grupo grande o empresa (por instructor)</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 7: 1 instructor por cada 2. Niños de 7 a 11: máximo 3 por instructor. Desde 12, adulto (hasta 5 por instructor): el pago se calcula por instructor según cuántos le tocan.</p>
+      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: van aparte, máximo 3 por instructor; el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
       <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Horarios y reglas</h3>
       <div class='es-f' style='margin-top:10px'><label class='w'>Horas de inicio de clase (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>

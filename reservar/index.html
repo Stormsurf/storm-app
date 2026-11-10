@@ -71,6 +71,7 @@
 .rs-traer ul{margin:6px 0 0;padding:0;list-style:none}
 .rs-traer li:before{content:'✅ '}
 .rs-traer p{margin:8px 0 0}
+.rs-nota5{margin:8px 0 0;font-size:1.25rem;color:var(--mute);line-height:1.4}
 .rs-mar{margin:14px 0 0;font-size:1.3rem;line-height:1.45;color:var(--mute)}
 .rs-ter{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:1.25rem;line-height:1.5;color:var(--mute)}
 .rs-ter summary{cursor:pointer;font-weight:600;color:var(--ink)}
@@ -115,8 +116,8 @@
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
   const precioDe = p => D && D.precios ? Number(D.precios[p]) : 0;
   const necesita = () => grupos(S.personas, S.menores, S.ninos).length;
-  // Igual que el servidor: los menores de 7 van de a 2 por instructor y el resto en otra clase
-  const grupos = (p, k, c) => { c = c || 0; const g = []; for(let x = k; x > 0; x -= 2) g.push({n: Math.min(2, x), ninos: true}); const r = p - k; if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), ninos: false}); } return g; };
+  // Igual que el servidor: los menores de 8 van de a 3 por instructor y el resto en otra clase
+  const grupos = (p, k, c) => { c = c || 0; const g = []; for(let x = k; x > 0; x -= 3) g.push({n: Math.min(3, x), ninos: true}); const r = p - k; if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), ninos: false}); } return g; };
   const totalDe = (p, k, c) => grupos(p, k, c).reduce((t, g) => t + precioDe(g.n), 0);
   const waLink = t => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(t);
 
@@ -159,8 +160,7 @@
     const p = S.personas, G = grupos(p, S.menores, S.ninos), precio = totalDe(p, S.menores, S.ninos), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
     const paso = (txt, sub, val, attr, max) => `<div class='rs-kids'><p>${txt}<small>${sub}</small></p>
       <div class='rs-num'><button ${attr}='-1' aria-label='Menos'${val<=0?' disabled':''}>−</button><b>${val}</b><button ${attr}='1' aria-label='Más'${val>=max?' disabled':''}>+</button></div></div>`;
-    const kids = p ? paso('¿Cuántos son menores de 7 años?', 'Tienen su propio instructor (1 por cada 2 niños).', S.menores, 'data-k', p - S.ninos)
-      + paso('¿Cuántos niños de 7 a 11 años?', 'Máximo 3 niños por instructor. Desde los 12 cuentan como adultos.', S.ninos, 'data-kn', p - S.menores) : '';
+    const kids = p ? paso('¿Cuántos son menores de 8 años?', 'Van con su propio instructor, máximo 3 niños por instructor.', S.menores, 'data-k', p) + `<p class='rs-nota5'>* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).</p>` : '';
     const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
     root.innerHTML = `
       <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
@@ -169,7 +169,7 @@
         <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
         <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
         ${kids}
-        ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>Clase para ${g.n} ${g.ninos ? (g.n===1?'niño':'niños') + ' menor' + (g.n===1?'':'es') + ' de 7' : (g.n===1?'persona':'personas')}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? 'Total · ' + G.length + ' instructores' : 'Clase para ' + p + ' persona' + (p===1?'':'s')}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
+        ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>Clase para ${g.n} ${g.ninos ? (g.n===1?'niño':'niños') + ' menor' + (g.n===1?'':'es') + ' de 8' : (g.n===1?'persona':'personas')}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? 'Total · ' + G.length + ' instructores' : 'Clase para ' + p + ' persona' + (p===1?'':'s')}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
       </div>
       <div class='rs-card${listo1?'':' off'}' id='rs-paso2'><div class='rs-step'><i>2</i><h2>Elige el día y la hora</h2></div>${listo1 ? calendario() : `<p class='rs-note'>Primero elige cuántas personas son.</p>`}</div>
       <div class='rs-card${listo2?'':' off'}' id='rs-paso3'><div class='rs-step'><i>3</i><h2>Tus datos</h2></div>
@@ -194,7 +194,7 @@
           </details>
           <label class='rs-chk'><input type='checkbox' name='acepta'> Acepto los términos y condiciones y la Declaración de Conocimiento y Aceptación de Riesgos.</label>
         </div>
-        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 7' : ''}${S.ninos ? ' · ' + S.ninos + ' de 7 a 11' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
+        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 8' : ''}${S.ninos ? ' · ' + S.ninos + ' de 7 a 11' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
         <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
         <p class='rs-err' id='rs-err' hidden></p>
         <p class='rs-mp'>🔒 Pago seguro con Mercado Pago</p>
@@ -203,7 +203,7 @@
     root.querySelectorAll('.rs-f [name]').forEach(i => { if(i.name in guardado){ if(i.type === 'checkbox') i.checked = guardado[i.name]; else i.value = guardado[i.name]; } });
     root.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const antes = necesita(); S.personas = +b.dataset.p; S.menores = Math.min(S.menores, S.personas); S.ninos = Math.min(S.ninos, S.personas - S.menores); if(!D || necesita() !== antes) cargar(); else pintar(); });
     root.querySelectorAll('[data-kn]').forEach(b => b.onclick = () => { const antes = necesita(); S.ninos = Math.max(0, Math.min(S.personas - S.menores, S.ninos + +b.dataset.kn)); if(necesita() !== antes) cargar(); else pintar(); });
-    root.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const antes = necesita(); S.menores = Math.max(0, Math.min(S.personas - S.ninos, S.menores + +b.dataset.k)); if(necesita() !== antes) cargar(); else pintar(); });
+    root.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const antes = necesita(); S.menores = Math.max(0, Math.min(S.personas, S.menores + +b.dataset.k)); if(necesita() !== antes) cargar(); else pintar(); });
     root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.fecha = b.dataset.f; S.hora = ''; pintar(); const h = $('.rs-dia'); if(h) h.scrollIntoView({behavior:'smooth', block:'start'}); });
     root.querySelectorAll('[data-h]').forEach(b => b.onclick = () => { S.hora = b.dataset.h; pintar(); $('#rs-paso3').scrollIntoView({behavior:'smooth', block:'start'}); });
     const mv = n => { const [y,m] = S.mes.split('-').map(Number), x = new Date(Date.UTC(y, m-1+n, 1)); S.mes = x.toISOString().slice(0,7); pintar(); };
