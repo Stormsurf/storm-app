@@ -189,10 +189,10 @@
       if (abierta !== r.ref) h += `<div class='es-acc'><button class='es-btn sec' data-abre='${r.ref}' data-modo='ins'>Cambiar instructor</button><button class='es-btn sec' data-abre='${r.ref}' data-modo='mover'>Mover</button><button class='es-btn peligro' data-abre='${r.ref}' data-modo='cancelar'>Cancelar</button></div>`;
       else if (modo === 'ins') {
         const n = r.instructores.length;
-        h += `<div class='es-box'><p>Elige ${n === 1 ? 'el instructor' : n + ' instructores'} para esta clase:</p><div class='es-chips' style='margin-top:0'>${E.instructores.filter(i => i.activo).map(i => {
+        h += `<div class='es-box'><p>Elige ${n === 1 ? 'el instructor' : 'los ' + n + ' instructores'} para esta clase. Puedes sumar o quitar instructores si el caso lo necesita.</p><div class='es-chips' style='margin-top:0'>${E.instructores.filter(i => i.activo).map(i => {
           const otra = reservaEn(i.nombre, r.fecha, r.hora); const ocup = (otra && otra.ref !== r.ref) || !!otraCosa(i.nombre, r.fecha, r.hora);
           return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>' + esc(otraCosa(i.nombre, r.fecha, r.hora) || 'ocupado') + '</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
-          <div class='es-acc'><button class='es-btn' data-go='ins'${sel.length === n ? '' : ' disabled'}>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
+          <div class='es-acc'><button class='es-btn' data-go='ins'${sel.length ? '' : ' disabled'}>Guardar${sel.length && sel.length !== n ? ' (' + sel.length + ' instructor' + (sel.length === 1 ? '' : 'es') + ')' : ''}</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'mover') {
         h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' min='${E.hoy}'></label><label>Hora<select id='es-mh'>${horasMano().map(x => `<option value='${x}'${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
           <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Se mantiene el mismo instructor. Avísale al cliente por WhatsApp.</p>
@@ -336,7 +336,7 @@
     let h = `<div class='pn-card'><h3>Precios y pago a instructores</h3><p class='pn-sub'>Lo que paga el cliente y lo que se le paga al instructor por clase.</p>
       <table class='es-tab'><tr><th>Personas</th><th>Precio</th><th>Pago instructor</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
       <tr><td colspan='2'>Grupo grande o empresa (por instructor)</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: van aparte, máximo 3 por instructor; el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
+      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: de a 2 por instructor (uno solo va con el grupo); el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
       <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Horarios y reglas</h3>
       <div class='es-f' style='margin-top:10px'><label class='w'>Horas de inicio de clase (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>
@@ -385,8 +385,8 @@
     $$('[data-abre]').forEach(b => b.onclick = () => { abierta = b.dataset.abre; modo = b.dataset.modo; msg = ''; sel = (E.reservas.find(r => r.ref === abierta) || {}).instructores.slice(); pintar(); });
     $$('[data-cerrar]').forEach(b => b.onclick = () => { abierta = ''; modo = ''; pintar(); });
     $$('[data-sel]').forEach(b => b.onclick = () => {
-      const n = (E.reservas.find(r => r.ref === abierta) || {}).instructores.length, v = b.dataset.sel;
-      if (sel.includes(v)) sel = sel.filter(x => x !== v); else { sel.push(v); if (sel.length > n) sel.shift(); }
+      const v = b.dataset.sel; // se pueden sumar o quitar instructores (casos especiales)
+      if (sel.includes(v)) sel = sel.filter(x => x !== v); else sel.push(v);
       pintar();
     });
     const go = $('[data-go]');

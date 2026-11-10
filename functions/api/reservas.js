@@ -106,19 +106,20 @@ async function instructores(db) {
 const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 
 /** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
- *  - menores de 8: aparte, máximo 3 por instructor (menores de 5: clase individual, se avisa en la página);
+ *  - menores de 8: de a 2 por instructor; si hay solo uno y vienen otros, va con el grupo (menores de 5: clase individual, aviso en la página);
  *  - (ninos: reservado por si se vuelve a separar por edades; hoy siempre 0)
  *  - desde 12 años cuenta como adulto; máximo 5 por instructor.
- *  Ej.: 5 con 2 menores de 8 = clase de 2 + clase de 3; 4 menores de 8 = clase de 3 + clase de 1. */
+ *  Ej.: 4 niños = 2 clases de 2; 4 adultos + 1 niño = 1 clase de 5; 2 adultos + 2 niños = clase de 2 + clase de 2. */
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return t.length ? ' (' + t.join(', ') + ')' : ''; };
-const MAX_MENORES = 3, MAX_NINOS = 3, MAX_GRUPO = 5;
+const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 function cotizar(a, personas, menores, ninos) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   if (!(personas >= 1)) throw err('Elige cuántas personas son.');
   if (menores < 0 || ninos < 0 || menores + ninos > personas) throw err('Revisa cuántos son niños.');
   const grupos = [];
-  for (let k = menores; k > 0; k -= MAX_MENORES) grupos.push({ personas: Math.min(MAX_MENORES, k), ninos: true });
-  const resto = personas - menores;
+  const solo = menores === 1 && personas > 1; // un solo niño va con su familia
+  if (!solo) for (let k = menores; k > 0; k -= MAX_MENORES) grupos.push({ personas: Math.min(MAX_MENORES, k), ninos: true });
+  const resto = personas - (solo ? 0 : menores);
   if (resto > 0) {
     // cuántos instructores para el resto: hasta 5 por grupo y hasta 3 niños de 7-11 por grupo; repartidos parejo
     const n = personas > a.maxWeb && !ninos ? 1 : Math.max(Math.ceil(resto / MAX_GRUPO), Math.ceil(ninos / MAX_NINOS), 1);
