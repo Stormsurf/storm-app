@@ -67,6 +67,10 @@
 .rs-f input:focus,.rs-f textarea:focus{outline:none;border-color:var(--ac)}
 .rs-f textarea{min-height:76px;resize:vertical}
 .rs-chk{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:1.3rem;line-height:1.45;color:var(--mute);cursor:pointer}
+.rs-traer{margin:16px 0 6px;padding:14px 16px;border-radius:16px;background:#F3F1EC;text-align:left;font-size:1.4rem;line-height:1.5}
+.rs-traer ul{margin:6px 0 0;padding:0;list-style:none}
+.rs-traer li:before{content:'✅ '}
+.rs-traer p{margin:8px 0 0}
 .rs-mar{margin:14px 0 0;font-size:1.3rem;line-height:1.45;color:var(--mute)}
 .rs-ter{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:1.25rem;line-height:1.5;color:var(--mute)}
 .rs-ter summary{cursor:pointer;font-weight:600;color:var(--ink)}
@@ -173,15 +177,20 @@
           <label for='rs-c'>Correo (te llega el comprobante)</label><input id='rs-c' name='correo' type='email' inputmode='email' autocomplete='email' required>
           <label for='rs-x'>¿Algo que debamos saber? <span style='font-weight:400;color:var(--mute)'>(opcional)</span></label><textarea id='rs-x' name='comentario' placeholder='Edades, si ya surfearon antes, alguna lesión…'></textarea>
           <p class='rs-mar'>🌊 El surf es un deporte en el mar. Si el mar no está apto, te avisamos por WhatsApp para cambiar la hora.</p>
-          <details class='rs-ter'><summary>Leer términos y condiciones y exención de responsabilidad</summary>
-            <p><b>Reserva y pago.</b> La clase queda reservada al pagar el total en línea. Para cambiar el día o la hora, escríbenos por WhatsApp.</p>
-            <p><b>Condiciones del mar.</b> Storm decide si el mar está apto. Si no lo está, cambiamos la clase a otro día u hora sin costo.</p>
-            <p><b>Salud.</b> Cada participante declara estar en condiciones de hacer actividad física en el mar y avisa al instructor cualquier lesión, enfermedad o medicamento.</p>
-            <p><b>Instrucciones.</b> Cada participante sigue en todo momento las indicaciones del instructor. Los menores de edad participan con autorización de su adulto responsable.</p>
-            <p><b>Exención de responsabilidad.</b> El surf es una actividad de turismo aventura con riesgos propios que no se pueden eliminar del todo, aun cumpliendo los estándares de seguridad. Al reservar, acepto esos riesgos y libero a Storm de responsabilidad por accidentes o lesiones que no se deban a su negligencia.</p>
-            <p><b>Ficha obligatoria.</b> Antes de entrar al mar, cada participante (o su tutor) completa y firma la ficha de inscripción y aceptación del riesgo de Sernatur (Decreto Nº19/2018). El link llega después de pagar.</p>
+          <details class='rs-ter'><summary>Leer términos y condiciones y Declaración de Aceptación de Riesgos</summary>
+            <p><b>1. La actividad.</b> El surf es un deporte al aire libre con riesgos propios que no se pueden eliminar del todo, aun con supervisión profesional. Incluye teoría en la arena, técnica, práctica supervisada en el mar y uso de tabla, leash y traje.</p>
+            <p><b>2. Riesgos.</b> Caídas, golpes con la tabla, choques con personas u objetos, corrientes, olas fuertes o cambios de clima, cansancio, cortes, moretones, hipotermia y lesiones leves o graves, aun con instructores presentes.</p>
+            <p><b>3. Participación voluntaria.</b> Participo por mi voluntad, entiendo los riesgos, asumo mi responsabilidad y sigo las instrucciones. No seguir las indicaciones de seguridad puede significar la suspensión inmediata.</p>
+            <p><b>4. Salud.</b> Declaro estar apto para actividades en el mar y aviso antes enfermedades, lesiones recientes, condiciones médicas o embarazo. Storm no responde por condiciones no informadas.</p>
+            <p><b>5. Equipo y seguridad.</b> Uso el equipo correctamente, sigo las reglas del instructor y actúo con responsabilidad.</p>
+            <p><b>6. Menores de edad.</b> En menores de 18, el padre, madre o tutor acepta esta declaración, autoriza la participación y es responsable de dejarlo y retirarlo.</p>
+            <p><b>7. Objetos personales.</b> Storm no responde por pérdida, robo o daño de objetos personales. Te recomendamos no traer cosas de valor.</p>
+            <p><b>8. Cambios o suspensión.</b> Storm puede cambiar, suspender o reagendar la clase por marejadas, cambios del mar, mal tiempo u otro riesgo natural.</p>
+            <p><b>9. Uso de imagen.</b> Storm puede tomar fotos o videos con fines educativos o de difusión. Si no quieres aparecer, avísanos antes.</p>
+            <p><b>10. Aceptación.</b> Al reservar y marcar la casilla, declaro haber leído esta declaración, entender y aceptar los riesgos y participar bajo mi responsabilidad (consentimiento informado, Decreto Supremo Nº19, turismo aventura).</p>
+            <p><a href='https://1139c283-d4d5-4df2-8ae3-00a213830c97.filesusr.com/ugd/983b34_40bbb7272f9e4feea7e2ccf77edd140d.pdf' target='_blank' rel='noopener'>Ver el documento completo (PDF)</a></p>
           </details>
-          <label class='rs-chk'><input type='checkbox' name='acepta'> Acepto los términos y condiciones y la exención de responsabilidad.</label>
+          <label class='rs-chk'><input type='checkbox' name='acepta'> Acepto los términos y condiciones y la Declaración de Conocimiento y Aceptación de Riesgos.</label>
         </div>
         ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 7' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
         <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
@@ -204,7 +213,7 @@
       if(f.nombre.length < 2) return msg('Escribe tu nombre.');
       if(f.telefono.replace(/\D/g,'').length < 8) return msg('Revisa tu teléfono.');
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.correo)) return msg('Revisa tu correo.');
-      if(!f.acepta) return msg('Para reservar, acepta los términos y condiciones y la exención de responsabilidad.');
+      if(!f.acepta) return msg('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.');
       go.disabled = true; go.textContent = 'Conectando con Mercado Pago…'; e.hidden = true;
       try{
         const r = await post(Object.assign({accion:'reservar', personas: S.personas, menores: S.menores, fecha: S.fecha, hora: S.hora}, f));
@@ -229,7 +238,10 @@
       root.innerHTML = `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>¡Clase reservada!</h2>
         <p class='big'>${esc(fd(r.fecha))}, ${esc(r.hora)} hrs</p>
         <p>${r.personas} persona${r.personas===1?'':'s'} · Playa de Matanzas<br>Te enviamos el comprobante a ${esc(r.correo)}.</p>
-        <p>Nosotros ponemos tabla y traje. Trae traje de baño, toalla y bloqueador, y llega 10 minutos antes.</p>
+        <div class='rs-traer'><b>🏄 ¿Qué debes traer?</b>
+          <ul><li>Traje de baño (para usar debajo del wetsuit)</li><li>Toalla</li><li>Bloqueador solar</li><li>Botella con agua</li><li>Ropa cómoda para después de la clase</li></ul>
+          <p>Nosotros te entregamos todo el equipamiento necesario 💙 Llega 10 minutos antes.</p></div>
+        <a class='rs-btn2' href='https://maps.app.goo.gl/xcFSTmgfwwKACqfb7' target='_blank' rel='noopener'>📍 Ver ubicación en el mapa</a>
         ${r.ficha ? `<div style='margin:18px 0 4px;padding:16px;border-radius:16px;background:#FFF6DA;text-align:left'><b style='font-size:1.6rem'>Falta un paso: la ficha de cada participante</b>
           <p style='margin:6px 0 0;color:#5c5b58'>Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona. Te dejamos el link también en el correo.</p>
           <a class='rs-go' style='text-decoration:none;text-align:center;margin-top:12px' href='${esc(r.ficha)}'>Llenar la ficha ahora</a></div>` : ''}

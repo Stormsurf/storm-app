@@ -19,6 +19,8 @@ let PAGINA = 'https://app.stormsurf.cl/reservar/';
 let PANEL = 'https://app.stormsurf.cl/agenda/';
 const CORREO_URL = 'https://script.google.com/macros/s/AKfycbzmzD794KtxFxndjERPQ8kneEvRMyBmd7tmcgD7Rvdl6eJv2ZsHDsFBnAvluCQYDOZ7/exec';
 const CORREO_STORM = 'isidoravergara@gmail.com';
+const MAPA = 'https://maps.app.goo.gl/xcFSTmgfwwKACqfb7';
+const TRAER = ['Traje de baño (para usar debajo del wetsuit)', 'Toalla', 'Bloqueador solar', 'Botella con agua', 'Ropa cómoda para después de la clase'];
 const WHATSAPP = '56977744306';
 const SESION_DIAS = 365;
 const BLOQUE = 30; // minutos
@@ -368,14 +370,40 @@ function cajaCorreo(titulo, filas, pie) {
 const botonFicha = r => '<span style="display:block;margin:0 0 18px;padding:16px;border-radius:14px;background:#FFF6DA;color:#3B2610"><b style="font-size:16px">Falta un paso: la ficha de cada participante</b><br>' +
   'Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona.<br><a href="' + linkFicha(r) + '" style="display:inline-block;margin-top:10px;background:#2C2C2B;color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:999px">Llenar la ficha</a></span>';
 const filaC = (k, v) => '<p style="margin:0 0 8px;font-size:16px;line-height:1.45"><span style="color:#8a8986">' + esc(k) + '</span><br><b>' + esc(v) + '</b></p>';
+/** Correo de confirmación para el cliente: todo lo que necesita saber para llegar a su clase. */
+function correoReservada(r, a, ins) {
+  const F = 'font-family:Helvetica,Arial,sans-serif;', fin = deMin(aMin(r.hora) + a.duracion);
+  const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Clase de surf Storm') + '&dates=' + r.fecha.replace(/-/g, '') + 'T' + r.hora.replace(':', '') + '00/' + r.fecha.replace(/-/g, '') + 'T' + fin.replace(':', '') + '00&ctz=America/Santiago&location=' + encodeURIComponent(MAPA) + '&details=' + encodeURIComponent('Llega 10 minutos antes. Ficha: ' + linkFicha(r));
+  const boton = (href, txt, fondo, color) => '<a href="' + href + '" style="display:block;text-align:center;text-decoration:none;background:' + fondo + ';color:' + color + ';font-weight:700;font-size:16px;padding:14px 18px;border-radius:999px;margin:10px 0 0">' + txt + '</a>';
+  const seccion = (titulo, cuerpo) => '<tr><td style="padding:22px 26px 0"><p style="margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8a8986;font-weight:700">' + titulo + '</p>' + cuerpo + '</td></tr>';
+  const dato = (k, v) => '<td style="padding:6px 0;font-size:15px;color:#8a8986;width:42%">' + k + '</td><td style="padding:6px 0;font-size:15px;font-weight:700;text-align:right">' + v + '</td>';
+  const ficha = r.ref ? '<tr><td style="padding:22px 26px 0"><div style="padding:18px;border-radius:16px;background:#FFF6DA;color:#3B2610"><b style="font-size:17px">Falta un paso: la ficha de cada participante</b><p style="margin:6px 0 0;font-size:15px;line-height:1.5">Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona y se firma con el dedo.</p>' + boton(linkFicha(r), 'Llenar la ficha', '#2C2C2B', '#ffffff') + '</div></td></tr>' : '';
+  const html = '<div style="background:#EFECE8;padding:28px 12px;' + F + 'color:#2C2C2B"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#fff;border-radius:22px;overflow:hidden">' +
+    '<tr><td style="padding:26px 26px 0;text-align:center"><img src="https://app.stormsurf.cl/img/storm-logo.png" alt="Storm" width="110" style="display:inline-block"></td></tr>' +
+    '<tr><td style="padding:18px 26px 0;text-align:center"><p style="margin:0;font-size:40px">🏄</p><h1 style="font-size:27px;line-height:1.15;margin:6px 0 8px">¡Tu clase de surf está reservada!</h1><p style="margin:0;font-size:16px;line-height:1.5;color:#5c5b58">Hola ' + esc(r.nombre.split(' ')[0]) + ', ya tienes tu lugar en el mar. Este correo es tu comprobante.</p></td></tr>' +
+    '<tr><td style="padding:22px 26px 0"><div style="background:#E3F1F1;border-radius:18px;padding:20px;text-align:center"><p style="margin:0;font-size:14px;color:#0f6e74;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Tu clase</p><p style="margin:6px 0 2px;font-size:22px;font-weight:700">' + esc(fechaLarga(r.fecha)) + '</p><p style="margin:0;font-size:20px">' + esc(r.hora) + ' a ' + esc(fin) + ' hrs</p></div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px">' +
+    '<tr>' + dato('Personas', r.personas + (r.menores ? ' (' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 7)' : '')) + '</tr>' +
+    (ins.length ? '<tr>' + dato(ins.length === 1 ? 'Instructor' : 'Instructores', esc(ins.join(' y '))) + '</tr>' : '') +
+    '<tr>' + dato('Dónde', esc(a.lugar)) + '</tr>' +
+    '<tr>' + dato('Total pagado', clp(r.total)) + '</tr>' +
+    '<tr>' + dato('Reserva', esc(r.ref)) + '</tr></table></td></tr>' +
+    ficha +
+    seccion('📍 Cómo llegar', '<p style="margin:0;font-size:15px;line-height:1.5">Nos encontramos en Storm, en ' + esc(a.lugar) + '. Llega 10 minutos antes para ponerte el traje con calma.</p>' + boton(MAPA, 'Ver ubicación en el mapa', '#2C2C2B', '#ffffff')) +
+    seccion('🎒 Qué traer', '<p style="margin:0;font-size:15px;line-height:1.9">' + TRAER.map(t => '✅ ' + esc(t)).join('<br>') + '</p>') +
+    seccion('💙 Nosotros ponemos', '<p style="margin:0;font-size:15px;line-height:1.9">🏄 Tabla de surf y leash<br>🌊 Traje de agua (wetsuit)<br>🤙 Instructor certificado</p>') +
+    seccion('🌊 Si el mar no está apto', '<p style="margin:0;font-size:15px;line-height:1.5">El surf es un deporte en el mar. Si las condiciones no son seguras, te escribimos por WhatsApp para cambiar la hora sin costo.</p>') +
+    '<tr><td style="padding:16px 26px 0">' + boton(gcal, 'Agregar a mi calendario', '#EFECE8', '#2C2C2B') + boton('https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Hola Storm, reservé una clase (' + r.ref + ')'), '¿Dudas o cambios? WhatsApp', '#25D366', '#ffffff') + '</td></tr>' +
+    '<tr><td style="padding:24px 26px 28px;text-align:center"><p style="margin:0;font-size:17px">¡Nos vemos en el agua! 🌊<br><b>Equipo Storm</b></p></td></tr></table>' +
+    '<p style="text-align:center;margin:16px 0 0;font-size:12px;color:#8a8986">Storm Surf Academy · Playa de Matanzas, Navidad · <a href="https://www.stormsurf.cl" style="color:#2d6e94">stormsurf.cl</a></p></div>';
+  return html.replace(/[^\x00-\x7F]/gu, c => '&#' + c.codePointAt(0) + ';');
+}
 async function avisarReserva(env, r, a) {
   const ins = parseLista(r.instructores);
   const cuando = fechaLarga(r.fecha) + ', ' + r.hora + ' hrs';
-  const html = cajaCorreo('¡Clase reservada!', '<p style="margin:0 0 16px;font-size:16px">Hola ' + esc(r.nombre.split(' ')[0]) + ', recibimos tu pago. Este correo es tu comprobante.</p>' +
-    filaC('Cuándo', cuando) + filaC('Duración', '1 hora y 30 minutos') + filaC('Personas', r.personas) + filaC('Dónde', a.lugar) + filaC('Total pagado', clp(r.total)),
-    botonFicha(r) + 'Nosotros ponemos tabla y traje. Trae traje de baño, toalla y bloqueador. Llega 10 minutos antes. Si necesitas cambiar la hora, escríbenos por WhatsApp. Referencia ' + esc(r.ref) + '.');
-  const p = [enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: 'Clase de surf reservada · ' + cuando, html,
-    body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\nNosotros ponemos tabla y traje. Referencia ' + r.ref })];
+  const html = correoReservada(r, a, ins);
+  const p = [enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: '🏄 ¡Tu clase de surf está reservada! · ' + cuando, html,
+    body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\n📍 Nuestra ubicación: ' + MAPA + '\n\n🏄 ¿Qué debes traer?\n' + TRAER.map(t => '✅ ' + t).join('\n') + '\n\nNosotros te entregamos todo el equipamiento necesario 💙\nReferencia ' + r.ref })];
   const lista = await env.DB.prepare('SELECT nombre, correo FROM instructores').all();
   lista.results.filter(i => ins.includes(i.nombre) && i.correo).forEach(i => p.push(enviarCorreo(env, { to: i.correo, subject: 'Nueva clase particular · ' + cuando,
     body: 'Hola ' + i.nombre + ',\n\nTienes una clase particular:\n' + cuando + '\n' + r.personas + ' persona(s)' + (r.menores ? ' (' + r.menores + ' menor(es) de 7)' : '') + '\nCliente: ' + r.nombre + ' · ' + r.telefono + (r.comentario ? '\nComentario: ' + r.comentario : '') + '\n\nLa ves en Agenda Storm: ' + PANEL + '\n\nEquipo Storm' })));
