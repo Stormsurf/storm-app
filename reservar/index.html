@@ -67,6 +67,12 @@
 .rs-f input:focus,.rs-f textarea:focus{outline:none;border-color:var(--ac)}
 .rs-f textarea{min-height:76px;resize:vertical}
 .rs-chk{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:1.3rem;line-height:1.45;color:var(--mute);cursor:pointer}
+.rs-mar{margin:14px 0 0;font-size:1.3rem;line-height:1.45;color:var(--mute)}
+.rs-ter{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:1.25rem;line-height:1.5;color:var(--mute)}
+.rs-ter summary{cursor:pointer;font-weight:600;color:var(--ink)}
+.rs-ter p{margin:8px 0 0}
+.rs-split{margin-top:14px;display:grid;gap:4px;font-size:1.35rem;color:var(--mute)}
+.rs-split div{display:flex;justify-content:space-between}
 .rs-chk input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--ink)}
 .rs-sum{margin:16px 0 0;padding:14px 16px;border-radius:16px;background:#F5F3EF;font-size:1.4rem;line-height:1.55}
 .rs-sum b{font-weight:600}
@@ -104,7 +110,10 @@
   const S = { personas: 0, menores: 0, fecha: '', hora: '', mes: '' };
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
   const precioDe = p => D && D.precios ? Number(D.precios[p]) : 0;
-  const necesita = () => Math.max(1, Math.ceil(S.menores / 2));
+  const necesita = () => Math.ceil(S.menores / 2) + (S.personas > S.menores ? 1 : 0);
+  // Igual que el servidor: los menores de 7 van de a 2 por instructor y el resto en otra clase
+  const grupos = (p, k) => { const g = []; for(let x = k; x > 0; x -= 2) g.push({n: Math.min(2, x), ninos: true}); if(p > k) g.push({n: p - k, ninos: false}); return g; };
+  const totalDe = (p, k) => grupos(p, k).reduce((t, g) => t + precioDe(g.n), 0);
   const waLink = t => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(t);
 
   async function cargar(){
@@ -143,18 +152,18 @@
   }
 
   function pintar(){
-    const p = S.personas, precio = precioDe(p), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
-    const kids = p ? `<div class='rs-kids'><p>¿Cuántos son menores de 7 años?<small>Por seguridad, va 1 instructor por cada 2 niños menores de 7.</small></p>
+    const p = S.personas, G = grupos(p, S.menores), precio = totalDe(p, S.menores), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
+    const kids = p ? `<div class='rs-kids'><p>¿Cuántos son menores de 7 años?<small>Por seguridad, los menores de 7 tienen su propio instructor (1 por cada 2 niños).</small></p>
       <div class='rs-num'><button data-k='-1' aria-label='Menos'${S.menores<=0?' disabled':''}>−</button><b>${S.menores}</b><button data-k='1' aria-label='Más'${S.menores>=p?' disabled':''}>+</button></div></div>` : '';
     const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
     root.innerHTML = `
       <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
-        <div class='rs-inc'><span>1 hora y 30 minutos</span><span>Tabla y traje incluidos</span><span>Todos los niveles</span></div></div>
+        <div class='rs-inc'><span>1 hora y media</span><span>Tabla y traje incluidos</span><span>Todos los niveles</span><span>Instructor certificado</span></div></div>
       <div class='rs-card'><div class='rs-step'><i>1</i><h2>¿Cuántas personas son?</h2></div>
         <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
         <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
         ${kids}
-        ${p ? `<div class='rs-price'><span>Clase para ${p} persona${p===1?'':'s'}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
+        ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>Clase para ${g.n} ${g.ninos ? (g.n===1?'niño':'niños') + ' menor' + (g.n===1?'':'es') + ' de 7' : (g.n===1?'persona':'personas')}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? 'Total · ' + G.length + ' instructores' : 'Clase para ' + p + ' persona' + (p===1?'':'s')}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
       </div>
       <div class='rs-card${listo1?'':' off'}' id='rs-paso2'><div class='rs-step'><i>2</i><h2>Elige el día y la hora</h2></div>${listo1 ? calendario() : `<p class='rs-note'>Primero elige cuántas personas son.</p>`}</div>
       <div class='rs-card${listo2?'':' off'}' id='rs-paso3'><div class='rs-step'><i>3</i><h2>Tus datos</h2></div>
@@ -163,7 +172,16 @@
           <label for='rs-t'>Teléfono (WhatsApp)</label><input id='rs-t' name='telefono' type='tel' inputmode='tel' autocomplete='tel' placeholder='+56 9 …' required>
           <label for='rs-c'>Correo (te llega el comprobante)</label><input id='rs-c' name='correo' type='email' inputmode='email' autocomplete='email' required>
           <label for='rs-x'>¿Algo que debamos saber? <span style='font-weight:400;color:var(--mute)'>(opcional)</span></label><textarea id='rs-x' name='comentario' placeholder='Edades, si ya surfearon antes, alguna lesión…'></textarea>
-          <label class='rs-chk'><input type='checkbox' name='acepta'> Sé que el surf es un deporte en el mar. Si el mar no está apto, Storm me avisa por WhatsApp para cambiar la hora.</label>
+          <p class='rs-mar'>🌊 El surf es un deporte en el mar. Si el mar no está apto, te avisamos por WhatsApp para cambiar la hora.</p>
+          <details class='rs-ter'><summary>Leer términos y condiciones y exención de responsabilidad</summary>
+            <p><b>Reserva y pago.</b> La clase queda reservada al pagar el total en línea. Para cambiar el día o la hora, escríbenos por WhatsApp.</p>
+            <p><b>Condiciones del mar.</b> Storm decide si el mar está apto. Si no lo está, cambiamos la clase a otro día u hora sin costo.</p>
+            <p><b>Salud.</b> Cada participante declara estar en condiciones de hacer actividad física en el mar y avisa al instructor cualquier lesión, enfermedad o medicamento.</p>
+            <p><b>Instrucciones.</b> Cada participante sigue en todo momento las indicaciones del instructor. Los menores de edad participan con autorización de su adulto responsable.</p>
+            <p><b>Exención de responsabilidad.</b> El surf es una actividad de turismo aventura con riesgos propios que no se pueden eliminar del todo, aun cumpliendo los estándares de seguridad. Al reservar, acepto esos riesgos y libero a Storm de responsabilidad por accidentes o lesiones que no se deban a su negligencia.</p>
+            <p><b>Ficha obligatoria.</b> Antes de entrar al mar, cada participante (o su tutor) completa y firma la ficha de inscripción y aceptación del riesgo de Sernatur (Decreto Nº19/2018). El link llega después de pagar.</p>
+          </details>
+          <label class='rs-chk'><input type='checkbox' name='acepta'> Acepto los términos y condiciones y la exención de responsabilidad.</label>
         </div>
         ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 7' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
         <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
@@ -186,7 +204,7 @@
       if(f.nombre.length < 2) return msg('Escribe tu nombre.');
       if(f.telefono.replace(/\D/g,'').length < 8) return msg('Revisa tu teléfono.');
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.correo)) return msg('Revisa tu correo.');
-      if(!f.acepta) return msg('Marca la casilla para seguir.');
+      if(!f.acepta) return msg('Para reservar, acepta los términos y condiciones y la exención de responsabilidad.');
       go.disabled = true; go.textContent = 'Conectando con Mercado Pago…'; e.hidden = true;
       try{
         const r = await post(Object.assign({accion:'reservar', personas: S.personas, menores: S.menores, fecha: S.fecha, hora: S.hora}, f));

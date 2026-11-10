@@ -104,15 +104,22 @@ async function instructores(db) {
 const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 
 /** Precio y pago de instructores según personas y menores de 7 (1 instructor por cada 2 menores de 7). */
+/** Precio por grupo: los menores de 7 van de a 2 por instructor (cada pareja es su propia clase) y el resto en otra clase.
+ *  Ej.: 5 personas con 2 menores de 7 = clase de 2 + clase de 3, con 2 instructores. */
 function cotizar(a, personas, menores) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0);
   if (!(personas >= 1)) throw err('Elige cuántas personas son.');
   if (menores < 0 || menores > personas) throw err('Revisa cuántos son menores de 7 años.');
-  const n = Math.max(1, Math.ceil(menores / 2));
-  const precio = Number(a.precios[personas]);
-  const porInstructor = Math.ceil(personas / n);
-  const pagoUno = Number(a.pagos[Math.min(porInstructor, 5)] || a.pagos.grupo || 0);
-  return { personas, menores, instructores: n, precio: precio || 0, pagoInstructor: pagoUno * n };
+  const grupos = [];
+  for (let k = menores; k > 0; k -= 2) grupos.push({ personas: Math.min(2, k), ninos: true });
+  if (personas - menores > 0) grupos.push({ personas: personas - menores, ninos: false });
+  let precio = 0, pago = 0;
+  grupos.forEach(g => {
+    g.precio = Number(a.precios[g.personas]) || 0;
+    g.pago = Number(g.personas <= 5 ? a.pagos[g.personas] : a.pagos.grupo) || Number(a.pagos.grupo) || 0;
+    precio += g.precio; pago += g.pago;
+  });
+  return { personas, menores, instructores: grupos.length, grupos, precio, pagoInstructor: pago };
 }
 
 /** Academia Anual (todos los instructores) y horas fijas de cada uno (talleres, etc.). */
