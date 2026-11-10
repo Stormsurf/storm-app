@@ -166,7 +166,7 @@
       <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
         <div class='rs-inc'><span>1 hora y media</span><span>Tabla y traje incluidos</span><span>Todos los niveles</span><span>Instructor certificado</span></div></div>
       <div class='rs-card'><div class='rs-step'><i>1</i><h2>¿Cuántas personas son?</h2></div>
-        <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
+        <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(p===n ? totalDe(n, S.menores, S.ninos) : precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
         <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
         ${kids}
         ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>Clase para ${g.n} ${g.ninos ? (g.n===1?'niño':'niños') + ' menor' + (g.n===1?'':'es') + ' de 8' : (g.n===1?'persona':'personas')}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? 'Total · ' + G.length + ' instructores' : 'Clase para ' + p + ' persona' + (p===1?'':'s')}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
