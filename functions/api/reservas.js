@@ -31,12 +31,14 @@ const AJUSTES_BASE = {
   horarios: ['08:30', '09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00'], // bloques seguidos de 1:30 (08:30 solo domingo en la semana tipo, antes de la Academia de las 10:00)
   duracion: 90,          // minutos
   minHoras: 3,           // anticipación mínima
-  horaTarde: '13:00',    // clases antes de esta hora son "de la mañana"
+  horaTarde: '23:59',    // clases antes de esta hora se reservan hasta cierreNoche del día anterior (hoy: todas; en verano se puede bajar a 13:00)
   cierreNoche: '20:00',  // las de la mañana se reservan hasta esta hora del día anterior
   diasAdelante: 60,
   retencionMin: 30,      // minutos que se guarda el horario mientras pagan
   maxWeb: 5,             // más personas = por WhatsApp
   maxSeguidas: 2,
+  // Enero y febrero: la Academia de Verano usa lun, mar, jue y vie de 9:00 a 12:00; en ese rato queda 1 instructor para particulares
+  verano: { meses: [1, 2], dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', instructores: 1 },
   horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
@@ -206,6 +208,18 @@ function permitido(a, fecha, hora, ahora = ahoraChile()) {
   return true;
 }
 
+/** Tope de la Academia de Verano: si la clase cae en ese rato, solo pueden darla los instructores que ya tienen particulares ahí,
+ *  más los que falten para llegar al tope (1). lista = nombres ya ordenados; devuelve la lista recortada. */
+function topeVerano(a, ag, fecha, hora, lista) {
+  const v = a.verano;
+  if (!v || !(v.meses || []).includes(+fecha.slice(5, 7)) || !(v.dias || []).includes(diaSemana(fecha))) return lista;
+  const ini = aMin(hora), fin = ini + a.duracion, d = aMin(v.desde), h = aMin(v.hasta);
+  if (fin <= d || ini >= h) return lista;
+  const usados = new Set(ag.bloques.filter(b => b.fecha === fecha && aMin(b.hora) >= d && aMin(b.hora) < h).map(b => b.instructor));
+  const cupo = Math.max(0, (Number(v.instructores) || 0) - usados.size);
+  return lista.filter(n => usados.has(n)).concat(lista.filter(n => !usados.has(n)).slice(0, cupo));
+}
+
 async function disponibilidad(db, d) {
   const a = await ajustes(db);
   const hoy = ahoraChile();
@@ -216,7 +230,7 @@ async function disponibilidad(db, d) {
   const activos = ag.ins.filter(i => i.activo);
   const dias = {};
   for (let f = hoy.fecha; f <= hasta; f = sumarDias(f, 1)) {
-    const horas = a.horarios.filter(h => permitido(a, f, h, hoy) && activos.filter(i => ag.libre(i.nombre, f, h)).length >= c.instructores);
+    const horas = a.horarios.filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
     if (horas.length) dias[f] = horas;
   }
   return { ok: true, precios: a.precios, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
@@ -306,7 +320,7 @@ async function reservar(env, d) {
   let elegido = null;
   for (let intento = 0; intento < 3 && !elegido; intento++) {
     const ag = await estadoAgenda(db, a, fecha, fecha);
-    const libres = elegir(ag, a, fecha, hora);
+    const libres = topeVerano(a, ag, fecha, hora, elegir(ag, a, fecha, hora));
     if (libres.length < c.instructores) break;
     const r = Object.assign({}, base, { instructores: libres.slice(0, c.instructores) });
     try { await guardarReserva(db, a, r, Date.now() + a.retencionMin * 60000); elegido = r; }
