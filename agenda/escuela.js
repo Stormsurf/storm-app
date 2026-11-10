@@ -336,7 +336,7 @@
     let h = `<div class='pn-card'><h3>Precios y pago a instructores</h3><p class='pn-sub'>Lo que paga el cliente y lo que se le paga al instructor por clase.</p>
       <table class='es-tab'><tr><th>Personas</th><th>Precio</th><th>Pago instructor</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
       <tr><td colspan='2'>Grupo grande o empresa (por instructor)</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: de a 2 por instructor (uno solo va con el grupo); el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
+      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: de a 2 por instructor (si sobra uno, va con el grupo; 3 niños solos = 1 instructor); el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
       <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Horarios y reglas</h3>
       <div class='es-f' style='margin-top:10px'><label class='w'>Horas de inicio de clase (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>

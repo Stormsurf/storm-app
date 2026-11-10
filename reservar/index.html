@@ -116,8 +116,8 @@
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
   const precioDe = p => D && D.precios ? Number(D.precios[p]) : 0;
   const necesita = () => grupos(S.personas, S.menores, S.ninos).length;
-  // Igual que el servidor: los menores de 8 van de a 2 por instructor (uno solo va con el grupo) y el resto en otra clase
-  const grupos = (p, k, c) => { c = c || 0; const g = []; const solo = k === 1 && p > 1; if(!solo) for(let x = k; x > 0; x -= 2) g.push({n: Math.min(2, x), ninos: true}); const r = p - (solo ? 0 : k); if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), ninos: false}); } return g; };
+  // Igual que el servidor: los menores de 8 van de a 2 por instructor; si sobra uno va con los demás (o con el último par)
+  const grupos = (p, k, c) => { c = c || 0; const g = []; const pr = Math.floor(k / 2); for(let i = 0; i < pr; i++) g.push({n: 2, ninos: true}); let r = p - pr * 2; if(pr && r === k % 2 && r > 0){ g[g.length - 1].n += r; r = 0; } if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), ninos: false}); } return g; };
   const totalDe = (p, k, c) => grupos(p, k, c).reduce((t, g) => t + precioDe(g.n), 0);
   const waLink = t => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(t);
 
@@ -160,7 +160,7 @@
     const p = S.personas, G = grupos(p, S.menores, S.ninos), precio = totalDe(p, S.menores, S.ninos), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
     const paso = (txt, sub, val, attr, max) => `<div class='rs-kids'><p>${txt}<small>${sub}</small></p>
       <div class='rs-num'><button ${attr}='-1' aria-label='Menos'${val<=0?' disabled':''}>−</button><b>${val}</b><button ${attr}='1' aria-label='Más'${val>=max?' disabled':''}>+</button></div></div>`;
-    const kids = p ? paso('¿Cuántos son menores de 8 años?', 'Van de a 2 por instructor. Si es solo uno, va con el grupo.', S.menores, 'data-k', p) + `<p class='rs-nota5'>* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).</p>` : '';
+    const kids = p ? paso('¿Cuántos son menores de 8 años?', 'Van de a 2 por instructor. Si sobra uno, va con el grupo.', S.menores, 'data-k', p) + `<p class='rs-nota5'>* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).</p>` : '';
     const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
     root.innerHTML = `
       <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
