@@ -106,6 +106,8 @@
     return o ? o.motivo || 'Ocupado' : ''; };
   const reservaEn = (inst, fecha, hora) => E.reservas.find(r => r.fecha === fecha && r.instructores.includes(inst) && Math.abs(aMin(r.hora) - aMin(hora)) < E.duracion);
 
+  // A mano se puede anotar a cualquier hora (cada 30 min, 7:00 a 19:30), no solo los bloques de la web
+  const horasMano = () => { const l = new Set(E.horarios); for (let m = 7 * 60; m <= 19 * 60 + 30; m += 30) l.add(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0')); return [...l].sort(); };
   const msgLink = L => 'Hola ' + L.nombre.split(' ')[0] + '! Te dejo el link para pagar tu clase de surf con Storm: ' + flarga(L.fecha).toLowerCase() + ' a las ' + L.hora + ', ' + L.personas + (L.personas === 1 ? ' persona' : ' personas') + ', ' + clp(L.total) + '. Al pagar te llega el comprobante y la ficha para llenar.\n' + L.url;
   // ---------- pintar ----------
   function pintar() {
@@ -170,7 +172,7 @@
           return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>' + esc(otraCosa(i.nombre, r.fecha, r.hora) || 'ocupado') + '</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
           <div class='es-acc'><button class='es-btn' data-go='ins'${sel.length === n ? '' : ' disabled'}>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'mover') {
-        h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' min='${E.hoy}'></label><label>Hora<select id='es-mh'>${E.horarios.map(x => `<option${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
+        h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' min='${E.hoy}'></label><label>Hora<select id='es-mh'>${horasMano().map(x => `<option value='${x}'${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
           <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Se mantiene el mismo instructor. Avísale al cliente por WhatsApp.</p>
           <div class='es-acc'><button class='es-btn' data-go='mover'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'cancelar') {
@@ -183,20 +185,21 @@
 
   function manualForm() {
     const a = E.ajustes || {};
-    return `<div class='pn-card'><h3>Agregar reserva a mano</h3><p class='pn-sub'>Para clases que llegan por WhatsApp, empresas o familias grandes. No pasa por Mercado Pago.</p>
+    return `<div class='pn-card'><h3>Agregar reserva a mano</h3><p class='pn-sub'>Para clases que llegan por WhatsApp, empresas o familias grandes. Puedes elegir cualquier hora.</p>
       <div class='es-f' style='margin-top:10px'>
         <label>Día<input type='date' name='fecha' min='${E.hoy}' value='${E.hoy}'></label>
-        <label>Hora<select name='hora'>${E.horarios.map(x => `<option>${x}</option>`).join('')}</select></label>
+        <label>Hora<select name='hora'>${horasMano().map(x => `<option value='${x}'${x === E.horarios[0] ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
         <label>Personas<input type='number' name='personas' min='1' value='2' inputmode='numeric'></label>
         <label>Menores de 7<input type='number' name='menores' min='0' value='0' inputmode='numeric'></label>
-        <label class='w'>Nombre del cliente<input name='nombre'></label>
+        <label class='w'>Nombre del cliente<input name='nombre' list='es-clientes' autocomplete='off' placeholder='Escribe y elige si ya reservó antes'></label><datalist id='es-clientes'>${(E.clientes || []).map(c => `<option value='${esc(c.nombre)}'>${esc([c.telefono, c.clases + (c.clases === 1 ? ' clase' : ' clases')].filter(Boolean).join(' · '))}</option>`).join('')}</datalist>
         <label>Teléfono<input name='telefono' type='tel'></label>
         <label>Correo (opcional)<input name='correo' type='email'></label>
         <label>Total cobrado<input name='total' inputmode='numeric' placeholder='según la tabla'></label>
         <label>Pago instructores<input name='pagoInstructor' inputmode='numeric' placeholder='según la tabla'></label>
         <label>Pago<select name='medio'><option value='Link de pago'>Mandar link de pago</option><option>Transferencia</option><option>Efectivo</option><option>Por pagar</option><option value='Mercado Pago'>Ya pagó por Mercado Pago</option></select></label>
-        <label>Instructor<select name='instructor'><option value=''>Al azar (los libres)</option>${E.instructores.filter(i => i.activo).map(i => `<option>${esc(i.nombre)}</option>`).join('')}</select></label>
         <label>N° de instructores<input type='number' name='nInstructores' min='1' value='1' inputmode='numeric'></label>
+        <div style='grid-column:1/-1'><b style='font-size:1.3rem'>Instructores</b> <span style='font-size:1.2rem;opacity:.7'>(elige uno o varios; si no eliges, o faltan, la app elige al azar entre los libres)</span>
+          <div class='es-chips' style='margin-top:6px'>${E.instructores.filter(i => i.activo).map(i => `<button type='button' class='es-chip' data-mi='${esc(i.nombre)}'>${esc(i.nombre)}</button>`).join('')}</div></div>
         <label class='w'>Comentario<textarea name='comentario' rows='2'></textarea></label>
         <label class='w' style='font-weight:500'><input type='checkbox' name='avisar' style='display:inline;width:auto;margin:0 6px 0 0'>Si ya pagó: mandarle el comprobante por correo</label>
       </div>
@@ -299,10 +302,14 @@
       if (go.dataset.go === 'mover') { const f = $('#es-mf').value, hh = $('#es-mh').value; accion({ accion: 'editar', ref: abierta, fecha: f, hora: hh }, go).then(ok => { if (ok) { msg = 'Listo: clase de ' + r.nombre + ' movida al ' + flarga(f) + ' a las ' + hh + '. Avísale por WhatsApp.'; pintar(); } }); }
       if (go.dataset.go === 'cancelar') accion({ accion: 'cancelar', ref: abierta }, go).then(ok => { if (ok) { msg = 'Clase de ' + r.nombre + ' cancelada.'; pintar(); } });
     };
+    $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
+    const nomIn = $('[name=nombre][list=es-clientes]');
+    if (nomIn) nomIn.onchange = () => { const c = (E.clientes || []).find(x => x.nombre.toLowerCase() === nomIn.value.trim().toLowerCase()); if (!c) return; const f = nomIn.closest('.pn-card'); const t = f.querySelector('[name=telefono]'), m = f.querySelector('[name=correo]'); if (t && !t.value) t.value = c.telefono; if (m && !m.value) m.value = c.correo; };
     const mg = $('[data-manual-go]');
     if (mg) mg.onclick = () => {
       const c = mg.closest('.pn-card'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
-      const body = Object.assign({ accion: 'manual' }, v, { instructores: v.instructor ? [v.instructor] : [] });
+      const elegidos = [...c.querySelectorAll('[data-mi].on')].map(b => b.dataset.mi);
+      const body = Object.assign({ accion: 'manual' }, v, { instructores: elegidos });
       accion(body, mg).then(ok => { if (ok) { manualOn = false; msg = E.nuevoLink ? '' : 'Reserva de ' + v.nombre + ' guardada.'; linkNuevo = E.nuevoLink || null; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
     };
     // calendario

@@ -177,8 +177,9 @@ async function estadoAgenda(db, a, desde, hasta) {
     return ((semana[inst] || {})[diaSemana(fecha)] || []).includes(hora);
   };
   const enOtraCosa = (inst, fecha, hora) => cruce(ocu, inst, fecha, hora, a.duracion);
-  const libre = (inst, fecha, hora) => disponible(inst, fecha, hora) && !enOtraCosa(inst, fecha, hora) && bloquesDe(hora, a.duracion).every(b => !ocupado.has(inst + '|' + fecha + '|' + b));
-  return { ins, semana, excep, ocupado, disponible, libre, bloques: blo.results };
+  const sinChoque = (inst, fecha, hora) => !enOtraCosa(inst, fecha, hora) && bloquesDe(hora, a.duracion).every(b => !ocupado.has(inst + '|' + fecha + '|' + b));
+  const libre = (inst, fecha, hora) => disponible(inst, fecha, hora) && sinChoque(inst, fecha, hora);
+  return { ins, semana, excep, ocupado, disponible, libre, sinChoque, bloques: blo.results };
 }
 
 /** ¿Se puede reservar ese horario ahora? (anticipación y nunca de noche para la mañana) */
@@ -214,7 +215,8 @@ const shuffle = arr => { const x = arr.slice(); for (let i = x.length - 1; i > 0
 
 /** Instructores libres a esa hora: primero los que ya tienen una clase justo antes o justo después (clases seguidas, sin esperar en el agua);
  *  entre iguales, al azar. */
-function elegir(ag, a, fecha, hora) {
+/** aMano: Isidora anota a cualquier hora; sirve cualquier instructor sin otra clase, primero los que marcaron disponible. */
+function elegir(ag, a, fecha, hora, aMano) {
   const antes = deMin(aMin(hora) - BLOQUE), despues = deMin(Math.floor(aMin(hora) / BLOQUE) * BLOQUE + Math.ceil(a.duracion / BLOQUE) * BLOQUE);
   const tiene = (n, m) => ag.ocupado.has(n + '|' + fecha + '|' + deMin(m));
   const pegado = n => {
@@ -227,7 +229,8 @@ function elegir(ag, a, fecha, hora) {
   };
   // clases que ya tiene ese día: si nadie tiene una pegada, va al que tiene menos (así trabajan todos)
   const nDia = n => new Set(ag.bloques.filter(b => b.instructor === n && b.fecha === fecha).map(b => b.ref)).size;
-  return shuffle(ag.ins.filter(i => i.activo && ag.libre(i.nombre, fecha, hora)).map(i => i.nombre)).sort((x, y) => pegado(y) - pegado(x) || nDia(x) - nDia(y));
+  const sirve = aMano ? ag.sinChoque : ag.libre, marco = n => ag.disponible(n, fecha, hora) ? 1 : 0;
+  return shuffle(ag.ins.filter(i => i.activo && sirve(i.nombre, fecha, hora)).map(i => i.nombre)).sort((x, y) => (aMano ? marco(y) - marco(x) : 0) || pegado(y) - pegado(x) || nDia(x) - nDia(y));
 }
 /** Guarda la reserva y ocupa los bloques en un solo paso: si alguien tomó el horario un segundo antes, falla entera. */
 async function guardarReserva(db, a, r, hastaMs) {
@@ -473,6 +476,10 @@ async function panel(env, q) {
     porIns.results.forEach(r => { const l = parseLista(r.instructores); if (l.includes(q.yo)) { clases++; pago += Math.round(r.pago_instructor / Math.max(1, l.length)); } });
     out.mes = { mes, clases, pagoYo: pago };
   }
+  if (admin) { // clientes que ya reservaron, para no escribirlos de nuevo en la reserva a mano
+    const cl = await env.DB.prepare("SELECT nombre, telefono, correo, MAX(creada_ms) AS ult, COUNT(*) AS n FROM reservas WHERE estado IN ('pagada', 'pendiente', 'revisar') GROUP BY lower(nombre) ORDER BY ult DESC LIMIT 1000").all();
+    out.clientes = cl.results.map(c => ({ nombre: c.nombre, telefono: c.telefono || '', correo: c.correo || '', clases: c.n }));
+  }
   return out;
 }
 
@@ -527,16 +534,21 @@ async function manual(env, q, d, ctx) {
   if (!(personas >= 1)) throw err('¿Cuántas personas son?');
   const menores = Math.max(0, Math.min(personas, Math.floor(Number(d.menores) || 0)));
   const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Escribe el nombre del cliente.');
-  const c = personas <= 5 ? cotizar(a, personas, menores) : { instructores: Math.max(1, Math.ceil(menores / 2)), precio: 0, pagoInstructor: Number(a.pagos.grupo || 25000) * Math.max(1, Math.ceil(menores / 2)) };
+  const c = cotizar(a, personas, menores); // más de 5 adultos: sin precio de tabla (escribe el total), pago instructor = grupo
   const total = d.total === '' || d.total == null ? c.precio : Math.round(Number(String(d.total).replace(/\D/g, '')) || 0);
-  const pago = d.pagoInstructor === '' || d.pagoInstructor == null ? c.pagoInstructor : Math.round(Number(String(d.pagoInstructor).replace(/\D/g, '')) || 0);
-  const nIns = Math.max(c.instructores, Math.floor(Number(d.nInstructores) || 0));
+  const elegidos = Array.isArray(d.instructores) ? [...new Set(d.instructores.map(String).filter(Boolean))] : [];
+  const nIns = Math.max(c.instructores, Math.floor(Number(d.nInstructores) || 0), elegidos.length);
+  // Si van más instructores que los de la tabla (grupo grande), cada uno se paga como grupo
+  const pagoTabla = nIns > c.instructores ? Number(a.pagos.grupo || 25000) * nIns : c.pagoInstructor;
+  const pago = d.pagoInstructor === '' || d.pagoInstructor == null ? pagoTabla : Math.round(Number(String(d.pagoInstructor).replace(/\D/g, '')) || 0);
   const conLink = d.medio === 'Link de pago';
   const medio = conLink ? 'Mercado Pago' : ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : 'Transferencia';
   if (conLink && !(total > 0)) throw err('Escribe el total a cobrar.');
   if (conLink && !env.MP_TOKEN) throw err('Falta conectar Mercado Pago (MP_TOKEN).');
   const ag = await estadoAgenda(db, a, fecha, fecha);
-  let ins = Array.isArray(d.instructores) && d.instructores.length ? d.instructores.map(String) : elegir(ag, a, fecha, hora).slice(0, nIns);
+  // Los que eligió Isidora + (si faltan) los que elige la app entre los libres
+  const ins = elegidos.concat(elegir(ag, a, fecha, hora, true).filter(i => !elegidos.includes(i))).slice(0, nIns);
+  if (ins.length < nIns) throw err('Solo hay ' + ins.length + ' instructor' + (ins.length === 1 ? '' : 'es') + ' libre' + (ins.length === 1 ? '' : 's') + ' a esa hora. Elige otra hora o menos instructores.');
   if (!ins.length) throw err('No hay instructores libres a esa hora. Elige uno a mano.');
   const t = ahoraChile();
   const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conLink ? 'pendiente' : 'pagada', fecha, hora, personas, menores, instructores: ins, nombre,
