@@ -176,7 +176,7 @@
           <label for='rs-t'>Teléfono (WhatsApp)</label><input id='rs-t' name='telefono' type='tel' inputmode='tel' autocomplete='tel' placeholder='+56 9 …' required>
           <label for='rs-c'>Correo (te llega el comprobante)</label><input id='rs-c' name='correo' type='email' inputmode='email' autocomplete='email' required>
           <label for='rs-x'>¿Algo que debamos saber? <span style='font-weight:400;color:var(--mute)'>(opcional)</span></label><textarea id='rs-x' name='comentario' placeholder='Edades, si ya surfearon antes, alguna lesión…'></textarea>
-          <p class='rs-mar'>🌊 El surf es un deporte en el mar. Si el mar no está apto, te avisamos por WhatsApp para cambiar la hora.</p>
+          <p class='rs-mar'>🌊 El surf es un deporte en el mar. Si el mar no está apto, te avisamos por WhatsApp para cambiar la hora.<br>📅 Una vez reservada, la clase no tiene cambios de día ni de hora, salvo casos excepcionales.</p>
           <details class='rs-ter'><summary>Leer términos y condiciones y Declaración de Aceptación de Riesgos</summary>
             <p><b>1. La actividad.</b> El surf es un deporte al aire libre con riesgos propios que no se pueden eliminar del todo, aun con supervisión profesional. Incluye teoría en la arena, técnica, práctica supervisada en el mar y uso de tabla, leash y traje.</p>
             <p><b>2. Riesgos.</b> Caídas, golpes con la tabla, choques con personas u objetos, corrientes, olas fuertes o cambios de clima, cansancio, cortes, moretones, hipotermia y lesiones leves o graves, aun con instructores presentes.</p>
@@ -185,7 +185,7 @@
             <p><b>5. Equipo y seguridad.</b> Uso el equipo correctamente, sigo las reglas del instructor y actúo con responsabilidad.</p>
             <p><b>6. Menores de edad.</b> En menores de 18, el padre, madre o tutor acepta esta declaración, autoriza la participación y es responsable de dejarlo y retirarlo.</p>
             <p><b>7. Objetos personales.</b> Storm no responde por pérdida, robo o daño de objetos personales. Te recomendamos no traer cosas de valor.</p>
-            <p><b>8. Cambios o suspensión.</b> Storm puede cambiar, suspender o reagendar la clase por marejadas, cambios del mar, mal tiempo u otro riesgo natural.</p>
+            <p><b>8. Cambios o suspensión.</b> Storm puede cambiar, suspender o reagendar la clase por marejadas, cambios del mar, mal tiempo u otro riesgo natural. Por parte del cliente, la reserva no admite cambios de día ni de hora, salvo casos excepcionales que Storm evalúa.</p>
             <p><b>9. Uso de imagen.</b> Storm puede tomar fotos o videos con fines educativos o de difusión. Si no quieres aparecer, avísanos antes.</p>
             <p><b>10. Aceptación.</b> Al reservar y marcar la casilla, declaro haber leído esta declaración, entender y aceptar los riesgos y participar bajo mi responsabilidad (consentimiento informado, Decreto Supremo Nº19, turismo aventura).</p>
             <p><a href='https://1139c283-d4d5-4df2-8ae3-00a213830c97.filesusr.com/ugd/983b34_40bbb7272f9e4feea7e2ccf77edd140d.pdf' target='_blank' rel='noopener'>Ver el documento completo (PDF)</a></p>
@@ -246,7 +246,7 @@
           <p style='margin:6px 0 0;color:#5c5b58'>Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona. Te dejamos el link también en el correo.</p>
           <a class='rs-go' style='text-decoration:none;text-align:center;margin-top:12px' href='${esc(r.ficha)}'>Llenar la ficha ahora</a></div>` : ''}
         <a class='rs-btn2' href='${gcal}' target='_blank' rel='noopener'>Agregar a mi calendario</a></div>
-        <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, reservé una clase (' + ref + ')')}'>¿Necesitas cambiar algo? Escríbenos por WhatsApp</a>`;
+        <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, reservé una clase (' + ref + ')')}'>¿Dudas? Escríbenos por WhatsApp</a>`;
       return;
     }
     const pendiente = r && r.estado === 'pendiente' && pago !== 'error';
