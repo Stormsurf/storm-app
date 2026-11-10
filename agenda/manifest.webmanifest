@@ -1,0 +1,28 @@
+{
+  "name": "Agenda Storm",
+  "short_name": "Agenda Storm",
+  "start_url": "/agenda/",
+  "scope": "/agenda/",
+  "display": "standalone",
+  "background_color": "#1E1E1D",
+  "theme_color": "#EFECE8",
+  "lang": "es-CL",
+  "icons": [
+    {
+      "src": "/icons/storm-app-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/storm-app-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/storm-app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

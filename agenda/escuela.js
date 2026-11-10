@@ -1,4 +1,4 @@
-/* Panel Storm · Escuela (clases particulares): reservas, calendario de cada instructor y ajustes.
+/* Agenda Storm · Escuela (clases particulares): reservas, calendario de cada instructor y ajustes.
    Habla con /api/reservas (Cloudflare). Usa la misma sesión del Panel. */
 (() => {
   const API = '/api/reservas';
@@ -77,7 +77,7 @@
   `;
 
   let E = null, auth = null, pane = null, sub = 'reservas', filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false;
-  const KEY = 'storm-panel-escuela';
+  const KEY = 'storm-agenda-datos';
 
   async function post(body) {
     const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth, body)) });
@@ -210,7 +210,7 @@
       h += `<div class='es-cd'><div class='es-cdh'><span>${esc(fcorta(f))}</span>${libres ? `<button data-dia='${f}' data-libre='0'>No puedo este día</button>` : `<button data-dia='${f}' data-libre='${diaEx ? 'x' : '1'}'>${diaEx ? 'Volver a mi semana tipo' : 'Puedo todo el día'}</button>`}</div><div class='es-slots'>`;
       E.horarios.forEach(x => {
         const r = reservaEn(inst, f, x), ok = dispo(inst, f, x);
-        if (r) h += `<span class='es-s res'>${x}<small>${esc(r.nombre.split(' ')[0])} · ${r.personas}p</small></span>`;
+        if (r) h += r.hora === x ? `<span class='es-s res'>${x}<small>${esc(r.nombre.split(' ')[0])} · ${r.personas}p</small></span>` : `<span class='es-s res' style='opacity:.55'>${x}<small>sigue clase ${esc(r.hora)}</small></span>`;
         else h += `<button class='es-s${ok ? '' : ' no'}' data-sf='${f}' data-sh='${x}' data-ok='${ok ? 1 : 0}'>${x}</button>`;
       });
       h += `</div></div>`;
@@ -241,7 +241,7 @@
       <label class='w'>Lugar (sale en el comprobante)<input id='es-lugar' value='${esc(a.lugar)}'></label></div>
       <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Así nadie reserva de noche para la mañana siguiente. Para la tarde se puede reservar el mismo día, con la anticipación mínima.</p>
       <div class='es-acc'><button class='es-btn' data-aj='reglas'>Guardar</button></div><p class='es-err vivo'></p></div>`;
-    h += `<div class='pn-card'><h3>Instructores de la Escuela</h3><p class='pn-sub'>Con su correo pueden entrar al Panel y ver su calendario. Inactivo = no recibe clases nuevas (por ejemplo, fuera de temporada).</p>
+    h += `<div class='pn-card'><h3>Instructores de la Escuela</h3><p class='pn-sub'>Con su correo pueden entrar a Agenda Storm y ver su calendario. Inactivo = no recibe clases nuevas (por ejemplo, fuera de temporada).</p>
       ${E.instructores.map(i => `<div class='es-insrow'><b>${esc(i.nombre)}</b><input data-ic='${esc(i.nombre)}' type='email' placeholder='correo' value='${esc(i.correo || '')}'>
         <label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}>Activo</label></div>`).join('')}
       <div class='es-insrow'><input id='es-nn' placeholder='Nombre nuevo'><input id='es-nc' type='email' placeholder='correo'><span></span></div>
@@ -320,8 +320,9 @@
     });
   }
 
-  async function cargar(p, a) {
-    pane = p; auth = a;
+  let salir = null;
+  async function cargar(p, a, alSalir) {
+    pane = p; auth = a; salir = alSalir || null;
     if (!E) E = leerCache();
     if (E) pintar(); else pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
     try {
@@ -330,7 +331,10 @@
       E = d; guardarCache(d);
       const a = document.activeElement;
       if (cambio && !(a && pane.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) pintar();
-    } catch (x) { if (!E) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
+    } catch (x) {
+      if (salir && /sesión|expir/i.test(x.message)) return salir(x.message);
+      if (!E) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
+    }
   }
   window.StormEscuela = { cargar };
 })();

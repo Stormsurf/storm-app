@@ -3,7 +3,7 @@
  * Corre en Cloudflare (Pages Functions) con la base de datos D1 "storm-reservas" (binding DB).
  *
  * Público (sin cuenta):  disponibilidad · reservar · estado
- * Panel (sesión del Panel Storm, misma firma CLAVE_WEB): escuela · editar · cancelar · disponible · semana · manual · instructor · ajustes
+ * Agenda Storm (misma sesión del Panel Storm, misma firma CLAVE_WEB): escuela · editar · cancelar · disponible · semana · manual · instructor · ajustes
  * Tarea (cada 5 min, con TAREA_CLAVE): revisa pagos pendientes, libera horarios no pagados y manda recordatorios.
  *
  * Variables/secretos en Cloudflare (Pages > storm-app > Configuración > Variables y secretos):
@@ -16,7 +16,7 @@
 const TZ = 'America/Santiago';
 const MP_API = 'https://api.mercadopago.com';
 const PAGINA = 'https://app.stormsurf.cl/reservar/';
-const PANEL = 'https://app.stormsurf.cl/panel/';
+const PANEL = 'https://app.stormsurf.cl/agenda/';
 const CORREO_URL = 'https://script.google.com/macros/s/AKfycbzmzD794KtxFxndjERPQ8kneEvRMyBmd7tmcgD7Rvdl6eJv2ZsHDsFBnAvluCQYDOZ7/exec';
 const CORREO_STORM = 'isidoravergara@gmail.com';
 const WHATSAPP = '56977744306';
@@ -26,7 +26,7 @@ const BLOQUE = 30; // minutos
 const AJUSTES_BASE = {
   precios: { 1: 35000, 2: 60000, 3: 75000, 4: 100000, 5: 100000 },
   pagos: { 1: 15000, 2: 20000, 3: 25000, 4: 25000, 5: 30000, grupo: 25000 }, // pago al instructor por clase
-  horarios: ['09:00', '10:30', '12:00', '13:30', '15:00', '16:30', '18:00'],
+  horarios: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'], // a la hora en punto
   duracion: 90,          // minutos
   minHoras: 3,           // anticipación mínima
   horaTarde: '13:00',    // clases antes de esta hora son "de la mañana"
@@ -251,7 +251,7 @@ async function confirmar(env, r, monto, ctx) {
       await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref)].concat(ins.flatMap(i => bl.map(b => db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, 0)').bind(i, r.fecha, b, r.ref)))));
     } catch (_) {
       await db.prepare("UPDATE reservas SET estado = 'revisar', nota = 'Pagó tarde y el instructor ya tenía otra clase: asígnale otro instructor' WHERE ref = ?").bind(r.ref).run();
-      tarea(ctx, correoStorm(env, 'Revisar reserva ' + r.ref, 'Llegó el pago de ' + r.nombre + ' (' + fechaLarga(r.fecha) + ' ' + r.hora + '), pero el instructor ya tenía otra clase. Asígnale otro instructor en el Panel > Escuela.'));
+      tarea(ctx, correoStorm(env, 'Revisar reserva ' + r.ref, 'Llegó el pago de ' + r.nombre + ' (' + fechaLarga(r.fecha) + ' ' + r.hora + '), pero el instructor ya tenía otra clase. Asígnale otro instructor en Agenda Storm.'));
       return 'revisar';
     }
   }
@@ -297,7 +297,7 @@ async function avisarReserva(env, r, a) {
     body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nNosotros ponemos tabla y traje. Referencia ' + r.ref })];
   const lista = await env.DB.prepare('SELECT nombre, correo FROM instructores').all();
   lista.results.filter(i => ins.includes(i.nombre) && i.correo).forEach(i => p.push(enviarCorreo(env, { to: i.correo, subject: 'Nueva clase particular · ' + cuando,
-    body: 'Hola ' + i.nombre + ',\n\nTienes una clase particular:\n' + cuando + '\n' + r.personas + ' persona(s)' + (r.menores ? ' (' + r.menores + ' menor(es) de 7)' : '') + '\nCliente: ' + r.nombre + ' · ' + r.telefono + (r.comentario ? '\nComentario: ' + r.comentario : '') + '\n\nLa ves en el Panel: ' + PANEL + '\n\nEquipo Storm' })));
+    body: 'Hola ' + i.nombre + ',\n\nTienes una clase particular:\n' + cuando + '\n' + r.personas + ' persona(s)' + (r.menores ? ' (' + r.menores + ' menor(es) de 7)' : '') + '\nCliente: ' + r.nombre + ' · ' + r.telefono + (r.comentario ? '\nComentario: ' + r.comentario : '') + '\n\nLa ves en Agenda Storm: ' + PANEL + '\n\nEquipo Storm' })));
   await Promise.all(p);
 }
 async function recordatorios(env, a) {
@@ -338,14 +338,14 @@ async function firmar(clave, email, ts) {
   return [...new Uint8Array(s)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 async function quien(env, d) {
-  if (!env.CLAVE_WEB || !d.email || !d.ts || !d.firma) throw err('Tu sesión expiró. Vuelve a entrar al panel.');
+  if (!env.CLAVE_WEB || !d.email || !d.ts || !d.firma) throw err('Tu sesión expiró. Vuelve a entrar.');
   const edad = Date.now() / 1000 - Number(d.ts);
-  if (!(edad < SESION_DIAS * 86400 && edad > -600) || await firmar(env.CLAVE_WEB, d.email, d.ts) !== String(d.firma).toLowerCase()) throw err('Tu sesión expiró. Vuelve a entrar al panel.');
+  if (!(edad < SESION_DIAS * 86400 && edad > -600) || await firmar(env.CLAVE_WEB, d.email, d.ts) !== String(d.firma).toLowerCase()) throw err('Tu sesión expiró. Vuelve a entrar.');
   const email = norm(d.email), a = await ajustes(env.DB);
   if ((a.admins || []).map(norm).includes(email)) return { email, rol: 'admin', yo: '' };
   const ins = await instructores(env.DB), yo = ins.find(i => norm(i.correo) === email);
   if (yo) return { email, rol: 'instructor', yo: yo.nombre };
-  throw err('Tu correo no está en la Escuela. Pídele a Isidora que lo agregue en Panel > Escuela > Ajustes.');
+  throw err('Tu correo no está en la Escuela. Pídele a Isidora que lo agregue en Agenda Storm > Ajustes.');
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
 const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, instructores: parseLista(r.instructores),
@@ -408,7 +408,7 @@ async function editar(env, q, d) {
 }
 async function cancelar(env, q, d) {
   const db = env.DB, ref = String(d.ref || '');
-  await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = TRIM(nota || ' ' || ?) WHERE ref = ?").bind(String(d.motivo || 'Cancelada desde el Panel'), ref)]);
+  await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = TRIM(nota || ' ' || ?) WHERE ref = ?").bind(String(d.motivo || 'Cancelada en Agenda Storm'), ref)]);
   await anotar(db, q, 'cancelar ' + ref);
   return panel(env, q);
 }
@@ -448,7 +448,7 @@ async function manual(env, q, d, ctx) {
   if (!ins.length) throw err('No hay instructores libres a esa hora. Elige uno a mano.');
   const t = ahoraChile();
   const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pagada', fecha, hora, personas, menores, instructores: ins, nombre,
-    telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pago_instructor: pago, medio, nota: 'Agregada en el Panel por ' + q.email };
+    telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pago_instructor: pago, medio, nota: 'Agregada a mano por ' + q.email };
   try { await guardarReserva(db, a, r, 0); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Ese instructor ya tiene otra clase a esa hora.'); throw x; }
   await anotar(db, q, 'manual ' + r.ref);
