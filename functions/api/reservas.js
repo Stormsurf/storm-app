@@ -565,6 +565,16 @@ async function pagosSemana(env, q, d) {
   return { ok: true, lunes, domingo, hoy, instructores: lista, total: lista.reduce((t, x) => t + x.total, 0) };
 }
 
+/** Para Finanzas (programa de la planilla Anual): ventas del mes, por medio de pago, y lo que se paga a instructores. mes = 'AAAA-MM'. */
+async function finanzasMes(env, d) {
+  const mes = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7);
+  const { results } = await env.DB.prepare("SELECT total, medio, pago_instructor, instructores, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all();
+  const porMedio = {}, porInstructor = {};
+  results.forEach(r => { porMedio[r.medio] = (porMedio[r.medio] || 0) + (r.total || 0); const p = pagosDe(r); Object.keys(p).forEach(i => porInstructor[i] = (porInstructor[i] || 0) + p[i]); });
+  return { ok: true, mes, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0), mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
+    instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor };
+}
+
 async function editar(env, q, d) {
   const db = env.DB, a = await ajustes(db);
   const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
@@ -789,6 +799,7 @@ export async function onRequest(context) {
     if (acc === 'disponible') return json(await disponible(env, q, d));
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (q.rol !== 'admin') throw err('Solo un administrador puede hacer esto.');
+    if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'editar') return json(await editar(env, q, d));
     if (acc === 'cancelar') return json(await cancelar(env, q, d));
     if (acc === 'manual') return json(await manual(env, q, d, context));
