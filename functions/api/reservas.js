@@ -15,8 +15,8 @@
 
 const TZ = 'America/Santiago';
 const MP_API = 'https://api.mercadopago.com';
-const PAGINA = 'https://app.stormsurf.cl/reservar/';
-const PANEL = 'https://app.stormsurf.cl/agenda/';
+let PAGINA = 'https://app.stormsurf.cl/reservar/';
+let PANEL = 'https://app.stormsurf.cl/agenda/';
 const CORREO_URL = 'https://script.google.com/macros/s/AKfycbzmzD794KtxFxndjERPQ8kneEvRMyBmd7tmcgD7Rvdl6eJv2ZsHDsFBnAvluCQYDOZ7/exec';
 const CORREO_STORM = 'isidoravergara@gmail.com';
 const WHATSAPP = '56977744306';
@@ -653,6 +653,9 @@ async function fichasLeer(env, q, d) {
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
+  // En la vista previa (*.storm-app.pages.dev) los links de pago, ficha y Agenda apuntan a la misma vista previa
+  const base = /(^|\.)storm-app\.pages\.dev$/.test(url.hostname) ? url.origin : 'https://app.stormsurf.cl';
+  PAGINA = base + '/reservar/'; PANEL = base + '/agenda/';
   try {
     if (!env.DB) throw err('Las reservas en línea no están activas en este momento. Escríbenos por WhatsApp.');
     // Aviso de Mercado Pago (webhook de órdenes), si se configura con esta URL + ?mp=1

@@ -5,4 +5,4 @@ compatibility_date = "2026-11-07"
 [[d1_databases]]
 binding = "DB"
 database_name = "storm-reservas"
-database_id = "pendiente"
+database_id = "601ed73d-f023-44c9-a918-eb4b9d49b5c0"
