@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ficha de inscripción · Storm</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#EFECE8">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1">
+<style>
+.fi{--ac:#61A1C8;--ac-dk:#2d6e94;--ac-soft:#E6F1F8;--ink:#2C2C2B;--mute:#6b6a67;--line:rgba(44,44,43,.12);--ok:#3f8f5f;max-width:560px;margin:0 auto;color:var(--ink)}
+.fi *{box-sizing:border-box}
+.fi-lang{display:flex;justify-content:flex-end;gap:4px;margin-bottom:6px}
+.fi-lang button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.fi-lang button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fi h1{margin:0;font-size:2.6rem;line-height:1.15;font-weight:600;text-align:center}
+.fi-sub{margin:8px auto 0;text-align:center;color:var(--mute);font-size:1.4rem;max-width:440px;line-height:1.5}
+.fi-card{background:#fff;border-radius:22px;padding:20px 18px;margin-top:14px}
+.fi-card h2{margin:0 0 12px;font-size:1.7rem;font-weight:600}
+.fi-act{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;font-size:1.35rem}
+.fi-act span{display:block;color:var(--mute);font-size:1.15rem}
+.fi-act b{font-weight:600}
+.fi-act .w{grid-column:1/-1}
+.fi-ruta{margin:12px 0 0;font-size:1.25rem;color:var(--mute);line-height:1.5}
+.fi-ppl{display:flex;flex-wrap:wrap;gap:6px}
+.fi-ppl button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font:inherit;font-size:1.35rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.fi-ppl button.ok{border-color:#bfe0cc;background:#effaf3;color:var(--ok)}
+.fi-ppl button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.fi-f label{display:block;font-size:1.3rem;font-weight:600;margin:12px 0 5px}
+.fi-f input,.fi-f textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 13px;font:inherit;font-size:1.6rem;background:#fff;color:var(--ink)}
+.fi-f input:focus{outline:none;border-color:var(--ac)}
+.fi-g2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.fi-g3{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:0 10px}
+.fi-q{padding:11px 0;border-bottom:1px solid var(--line)}
+.fi-q:last-child{border-bottom:0}
+.fi-qh{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:1.45rem}
+.fi-yn{display:flex;gap:4px;flex:none}
+.fi-yn button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:1.3rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.fi-yn button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.fi-q input{margin-top:8px;width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:1.45rem}
+.fi-decl{font-size:1.35rem;line-height:1.55;color:#3d3c3a;background:#F5F3EF;border-radius:14px;padding:14px}
+.fi-decl p{margin:0 0 8px}.fi-decl p:last-child{margin:0}
+.fi-chk{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:1.35rem;line-height:1.45;cursor:pointer}
+.fi-chk input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--ink)}
+.fi-sig{position:relative;margin-top:6px;border:1.5px dashed #b9b6b0;border-radius:14px;background:#fff;touch-action:none}
+.fi-sig canvas{display:block;width:100%;height:170px;border-radius:14px}
+.fi-sig span{position:absolute;left:14px;bottom:10px;font-size:1.2rem;color:#b0ada7;pointer-events:none}
+.fi-sig button{position:absolute;right:8px;top:8px;border:0;background:#F3F1EC;border-radius:999px;padding:5px 11px;font:inherit;font-size:1.2rem;cursor:pointer}
+.fi-go{display:block;width:100%;margin-top:16px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:inherit;font-size:1.7rem;font-weight:600;padding:16px;cursor:pointer}
+.fi-go:disabled{opacity:.45}
+.fi-err{margin:10px 0 0;color:#a12c1c;font-size:1.4rem}
+.fi-tutor{margin-top:12px;padding:12px 14px;border-radius:14px;background:#FFF6DA;font-size:1.35rem;line-height:1.45}
+.fi-done{text-align:center;padding:26px 18px}
+.fi-done .ic{width:60px;height:60px;border-radius:50%;background:#e5f2ea;color:var(--ok);display:grid;place-items:center;margin:0 auto 10px;font-size:2.8rem}
+.fi-done h2{font-size:2.3rem;margin:0}
+.fi-done p{color:var(--mute);font-size:1.45rem;line-height:1.5;margin:8px 0 0}
+.fi-skel{height:200px;border-radius:16px;background:linear-gradient(90deg,#f3f1ed 25%,#ebe8e3 50%,#f3f1ed 75%);background-size:200% 100%;animation:fi-sk 1.2s infinite}
+@keyframes fi-sk{to{background-position:-200% 0}}
+.fi-foot{text-align:center;margin:16px 0 0;font-size:1.15rem;color:var(--mute)}
+</style>
+</head>
+<body>
+<header class="ap-top"><a href="https://www.stormsurf.cl" aria-label="Storm"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></a></header>
+<main class="storm-section"><div class="fi" id="fi"></div></main>
+<script>
+(()=>{
+  const API = '/api/reservas';
+  const q = new URLSearchParams(location.search), REF = q.get('r') || '', K = q.get('k') || '';
+  const root = document.getElementById('fi');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error(T('red')); } if(!d.ok) throw new Error(d.error || 'Error'); return d; }
+
+  const TX = {
+    es: { titulo:'Ficha de inscripción y aceptación del riesgo', sub:'Obligatoria antes de entrar al mar (Sernatur, Decreto 19/2018). Una por cada participante. Toma 2 minutos.',
+      actividad:'Actividad', clase:'Clase de surf', fecha:'Fecha', inicio:'Hora inicio', termino:'Hora término', guia:'Guía a cargo', rut:'RUT', salida:'Lugar de salida y llegada',
+      ruta:'La clase se inicia en la Academia de Surf Storm, donde se entregan tabla, leash y traje de agua. Se camina por la playa hasta la "zona de escuela", donde se hace un calentamiento, se practica técnica y luego se entra al mar.',
+      part:'Participante', quien:'¿De quién es esta ficha?', personales:'Datos personales', nombre:'Nombre y apellido', nac:'Nacionalidad', doc:'RUT o pasaporte', edad:'Edad', peso:'Peso (kg)',
+      urg:'Contacto en caso de urgencia', urg2:'Segundo contacto (opcional)', tel:'Teléfono', mail:'Correo', copiar:'Usar el mismo contacto del participante anterior',
+      decl:'Declaración', si:'Sí', no:'No', esp:'Especificar',
+      p:{ experiencia:'Experiencia en surf', seguro:'Cuenta con seguro', alergias:'Alergias', medicamentos:'Medicamentos contraindicados', regimen:'Régimen especial (alimentación)', operaciones:'Operaciones recientes', embarazada:'Embarazada', otros:'Otros' },
+      menor:'Es menor de edad: esta parte la completa y firma su madre, padre o tutor que lo acompaña.',
+      riesgo:['declaro conocer y entender los riesgos que envuelve la participación en este tipo de actividades, el cual no puede ser completamente eliminado, aun cuando exista el cumplimiento de estándares de seguridad acreditados por el prestador, los cuales tienen por finalidad disminuir los riesgos que el desarrollo de esta actividad involucra.','Será deber del prestador de servicios de turismo aventura informar de las condiciones y requisitos para el desarrollo de la actividad, como asimismo, es deber de los participantes informarse adecuadamente de las condiciones en que se presta el servicio, de las condiciones mínimas que el participante debe poseer antes de efectuar la actividad y acatar las instrucciones que la empresa y guía a cargo de la actividad indiquen.'],
+      yo:'Yo', firmante:'Nombre de quien firma', rutF:'RUT o pasaporte de quien firma', acepto:'Leí y acepto la declaración.', firma:'Firma aquí con el dedo', borrar:'Borrar', enviar:'Guardar ficha', guardando:'Guardando…',
+      listo:'¡Fichas listas!', listoTxt:'Ya tenemos la ficha de todos los participantes. ¡Nos vemos en el agua!', siguiente:'Ficha guardada. Sigue con el participante ', faltan:'Faltan fichas', red:'No pudimos conectarnos. Revisa tu internet.',
+      error:'Este link no es válido. Escríbenos por WhatsApp.', yn:'Responde sí o no en todas las preguntas.', faltaFirma:'Falta la firma.', hecha:'lista' },
+    en: { titulo:'Registration form and acceptance of activity risk', sub:'Required before entering the sea (Sernatur, Decree 19/2018). One per participant. Takes 2 minutes.',
+      actividad:'Activity', clase:'Surf lesson', fecha:'Date', inicio:'Start time', termino:'End time', guia:'Guide in charge', rut:'ID', salida:'Departure and arrival',
+      ruta:'The lesson begins at Storm Surf Academy, where surfboard, leash and wetsuit are provided. Participants walk along the beach to the "school zone", where a warm-up takes place, technique is practiced, and then participants enter the sea.',
+      part:'Participant', quien:'Who is this form for?', personales:'Personal information', nombre:'Full name', nac:'Nationality', doc:'RUT or passport', edad:'Age', peso:'Weight (kg)',
+      urg:'Emergency contact', urg2:'Second contact (optional)', tel:'Phone', mail:'E-mail', copiar:'Use the same contact as the previous participant',
+      decl:'Declaration', si:'Yes', no:'No', esp:'Specify',
+      p:{ experiencia:'Experience in surfing', seguro:'Has insurance', alergias:'Allergies', medicamentos:'Contraindicated medications', regimen:'Special diet', operaciones:'Recent surgeries', embarazada:'Pregnant', otros:'Other' },
+      menor:'Underage participant: this part must be completed and signed by the parent or guardian accompanying them.',
+      riesgo:['declare that I know and understand the risks involved in participating in this type of activity, which cannot be completely eliminated, even when safety standards accredited by the service provider are complied with, whose purpose is to reduce the risks involved in the development of this activity.','It shall be the duty of the adventure tourism service provider to inform participants of the conditions and requirements for carrying out the activity. Likewise, it is the duty of the participants to properly inform themselves of the conditions under which the service is provided, the minimum conditions that the participant must meet before carrying out the activity, and to follow the instructions indicated by the company and the guide in charge of the activity.'],
+      yo:'I,', firmante:'Name of the person signing', rutF:'ID of the person signing', acepto:'I have read and accept the declaration.', firma:'Sign here with your finger', borrar:'Clear', enviar:'Save form', guardando:'Saving…',
+      listo:'All forms done!', listoTxt:'We have the form for every participant. See you in the water!', siguiente:'Form saved. Continue with participant ', faltan:'Forms missing', red:'We could not connect. Check your internet.',
+      error:'This link is not valid. Please contact us on WhatsApp.', yn:'Answer yes or no to every question.', faltaFirma:'Signature missing.', hecha:'done' }
+  };
+  let L = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
+  try{ L = localStorage.getItem('storm-ficha-lang') || L; }catch(_){}
+  const T = k => TX[L][k];
+  const PREG = ['experiencia','seguro','alergias','medicamentos','regimen','operaciones','embarazada','otros'];
+  let D = null, n = 1, F = nuevo(), aviso = '', ultimoUrg = null;
+  function nuevo(){ return { nombre:'', nacionalidad: L==='es' ? 'Chilena' : '', documento:'', edad:'', peso:'', urgencia:[{nombre:'',telefono:'',correo:''},{nombre:'',telefono:'',correo:''}], declaracion:{}, firmante:'', rutFirmante:'', acepta:false }; }
+  const hechas = () => new Set((D.hechas || []).map(h => h.n));
+  const primeraLibre = () => { const h = hechas(); for(let i = 1; i <= D.personas; i++) if(!h.has(i)) return i; return 0; };
+
+  async function cargar(){
+    root.innerHTML = `<div class='fi-skel'></div>`;
+    try{ D = await post({accion:'ficha', r: REF, k: K}); n = primeraLibre() || 1; pintar(); }
+    catch(x){ root.innerHTML = `<div class='fi-card fi-done'><h2>${esc(x.message)}</h2><p><a href='https://wa.me/56977744306'>WhatsApp +56 9 7774 4306</a></p></div>`; }
+  }
+  const leerForm = () => { root.querySelectorAll('[data-k]').forEach(i => { const path = i.dataset.k.split('.'); let o = F; while(path.length > 1){ const p = path.shift(); o = o[p] = o[p] || {}; } o[path[0]] = i.type === 'checkbox' ? i.checked : i.value; }); };
+
+  function pintar(){
+    const A = D.actividad, h = hechas(), menor = Number(F.edad) > 0 && Number(F.edad) < 18;
+    if(!primeraLibre() && !h.has(n)) n = 1;
+    if(!primeraLibre() && aviso === 'fin'){
+      root.innerHTML = lang() + `<div class='fi-card fi-done'><div class='ic'>✓</div><h2>${T('listo')}</h2><p>${T('listoTxt')}</p></div>`;
+      bindLang(); return;
+    }
+    root.innerHTML = lang() + `<h1>${T('titulo')}</h1><p class='fi-sub'>${T('sub')}</p>
+      <div class='fi-card'><h2>${T('actividad')}: ${T('clase')}</h2><div class='fi-act'>
+        <div><span>${T('fecha')}</span><b>${esc(A.fechaLarga)}</b></div><div><span>${T('salida')}</span><b>Storm · ${esc(A.lugar)}</b></div>
+        <div><span>${T('inicio')}</span><b>${esc(A.inicio)}</b></div><div><span>${T('termino')}</span><b>${esc(A.termino)}</b></div>
+        ${A.guia ? `<div><span>${T('guia')}</span><b>${esc(A.guia)}</b></div><div><span>${T('rut')}</span><b>${esc(A.rutGuia || '—')}</b></div>` : ''}
+      </div><p class='fi-ruta'>${T('ruta')}</p></div>
+      ${D.personas > 1 ? `<div class='fi-card'><h2>${T('quien')}</h2><div class='fi-ppl'>${Array.from({length: D.personas}, (_, i) => i + 1).map(i => { const hh = (D.hechas || []).find(x => x.n === i);
+        return `<button data-n='${i}' class='${i === n ? 'on' : hh ? 'ok' : ''}'>${hh ? '✓ ' + esc(hh.nombre.split(' ')[0]) : T('part') + ' ' + i}</button>`; }).join('')}</div></div>` : ''}
+      ${aviso && aviso !== 'fin' ? `<div class='fi-card' style='background:#e5f2ea;color:#2f7a4d;font-weight:600;font-size:1.4rem'>${esc(aviso)}</div>` : ''}
+      <div class='fi-card fi-f'><h2>${T('personales')}${D.personas > 1 ? ' · ' + T('part') + ' ' + n : ''}</h2>
+        <label>${T('nombre')}</label><input data-k='nombre' value='${esc(F.nombre)}' autocomplete='off'>
+        <div class='fi-g2'><div><label>${T('nac')}</label><input data-k='nacionalidad' value='${esc(F.nacionalidad)}'></div><div><label>${T('doc')}</label><input data-k='documento' value='${esc(F.documento)}'></div></div>
+        <div class='fi-g2'><div><label>${T('edad')}</label><input data-k='edad' data-re type='number' inputmode='numeric' min='1' value='${esc(F.edad)}'></div><div><label>${T('peso')}</label><input data-k='peso' inputmode='decimal' value='${esc(F.peso)}'></div></div>
+      </div>
+      <div class='fi-card fi-f'><h2>${T('urg')}</h2>
+        ${ultimoUrg ? `<label class='fi-chk' style='margin-top:0;font-weight:500'><input type='checkbox' data-copiar> ${T('copiar')}</label>` : ''}
+        <label>${T('nombre')}</label><input data-k='urgencia.0.nombre' value='${esc(F.urgencia[0].nombre)}'>
+        <div class='fi-g2'><div><label>${T('tel')}</label><input data-k='urgencia.0.telefono' type='tel' value='${esc(F.urgencia[0].telefono)}'></div><div><label>${T('mail')}</label><input data-k='urgencia.0.correo' type='email' value='${esc(F.urgencia[0].correo)}'></div></div>
+        <p style='margin:16px 0 0;font-size:1.3rem;font-weight:600'>${T('urg2')}</p>
+        <label>${T('nombre')}</label><input data-k='urgencia.1.nombre' value='${esc(F.urgencia[1].nombre)}'>
+        <div class='fi-g2'><div><label>${T('tel')}</label><input data-k='urgencia.1.telefono' type='tel' value='${esc(F.urgencia[1].telefono)}'></div><div><label>${T('mail')}</label><input data-k='urgencia.1.correo' type='email' value='${esc(F.urgencia[1].correo)}'></div></div>
+      </div>
+      <div class='fi-card'><h2>${T('decl')}</h2>${PREG.map(k => { const v = F.declaracion[k] || {};
+        return `<div class='fi-q'><div class='fi-qh'><span>${T('p')[k]}</span><div class='fi-yn'><button data-yn='${k}' data-v='1' class='${v.si === true ? 'on' : ''}'>${T('si')}</button><button data-yn='${k}' data-v='0' class='${v.si === false ? 'on' : ''}'>${T('no')}</button></div></div>
+          ${v.si ? `<input data-k='declaracion.${k}.detalle' placeholder='${T('esp')}' value='${esc(v.detalle || '')}'>` : ''}</div>`; }).join('')}</div>
+      <div class='fi-card fi-f'>
+        ${menor ? `<div class='fi-tutor' style='margin:0 0 12px'>${T('menor')}</div>` : ''}
+        <div class='fi-decl'><p><b>${T('yo')} ${esc(F.firmante || '______')}</b>, ${T('riesgo')[0]}</p><p>${T('riesgo')[1]}</p></div>
+        <div class='fi-g2'><div><label>${T('firmante')}</label><input data-k='firmante' data-re value='${esc(F.firmante)}'></div><div><label>${T('rutF')}</label><input data-k='rutFirmante' value='${esc(F.rutFirmante)}'></div></div>
+        <label class='fi-chk'><input type='checkbox' data-k='acepta'${F.acepta ? ' checked' : ''}> ${T('acepto')}</label>
+        <div class='fi-sig'><canvas id='fi-c'></canvas><span id='fi-sp'>${T('firma')}</span><button type='button' id='fi-cl'>${T('borrar')}</button></div>
+        <button class='fi-go' id='fi-go'>${T('enviar')}</button><p class='fi-err' id='fi-err' hidden></p>
+      </div>
+      <p class='fi-foot'>Storm Surf Academy · Prestador de turismo aventura registrado en Sernatur</p>`;
+    bindLang();
+    root.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { leerForm(); n = +b.dataset.n; F = nuevo(); aviso = ''; pintar(); window.scrollTo({top:0}); });
+    root.querySelectorAll('[data-yn]').forEach(b => b.onclick = () => { leerForm(); const k = b.dataset.yn; F.declaracion[k] = Object.assign(F.declaracion[k] || {}, {si: b.dataset.v === '1'}); const y = window.scrollY; pintar(); window.scrollTo({top:y}); });
+    root.querySelectorAll('[data-re]').forEach(i => i.addEventListener('change', () => { leerForm(); const y = window.scrollY; pintar(); window.scrollTo({top:y}); }));
+    const cp = root.querySelector('[data-copiar]'); if(cp) cp.onchange = () => { leerForm(); if(cp.checked) F.urgencia = JSON.parse(JSON.stringify(ultimoUrg)); const y = window.scrollY; pintar(); window.scrollTo({top:y}); };
+    firma();
+    document.getElementById('fi-go').onclick = guardar;
+  }
+  const lang = () => `<div class='fi-lang'><button data-l='es' class='${L==='es'?'on':''}'>Español</button><button data-l='en' class='${L==='en'?'on':''}'>English</button></div>`;
+  function bindLang(){ root.querySelectorAll('[data-l]').forEach(b => b.onclick = () => { if(root.querySelector('[data-k]')) leerForm(); L = b.dataset.l; try{ localStorage.setItem('storm-ficha-lang', L); }catch(_){} pintar(); }); }
+
+  let trazos = 0;
+  function firma(){
+    const c = document.getElementById('fi-c'); if(!c) return;
+    const r = c.getBoundingClientRect(), dpr = Math.max(1, window.devicePixelRatio || 1);
+    c.width = r.width * dpr; c.height = r.height * dpr;
+    const x = c.getContext('2d'); x.scale(dpr, dpr); x.lineWidth = 2.4; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#1d1d1c';
+    trazos = 0; let dib = false, last = null;
+    const pt = e => { const b = c.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+    c.onpointerdown = e => { dib = true; last = pt(e); c.setPointerCapture(e.pointerId); document.getElementById('fi-sp').style.display = 'none'; };
+    c.onpointermove = e => { if(!dib) return; const p = pt(e); x.beginPath(); x.moveTo(last[0], last[1]); x.lineTo(p[0], p[1]); x.stroke(); last = p; trazos++; };
+    c.onpointerup = c.onpointercancel = () => { dib = false; };
+    document.getElementById('fi-cl').onclick = () => { x.clearRect(0, 0, c.width, c.height); trazos = 0; document.getElementById('fi-sp').style.display = ''; };
+  }
+  async function guardar(){
+    leerForm();
+    const e = document.getElementById('fi-err'), msg = t => { e.hidden = false; e.textContent = t; };
+    if(PREG.some(k => !F.declaracion[k] || typeof F.declaracion[k].si !== 'boolean')) return msg(T('yn'));
+    if(trazos < 8) return msg(T('faltaFirma'));
+    const go = document.getElementById('fi-go'); go.disabled = true; go.textContent = T('guardando');
+    // la firma se guarda en blanco y negro sobre fondo blanco, más liviana
+    const c = document.getElementById('fi-c'), o = document.createElement('canvas'); o.width = 600; o.height = Math.round(600 * c.height / c.width);
+    const ox = o.getContext('2d'); ox.fillStyle = '#fff'; ox.fillRect(0, 0, o.width, o.height); ox.drawImage(c, 0, 0, o.width, o.height);
+    const datos = Object.assign({}, F, { edad: Number(F.edad), tutor: Number(F.edad) < 18, idioma: L, urgencia: F.urgencia.filter(u => u.nombre || u.telefono) });
+    try{
+      D = await post({accion:'ficha-guardar', r: REF, k: K, n, datos, firma: o.toDataURL('image/png'), acepta: F.acepta});
+      ultimoUrg = JSON.parse(JSON.stringify(F.urgencia));
+      const sig = primeraLibre();
+      aviso = sig ? T('siguiente') + sig + '.' : 'fin'; if(sig) n = sig; F = nuevo(); pintar(); window.scrollTo({top:0, behavior:'smooth'});
+    }catch(x){ go.disabled = false; go.textContent = T('enviar'); msg(x.message); }
+  }
+  if(!REF || !K) root.innerHTML = `<div class='fi-card fi-done'><h2>${T('error')}</h2></div>`; else cargar();
+})();
+</script>
+</body>
+</html>

@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS reservas (
   medio TEXT NOT NULL,            -- Mercado Pago | Transferencia | Efectivo | Por pagar
   orden_mp TEXT NOT NULL DEFAULT '',
   recordatorio INTEGER NOT NULL DEFAULT 0,
-  nota TEXT NOT NULL DEFAULT ''
+  nota TEXT NOT NULL DEFAULT '',
+  clave TEXT NOT NULL DEFAULT ''   -- llave del link de la ficha
 );
 CREATE INDEX IF NOT EXISTS reservas_fecha ON reservas(fecha);
 CREATE INDEX IF NOT EXISTS reservas_estado ON reservas(estado);
@@ -36,6 +37,7 @@ CREATE TABLE IF NOT EXISTS instructores (
   nombre TEXT PRIMARY KEY,
   correo TEXT NOT NULL DEFAULT '',
   telefono TEXT NOT NULL DEFAULT '',
+  rut TEXT NOT NULL DEFAULT '',
   activo INTEGER NOT NULL DEFAULT 1,
   orden INTEGER NOT NULL DEFAULT 0
 );
@@ -76,3 +78,14 @@ CREATE TABLE IF NOT EXISTS ocupaciones (
   motivo TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS ocupaciones_fecha ON ocupaciones(fecha);
+-- Ficha de inscripción y aceptación del riesgo (Sernatur, Decreto 19/2018): una por participante.
+CREATE TABLE IF NOT EXISTS fichas (
+  ref TEXT NOT NULL,
+  n INTEGER NOT NULL,             -- participante 1, 2, 3…
+  nombre TEXT NOT NULL,
+  datos TEXT NOT NULL,            -- JSON con todo lo que llenó
+  firma TEXT NOT NULL,            -- imagen de la firma (data:image/png)
+  creada TEXT NOT NULL,
+  ip TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (ref, n)
+);

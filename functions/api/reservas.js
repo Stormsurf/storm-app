@@ -199,6 +199,8 @@ async function disponibilidad(db, d) {
 }
 
 // ---------- reservar y pagar ----------
+const nuevaClave = () => [...crypto.getRandomValues(new Uint8Array(9))].map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 14);
+const linkFicha = r => PAGINA + 'ficha/?r=' + encodeURIComponent(r.ref) + '&k=' + encodeURIComponent(r.clave || '');
 const nuevaRef = () => { const t = ahoraChile(); return 'ES-' + t.fecha.slice(2).replace(/-/g, '') + '-' + t.hora.replace(':', '') + '-' + Math.floor(Math.random() * 9000 + 1000); };
 const shuffle = arr => { const x = arr.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 
@@ -219,9 +221,9 @@ function elegir(ag, a, fecha, hora) {
 }
 /** Guarda la reserva y ocupa los bloques en un solo paso: si alguien tomó el horario un segundo antes, falla entera. */
 async function guardarReserva(db, a, r, hastaMs) {
-  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, JSON.stringify(r.instructores),
-      r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '')];
+  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota, clave)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, JSON.stringify(r.instructores),
+      r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '', r.clave || (r.clave = nuevaClave()))];
   r.instructores.forEach(i => bloquesDe(r.hora, a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, hastaMs))));
   await db.batch(st);
 }
@@ -321,7 +323,8 @@ async function estado(env, d, ctx) {
   const r = await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
   if (!r) throw err('No encontramos la reserva.');
   const est = await revisarPago(env, r, ctx);
-  return { ok: true, estado: est, fecha: r.fecha, fechaLarga: fechaLarga(r.fecha), hora: r.hora, personas: r.personas, total: r.total, nombre: r.nombre.split(' ')[0], correo: r.correo };
+  return { ok: true, estado: est, fecha: r.fecha, fechaLarga: fechaLarga(r.fecha), hora: r.hora, personas: r.personas, total: r.total, nombre: r.nombre.split(' ')[0], correo: r.correo,
+    ficha: est === 'pagada' || est === 'revisar' ? linkFicha(r) : '' };
 }
 
 // ---------- correos ----------
@@ -342,15 +345,17 @@ function cajaCorreo(titulo, filas, pie) {
     '<tr><td style="text-align:center;padding:18px 8px 0;font-size:12px;color:#8a8986">Storm Surf Academy · Playa de Matanzas · <a href="https://wa.me/' + WHATSAPP + '" style="color:#2d6e94">WhatsApp +56 9 7774 4306</a></td></tr></table></div>')
     .replace(/[^\x00-\x7F]/gu, c => '&#' + c.codePointAt(0) + ';');
 }
+const botonFicha = r => '<span style="display:block;margin:0 0 18px;padding:16px;border-radius:14px;background:#FFF6DA;color:#3B2610"><b style="font-size:16px">Falta un paso: la ficha de cada participante</b><br>' +
+  'Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona.<br><a href="' + linkFicha(r) + '" style="display:inline-block;margin-top:10px;background:#2C2C2B;color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:999px">Llenar la ficha</a></span>';
 const filaC = (k, v) => '<p style="margin:0 0 8px;font-size:16px;line-height:1.45"><span style="color:#8a8986">' + esc(k) + '</span><br><b>' + esc(v) + '</b></p>';
 async function avisarReserva(env, r, a) {
   const ins = parseLista(r.instructores);
   const cuando = fechaLarga(r.fecha) + ', ' + r.hora + ' hrs';
   const html = cajaCorreo('¡Clase reservada!', '<p style="margin:0 0 16px;font-size:16px">Hola ' + esc(r.nombre.split(' ')[0]) + ', recibimos tu pago. Este correo es tu comprobante.</p>' +
     filaC('Cuándo', cuando) + filaC('Duración', '1 hora y 30 minutos') + filaC('Personas', r.personas) + filaC('Dónde', a.lugar) + filaC('Total pagado', clp(r.total)),
-    'Nosotros ponemos tabla y traje. Trae traje de baño, toalla y bloqueador. Llega 10 minutos antes. Si necesitas cambiar la hora, escríbenos por WhatsApp. Referencia ' + esc(r.ref) + '.');
+    botonFicha(r) + 'Nosotros ponemos tabla y traje. Trae traje de baño, toalla y bloqueador. Llega 10 minutos antes. Si necesitas cambiar la hora, escríbenos por WhatsApp. Referencia ' + esc(r.ref) + '.');
   const p = [enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: 'Clase de surf reservada · ' + cuando, html,
-    body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nNosotros ponemos tabla y traje. Referencia ' + r.ref })];
+    body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\nNosotros ponemos tabla y traje. Referencia ' + r.ref })];
   const lista = await env.DB.prepare('SELECT nombre, correo FROM instructores').all();
   lista.results.filter(i => ins.includes(i.nombre) && i.correo).forEach(i => p.push(enviarCorreo(env, { to: i.correo, subject: 'Nueva clase particular · ' + cuando,
     body: 'Hola ' + i.nombre + ',\n\nTienes una clase particular:\n' + cuando + '\n' + r.personas + ' persona(s)' + (r.menores ? ' (' + r.menores + ' menor(es) de 7)' : '') + '\nCliente: ' + r.nombre + ' · ' + r.telefono + (r.comentario ? '\nComentario: ' + r.comentario : '') + '\n\nLa ves en Agenda Storm: ' + PANEL + '\n\nEquipo Storm' })));
@@ -365,7 +370,7 @@ async function recordatorios(env, a) {
     const cuando = 'mañana ' + fechaLarga(r.fecha) + ' a las ' + r.hora;
     await enviarCorreo(env, { to: r.correo, subject: 'Mañana es tu clase de surf · ' + r.hora + ' hrs',
       html: cajaCorreo('¡Mañana surfeamos!', '<p style="margin:0 0 16px;font-size:16px">Hola ' + esc(r.nombre.split(' ')[0]) + ', te recordamos tu clase:</p>' + filaC('Cuándo', cuando) + filaC('Dónde', a.lugar),
-        'Trae traje de baño, toalla y bloqueador. Llega 10 minutos antes. Si el mar no está apto, te escribimos por WhatsApp para cambiar la hora.'),
+        ((await fichasDe(env.DB, r.ref)).length < r.personas ? botonFicha(r) : '') + 'Trae traje de baño, toalla y bloqueador. Llega 10 minutos antes. Si el mar no está apto, te escribimos por WhatsApp para cambiar la hora.'),
       body: 'Hola ' + r.nombre.split(' ')[0] + ', te recordamos tu clase de surf ' + cuando + ' en ' + a.lugar + '. Llega 10 minutos antes.' });
     await env.DB.prepare('UPDATE reservas SET recordatorio = 1 WHERE ref = ?').bind(r.ref).run();
   }
@@ -420,15 +425,17 @@ async function panel(env, q) {
     leerOcupaciones(db, hoy, hasta),
     db.prepare("SELECT valor FROM ajustes WHERE clave = 'anualSync'").first()
   ]);
+  const fic = await db.prepare('SELECT ref, n, nombre FROM fichas WHERE ref IN (SELECT ref FROM reservas WHERE fecha BETWEEN ? AND ?)').bind(desde, hasta).all();
+  const fichasPor = {}; fic.results.forEach(f => (fichasPor[f.ref] = fichasPor[f.ref] || []).push(f.nombre));
   let reservas = res.results.filter(r => r.estado !== 'pendiente' || Date.now() - r.creada_ms < a.retencionMin * 60000);
   if (!admin) reservas = reservas.filter(r => parseLista(r.instructores).includes(q.yo));
   const out = { ok: true, rol: q.rol, yo: q.yo, hoy, duracion: a.duracion, horarios: a.horarios,
-    instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono } : {}) })),
+    instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono, rut: i.rut } : {}) })),
     semana: sem.results.map(s => ({ instructor: s.instructor, dia: s.dia, horas: parseLista(s.horas) })).filter(s => admin || s.instructor === q.yo),
     ocupaciones: ocu.filter(o => admin || o.instructor === '*' || o.instructor === q.yo).map(o => ({ id: o.id, origen: o.origen, instructor: o.instructor, fecha: o.fecha, dia: o.dia, desde: o.desde, hasta: o.hasta, motivo: o.motivo })),
     anualSync: sync ? JSON.parse(sync.valor) : null,
     excepciones: exc.results.filter(e => admin || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
-    reservas: reservas.map(r => filaPanel(r, admin)), link: PAGINA };
+    reservas: reservas.map(r => Object.assign(filaPanel(r, admin), { fichas: fichasPor[r.ref] || [], linkFicha: linkFicha(r) })), link: PAGINA };
   if (admin) {
     out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins };
     const mes = hoy.slice(0, 7);
@@ -526,8 +533,8 @@ async function guardarInstructor(env, q, d) {
     await db.batch([db.prepare('DELETE FROM instructores WHERE nombre = ?').bind(nombre), db.prepare('DELETE FROM semana WHERE instructor = ?').bind(nombre), db.prepare('DELETE FROM excepciones WHERE instructor = ?').bind(nombre)]);
   } else {
     const existe = await db.prepare('SELECT nombre FROM instructores WHERE nombre = ?').bind(nombre).first();
-    const st = [db.prepare('INSERT INTO instructores (nombre, correo, telefono, activo, orden) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(orden),0)+1 FROM instructores)) ON CONFLICT(nombre) DO UPDATE SET correo = excluded.correo, telefono = excluded.telefono, activo = excluded.activo')
-      .bind(nombre, norm(d.correo), String(d.telefono || '').trim(), d.activo === false ? 0 : 1)];
+    const st = [db.prepare('INSERT INTO instructores (nombre, correo, telefono, rut, activo, orden) VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(orden),0)+1 FROM instructores)) ON CONFLICT(nombre) DO UPDATE SET correo = excluded.correo, telefono = excluded.telefono, rut = excluded.rut, activo = excluded.activo')
+      .bind(nombre, norm(d.correo), String(d.telefono || '').trim(), String(d.rut || '').trim(), d.activo === false ? 0 : 1)];
     if (!existe) for (let i = 0; i < 7; i++) st.push(db.prepare('INSERT OR IGNORE INTO semana (instructor, dia, horas) VALUES (?, ?, ?)').bind(nombre, i, JSON.stringify(a.horarios)));
     await db.batch(st);
   }
@@ -560,6 +567,59 @@ async function guardarFijo(env, q, d) {
   return panel(env, q);
 }
 
+// ---------- Ficha de inscripción y aceptación del riesgo (Sernatur) ----------
+const fichasDe = async (db, ref) => (await db.prepare('SELECT n, nombre, datos, firma, creada FROM fichas WHERE ref = ? ORDER BY n').bind(ref).all()).results;
+async function reservaConClave(env, d) {
+  const r = await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.r || d.ref || '')).first();
+  if (!r || !r.clave || String(d.k || '') !== r.clave || r.estado === 'cancelada') throw err('Este link de la ficha no es válido. Escríbenos por WhatsApp.');
+  return r;
+}
+async function actividad(env, r) {
+  const a = await ajustes(env.DB), ins = parseLista(r.instructores);
+  const lista = (await env.DB.prepare('SELECT nombre, rut FROM instructores').all()).results;
+  return { fecha: r.fecha, fechaLarga: fechaLarga(r.fecha), inicio: r.hora, termino: deMin(aMin(r.hora) + a.duracion), lugar: a.lugar,
+    guia: ins.join(' y '), rutGuia: ins.map(n => (lista.find(i => i.nombre === n) || {}).rut || '').filter(Boolean).join(' / ') };
+}
+async function fichaVer(env, d) {
+  const r = await reservaConClave(env, d);
+  const hechas = await fichasDe(env.DB, r.ref);
+  return { ok: true, ref: r.ref, personas: r.personas, menores: r.menores, cliente: r.nombre, telefono: r.telefono, correo: r.correo, actividad: await actividad(env, r),
+    hechas: hechas.map(f => ({ n: f.n, nombre: f.nombre })) };
+}
+const PREGUNTAS = ['experiencia', 'seguro', 'alergias', 'medicamentos', 'regimen', 'operaciones', 'embarazada', 'otros'];
+async function fichaGuardar(env, d, request) {
+  const r = await reservaConClave(env, d);
+  const n = Math.floor(Number(d.n));
+  if (!(n >= 1 && n <= Math.max(r.personas, 30))) throw err('Participante no válido.');
+  const f = d.datos || {}, t = v => String(v == null ? '' : v).trim().slice(0, 200);
+  const datos = { nombre: nombrePropio(f.nombre), nacionalidad: t(f.nacionalidad), documento: t(f.documento), edad: Math.floor(Number(f.edad)) || 0, peso: t(f.peso),
+    urgencia: (Array.isArray(f.urgencia) ? f.urgencia : []).slice(0, 2).map(u => ({ nombre: nombrePropio(u && u.nombre), telefono: t(u && u.telefono), correo: norm(u && u.correo) })).filter(u => u.nombre || u.telefono),
+    declaracion: {}, firmante: nombrePropio(f.firmante), rutFirmante: t(f.rutFirmante), tutor: !!f.tutor, idioma: f.idioma === 'en' ? 'en' : 'es' };
+  PREGUNTAS.forEach(k => { const x = (f.declaracion || {})[k] || {}; datos.declaracion[k] = { si: x.si === true, detalle: t(x.detalle) }; });
+  if (datos.nombre.length < 2) throw err('Falta el nombre del participante.');
+  if (!datos.documento) throw err('Falta el RUT o pasaporte.');
+  if (!(datos.edad > 0 && datos.edad < 110)) throw err('Revisa la edad.');
+  if (!datos.urgencia.length || !datos.urgencia[0].telefono) throw err('Falta un contacto en caso de urgencia.');
+  if (PREGUNTAS.some(k => (f.declaracion || {})[k] == null || typeof (f.declaracion || {})[k].si !== 'boolean')) throw err('Responde sí o no en todas las preguntas.');
+  if (datos.edad < 18 && !datos.tutor) throw err('Para menores de edad, la ficha la firma su madre, padre o tutor.');
+  if (datos.firmante.length < 2 || !datos.rutFirmante) throw err('Falta el nombre y RUT de quien firma.');
+  if (!d.acepta) throw err('Para seguir, acepta la declaración.');
+  const firma = String(d.firma || '');
+  if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(firma) || firma.length < 800 || firma.length > 400000) throw err('Falta la firma.');
+  const tt = ahoraChile();
+  await env.DB.prepare('INSERT OR REPLACE INTO fichas (ref, n, nombre, datos, firma, creada, ip) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(r.ref, n, datos.nombre, JSON.stringify(datos), firma, tt.fecha + ' ' + tt.hora, (request && request.headers.get('CF-Connecting-IP')) || '').run();
+  return fichaVer(env, d);
+}
+async function fichasLeer(env, q, d) {
+  const r = await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
+  if (!r) throw err('No encontramos la reserva.');
+  if (q.rol !== 'admin' && !parseLista(r.instructores).includes(q.yo)) throw err('Esta clase no es tuya.');
+  const fs = await fichasDe(env.DB, r.ref);
+  return { ok: true, ref: r.ref, personas: r.personas, cliente: r.nombre, actividad: await actividad(env, r), link: linkFicha(r),
+    fichas: fs.map(f => Object.assign(JSON.parse(f.datos), { n: f.n, firma: f.firma, creada: f.creada })) };
+}
+
 // ---------- entrada ----------
 export async function onRequest(context) {
   const { request, env } = context;
@@ -584,7 +644,10 @@ export async function onRequest(context) {
     if (acc === 'disponibilidad') return json(await disponibilidad(env.DB, d));
     if (acc === 'reservar') return json(await reservar(env, d));
     if (acc === 'estado') return json(await estado(env, d, context));
+    if (acc === 'ficha') return json(await fichaVer(env, d));
+    if (acc === 'ficha-guardar') return json(await fichaGuardar(env, d, request));
     const q = await quien(env, d);
+    if (acc === 'fichas') return json(await fichasLeer(env, q, d));
     if (acc === 'escuela') return json(await panel(env, q));
     if (acc === 'disponible') return json(await disponible(env, q, d));
     if (acc === 'semana') return json(await semanaTipo(env, q, d));

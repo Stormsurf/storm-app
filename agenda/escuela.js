@@ -151,9 +151,11 @@
     const est = r.estado === 'pendiente' ? `<span class='es-est'>Pagando en este momento</span>` : r.estado === 'revisar' ? `<span class='es-est'>Revisar: ${esc(r.nota)}</span>` : '';
     let h = `<div class='es-r'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora)}</small></div>
       <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 7' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
-      ${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}${est}</div>
+      ${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}${est}
+      <span class='es-est' style='${(r.fichas || []).length >= r.personas ? 'background:#e5f2ea;color:#2f7a4d' : ''}'>Fichas ${(r.fichas || []).length}/${r.personas}</span></div>
       ${wa(r.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}'>WhatsApp</a>` : ''}</div>
-      ${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}`;
+      ${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}
+      <div class='es-acc'>${(r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${(r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
     if (admin && r.fecha >= E.hoy) {
       if (abierta !== r.ref) h += `<div class='es-acc'><button class='es-btn sec' data-abre='${r.ref}' data-modo='ins'>Cambiar instructor</button><button class='es-btn sec' data-abre='${r.ref}' data-modo='mover'>Mover</button><button class='es-btn peligro' data-abre='${r.ref}' data-modo='cancelar'>Cancelar</button></div>`;
       else if (modo === 'ins') {
@@ -248,7 +250,8 @@
       <div class='es-acc'><button class='es-btn' data-aj='reglas'>Guardar</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Instructores de la Escuela</h3><p class='pn-sub'>Con su correo pueden entrar a Agenda Storm y ver su calendario. Inactivo = no recibe clases nuevas (por ejemplo, fuera de temporada).</p>
       ${E.instructores.map(i => `<div class='es-insrow'><b>${esc(i.nombre)}</b><input data-ic='${esc(i.nombre)}' type='email' placeholder='correo' value='${esc(i.correo || '')}'>
-        <label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}>Activo</label></div>`).join('')}
+        <label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}>Activo</label>
+        <span></span><input data-ir='${esc(i.nombre)}' placeholder='RUT (sale en la ficha)' value='${esc(i.rut || '')}'><span></span></div>`).join('')}
       <div class='es-insrow'><input id='es-nn' placeholder='Nombre nuevo'><input id='es-nc' type='email' placeholder='correo'><span></span></div>
       <div class='es-acc'><button class='es-btn' data-aj='instructores'>Guardar instructores</button></div><p class='es-err vivo'></p></div>`;
     const sy = E.anualSync;
@@ -273,6 +276,7 @@
     const $$ = s => pane.querySelectorAll(s), $ = s => pane.querySelector(s);
     $$('[data-fi]').forEach(b => b.onclick = () => { filtroIns = b.dataset.fi; pintar(); });
     $$('[data-pasadas]').forEach(b => b.onclick = () => { verPasadas = !verPasadas; pintar(); });
+    $$('[data-lf]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.lf); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', b.dataset.lf); } });
     $$('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(E.link); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', E.link); } });
     $$('[data-manual]').forEach(b => b.onclick = () => { manualOn = !manualOn; pintar(); });
     $$('[data-abre]').forEach(b => b.onclick = () => { abierta = b.dataset.abre; modo = b.dataset.modo; msg = ''; sel = (E.reservas.find(r => r.ref === abierta) || {}).instructores.slice(); pintar(); });
@@ -330,8 +334,8 @@
         b.disabled = true; b.textContent = 'Guardando…';
         try {
           for (const i of E.instructores) {
-            const c = pane.querySelector(`[data-ic="${CSS.escape(i.nombre)}"]`).value.trim(), a = pane.querySelector(`[data-ia="${CSS.escape(i.nombre)}"]`).checked;
-            if (c !== (i.correo || '') || a !== i.activo) E = await post({ accion: 'instructor', nombre: i.nombre, correo: c, telefono: i.telefono || '', activo: a });
+            const c = pane.querySelector(`[data-ic="${CSS.escape(i.nombre)}"]`).value.trim(), a = pane.querySelector(`[data-ia="${CSS.escape(i.nombre)}"]`).checked, rt = pane.querySelector(`[data-ir="${CSS.escape(i.nombre)}"]`).value.trim();
+            if (c !== (i.correo || '') || a !== i.activo || rt !== (i.rut || '')) E = await post({ accion: 'instructor', nombre: i.nombre, correo: c, telefono: i.telefono || '', rut: rt, activo: a });
           }
           const nn = $('#es-nn').value.trim(); if (nn) E = await post({ accion: 'instructor', nombre: nn, correo: $('#es-nc').value.trim(), activo: true });
           guardarCache(E); msg = 'Instructores guardados.'; pintar();

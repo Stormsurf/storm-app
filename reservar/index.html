@@ -212,6 +212,9 @@
         <p class='big'>${esc(fd(r.fecha))}, ${esc(r.hora)} hrs</p>
         <p>${r.personas} persona${r.personas===1?'':'s'} · Playa de Matanzas<br>Te enviamos el comprobante a ${esc(r.correo)}.</p>
         <p>Nosotros ponemos tabla y traje. Trae traje de baño, toalla y bloqueador, y llega 10 minutos antes.</p>
+        ${r.ficha ? `<div style='margin:18px 0 4px;padding:16px;border-radius:16px;background:#FFF6DA;text-align:left'><b style='font-size:1.6rem'>Falta un paso: la ficha de cada participante</b>
+          <p style='margin:6px 0 0;color:#5c5b58'>Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona. Te dejamos el link también en el correo.</p>
+          <a class='rs-go' style='text-decoration:none;text-align:center;margin-top:12px' href='${esc(r.ficha)}'>Llenar la ficha ahora</a></div>` : ''}
         <a class='rs-btn2' href='${gcal}' target='_blank' rel='noopener'>Agregar a mi calendario</a></div>
         <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, reservé una clase (' + ref + ')')}'>¿Necesitas cambiar algo? Escríbenos por WhatsApp</a>`;
       return;

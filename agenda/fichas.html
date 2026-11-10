@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fichas de inscripción · Storm</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icons/storm-app-192.png">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#EFECE8;font-family:Helvetica,Arial,sans-serif;color:#1d1d1c;font-size:12.5px}
+.bar{position:sticky;top:0;display:flex;gap:8px;justify-content:center;align-items:center;padding:10px;background:#2C2C2B;color:#fff;font-size:14px;z-index:2}
+.bar button{border:0;border-radius:999px;background:#fff;color:#2C2C2B;font:inherit;font-weight:700;padding:8px 16px;cursor:pointer}
+.hoja{background:#fff;max-width:800px;margin:16px auto;padding:28px 34px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+h1{font-size:15px;text-align:center;margin:0}
+h2{font-size:11px;text-align:center;margin:2px 0 12px;font-weight:600;letter-spacing:.04em}
+.intro{font-size:10px;color:#444;margin:0 0 12px;text-align:justify}
+.sec{font-weight:700;text-align:center;font-size:11.5px;margin:14px 0 6px;border-bottom:1px solid #1d1d1c;padding-bottom:3px}
+table{width:100%;border-collapse:collapse}
+td{padding:4px 6px;vertical-align:top}
+td b{font-weight:700}
+.ruta{border:1px solid #888;padding:6px 8px;font-size:11px;margin-top:6px}
+.dec td{border-bottom:1px solid #ddd}
+.x{display:inline-block;width:12px;height:12px;border:1px solid #1d1d1c;text-align:center;line-height:11px;font-size:10px;font-weight:700;margin:0 3px 0 6px}
+.decl{font-size:11px;text-align:justify;margin-top:10px;line-height:1.45}
+.firma{margin-top:14px;text-align:center}
+.firma img{height:90px;display:block;margin:0 auto}
+.firma .l{border-top:1px solid #1d1d1c;width:70%;margin:2px auto 0;padding-top:4px;font-size:10.5px}
+.pie{text-align:center;font-size:9.5px;color:#555;margin-top:16px}
+.msg{max-width:520px;margin:40px auto;background:#fff;padding:24px;border-radius:16px;text-align:center;font-size:15px}
+@media print{body{background:#fff}.bar{display:none}.hoja{box-shadow:none;margin:0 auto;padding:10mm 12mm;page-break-after:always;max-width:none}.hoja:last-child{page-break-after:auto}}
+</style>
+</head>
+<body>
+<div id="app"><div class="msg">Cargando…</div></div>
+<script>
+(async () => {
+  const app = document.getElementById('app');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const P = { experiencia:'Experiencia en misma actividad', seguro:'Cuenta con seguro', alergias:'Alergias', medicamentos:'Medicamentos contraindicados', regimen:'Régimen especial (alimentación)', operaciones:'Operaciones recientes', embarazada:'Embarazada', otros:'Otros' };
+  let auth = null; try{ auth = JSON.parse(localStorage.getItem('storm-panel') || 'null'); }catch(_){}
+  const ref = new URLSearchParams(location.search).get('ref');
+  if(!auth){ app.innerHTML = `<div class='msg'>Primero entra a <a href='/agenda/'>Agenda Storm</a>.</div>`; return; }
+  let d;
+  try{ const r = await fetch('/api/reservas', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, auth, {accion:'fichas', ref}))}); d = await r.json(); if(!d.ok) throw new Error(d.error); }
+  catch(x){ app.innerHTML = `<div class='msg'>${esc(x.message || 'No se pudo cargar.')}</div>`; return; }
+  const A = d.actividad;
+  const hoja = f => `<div class='hoja'>
+    <h1>FICHA INSCRIPCIÓN Y ACEPTACIÓN DEL RIESGO DE LA ACTIVIDAD</h1><h2>PRESTADORES SERVICIOS DE TURISMO AVENTURA</h2>
+    <p class='intro'>Ficha completada y firmada en línea por el participante o su tutor antes de la actividad (Decreto Nº19/2018, del Ministerio de Economía, Fomento y Turismo). Firmada el ${esc(f.creada)} · Reserva ${esc(d.ref)} · Participante ${f.n} de ${d.personas}${f.idioma === 'en' ? ' · completed in English' : ''}.</p>
+    <div class='sec'>DATOS PERSONALES</div>
+    <table><tr><td colspan='2'><b>Nombre:</b> ${esc(f.nombre)}</td><td><b>Nacionalidad:</b> ${esc(f.nacionalidad)}</td></tr>
+      <tr><td><b>Rut o Pasaporte:</b> ${esc(f.documento)}</td><td><b>Edad:</b> ${esc(f.edad)}</td><td><b>Peso:</b> ${esc(f.peso)}${f.peso && !/kg/i.test(f.peso) ? ' kg' : ''}</td></tr></table>
+    <div class='sec'>ACTIVIDAD</div>
+    <table><tr><td colspan='2'><b>Actividad:</b> Clase de Surf</td><td><b>Fecha:</b> ${esc(A.fechaLarga)}</td></tr>
+      <tr><td colspan='2'><b>Guía a cargo:</b> ${esc(A.guia)}</td><td><b>Rut:</b> ${esc(A.rutGuia)}</td></tr>
+      <tr><td><b>Hora Inicio:</b> ${esc(A.inicio)}</td><td><b>Hora Término:</b> ${esc(A.termino)}</td><td><b>Lugar salida / llegada:</b> Storm</td></tr></table>
+    <div class='ruta'><b>Trayectoria, recorrido donde se desarrollará la actividad:</b> La clase de surf se inicia en la Academia de Surf Storm, en donde se entregan los implementos necesarios para la práctica de surf, tales como tabla de surf, leash y traje de agua. Se camina por la playa hasta la zona designada como "zona de escuela" en donde se hace un calentamiento en la playa, se practica técnica y luego se ingresa al mar.</div>
+    <div class='sec'>CONTACTO EN CASO DE URGENCIA</div>
+    <table>${[0,1].map(i => { const u = (f.urgencia || [])[i] || {}; return `<tr><td><b>Nombre:</b> ${esc(u.nombre)}</td><td><b>Teléfono:</b> ${esc(u.telefono)}</td><td><b>E-mail:</b> ${esc(u.correo)}</td></tr>`; }).join('')}</table>
+    <div class='sec'>DECLARACIÓN</div>
+    <table class='dec'>${Object.keys(P).map(k => { const v = (f.declaracion || {})[k] || {}; return `<tr><td style='width:42%'>${P[k]}</td><td style='width:22%'>SI<span class='x'>${v.si ? 'X' : ''}</span> NO<span class='x'>${v.si ? '' : 'X'}</span></td><td><b>Especificar:</b> ${esc(v.detalle)}</td></tr>`; }).join('')}</table>
+    ${f.tutor ? `<p class='decl'><i>Participante menor de edad: datos completados por el tutor que lo acompaña.</i></p>` : ''}
+    <p class='decl'>Yo <b>${esc(f.firmante)}</b>, declaro conocer y entender los riesgos que envuelve la participación en este tipo de actividades, el cual no puede ser completamente eliminado, aun cuando exista el cumplimiento de estándares de seguridad acreditados por el prestador, los cuales tienen por finalidad el disminuir los riesgos que el desarrollo de esta actividad involucra.</p>
+    <p class='decl'>Será deber del prestador de servicios de turismo aventura informar de las condiciones y requisitos para el desarrollo de la actividad, como asimismo, es deber de los participantes que tomen un servicio de turismo aventura el informarse adecuadamente de las condiciones en que se presta el servicio, de las condiciones mínimas que el participante debe poseer antes de efectuar la actividad y acatar las instrucciones que la empresa y guía a cargo de la actividad indiquen.</p>
+    <div class='firma'><img src='${f.firma}' alt='Firma'><div class='l'>FIRMA, NOMBRE Y RUT DEL PARTICIPANTE O TUTOR: ${esc(f.firmante)} · ${esc(f.rutFirmante)}</div></div>
+    <div class='pie'>SERVICIO NACIONAL DE TURISMO · www.sernatur.cl</div></div>`;
+  const faltan = d.personas - d.fichas.length;
+  app.innerHTML = `<div class='bar'><span>${esc(d.cliente)} · ${esc(A.fechaLarga)} ${esc(A.inicio)} · ${d.fichas.length} de ${d.personas} fichas</span><button onclick='print()'>Imprimir o guardar PDF</button></div>` +
+    (faltan > 0 ? `<div class='msg' style='margin:16px auto'>Faltan ${faltan} ficha${faltan === 1 ? '' : 's'}. Link para el cliente:<br><a href='${esc(d.link)}' style='word-break:break-all'>${esc(d.link)}</a></div>` : '') +
+    d.fichas.map(hoja).join('');
+})();
+</script>
+</body>
+</html>
