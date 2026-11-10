@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS reservas (
   nota TEXT NOT NULL DEFAULT '',
   clave TEXT NOT NULL DEFAULT '',  -- llave del link de la ficha
   link_pago TEXT NOT NULL DEFAULT '', -- link de Mercado Pago (reservas anotadas a mano)
+  ninos INTEGER NOT NULL DEFAULT 0, -- niños de 7 a 11 (máx. 3 por instructor)
   pagos TEXT -- JSON {instructor: monto} (lo que gana cada uno en esta clase)
 );
 CREATE INDEX IF NOT EXISTS reservas_fecha ON reservas(fecha);

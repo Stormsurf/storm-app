@@ -105,23 +105,32 @@ async function instructores(db) {
 }
 const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 
-/** Precio y pago de instructores según personas y menores de 7 (1 instructor por cada 2 menores de 7). */
-/** Precio por grupo: los menores de 7 van de a 2 por instructor (cada pareja es su propia clase) y el resto en otra clase.
- *  Ej.: 5 personas con 2 menores de 7 = clase de 2 + clase de 3, con 2 instructores. */
-function cotizar(a, personas, menores) {
-  personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0);
+/** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
+ *  - menores de 7: aparte, máximo 2 por instructor;
+ *  - niños de 7 a 11: máximo 3 por instructor (pueden ir con adultos);
+ *  - desde 12 años cuenta como adulto; máximo 5 por instructor.
+ *  Ej.: 5 con 2 menores de 7 = clase de 2 + clase de 3; 4 niños de 10 = 2 clases de 2; 2 adultos + 2 niños de 9 = 1 clase de 4. */
+const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 7'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return t.length ? ' (' + t.join(', ') + ')' : ''; };
+const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
+function cotizar(a, personas, menores, ninos) {
+  personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   if (!(personas >= 1)) throw err('Elige cuántas personas son.');
-  if (menores < 0 || menores > personas) throw err('Revisa cuántos son menores de 7 años.');
+  if (menores < 0 || ninos < 0 || menores + ninos > personas) throw err('Revisa cuántos son niños.');
   const grupos = [];
-  for (let k = menores; k > 0; k -= 2) grupos.push({ personas: Math.min(2, k), ninos: true });
-  if (personas - menores > 0) grupos.push({ personas: personas - menores, ninos: false });
+  for (let k = menores; k > 0; k -= MAX_MENORES) grupos.push({ personas: Math.min(MAX_MENORES, k), ninos: true });
+  const resto = personas - menores;
+  if (resto > 0) {
+    // cuántos instructores para el resto: hasta 5 por grupo y hasta 3 niños de 7-11 por grupo; repartidos parejo
+    const n = personas > a.maxWeb && !ninos ? 1 : Math.max(Math.ceil(resto / MAX_GRUPO), Math.ceil(ninos / MAX_NINOS), 1);
+    for (let g = 0; g < n; g++) grupos.push({ personas: Math.floor(resto / n) + (g < resto % n ? 1 : 0), ninos: false });
+  }
   let precio = 0, pago = 0;
   grupos.forEach(g => {
     g.precio = Number(a.precios[g.personas]) || 0;
     g.pago = Number(g.personas <= 5 ? a.pagos[g.personas] : a.pagos.grupo) || Number(a.pagos.grupo) || 0;
     precio += g.precio; pago += g.pago;
   });
-  return { personas, menores, instructores: grupos.length, grupos, precio, pagoInstructor: pago };
+  return { personas, menores, ninos, instructores: grupos.length, grupos, precio, pagoInstructor: pago };
 }
 
 /** Academia Anual (todos los instructores) y horas fijas de cada uno (talleres, etc.). */
@@ -197,7 +206,7 @@ async function disponibilidad(db, d) {
   const a = await ajustes(db);
   const hoy = ahoraChile();
   const personas = Math.max(1, Math.min(a.maxWeb, Math.floor(Number(d.personas) || 1)));
-  const c = cotizar(a, personas, Math.min(personas, Math.floor(Number(d.menores) || 0)));
+  const c = cotizar(a, personas, Math.min(personas, Math.floor(Number(d.menores) || 0)), Math.floor(Number(d.ninos) || 0));
   const hasta = sumarDias(hoy.fecha, a.diasAdelante);
   const ag = await estadoAgenda(db, a, hoy.fecha, hasta);
   const activos = ag.ins.filter(i => i.activo);
@@ -242,10 +251,10 @@ async function tarifas(db) {
 }
 /** Cuánto gana cada instructor en esta clase. Cada uno toma un grupo (pareja de niños o el resto); los extras se pagan como grupo.
  *  Si Isidora escribió el pago a mano, se reparte igual entre todos. */
-function repartirPago(a, tar, personas, menores, ins, pagoManual) {
+function repartirPago(a, tar, personas, menores, ninos, ins, pagoManual) {
   const out = {};
   if (pagoManual != null) { const base = Math.floor(pagoManual / Math.max(1, ins.length)); ins.forEach((n, k) => out[n] = base + (k === 0 ? pagoManual - base * ins.length : 0)); out._manual = 1; return out; }
-  const c = cotizar(a, personas, menores);
+  const c = cotizar(a, personas, menores, ninos);
   ins.forEach((n, k) => {
     const g = c.grupos[k], clave = g && g.personas <= 5 ? g.personas : 'grupo', t = tar[n] || {};
     out[n] = Number(t[clave]) || Number(a.pagos[clave]) || Number(t.grupo) || Number(a.pagos.grupo) || 0;
@@ -261,10 +270,10 @@ function pagosDe(r) {
 
 /** Guarda la reserva y ocupa los bloques en un solo paso: si alguien tomó el horario un segundo antes, falla entera. */
 async function guardarReserva(db, a, r, hastaMs) {
-  r.pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.instructores, r.pagoManual == null ? null : r.pagoManual);
+  r.pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.ninos || 0, r.instructores, r.pagoManual == null ? null : r.pagoManual);
   r.pago_instructor = sumaPagos(r.pagos);
-  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota, clave, pagos)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, JSON.stringify(r.instructores),
+  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, ninos, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota, clave, pagos)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, r.ninos || 0, JSON.stringify(r.instructores),
       r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '', r.clave || (r.clave = nuevaClave()), JSON.stringify(r.pagos))];
   r.instructores.forEach(i => bloquesDe(r.hora, a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, hastaMs))));
   await db.batch(st);
@@ -277,7 +286,7 @@ async function reservar(env, d) {
   if (!esFecha(fecha) || !hora || !a.horarios.includes(hora)) throw err('Elige un día y un horario.');
   const personas = Math.floor(Number(d.personas));
   if (!(personas >= 1 && personas <= a.maxWeb)) throw err('Para más de ' + a.maxWeb + ' personas escríbenos por WhatsApp.');
-  const c = cotizar(a, personas, d.menores);
+  const c = cotizar(a, personas, d.menores, d.ninos);
   const nombre = nombrePropio(d.nombre), telefono = String(d.telefono || '').trim(), correo = norm(d.correo), comentario = String(d.comentario || '').trim().slice(0, 500);
   if (nombre.length < 2) throw err('Escribe tu nombre.');
   if (telefono.replace(/\D/g, '').length < 8) throw err('Revisa tu teléfono.');
@@ -287,7 +296,7 @@ async function reservar(env, d) {
   if (!env.MP_TOKEN) throw err('Las reservas en línea no están activas en este momento. Escríbenos por WhatsApp.');
   await limpiarRetenciones(db);
   const ref = nuevaRef(), t = ahoraChile();
-  const base = { ref, creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pendiente', fecha, hora, personas, menores: c.menores, nombre, telefono, correo, comentario,
+  const base = { ref, creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pendiente', fecha, hora, personas, menores: c.menores, ninos: c.ninos, nombre, telefono, correo, comentario,
     total: c.precio, pago_instructor: c.pagoInstructor, medio: 'Mercado Pago' };
   // Instructor al azar entre los libres; si dos personas reservan a la vez, el segundo intenta con otro.
   let elegido = null;
@@ -410,7 +419,7 @@ function correoReservada(r, a, ins) {
     '<tr><td style="padding:18px 26px 0;text-align:center"><p style="margin:0;font-size:40px">🏄</p><h1 style="font-size:27px;line-height:1.15;margin:6px 0 8px">¡Tu clase de surf está reservada!</h1><p style="margin:0;font-size:16px;line-height:1.5;color:#5c5b58">Hola ' + esc(r.nombre.split(' ')[0]) + ', ya tienes tu lugar en el mar. Este correo es tu comprobante.</p></td></tr>' +
     '<tr><td style="padding:22px 26px 0"><div style="background:#E3F1F1;border-radius:18px;padding:20px;text-align:center"><p style="margin:0;font-size:14px;color:#0f6e74;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Tu clase</p><p style="margin:6px 0 2px;font-size:22px;font-weight:700">' + esc(fechaLarga(r.fecha)) + '</p><p style="margin:0;font-size:20px">' + esc(r.hora) + ' a ' + esc(fin) + ' hrs</p></div>' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px">' +
-    '<tr>' + dato('Personas', r.personas + (r.menores ? ' (' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 7)' : '')) + '</tr>' +
+    '<tr>' + dato('Personas', r.personas + edades(r)) + '</tr>' +
     (ins.length ? '<tr>' + dato(ins.length === 1 ? 'Instructor' : 'Instructores', esc(ins.join(' y '))) + '</tr>' : '') +
     '<tr>' + dato('Dónde', esc(a.lugar)) + '</tr>' +
     '<tr>' + dato('Total pagado', clp(r.total)) + '</tr>' +
@@ -433,7 +442,7 @@ async function avisarReserva(env, r, a) {
     body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\n📍 Nuestra ubicación: ' + MAPA + '\n\n🏄 ¿Qué debes traer?\n' + TRAER.map(t => '✅ ' + t).join('\n') + '\n\nNosotros te entregamos todo el equipamiento necesario 💙\nReferencia ' + r.ref })];
   const lista = await env.DB.prepare('SELECT nombre, correo FROM instructores').all();
   lista.results.filter(i => ins.includes(i.nombre) && i.correo).forEach(i => p.push(enviarCorreo(env, { to: i.correo, subject: 'Nueva clase particular · ' + cuando,
-    body: 'Hola ' + i.nombre + ',\n\nTienes una clase particular:\n' + cuando + '\n' + r.personas + ' persona(s)' + (r.menores ? ' (' + r.menores + ' menor(es) de 7)' : '') + '\nCliente: ' + r.nombre + ' · ' + r.telefono + (r.comentario ? '\nComentario: ' + r.comentario : '') + '\n\nLa ves en Agenda Storm: ' + PANEL + '\n\nEquipo Storm' })));
+    body: 'Hola ' + i.nombre + ',\n\nTienes una clase particular:\n' + cuando + '\n' + r.personas + ' persona(s)' + edades(r) + '\nCliente: ' + r.nombre + ' · ' + r.telefono + (r.comentario ? '\nComentario: ' + r.comentario : '') + '\n\nLa ves en Agenda Storm: ' + PANEL + '\n\nEquipo Storm' })));
   await Promise.all(p);
 }
 async function recordatorios(env, a) {
@@ -488,7 +497,7 @@ async function quien(env, d) {
   throw err('Tu correo no está en la Escuela. Pídele a Isidora que lo agregue en Agenda Storm > Ajustes.');
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
-const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, instructores: parseLista(r.instructores),
+const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, instructores: parseLista(r.instructores),
   nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? r.link_pago : '' } : {}) });
 
 async function panel(env, q) {
@@ -551,14 +560,14 @@ async function pagosSemana(env, q, d) {
     await anotar(db, q, 'pago semana ' + lunes + ' ' + inst + (d.marcar.pagado ? ' pagado' : ' desmarcado'));
   }
   const [res, pag] = await Promise.all([
-    db.prepare("SELECT ref, fecha, hora, personas, menores, nombre, instructores, pago_instructor, pagos FROM reservas WHERE fecha BETWEEN ? AND ? AND estado = 'pagada' ORDER BY fecha, hora").bind(lunes, domingo).all(),
+    db.prepare("SELECT ref, fecha, hora, personas, menores, ninos, nombre, instructores, pago_instructor, pagos FROM reservas WHERE fecha BETWEEN ? AND ? AND estado = 'pagada' ORDER BY fecha, hora").bind(lunes, domingo).all(),
     db.prepare('SELECT * FROM pagos_semana WHERE lunes = ?').bind(lunes).all()
   ]);
   const por = {};
   res.results.forEach(r => { const p = pagosDe(r); Object.keys(p).forEach(i => {
     if (!admin && i !== q.yo) return;
     const x = por[i] = por[i] || { instructor: i, total: 0, clases: [] };
-    x.total += p[i]; x.clases.push({ fecha: r.fecha, hora: r.hora, cliente: r.nombre, personas: r.personas, menores: r.menores, monto: p[i] });
+    x.total += p[i]; x.clases.push({ fecha: r.fecha, hora: r.hora, cliente: r.nombre, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, monto: p[i] });
   }); });
   pag.results.forEach(x => { if (admin || x.instructor === q.yo) { const y = por[x.instructor] = por[x.instructor] || { instructor: x.instructor, total: 0, clases: [] }; y.pagado = { monto: x.monto, el: x.pagado_el }; } });
   const lista = Object.values(por).sort((a, b) => b.total - a.total);
@@ -589,7 +598,7 @@ async function editar(env, q, d) {
   ins.forEach(i => bloquesDe(hora, a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, fecha, b, r.ref, fijo))));
   const estadoNuevo = r.estado === 'revisar' && /instructor/.test(r.nota) ? 'pagada' : r.estado;
   let viejo = null; try { viejo = JSON.parse(r.pagos || 'null'); } catch (_) {}
-  const pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, ins, viejo && viejo._manual ? r.pago_instructor : null);
+  const pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.ninos || 0, ins, viejo && viejo._manual ? r.pago_instructor : null);
   st.push(db.prepare('UPDATE reservas SET fecha = ?, hora = ?, instructores = ?, estado = ?, pagos = ?, pago_instructor = ?, recordatorio = CASE WHEN fecha = ? THEN recordatorio ELSE 0 END WHERE ref = ?').bind(fecha, hora, JSON.stringify(ins), estadoNuevo, JSON.stringify(pagos), sumaPagos(pagos), fecha, r.ref));
   try { await db.batch(st); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Ese instructor ya tiene otra clase a esa hora.'); throw x; }
@@ -627,8 +636,9 @@ async function manual(env, q, d, ctx) {
   if (!esFecha(fecha) || !hora) throw err('Elige el día y la hora.');
   if (!(personas >= 1)) throw err('¿Cuántas personas son?');
   const menores = Math.max(0, Math.min(personas, Math.floor(Number(d.menores) || 0)));
+  const ninos = Math.max(0, Math.min(personas - menores, Math.floor(Number(d.ninos) || 0)));
   const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Escribe el nombre del cliente.');
-  const c = cotizar(a, personas, menores); // más de 5 adultos: sin precio de tabla (escribe el total), pago instructor = grupo
+  const c = cotizar(a, personas, menores, ninos); // más de 5 adultos: sin precio de tabla (escribe el total), pago instructor = grupo
   const total = d.total === '' || d.total == null ? c.precio : Math.round(Number(String(d.total).replace(/\D/g, '')) || 0);
   const elegidos = Array.isArray(d.instructores) ? [...new Set(d.instructores.map(String).filter(Boolean))] : [];
   const nIns = Math.max(c.instructores, Math.floor(Number(d.nInstructores) || 0), elegidos.length);
@@ -644,7 +654,7 @@ async function manual(env, q, d, ctx) {
   if (ins.length < nIns) throw err('Solo hay ' + ins.length + ' instructor' + (ins.length === 1 ? '' : 'es') + ' libre' + (ins.length === 1 ? '' : 's') + ' a esa hora. Elige otra hora o menos instructores.');
   if (!ins.length) throw err('No hay instructores libres a esa hora. Elige uno a mano.');
   const t = ahoraChile();
-  const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conLink ? 'pendiente' : 'pagada', fecha, hora, personas, menores, instructores: ins, nombre,
+  const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conLink ? 'pendiente' : 'pagada', fecha, hora, personas, menores, ninos, instructores: ins, nombre,
     telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pagoManual, medio, nota: 'Agregada a mano por ' + q.email };
   // Con link: el horario se guarda hasta que paguen (máximo las horas de "horasLink", y nunca después de que empiece la clase).
   const desfase = minLocal(t.fecha, t.hora) - Math.floor(Date.now() / 60000);

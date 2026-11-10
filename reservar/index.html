@@ -111,18 +111,18 @@
   const fin = h => { const [a,b] = h.split(':').map(Number), t = a*60 + b + (D ? D.duracion : 90); return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0'); };
   async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.'); } if(!d.ok) throw new Error(d.error || 'Algo falló.'); return d; }
   const root = $('#rs');
-  const S = { personas: 0, menores: 0, fecha: '', hora: '', mes: '' };
+  const S = { personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '' };
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
   const precioDe = p => D && D.precios ? Number(D.precios[p]) : 0;
-  const necesita = () => Math.ceil(S.menores / 2) + (S.personas > S.menores ? 1 : 0);
+  const necesita = () => grupos(S.personas, S.menores, S.ninos).length;
   // Igual que el servidor: los menores de 7 van de a 2 por instructor y el resto en otra clase
-  const grupos = (p, k) => { const g = []; for(let x = k; x > 0; x -= 2) g.push({n: Math.min(2, x), ninos: true}); if(p > k) g.push({n: p - k, ninos: false}); return g; };
-  const totalDe = (p, k) => grupos(p, k).reduce((t, g) => t + precioDe(g.n), 0);
+  const grupos = (p, k, c) => { c = c || 0; const g = []; for(let x = k; x > 0; x -= 2) g.push({n: Math.min(2, x), ninos: true}); const r = p - k; if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), ninos: false}); } return g; };
+  const totalDe = (p, k, c) => grupos(p, k, c).reduce((t, g) => t + precioDe(g.n), 0);
   const waLink = t => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(t);
 
   async function cargar(){
     const id = ++pidiendo; cargando = true; errCarga = ''; pintar();
-    try{ const d = await post({accion:'disponibilidad', personas: S.personas || 1, menores: S.menores}); if(id !== pidiendo) return; D = d; }
+    try{ const d = await post({accion:'disponibilidad', personas: S.personas || 1, menores: S.menores, ninos: S.ninos}); if(id !== pidiendo) return; D = d; }
     catch(x){ if(id !== pidiendo) return; errCarga = x.message; }
     cargando = false;
     if(D && S.fecha && !(D.dias[S.fecha] || []).includes(S.hora)) S.hora = '';
@@ -156,9 +156,11 @@
   }
 
   function pintar(){
-    const p = S.personas, G = grupos(p, S.menores), precio = totalDe(p, S.menores), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
-    const kids = p ? `<div class='rs-kids'><p>¿Cuántos son menores de 7 años?<small>Por seguridad, los menores de 7 tienen su propio instructor (1 por cada 2 niños).</small></p>
-      <div class='rs-num'><button data-k='-1' aria-label='Menos'${S.menores<=0?' disabled':''}>−</button><b>${S.menores}</b><button data-k='1' aria-label='Más'${S.menores>=p?' disabled':''}>+</button></div></div>` : '';
+    const p = S.personas, G = grupos(p, S.menores, S.ninos), precio = totalDe(p, S.menores, S.ninos), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
+    const paso = (txt, sub, val, attr, max) => `<div class='rs-kids'><p>${txt}<small>${sub}</small></p>
+      <div class='rs-num'><button ${attr}='-1' aria-label='Menos'${val<=0?' disabled':''}>−</button><b>${val}</b><button ${attr}='1' aria-label='Más'${val>=max?' disabled':''}>+</button></div></div>`;
+    const kids = p ? paso('¿Cuántos son menores de 7 años?', 'Tienen su propio instructor (1 por cada 2 niños).', S.menores, 'data-k', p - S.ninos)
+      + paso('¿Cuántos niños de 7 a 11 años?', 'Máximo 3 niños por instructor. Desde los 12 cuentan como adultos.', S.ninos, 'data-kn', p - S.menores) : '';
     const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
     root.innerHTML = `
       <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
@@ -192,15 +194,16 @@
           </details>
           <label class='rs-chk'><input type='checkbox' name='acepta'> Acepto los términos y condiciones y la Declaración de Conocimiento y Aceptación de Riesgos.</label>
         </div>
-        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 7' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
+        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 7' : ''}${S.ninos ? ' · ' + S.ninos + ' de 7 a 11' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
         <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
         <p class='rs-err' id='rs-err' hidden></p>
         <p class='rs-mp'>🔒 Pago seguro con Mercado Pago</p>
       </div>
       <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tengo una pregunta sobre las clases de surf')}'>¿Dudas? Escríbenos por WhatsApp</a>`;
     root.querySelectorAll('.rs-f [name]').forEach(i => { if(i.name in guardado){ if(i.type === 'checkbox') i.checked = guardado[i.name]; else i.value = guardado[i.name]; } });
-    root.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const antes = necesita(); S.personas = +b.dataset.p; S.menores = Math.min(S.menores, S.personas); if(!D || necesita() !== antes) cargar(); else pintar(); });
-    root.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const antes = necesita(); S.menores = Math.max(0, Math.min(S.personas, S.menores + +b.dataset.k)); if(necesita() !== antes) cargar(); else pintar(); });
+    root.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const antes = necesita(); S.personas = +b.dataset.p; S.menores = Math.min(S.menores, S.personas); S.ninos = Math.min(S.ninos, S.personas - S.menores); if(!D || necesita() !== antes) cargar(); else pintar(); });
+    root.querySelectorAll('[data-kn]').forEach(b => b.onclick = () => { const antes = necesita(); S.ninos = Math.max(0, Math.min(S.personas - S.menores, S.ninos + +b.dataset.kn)); if(necesita() !== antes) cargar(); else pintar(); });
+    root.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const antes = necesita(); S.menores = Math.max(0, Math.min(S.personas - S.ninos, S.menores + +b.dataset.k)); if(necesita() !== antes) cargar(); else pintar(); });
     root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.fecha = b.dataset.f; S.hora = ''; pintar(); const h = $('.rs-dia'); if(h) h.scrollIntoView({behavior:'smooth', block:'start'}); });
     root.querySelectorAll('[data-h]').forEach(b => b.onclick = () => { S.hora = b.dataset.h; pintar(); $('#rs-paso3').scrollIntoView({behavior:'smooth', block:'start'}); });
     const mv = n => { const [y,m] = S.mes.split('-').map(Number), x = new Date(Date.UTC(y, m-1+n, 1)); S.mes = x.toISOString().slice(0,7); pintar(); };
@@ -216,7 +219,7 @@
       if(!f.acepta) return msg('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.');
       go.disabled = true; go.textContent = 'Conectando con Mercado Pago…'; e.hidden = true;
       try{
-        const r = await post(Object.assign({accion:'reservar', personas: S.personas, menores: S.menores, fecha: S.fecha, hora: S.hora}, f));
+        const r = await post(Object.assign({accion:'reservar', personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora}, f));
         try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
         location.href = r.url;
       }catch(x){ go.disabled = false; go.textContent = 'Pagar ' + clp(precioDe(S.personas)); msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
