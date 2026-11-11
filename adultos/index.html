@@ -108,7 +108,8 @@
 <script>
 (() => {
   const $ = s => document.querySelector(s);
-  const PRECIO_CLASE = 15000, PRECIO_PACK = 100000, PACK = 8, COMISION = 0.0344;
+  const PRECIO_CLASE = 18000, PRECIO_PACK = 100000, PACK = 8, PRECIO_PACK4 = 60000, PACK4 = 4, SEMANAS4 = 6, COMISION = 0.0344;
+  const CLASES = { pack:PACK, pack4:PACK4, suelta:1 };
   const HOY = '2026-11-14'; // en la prueba hacemos como si hoy fuera sábado 14 de noviembre
   const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
   const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -131,7 +132,7 @@
     alumnos: [
       { id:'cr', nombre:'Camila Rojas', pagos:[{ tipo:'pack', monto:PRECIO_PACK, fecha:'2026-11-01', medio:'Mercado Pago' }] },
       { id:'ap', nombre:'Andrés Pérez', pagos:[{ tipo:'pack', monto:PRECIO_PACK, fecha:'2026-11-02', medio:'Mercado Pago' }] },
-      { id:'jm', nombre:'Josefina Mena', pagos:[{ tipo:'suelta', monto:PRECIO_CLASE, fecha:'2026-11-07', medio:'Transferencia' }] },
+      { id:'jm', nombre:'Josefina Mena', pagos:[{ tipo:'pack4', monto:PRECIO_PACK4, fecha:'2026-11-07', medio:'Mercado Pago' }] },
       { id:'tv', nombre:'Tomás Vidal', pagos:[] },
       { id:'pg', nombre:'Pedro González', pagos:[], agregado:true }
     ],
@@ -153,11 +154,11 @@
 
   // Cuenta de cada alumno: clases pagadas, clases que fue, cuántas le quedan o cuánto debe.
   function cuenta(a){
-    const pagadas = a.pagos.reduce((s,p) => s + (p.tipo === 'pack' ? PACK : 1), 0);
+    const pagadas = a.pagos.reduce((s,p) => s + (p.n || CLASES[p.tipo] || 1), 0);
     const pagado = a.pagos.reduce((s,p) => s + p.monto, 0);
     const fue = S.clases.filter(c => S.asis[c.f] && S.asis[c.f][a.id]).map(c => c.f);
     const quedan = pagadas - fue.length;
-    return { pagadas, pagado, fue, quedan, debe: quedan < 0 ? -quedan * PRECIO_CLASE : 0, tienePack: a.pagos.some(p => p.tipo === 'pack') };
+    return { pagadas, pagado, fue, quedan, debe: quedan < 0 ? -quedan * PRECIO_CLASE : 0, plan: (a.pagos.filter(p => p.tipo !== 'suelta').slice(-1)[0] || a.pagos.slice(-1)[0] || {}), deudaClases: quedan < 0 ? -quedan : 0 };
   }
   const estado = a => {
     const c = cuenta(a);
@@ -176,6 +177,9 @@
     { url:'/familias/surf-desde-cero.html', icono:'🏄', titulo:'Surf desde cero', texto:'Las partes de tu tabla y si eres regular o goofy.' }
   ];
 
+  const vence = f => { const d = new Date(f + 'T12:00'); d.setDate(d.getDate() + SEMANAS4 * 7); return d.toISOString().slice(0,10); };
+  const verComo = () => `<p class="ad-note" style="margin-top:10px">Ver la prueba como: ` + S.alumnos.filter(a => !a.agregado).map(a => `<button class="ad-mini${a.id === S.yo ? ' on' : ''}" data-yo="${a.id}" style="padding:4px 10px;font-size:1.15rem;margin:2px">${a.nombre.split(' ')[0]}</button>`).join('') + `</p>`;
+
   // ---------- Vista del alumno ----------
   function vAlumno(){
     const a = S.alumnos.find(x => x.id === S.yo), c = cuenta(a);
@@ -183,7 +187,7 @@
     const aviso = S.aviso ? `<div class="ad-card ad-aviso"><b>🔔 Aviso de Emerson</b><p>${S.aviso}</p></div>` : '';
     const marcada = hoy && S.asis[HOY] && S.asis[HOY][a.id];
     const prox = S.clases.find(x => x.f > HOY && !x.cancelada);
-    let h = `<div class="ad-hero"><small>Academia de Adultos</small><h1>Hola, ${a.nombre.split(' ')[0]}</h1><p>Lunes y sábados de 9:00 a 11:00.</p></div>`;
+    let h = `<div class="ad-hero"><small>Academia de Adultos</small><h1>Hola, ${a.nombre.split(' ')[0]}</h1><p>Lunes y sábados de 9:00 a 11:00.</p></div>` + verComo();
     h += aviso;
     if (hoy && hoy.cancelada) h += `<div class="ad-card ad-hoy"><small>Hoy no hay clase</small><h3>${larga(hoy.f)}</h3><p>${hoy.cambio}</p></div>`;
     else if (hoy) h += `<div class="ad-card ad-hoy"><small>Hoy hay clase</small><h3>${larga(hoy.f)}</h3><p>${hoy.h}${hoy.cambio ? ' · ' + hoy.cambio : ''}</p>
@@ -192,7 +196,7 @@
     const ringBg = c.debe ? 'var(--warn-soft)' : 'var(--ac-soft)';
     h += `<h2 class="ad-h2">Mis clases</h2><div class="ad-card"><div class="ad-plan">
       <div class="ad-ring" style="background:${ringBg}"><div><b>${c.debe ? '!' : Math.max(c.quedan,0)}</b><small>${c.debe ? 'por pagar' : 'te quedan'}</small></div></div>
-      <div><h3>${c.tienePack ? 'Plan 8 clases' : 'Clase suelta'}</h3><p>Fuiste a ${c.fue.length} de ${c.pagadas} ${c.pagadas === 1 ? 'clase pagada' : 'clases pagadas'}.${c.debe ? ' Tienes ' + fmt(c.debe) + ' por pagar.' : ''}</p></div></div>`;
+      <div><h3>${c.plan.tipo === 'pack' ? 'Plan 8 clases' : c.plan.tipo === 'pack4' ? 'Plan 4 clases' : c.plan.tipo ? 'Clase suelta' : 'Sin plan'}</h3>${c.plan.tipo === 'pack4' ? `<p style="margin-top:2px">Úsalas hasta el ${larga(vence(c.plan.fecha)).toLowerCase()}.</p>` : ''}<p>${c.pagadas ? `Fuiste a ${c.fue.length} de ${c.pagadas} ${c.pagadas === 1 ? 'clase pagada' : 'clases pagadas'}.` : `Fuiste a ${c.fue.length} ${c.fue.length === 1 ? 'clase' : 'clases'}.`}${c.debe ? ' Tienes ' + fmt(c.debe) + ' por pagar.' : ''}</p></div></div>`;
     h += `<div style="margin-top:14px;border-top:1px solid var(--line)">` + S.clases.filter(x => x.f <= HOY).slice().reverse().map(x => {
       const m = S.asis[x.f] && S.asis[x.f][a.id];
       if (x.cancelada) return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.cambio}</small></div><span class="ad-tag t-chg">Cancelada</span></div>`;
@@ -206,9 +210,12 @@
       }).join('') + `</div><p class="ad-note">Marca "Voy" para que Emerson sepa cuántos llegan. El día antes a las 19:00 te llega un recordatorio al celular.</p>`;
     }
     h += `<h2 class="ad-h2">Recursos Storm</h2><div class="ad-res">` + RECURSOS.map(r => `<a href="${r.url}"><i>${r.icono}</i><h3>${r.titulo}</h3><p>${r.texto}</p></a>`).join('') + `</div>`;
-    h += `<h2 class="ad-h2">Pagar</h2><div class="ad-pay">
-      <button class="ad-opt best" data-pay="pack"><small>8 clases al mes</small><b>${fmt(PRECIO_PACK)}</b><small>Sale ${fmt(PRECIO_PACK/PACK)} la clase</small></button>
-      <button class="ad-opt" data-pay="suelta"><small>Clase suelta</small><b>${fmt(PRECIO_CLASE)}</b><small>Una clase</small></button></div>
+    h += `<h2 class="ad-h2">Pagar</h2>`;
+    if (c.debe) h += `<div class="ad-card" style="background:var(--warn-soft);border-color:transparent;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b style="font-size:1.6rem">Debes ${fmt(c.debe)}</b><p style="margin:2px 0 0;font-size:1.3rem;opacity:.75">${c.deudaClases === 1 ? '1 clase' : c.deudaClases + ' clases'} sin pagar (${fmt(PRECIO_CLASE)} c/u). Si pagas un plan, se descuentan de ahí.</p></div><button class="ad-go" data-pay="deuda">Pagar lo que debo</button></div>`;
+    h += `<div class="ad-pay">
+      <button class="ad-opt best" data-pay="pack4"><small>4 clases · 6 semanas</small><b>${fmt(PRECIO_PACK4)}</b><small>Sale ${fmt(PRECIO_PACK4/PACK4)} la clase</small></button>
+      <button class="ad-opt" data-pay="pack"><small>8 clases al mes</small><b>${fmt(PRECIO_PACK)}</b><small>Sale ${fmt(PRECIO_PACK/PACK)} la clase</small></button>
+      <button class="ad-opt" data-pay="suelta" style="grid-column:1/-1"><small>Clase suelta</small><b>${fmt(PRECIO_CLASE)}</b><small>Con un plan te ahorras hasta ${fmt(PRECIO_CLASE - PRECIO_PACK/PACK)} por clase</small></button></div>
       <p class="ad-note">Pagas con Mercado Pago y queda anotado solo.</p>`;
     return h;
   }
@@ -291,6 +298,7 @@
     if (t.id === 'fui'){ const a = S.asis[HOY] = S.asis[HOY] || {}; if (!a[S.yo]){ a[S.yo] = 'alumno'; save(); render(); toast('¡Listo! Quedó anotado'); } return; }
     if (t.dataset.voy){ const v = S.voy[t.dataset.voy] = S.voy[t.dataset.voy] || {}; if (v[S.yo]) delete v[S.yo]; else v[S.yo] = 1; save(); render(); toast(v[S.yo] ? '¡Te esperamos!' : 'Quitaste el "Voy"'); return; }
     if (t.dataset.fui){ (S.asis[t.dataset.fui] = S.asis[t.dataset.fui] || {})[S.yo] = 'alumno'; save(); render(); toast('Quedó anotado que fuiste'); return; }
+    if (t.dataset.yo){ S.yo = t.dataset.yo; save(); render(); return; }
     if (t.dataset.pay){ toast('Aquí se abre Mercado Pago (en la prueba no cobra)'); return; }
     if (t.dataset.cl){ claseSel = t.dataset.cl; formAbierto = false; render(); return; }
     if (t.dataset.al){ const a = S.asis[claseSel] = S.asis[claseSel] || {}; if (a[t.dataset.al]) delete a[t.dataset.al]; else a[t.dataset.al] = 'emerson'; save(); render(); return; }
@@ -310,7 +318,7 @@
       }
       if (avisar) S.aviso = txt;
       formAbierto = false; save(); render(); toast(avisar ? 'Cambio guardado y aviso enviado a ' + S.alumnos.length + ' alumnos' : 'Cambio guardado'); return; }
-    if (t.dataset.cobro){ const a = S.alumnos.find(x => x.id === t.dataset.cobro), c = cuenta(a); const monto = c.debe || PRECIO_CLASE; a.pagos.push({ tipo:'suelta', monto, fecha:HOY, medio:'Transferencia' }); for (let i = 1; i < monto / PRECIO_CLASE; i++) a.pagos.push({ tipo:'suelta', monto:0, fecha:HOY, medio:'Transferencia' }); save(); render(); toast('Pago anotado'); return; }
+    if (t.dataset.cobro){ const a = S.alumnos.find(x => x.id === t.dataset.cobro), c = cuenta(a); const n = c.deudaClases || 1; a.pagos.push({ tipo:'suelta', n, monto: n * PRECIO_CLASE, fecha:HOY, medio:'Transferencia' }); save(); render(); toast('Pago anotado'); return; }
   });
   render();
 })();
