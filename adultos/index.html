@@ -82,6 +82,8 @@
 .ad-aviso{background:#FBF3DC;border:0;color:#4d3b06}
 .ad-aviso b{display:block;font-size:1.5rem}
 .ad-aviso p{margin:4px 0 0;font-size:1.4rem}
+.ad-mini{border:1.5px solid var(--ac);background:#fff;color:var(--ac-dk);border-radius:999px;font:inherit;font-weight:600;font-size:1.3rem;padding:7px 16px;cursor:pointer;white-space:nowrap}
+.ad-mini.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .ad-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:1.4rem;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 [hidden]{display:none!important}
 </style>
@@ -134,9 +136,11 @@
       '2026-11-07': { cr:'emerson', ap:'emerson', jm:'emerson', tv:'emerson' },
       '2026-11-09': { cr:'emerson', ap:'alumno', pg:'emerson' }
     },
+    voy: { '2026-11-14': { ap:1, jm:1 }, '2026-11-16': { ap:1, tv:1 } },
     yo: 'cr'
   });
   let S = JSON.parse(localStorage.getItem('ad-prueba') || 'null') || INICIAL();
+  S.voy = S.voy || {};
   const save = () => localStorage.setItem('ad-prueba', JSON.stringify(S));
   let vista = 'alumno', claseSel = HOY;
 
@@ -178,9 +182,15 @@
     h += `<div style="margin-top:14px;border-top:1px solid var(--line)">` + S.clases.filter(x => x.f <= HOY).slice().reverse().map(x => {
       const m = S.asis[x.f] && S.asis[x.f][a.id];
       if (x.cancelada) return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.cambio}</small></div><span class="ad-tag t-chg">Cancelada</span></div>`;
-      return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.h}${x.cambio ? ' · ' + x.cambio : ''}</small></div>${m ? '<span class="ad-tag t-ok">Fuiste</span>' : (x.f === HOY ? '<span class="ad-tag t-ac">Hoy</span>' : '<span class="ad-tag t-no">No fuiste</span>')}</div>`;
-    }).join('') + `</div></div>`;
-    if (prox) h += `<p class="ad-note">Próxima clase: <b>${larga(prox.f)}</b>, ${prox.h}.</p>`;
+      return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.h}${x.cambio ? ' · ' + x.cambio : ''}</small></div>${m ? '<span class="ad-tag t-ok">Fuiste</span>' : (x.f === HOY ? '<span class="ad-tag t-ac">Hoy</span>' : `<button class="ad-mini" data-fui="${x.f}">Sí fui</button>`)}</div>`;
+    }).join('') + `</div><p class="ad-note" style="margin-top:8px">¿Fuiste y no lo marcaste? Toca "Sí fui".</p></div>`;
+    const futuras = S.clases.filter(x => x.f > HOY && !x.cancelada).slice(0, 4);
+    if (futuras.length){
+      h += `<h2 class="ad-h2">Próximas clases</h2><div class="ad-card" style="padding-top:8px;padding-bottom:8px">` + futuras.map(x => {
+        const v = S.voy[x.f] && S.voy[x.f][a.id];
+        return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.h}${x.cambio ? ' · ' + x.cambio : ''}</small></div><button class="ad-mini${v ? ' on' : ''}" data-voy="${x.f}">${v ? '✓ Voy' : 'Voy'}</button></div>`;
+      }).join('') + `</div><p class="ad-note">Marca "Voy" para que Emerson sepa cuántos llegan. El día antes a las 19:00 te llega un recordatorio al celular.</p>`;
+    }
     h += `<h2 class="ad-h2">Pagar</h2><div class="ad-pay">
       <button class="ad-opt best" data-pay="pack"><small>8 clases al mes</small><b>${fmt(PRECIO_PACK)}</b><small>Sale ${fmt(PRECIO_PACK/PACK)} la clase</small></button>
       <button class="ad-opt" data-pay="suelta"><small>Clase suelta</small><b>${fmt(PRECIO_CLASE)}</b><small>Una clase</small></button></div>
@@ -211,14 +221,16 @@
     let h = `<div class="ad-hero"><small>Panel · Academia de Adultos</small><h1>Pasar lista</h1><p>Toca a cada persona que vino. Si alguien no está en la lista, agrégalo abajo. Aquí también cambias o cancelas una clase.</p></div>`;
     h += `<div class="ad-sel">` + pas.slice().reverse().map(x => { const d = dd(x.f); return `<button data-cl="${x.f}" class="${x.f === claseSel ? 'on' : ''}${x.f === HOY ? ' hoy' : ''}"${x.cancelada ? ' style="text-decoration:line-through;opacity:.5"' : ''}><small>${d.dia}</small><b>${d.n}</b></button>`; }).join('') + `</div>`;
     const n = Object.keys(as).length;
-    h += `<div class="ad-card"><div class="ad-cnt"><b>${larga(cl.f)}${cl.f === HOY ? ' · hoy' : ''}</b><span class="ad-tag t-ac">${n} ${n === 1 ? 'vino' : 'vinieron'}</span></div>`;
+    h += `<div class="ad-card"><div class="ad-cnt"><b>${larga(cl.f)}${cl.f === HOY ? ' · hoy' : ''}</b><span class="ad-tag t-ac">${cl.f > HOY ? (() => { const v = Object.keys(S.voy[cl.f] || {}).length; return v + (v === 1 ? ' va' : ' van'); })() : n + (n === 1 ? ' vino' : ' vinieron')}</span></div>`;
     h += `<p style="margin:6px 0 0;font-size:1.3rem;opacity:.65">${cl.h}${cl.cambio ? ' · ' + cl.cambio : ''} </p>`;
     if (!cl.cancelada || cl.f >= HOY) h += form(cl);
     if (cl.cancelada){ h += `<p class="ad-note">Esta clase está cancelada.</p></div>`; return h; }
-    if (cl.f > HOY){ h += `<p class="ad-note">Todavía no es esta clase. La lista se pasa el mismo día.</p></div>`; return h; }
+    const vienen = S.alumnos.filter(a => S.voy[cl.f] && S.voy[cl.f][a.id]);
+    if (cl.f > HOY){ h += `<p style="margin:14px 0 4px;font-weight:600">${vienen.length ? vienen.length + (vienen.length === 1 ? ' dijo que va' : ' dijeron que van') : 'Nadie ha marcado "Voy" todavía'}</p>` + vienen.map(a => `<div class="ad-row"><div><b>${a.nombre}</b></div>${estado(a)}</div>`).join('') + `<p class="ad-note">La lista se pasa el mismo día de la clase.</p></div>`; return h; }
     h += `<div class="ad-list" style="margin-top:10px;border-top:1px solid var(--line)">` + S.alumnos.map(a => {
       const m = as[a.id];
-      const sub = m === 'alumno' ? 'Lo marcó desde su celular' : a.agregado ? 'Agregado por Emerson (no estaba inscrito)' : '';
+      const dijo = S.voy[claseSel] && S.voy[claseSel][a.id];
+      const sub = m === 'alumno' ? 'Lo marcó desde su celular' : a.agregado ? 'Agregado por Emerson (no estaba inscrito)' : (!m && dijo ? 'Dijo que venía' : '');
       return `<div class="ad-row" data-al="${a.id}"><div class="ad-chk${m ? ' on' : ''}">${m ? '✓' : ''}</div><div class="ad-who"><b>${a.nombre}</b>${sub ? `<small>${sub}</small>` : ''}</div>${estado(a)}</div>`;
     }).join('') + `</div>`;
     h += `<div class="ad-add"><input id="nuevo" placeholder="Nombre de alguien que vino"><button class="ad-go" id="agregar">Agregar</button></div></div>`;
@@ -262,6 +274,8 @@
     if (t.dataset.v){ vista = t.dataset.v; render(); window.scrollTo(0,0); return; }
     if (t.id === 'reset'){ S = INICIAL(); save(); render(); toast('Prueba reiniciada'); return; }
     if (t.id === 'fui'){ const a = S.asis[HOY] = S.asis[HOY] || {}; if (!a[S.yo]){ a[S.yo] = 'alumno'; save(); render(); toast('¡Listo! Quedó anotado'); } return; }
+    if (t.dataset.voy){ const v = S.voy[t.dataset.voy] = S.voy[t.dataset.voy] || {}; if (v[S.yo]) delete v[S.yo]; else v[S.yo] = 1; save(); render(); toast(v[S.yo] ? '¡Te esperamos!' : 'Quitaste el "Voy"'); return; }
+    if (t.dataset.fui){ (S.asis[t.dataset.fui] = S.asis[t.dataset.fui] || {})[S.yo] = 'alumno'; save(); render(); toast('Quedó anotado que fuiste'); return; }
     if (t.dataset.pay){ toast('Aquí se abre Mercado Pago (en la prueba no cobra)'); return; }
     if (t.dataset.cl){ claseSel = t.dataset.cl; formAbierto = false; render(); return; }
     if (t.dataset.al){ const a = S.asis[claseSel] = S.asis[claseSel] || {}; if (a[t.dataset.al]) delete a[t.dataset.al]; else a[t.dataset.al] = 'emerson'; save(); render(); return; }
