@@ -142,11 +142,27 @@
   .es-insrow{display:grid;grid-template-columns:1fr 1.4fr auto;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
   .es-insrow input{border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit;font-size:1.3rem;min-width:0}
   .es-insrow b{font-size:1.4rem}
-  .es-sw{display:inline-flex;align-items:center;gap:6px;font-size:1.2rem;cursor:pointer}
+  .es-sw{display:inline-flex;align-items:center;gap:8px;font-size:1.25rem;cursor:pointer;color:#8a8986}
+  .es-sw input{position:absolute;opacity:0;width:0;height:0}
+  .es-tg{width:38px;height:22px;border-radius:999px;background:#d6d3ce;position:relative;transition:.15s;flex:none}
+  .es-tg:after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+  .es-sw input:checked+.es-tg{background:#0f6e74}.es-sw input:checked+.es-tg:after{left:19px}
+  .es-ajt{margin-bottom:12px}
+  .es-ajw{max-width:760px}
+  .es-intro{margin:0 0 12px;font-size:1.35rem;color:#6b6a67}
+  .es-nota{margin:8px 0 0;font-size:1.2rem;color:#8a8986}
+  .es-ich{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}.es-ich b{font-size:1.6rem}
+  .es-det{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .es-det summary{cursor:pointer;font-size:1.3rem;font-weight:600;color:#0f6e74}
+  .es-tar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 8px;margin-top:8px}
+  .es-tar label{font-size:1.15rem;color:#6b6a67;display:block;min-width:0}
+  .es-tar input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit;font-size:1.3rem;margin-top:2px}
+  .es-como ul{margin:6px 0 0;padding-left:18px;font-size:1.3rem;line-height:1.5;color:#55544f}
+  .es-ajw .es-cdh{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .es-aviso{background:#fbeee2;color:#7a4317;border-radius:14px;padding:12px 14px;font-size:1.35rem;line-height:1.45;margin-top:12px}
   `;
 
-  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false;
+  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = 'instructores';
   const KEY = 'storm-agenda-datos';
 
   async function post(body) {
@@ -204,7 +220,7 @@
     if (sub === 'dia') h += diaVista(admin);
     else if (sub === 'calendario') h += calendario(admin);
     else if (sub === 'pagos') h += pagosVista(admin);
-    else if (sub === 'ajustes' && admin) h += `<div class='es-cols'>` + ajustes() + `</div>`;
+    else if (sub === 'ajustes' && admin) h += ajustes();
     else h += reservas(admin);
     h += `</div></div>`;
     if (manualOn && admin) h += `<div class='es-modal' data-fondo><div class='es-sheet'>${manualForm()}</div></div>`;
@@ -427,45 +443,65 @@
 
   function ajustes() {
     const a = E.ajustes;
-    let h = `<div class='pn-card'><h3>Precios y pago a instructores</h3><p class='pn-sub'>Lo que paga el cliente y lo que se le paga al instructor por clase.</p>
-      <table class='es-tab'><tr><th>Personas</th><th>Precio</th><th>Pago instructor</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
-      <tr><td colspan='2'>Grupo grande o empresa (por instructor)</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: de a 2 por instructor; si queda una sola persona suelta (niño o adulto), va con un par de niños; el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
-      <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
-    h += `<div class='pn-card'><h3>Horarios y reglas</h3>
-      <div class='es-f' style='margin-top:10px'><label class='w'>Horas de inicio de clase (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>
-      <label>Anticipación mínima (horas)<input id='es-min' type='number' min='0' value='${a.minHoras}'></label>
-      <label>Clases seguidas por instructor (máximo)<input id='es-seg' type='number' min='1' value='${a.maxSeguidas || 2}'></label>
-      <label>Se puede reservar hasta (días adelante)<input id='es-dias' type='number' min='1' value='${a.diasAdelante}'></label>
-      <label>Las clases antes de las…<input id='es-tarde' value='${esc(a.horaTarde)}'></label>
-      <label>…se reservan hasta las (día anterior)<input id='es-noche' value='${esc(a.cierreNoche)}'></label>
-      <label class='w'>Lugar (sale en el comprobante)<input id='es-lugar' value='${esc(a.lugar)}'></label></div>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Los horarios van seguidos cada 1:30 para que el instructor haga sus clases una tras otra. La app le da la clase nueva al instructor que ya tiene una justo antes o después (hasta el máximo de seguidas). Así nadie reserva de noche para la mañana siguiente. Hoy todas las clases se reservan hasta las 20:00 del día anterior; para el verano puedes cambiar "Las clases antes de las…" a 13:00 y así las de la tarde se reservan el mismo día, con la anticipación mínima. En enero y febrero, lunes, martes, jueves y viernes de 9:00 a 12:00 la web deja solo 1 instructor para particulares (Academia de Verano) y las clases de la mañana parten 9:30 y 11:00 (en vez de 9:00 y 10:30); a mano puedes anotar más.</p>
-      <div class='es-acc'><button class='es-btn' data-aj='reglas'>Guardar</button></div><p class='es-err vivo'></p></div>`;
-    h += `<div class='pn-card'><h3>Instructores de la Escuela</h3><p class='pn-sub'>Con su correo pueden entrar a Agenda Storm y ver su calendario. Inactivo = no recibe clases nuevas (por ejemplo, fuera de temporada).</p>
-      ${E.instructores.map(i => `<div class='es-insrow'><b>${esc(i.nombre)}</b><input data-ic='${esc(i.nombre)}' type='email' placeholder='correo' value='${esc(i.correo || '')}'>
-        <label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}>Activo</label>
-        <span></span><input data-ir='${esc(i.nombre)}' placeholder='RUT (sale en la ficha)' value='${esc(i.rut || '')}'><span></span>
-        <div style='grid-column:1/-1;font-size:1.2rem'><span style='opacity:.7'>Pago propio por clase (vacío = tabla general):</span>
-          <div style='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 6px;margin-top:4px'>${['1', '2', '3', '4', '5', 'grupo'].map(k => `<label style='font-size:1.1rem;min-width:0;display:block'>${k === 'grupo' ? 'Grupo' : k + 'p'}<input data-it='${esc(i.nombre)}' data-k='${k}' inputmode='numeric' placeholder='${esc(String((E.ajustes.pagos || {})[k] || ''))}' value='${esc(String((i.tarifas || {})[k] || ''))}' style='padding:6px 8px;width:100%;min-width:0;box-sizing:border-box'></label>`).join('')}</div></div></div>`).join('')}
-      <div class='es-insrow'><input id='es-nn' placeholder='Nombre nuevo'><input id='es-nc' type='email' placeholder='correo'><span></span></div>
-      <div class='es-acc'><button class='es-btn' data-aj='instructores'>Guardar instructores</button></div><p class='es-err vivo'></p></div>`;
-    const sy = E.anualSync;
-    h += `<div class='pn-card'><h3>Horas que los instructores ya tienen ocupadas</h3>
-      <p class='pn-sub'>A esas horas no se les asigna clase particular.</p>
-      <div class='es-cd'><div class='es-cdh'><span>Academia Anual (todos)</span><button data-sync>Actualizar ahora</button></div>
-        <p style='margin:4px 0 0;font-size:1.25rem;opacity:.7'>Se lee sola del calendario Storm cada hora (las clases canceladas no bloquean). ${sy && sy.cuando ? 'Última vez: ' + esc(sy.cuando) + ' · ' + sy.clases + ' clases.' : 'Todavía no se ha leído.'}</p></div>
-      ${(E.ocupaciones || []).filter(o => o.origen === 'fijo').map(o => `<div class='es-cd'><div class='es-cdh'><span>${esc(o.instructor === '*' ? 'Todos' : o.instructor)} · ${DIAS[o.dia]} ${esc(o.desde)} a ${esc(o.hasta)}</span><button data-fdel='${o.id}'>Quitar</button></div><p style='margin:2px 0 0;font-size:1.25rem;opacity:.7'>${esc(o.motivo)} · cada semana</p></div>`).join('')}
-      <div class='es-f' style='margin-top:10px'>
-        <label>Instructor<select id='es-fi'>${E.instructores.map(i => `<option>${esc(i.nombre)}</option>`).join('')}<option value='*'>Todos</option></select></label>
-        <label>Día<select id='es-fd'>${[1, 2, 3, 4, 5, 6, 0].map(d => `<option value='${d}'>${DIAS[d]}</option>`).join('')}</select></label>
-        <label>Desde<input id='es-fdes' placeholder='09:00'></label><label>Hasta<input id='es-fhas' placeholder='11:00'></label>
-        <label class='w'>Qué es<input id='es-fmot' placeholder='Taller municipal'></label></div>
-      <div class='es-acc'><button class='es-btn' data-fadd>Agregar</button></div><p class='es-err vivo'></p></div>`;
-    h += `<div class='pn-card'><h3>Administradores</h3><p class='pn-sub'>Ven todo, cambian instructores, precios y ajustes.</p>
-      <div class='es-f' style='margin-top:10px'><label class='w'>Correos (separados por coma)<input id='es-adm' value='${esc((a.admins || []).join(', '))}'></label></div>
-      <div class='es-acc'><button class='es-btn' data-aj='admins'>Guardar</button><button class='es-btn sec' data-pp>Probar notificación (me llega a mí)</button></div><p class='es-err vivo'></p><p class='pn-sub' data-ppr></p></div>`;
-    return h;
+    const TABS = [['instructores', 'Instructores'], ['precios', 'Precios'], ['reglas', 'Reglas para reservar'], ['bloqueos', 'Horas bloqueadas'], ['admins', 'Administradores']];
+    let h = `<div class='es-chips es-ajt'>${TABS.map(([k, t]) => `<button class='es-chip${ajTab === k ? ' on' : ''}' data-ajt='${k}'>${t}</button>`).join('')}</div><div class='es-ajw'>`;
+    const nota = t => `<p class='es-nota'>${t}</p>`;
+    if (ajTab === 'instructores') {
+      h += `<p class='es-intro'>Quiénes dan clases particulares. Con su correo entran a Agenda Storm y ven sus clases. Si apagas a alguien, no recibe clases nuevas.</p>`;
+      h += E.instructores.map(i => `<div class='pn-card es-ic'><div class='es-ich'><b>${esc(i.nombre)}</b><label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}><span class='es-tg'></span>${i.activo ? 'Activo' : 'Inactivo'}</label></div>
+        <div class='es-f'><label>Correo<input data-ic='${esc(i.nombre)}' type='email' placeholder='correo@gmail.com' value='${esc(i.correo || '')}'></label><label>RUT (sale en la ficha)<input data-ir='${esc(i.nombre)}' value='${esc(i.rut || '')}'></label></div>
+        <details class='es-det'${Object.keys(i.tarifas || {}).length ? ' open' : ''}><summary>Pago distinto a la tabla general</summary><p class='es-nota'>Llena solo si a ${esc(i.nombre)} le pagas otro monto. Vacío = lo de la pestaña Precios.</p>
+          <div class='es-tar'>${['1', '2', '3', '4', '5', 'grupo'].map(k => `<label>${k === 'grupo' ? 'Grupo grande' : k + (k === '1' ? ' persona' : ' personas')}<input data-it='${esc(i.nombre)}' data-k='${k}' inputmode='numeric' placeholder='${esc(String((a.pagos || {})[k] || ''))}' value='${esc(String((i.tarifas || {})[k] || ''))}'></label>`).join('')}</div></details></div>`).join('');
+      h += `<div class='pn-card'><h3>Agregar instructor</h3><div class='es-f'><label>Nombre<input id='es-nn' placeholder='Nombre'></label><label>Correo<input id='es-nc' type='email' placeholder='correo@gmail.com'></label></div></div>
+        <div class='es-acc'><button class='es-btn' data-aj='instructores'>Guardar cambios</button></div><p class='es-err vivo'></p>`;
+    }
+    if (ajTab === 'precios') {
+      h += `<div class='pn-card'><h3>Precio por clase</h3><p class='pn-sub'>Lo que paga el cliente (lo ve en la página para reservar) y lo que recibe cada instructor por esa clase.</p>
+        <table class='es-tab'><tr><th>Personas</th><th>Cliente paga</th><th>Instructor recibe</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
+        <tr><td colspan='2'>Grupo grande o empresa</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
+        ${nota('Con niños menores de 8 la app arma los grupos sola: 2 niños por instructor, y si sobra uno se suma al último par.')}
+        <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
+    }
+    if (ajTab === 'reglas') {
+      h += `<div class='pn-card'><h3>Cuándo se puede reservar</h3>
+        <div class='es-f'><label>Se cierran las reservas a las… (del día anterior)<input id='es-noche' value='${esc(a.cierreNoche)}'></label>
+        <label>Se puede reservar con hasta… días de anticipación<input id='es-dias' type='number' min='1' value='${a.diasAdelante}'></label>
+        <label class='w'>Horas en que parten las clases (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>
+        <label class='w'>Lugar (sale en el comprobante)<input id='es-lugar' value='${esc(a.lugar)}'></label></div>
+        <details class='es-det'><summary>Opciones avanzadas</summary><div class='es-f'>
+          <label>Clases seguidas por instructor (máximo)<input id='es-seg' type='number' min='1' value='${a.maxSeguidas || 2}'></label>
+          <label>Clases desde esta hora se reservan el mismo día (23:59 = ninguna)<input id='es-tarde' value='${esc(a.horaTarde)}'></label>
+          <label>Para esas, anticipación mínima (horas)<input id='es-min' type='number' min='0' value='${a.minHoras}'></label></div></details>
+        <div class='es-acc'><button class='es-btn' data-aj='reglas'>Guardar</button></div><p class='es-err vivo'></p></div>
+        <div class='pn-card es-como'><h3>Así funciona hoy</h3><ul>
+          <li>Todas las clases se reservan hasta las ${esc(a.cierreNoche)} del día anterior.</li>
+          <li>Las 8:30 solo aparecen el domingo.</li>
+          <li>La app junta las clases de un instructor una tras otra, hasta ${a.maxSeguidas || 2} seguidas.</li>
+          <li>En enero y febrero (lunes, martes, jueves y viernes de 9:00 a 12:00) la web deja 1 solo instructor por la Academia de Verano, y las clases de la mañana parten 9:30 y 11:00. A mano puedes anotar más.</li></ul></div>`;
+    }
+    if (ajTab === 'bloqueos') {
+      const sy = E.anualSync;
+      h += `<p class='es-intro'>En estas horas la app no le da clases particulares a ese instructor.</p>
+        <div class='pn-card'><div class='es-cdh'><h3 style='margin:0'>Academia Anual</h3><button class='es-btn sec' data-sync>Actualizar ahora</button></div>
+        ${nota('Se lee sola del calendario Storm cada hora. Las clases canceladas no bloquean. ' + (sy && sy.cuando ? 'Última vez: ' + esc(sy.cuando) + ' · ' + sy.clases + ' clases.' : 'Todavía no se ha leído.'))}</div>
+        <div class='pn-card'><h3>Otros compromisos fijos</h3>
+        ${(E.ocupaciones || []).filter(o => o.origen === 'fijo').map(o => `<div class='es-cd'><div class='es-cdh'><span>${esc(o.instructor === '*' ? 'Todos' : o.instructor)} · ${DIAS[o.dia]} ${esc(o.desde)} a ${esc(o.hasta)}</span><button data-fdel='${o.id}'>Quitar</button></div><p style='margin:2px 0 0;font-size:1.25rem;opacity:.7'>${esc(o.motivo)} · cada semana</p></div>`).join('') || nota('No hay ninguno.')}
+        <p class='pn-sub' style='margin-top:14px'>Agregar uno (se repite cada semana):</p>
+        <div class='es-f'>
+          <label>Instructor<select id='es-fi'>${E.instructores.map(i => `<option>${esc(i.nombre)}</option>`).join('')}<option value='*'>Todos</option></select></label>
+          <label>Día<select id='es-fd'>${[1, 2, 3, 4, 5, 6, 0].map(d => `<option value='${d}'>${DIAS[d]}</option>`).join('')}</select></label>
+          <label>Desde<input id='es-fdes' placeholder='09:00'></label><label>Hasta<input id='es-fhas' placeholder='11:00'></label>
+          <label class='w'>Qué es<input id='es-fmot' placeholder='Taller municipal'></label></div>
+        <div class='es-acc'><button class='es-btn' data-fadd>Agregar</button></div><p class='es-err vivo'></p></div>`;
+    }
+    if (ajTab === 'admins') {
+      h += `<div class='pn-card'><h3>Administradores</h3><p class='pn-sub'>Ven todo: valores, pagos y estos ajustes. Los instructores no.</p>
+        <div class='es-f'><label class='w'>Correos (separados por coma)<input id='es-adm' value='${esc((a.admins || []).join(', '))}'></label></div>
+        <div class='es-acc'><button class='es-btn' data-aj='admins'>Guardar</button></div><p class='es-err vivo'></p></div>
+        <div class='pn-card'><h3>Notificaciones</h3><p class='pn-sub'>Llegan al celular cuando alguien reserva y el día antes a las 19:00. Prueba que te lleguen a ti:</p>
+        <div class='es-acc'><button class='es-btn sec' data-pp>Mandarme una notificación de prueba</button></div><p class='pn-sub' data-ppr></p></div>`;
+    }
+    return h + `</div>`;
   }
 
   function bind(admin) {
@@ -548,6 +584,8 @@
     });
     $$('[data-semtodo]').forEach(b => b.onclick = () => accion({ accion: 'semana', instructor: inst, dia: +b.dataset.semtodo, horas: b.dataset.v === '1' ? E.horarios.filter(x => +b.dataset.semtodo === 0 || x >= '09:00') : [] }, b));
     // ajustes
+    $$('[data-ia]').forEach(c => c.onchange = () => { c.parentElement.lastChild.textContent = c.checked ? 'Activo' : 'Inactivo'; });
+    $$('[data-ajt]').forEach(b => b.onclick = () => { ajTab = b.dataset.ajt; msg = ''; pintar(); });
     $$('[data-sync]').forEach(b => b.onclick = () => accion({ accion: 'sincronizar' }, b).then(ok => { if (ok) { msg = 'Academia Anual actualizada.'; pintar(); } }));
     $$('[data-fdel]').forEach(b => b.onclick = () => accion({ accion: 'fijo', borrar: b.dataset.fdel }, b));
     $$('[data-fadd]').forEach(b => b.onclick = () => accion({ accion: 'fijo', instructor: $('#es-fi').value, dia: $('#es-fd').value, desde: $('#es-fdes').value, hasta: $('#es-fhas').value, motivo: $('#es-fmot').value }, b).then(ok => { if (ok) { msg = 'Guardado.'; pintar(); } }));
