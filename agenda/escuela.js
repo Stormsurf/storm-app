@@ -93,8 +93,9 @@
   .es-s.pas{opacity:.45;cursor:default}
   .es-ley{display:flex;flex-wrap:wrap;gap:10px;font-size:1.15rem;opacity:.75;margin-top:8px}
   .es-ley i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
-  .es-wk{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
-  .es-wk button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:1.3rem;cursor:pointer;color:var(--ink)}
+  .es-wk{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px}
+  .es-wk b{text-align:center}
+  .es-wk button{flex:none;white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:1.3rem;cursor:pointer;color:var(--ink)}
   .es-tab{width:100%;border-collapse:collapse;font-size:1.35rem;margin-top:6px}
   .es-tab th{font-size:1.15rem;text-align:left;opacity:.6;font-weight:600;padding:4px}
   .es-tab td{padding:4px}
@@ -356,7 +357,7 @@
         <b style='font-size:2rem${x.pagado ? ';color:#2f7a4d' : ''}'>${clp(x.total)}</b></div>
         ${psAbierto === x.instructor ? `<div style='margin-top:8px'>${x.clases.map(c => `<div style='display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:1.3rem'><span>${esc(fcorta(c.fecha))} ${esc(c.hora)} · ${esc(c.cliente)} · ${c.personas}p${c.menores ? ' (' + c.menores + ' menor' + (c.menores === 1 ? '' : 'es') + ' de 7)' : ''}</span><b>${clp(c.monto)}</b></div>`).join('')}</div>` : ''}
         <div class='es-acc'><button class='es-btn sec' data-psa='${esc(x.instructor)}'>${psAbierto === x.instructor ? 'Ocultar clases' : 'Ver clases'}</button>${admin ? (x.pagado ? `<button class='pn-link' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='0'>Desmarcar pagado</button>` : x.total ? `<button class='es-btn' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='1'>Marcar pagado</button>` : '') : ''}</div></div>`).join('');
-    return h + `<p class='pn-note'>Cuenta las clases pagadas de lunes a domingo. Cada instructor gana según su tarifa (en Ajustes) y el tamaño de su grupo.</p>`;
+    return h + `<p class='pn-note'>${admin ? 'Cuenta las clases pagadas de lunes a domingo. Cada instructor gana según su tarifa (en Ajustes) y el tamaño de su grupo.' : 'Tus clases de lunes a domingo y lo que te toca por cada una. Storm te transfiere el domingo.'}</p>`;
   }
 
   function ajustes() {
