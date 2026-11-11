@@ -199,9 +199,75 @@
   .es-como ul{margin:6px 0 0;padding-left:18px;font-size:1.3rem;line-height:1.5;color:#55544f}
   .es-ajw .es-cdh{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .es-aviso{background:#fbeee2;color:#7a4317;border-radius:14px;padding:12px 14px;font-size:1.35rem;line-height:1.45;margin-top:12px}
+  /* páginas completas (nueva clase, detalle de clase, cliente) */
+  .es-pg{position:fixed;inset:0;z-index:70;background:#F7F6F3;display:flex;flex-direction:column;color:var(--ink,#2C2C2B);--line:rgba(44,44,43,.12);--ink:#2C2C2B}
+  .es-pgh{flex:none;display:flex;align-items:center;gap:6px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:#F7F6F3}
+  .es-pgh h2{margin:0;font-size:2.2rem;font-weight:600}
+  .es-back{width:44px;height:44px;border:0;background:none;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--ink);flex:none}.es-back svg{width:26px;height:26px}.es-back:hover{background:#ECEAE6}
+  .es-pgb{flex:1;overflow:auto;padding:4px 20px 24px;-webkit-overflow-scrolling:touch}
+  .es-pgb>*{max-width:640px;margin-left:auto;margin-right:auto}
+  .es-pgf{flex:none;padding:12px 20px calc(12px + env(safe-area-inset-bottom));background:#F7F6F3;border-top:1px solid var(--line)}
+  .es-pgf>*{max-width:640px;margin-left:auto;margin-right:auto}
+  .es-pgf .es-err{text-align:center;margin:0 auto 8px}
+  .es-big{display:block;width:100%;border:0;border-radius:999px;background:#0f6e74;color:#fff;font:inherit;font-size:1.7rem;font-weight:600;padding:16px;cursor:pointer}.es-big[disabled]{opacity:.5}
+  @media (min-width:1000px){.es-pg{left:auto;width:560px;box-shadow:-20px 0 60px rgba(0,0,0,.15)}}
+  .es-lb{display:block;font-size:1.45rem;color:#55544f;margin:18px 0 8px;font-weight:500}
+  .es-lb small{font-size:1.2rem;color:#8a8986;font-weight:400}
+  .es-in{display:block;width:100%;box-sizing:border-box;min-height:54px;border:1px solid #d9d6d0;border-radius:14px;background:#fff;padding:12px 16px;font:inherit;font-size:1.6rem;color:var(--ink);-webkit-appearance:none;appearance:none}
+  textarea.es-in{min-height:90px;resize:vertical}
+  select.es-in{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2355544f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center/20px;padding-right:44px}
+  .es-in:focus{outline:2px solid #0f6e74;outline-offset:-1px;border-color:transparent}
+  .es-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.es-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .es-2 .es-lb,.es-3 .es-lb{margin-top:18px}
+  .es-pick{display:flex;align-items:center;gap:14px;width:100%;min-height:68px;border:1px solid #d9d6d0;border-radius:16px;background:#fff;padding:10px 16px 10px 12px;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+  .es-pick .es-rx b{font-weight:500}.es-pick.vacio .es-rx b{color:#8a8986;font-weight:400}
+  .es-avl{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1.5rem;background:#E9DDFB;color:#6B3FA0}.es-avl svg{width:22px;height:22px}
+  .es-avl.xl{width:72px;height:72px;font-size:2.4rem}
+  .es-mchips{display:flex;flex-wrap:wrap;gap:8px}
+  .es-mchips .es-chip{padding:10px 16px;font-size:1.45rem}
+  .es-caja{background:#fff;border:1px solid #e3e0da;border-radius:18px;padding:4px 16px 16px;margin-top:20px}
+  .es-caja>b{display:block;font-size:1.6rem;margin-top:14px}
+  .es-chk{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:1.4rem;color:#55544f;cursor:pointer}.es-chk input{width:22px;height:22px;accent-color:#0f6e74;flex:none}
+  .es-gt{margin:22px 0 8px;font-size:1.35rem;font-weight:600;color:#8a8986}
+  .es-grp{background:#fff;border:1px solid #e3e0da;border-radius:18px;overflow:hidden}
+  .es-row{display:flex;align-items:center;gap:14px;width:100%;box-sizing:border-box;padding:14px 16px;border:0;border-top:1px solid #eeebe6;background:#fff;font:inherit;text-align:left;color:var(--ink);text-decoration:none}
+  .es-grp>.es-row:first-child{border-top:0}
+  button.es-row,a.es-row,label.es-row{cursor:pointer}button.es-row:hover,a.es-row:hover{background:#FAF9F7}
+  .es-ri{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:#E3F1F1;color:#0f6e74;font-style:normal;font-weight:800;font-size:1.6rem}.es-ri svg{width:22px;height:22px}
+  .es-ri.ok{background:#e5f2ea;color:#2f7a4d}.es-ri.pend{background:#fbeee2;color:#b5662b}.es-ri.mal{background:#f8e3df;color:#a6402c}.es-ri.gris{background:#eeece8;color:#8a8986}.es-ri.lila{background:#EFE8FB;color:#6B3FA0}
+  .es-rx{flex:1;min-width:0}.es-rx b{display:block;font-size:1.6rem;font-weight:500;line-height:1.25}.es-rx small{display:block;font-size:1.35rem;color:#77756f;margin-top:2px;line-height:1.35}
+  .es-rc{flex:none;color:#a5a39f;font-size:2.2rem;line-height:1}
+  .es-row.rojo .es-rx b{color:#a12c1c}
+  .es-row .es-sw{flex:none}
+  .es-rpago{padding:4px 16px 14px;display:flex;flex-wrap:wrap;gap:8px}
+  .es-rpago span{width:100%;font-size:1.3rem;color:#b5662b;font-weight:600}
+  .es-rpago button{border:1.5px solid #e0a03a;background:#fff;color:#7a4a1a;border-radius:999px;padding:9px 14px;font:inherit;font-size:1.4rem;font-weight:600;cursor:pointer}
+  .es-hero{display:flex;align-items:center;gap:16px;margin:8px auto 4px}
+  .es-hero b{display:block;font-size:2.2rem;font-weight:600;line-height:1.2}.es-hero small{display:block;font-size:1.4rem;color:#77756f;margin-top:3px}
+  .es-cta{display:flex;gap:10px;margin-top:16px}
+  .es-cta a,.es-cta button{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:16px;background:#fff;border:1px solid #e3e0da;color:#0f6e74;font:inherit;font-size:1.3rem;font-weight:600;text-decoration:none;cursor:pointer}
+  .es-cta svg{width:24px;height:24px}.es-cta .wa{color:#1a9e50}
+  .es-srch{position:relative;margin:0 0 12px}.es-srch svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:#8a8986}
+  .es-srch input{width:100%;box-sizing:border-box;min-height:52px;border:1px solid #d9d6d0;border-radius:14px;background:#fff;padding:10px 14px 10px 46px;font:inherit;font-size:1.55rem;color:var(--ink)}
+  .es-rv{cursor:pointer}.es-rv:hover{box-shadow:0 4px 16px rgba(0,0,0,.05)}.es-rv .es-r-top>.es-rc{align-self:center}
+  .es-volver{border:0;background:none;padding:6px 0;font:inherit;font-size:1.4rem;font-weight:600;color:#0f6e74;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+  .es-ajh{font-size:2rem;margin:4px 0 12px}
+  /* hojas (buscar / crear cliente) */
+  .es-hf{position:fixed;inset:0;z-index:80;background:rgba(30,30,28,.45);display:flex;align-items:flex-end;justify-content:center}
+  .es-hj{background:#fff;width:100%;max-width:640px;height:92vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;color:#2C2C2B;animation:esUp .2s ease-out}
+  @keyframes esUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+  @media (min-width:1000px){.es-hf{align-items:center}.es-hj{border-radius:22px;height:80vh}}
+  .es-hj:before{content:'';display:block;width:40px;height:5px;border-radius:9px;background:#cfccc6;margin:10px auto 0}
+  .es-hjh{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px 20px}.es-hjh b{font-size:1.9rem;font-weight:600}
+  .es-hjh button{width:44px;height:44px;border:0;background:none;border-radius:50%;cursor:pointer;color:#55544f;display:grid;place-items:center}.es-hjh svg{width:24px;height:24px}
+  .es-hjb{flex:1;overflow:auto;padding:6px 20px 20px}
+  .es-hjb .es-row{padding:12px 0;border-top:1px solid #eeebe6}
+  .es-crear{display:flex;align-items:center;gap:14px;border:0;background:none;padding:14px 0;font:inherit;font-size:1.6rem;font-weight:600;color:#0f6e74;cursor:pointer;width:100%;text-align:left}
+  .es-crear i{width:44px;height:44px;border-radius:50%;background:#F1EFEB;display:grid;place-items:center;font-style:normal;font-size:2.2rem;font-weight:400;color:#55544f}
+  .es-hjf{padding:12px 20px calc(14px + env(safe-area-inset-bottom))}
   `;
 
-  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = 'instructores';
+  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = '', vista = null, pila = [];
   const KEY = 'storm-agenda-datos';
 
   async function post(body) {
@@ -215,7 +281,7 @@
   async function accion(body, btn) {
     if (btn) { btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = 'Guardando…'; }
     try { E = await post(body); guardarCache(E); abierta = ''; modo = ''; pintar(); return true; }
-    catch (x) { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.t; } const e = pane.querySelector('.es-err.vivo') || (btn && btn.parentNode.appendChild(Object.assign(document.createElement('p'), { className: 'es-err vivo' }))); if (e) e.textContent = x.message; else alert(x.message); return false; }
+    catch (x) { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.t; } const e = (btn && btn.closest('.es-pg, .es-box, .pn-card') || pane).querySelector('.es-err.vivo') || pane.querySelector('.es-err.vivo') || (btn && btn.parentNode.appendChild(Object.assign(document.createElement('p'), { className: 'es-err vivo' }))); if (e) e.textContent = x.message; else alert(x.message); return false; }
   }
 
   // ---------- disponibilidad (igual que en el servidor) ----------
@@ -248,8 +314,27 @@
     wa: `<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 2.2a9.7 9.7 0 0 0-8.4 14.6L2.2 21.8l5.1-1.3A9.7 9.7 0 1 0 12 2.2Zm0 17.7c-1.5 0-2.9-.4-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 19.9Zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.8 1c-.1.2-.3.2-.5.1a6.6 6.6 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1l-.4-.2Z'/></svg>`,
     tel: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 3.5h3.2l1.6 4-2 1.3a11 11 0 0 0 5.4 5.4l1.3-2 4 1.6V17a3 3 0 0 1-3 3A14.5 14.5 0 0 1 2 6.5a3 3 0 0 1 3-3Z'/></svg>`,
     pago: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18'/></svg>`,
-    cal: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><rect x='3.5' y='5' width='17' height='15' rx='3'/><path d='M3.5 10h17M8 3v4M16 3v4'/></svg>`
+    cal: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><rect x='3.5' y='5' width='17' height='15' rx='3'/><path d='M3.5 10h17M8 3v4M16 3v4'/></svg>`,
+    atras: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m15 5-7 7 7 7'/></svg>`,
+    x: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M6 6l12 12M18 6 6 18'/></svg>`,
+    persona: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='4'/><path d='M4.5 20.5a7.5 7.5 0 0 1 15 0'/></svg>`,
+    gente: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='9' cy='8' r='3.5'/><path d='M2.5 20a6.5 6.5 0 0 1 13 0M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.5a6.5 6.5 0 0 1 3.5 5.5'/></svg>`,
+    nota: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20h4L19 9l-4-4L4 16v4Z'/></svg>`,
+    mail: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='14' rx='3'/><path d='m4 7 8 6 8-6'/></svg>`,
+    buscar: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3.5-3.5'/></svg>`,
+    mover: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3.5' y='5' width='17' height='15' rx='3'/><path d='M3.5 10h17M8 3v4M16 3v4M10 15h5m-2-2 2 2-2 2'/></svg>`,
+    borrar: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='8.5'/><path d='m9 9 6 6M15 9l-6 6'/></svg>`,
+    link: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'/></svg>`,
+    llave: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3 4.5 6v5c0 4.5 3.2 8.3 7.5 10 4.3-1.7 7.5-5.5 7.5-10V6L12 3Z'/></svg>`,
+    candado: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><rect x='5' y='10.5' width='14' height='10' rx='2.5'/><path d='M8 10.5V8a4 4 0 0 1 8 0v2.5'/></svg>`,
+    regla: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='8.5'/><path d='M12 7.5V12l3 2'/></svg>`
   };
+  const PAL = [['#EFE8FB', '#6B3FA0'], ['#DDF3E7', '#23804F'], ['#FBE3EF', '#A3306B'], ['#FCE6DB', '#B24F2B'], ['#DFEDFB', '#1F5FA0'], ['#E3F1F1', '#0f6e74']];
+  const colorDe = t => { let n = 0; for (const c of String(t || '')) n = (n * 31 + c.charCodeAt(0)) >>> 0; const p = PAL[n % PAL.length]; return `background:${p[0]};color:${p[1]}`; };
+  const ini = t => esc(String(t || '').trim().split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase() || '?');
+  const avatar = (t, cl = '') => `<span class='es-avl ${cl}' style='${colorDe(t)}'>${ini(t)}</span>`;
+  const fila = (ic, t, sub, o = {}) => { const tag = o.tag || 'div'; return `<${tag} class='es-row${o.cl ? ' ' + o.cl : ''}' ${o.at || ''}><i class='es-ri ${o.ic || ''}'>${ic}</i><span class='es-rx'><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span>${o.fin != null ? o.fin : tag === 'div' ? '' : `<span class='es-rc'>›</span>`}</${tag}>`; };
+  const grupo = (t, filas) => { const f = filas.filter(Boolean); return f.length ? `${t ? `<p class='es-gt'>${t}</p>` : ''}<div class='es-grp'>${f.join('')}</div>` : ''; };
   // ---------- pintar ----------
   function pintar() {
     if (!pane || !E) return;
@@ -259,8 +344,8 @@
     if (linkNuevo) { const L = linkNuevo;
       cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
-    const IT = admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
-    const TIT = { dia: 'Agenda del día', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };
+    const IT = admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['clientes', 'Clientes'], ['calendario', 'Disponibilidad'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
+    const TIT = { dia: 'Agenda del día', clientes: 'Clientes', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };
     if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip' data-sub='${k}'>${t}</button>`).join('')}${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
     else h += `<div class='es-app'><nav class='es-nav'><div class='es-brand'><img src='/img/storm-logo.png' alt='Storm'><span>Agenda</span></div>${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}${IT.map(([k, t]) => `<button class='es-ni' data-sub='${k}'>${ICO[k]}<span>${t}</span></button>`).join('')}<div class='es-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>
       <div class='es-main'><div class='es-top'><h2>${TIT[sub] || ''}</h2><div class='es-topb'>${admin ? `<button class='es-nueva' data-nueva>+ Nueva</button>` : ''}<button class='es-salir-m' data-salir>Salir</button></div></div>` + cuerpo;
@@ -269,10 +354,15 @@
     else if (sub === 'calendario') h += calendario(admin);
     else if (sub === 'pagos') h += pagosVista(admin);
     else if (sub === 'ajustes' && admin) h += ajustes();
+    else if (sub === 'clientes' && admin) h += clientesVista();
     else h += reservas(admin);
     h += window.STORM_SHELL ? `</div>` : `</div></div>`;
     if (toast) h += `<div class='es-toast${/^No /.test(toast) ? ' mal' : ''}' role='status'><span class='es-ti'>${/^No /.test(toast) ? '!' : '✓'}</span>${esc(toast)}</div>`;
-    if (manualOn && admin) h += `<div class='es-modal' data-fondo><div class='es-sheet'>${manualForm()}</div></div>`;
+    if (vista && vista.t === 'clase' && !E.reservas.some(r => r.ref === vista.ref)) vista = pila.pop() || null;
+    if (manualOn && admin) h += manualForm();
+    else if (vista && vista.t === 'clase') h += paginaClase(E.reservas.find(r => r.ref === vista.ref), admin);
+    else if (vista && vista.t === 'cliente' && admin) h += paginaCliente(vista.nombre);
+    document.documentElement.style.overflow = (manualOn && admin) || vista ? 'hidden' : '';
     pane.innerHTML = h;
     pane.querySelectorAll('[data-sub]').forEach(b => { b.classList.toggle('on', b.dataset.sub === sub); b.onclick = () => { sub = b.dataset.sub; msg = ''; pintar(); }; });
     bind(admin);
@@ -324,28 +414,28 @@
     return { c: 'ok', i: '✓', t: 'Confirmada' };
   }
   const contacto = r => wa(r.telefono) ? `<div class='es-ct'><a class='es-ctb wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}' title='WhatsApp' aria-label='WhatsApp'>${ICO_S.wa}</a><a class='es-ctb' href='tel:+${wa(r.telefono)}' title='Llamar' aria-label='Llamar'>${ICO_S.tel}</a></div>` : '';
+  const fichasTag = r => `<span class='es-st ${r.fichasPapel || (r.fichas || []).length >= r.personas ? 'ok' : 'pend'}'><i>${ICO_S.ficha}</i>${r.fichasPapel ? 'Fichas en papel' : 'Fichas ' + (r.fichas || []).length + '/' + r.personas}</span>`;
+  const gentes = r => `${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 8 a 11' : ''}`;
+  // tarjeta de la lista: se toca y abre la clase
   function tarjeta(r, admin) {
     const E0 = estadoDe(r), est = `<span class='es-st ${E0.c}'><i>${E0.i}</i>${esc(E0.t)}</span>`;
-    let h = `<div class='es-r es-r--${E0.c}'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora, r.duracion)}</small></div>
-      <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 7 a 11' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
-      <div class='es-tags'>${est}<span class='es-st ${r.fichasPapel || (r.fichas || []).length >= r.personas ? 'ok' : 'pend'}'><i>${ICO_S.ficha}</i>${r.fichasPapel ? 'Fichas en papel ✓' : 'Fichas ' + (r.fichas || []).length + '/' + r.personas}</span>${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}</div></div>
-      ${contacto(r)}</div>
-      ${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}
-      ${admin && r.linkPago ? `<div class='es-acc'><button class='es-btn' data-lf='${esc(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Copiar link de pago</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Reenviar por WhatsApp</a>` : ''}</div>` : ''}
-      <div class='es-acc'>${r.estado === 'pendiente' ? '' : (r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${r.estado !== 'pendiente' && !r.fichasPapel && (r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
-    if (admin && r.estado !== 'cancelada' && r.medio === 'Por pagar') h += `<div class='es-pago'><span>¿Ya pagó?</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
-    if (admin && r.estado !== 'cancelada' && r.estado !== 'pendiente' && (r.fichas || []).length < r.personas) h += `<label class='es-papel'><input type='checkbox' data-papel='${esc(r.ref)}'${r.fichasPapel ? ' checked' : ''}>Las fichas se hicieron en papel</label>`;
-    // clases pasadas: solo se pueden cancelar (por ejemplo, pruebas o errores), así no cuentan en las ventas ni en los pagos
-    if (admin && (r.fecha >= E.hoy || r.estado !== 'cancelada')) {
-      if (abierta !== r.ref) h += `<div class='es-acc'><button class='es-btn sec' data-abre='${r.ref}' data-modo='datos'>Editar</button>${r.fecha >= E.hoy ? `<button class='es-btn sec' data-abre='${r.ref}' data-modo='ins'>Cambiar instructor</button><button class='es-btn sec' data-abre='${r.ref}' data-modo='mover'>Mover</button>` : ''}<button class='es-btn peligro' data-abre='${r.ref}' data-modo='cancelar'>Cancelar</button></div>`;
-      else if (modo === 'ins') {
+    return `<div class='es-r es-r--${E0.c} es-rv' data-ver='${esc(r.ref)}' role='button' tabindex='0'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora, r.duracion)}</small></div>
+      <div class='es-who'><b>${esc(r.nombre)}</b><small>${gentes(r)}${admin ? ' · ' + clp(r.total) : ''}</small>
+      <div class='es-tags'>${est}${fichasTag(r)}${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}</div></div>
+      ${contacto(r)}<span class='es-rc'>›</span></div>${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}</div>`;
+  }
+  // editores de una clase (cambiar instructor, mover, datos, cancelar)
+  function editor(r) {
+    let h = '';
+    if (abierta !== r.ref) return h;
+    if (modo === 'ins') {
         const n = r.instructores.length;
         h += `<div class='es-box'><p>Elige ${n === 1 ? 'el instructor' : 'los ' + n + ' instructores'} para esta clase. Puedes sumar o quitar instructores si el caso lo necesita.</p><div class='es-chips' style='margin-top:0'>${E.instructores.filter(i => i.activo).map(i => {
           const otra = reservaEn(i.nombre, r.fecha, r.hora); const ocup = (otra && otra.ref !== r.ref) || !!otraCosa(i.nombre, r.fecha, r.hora);
           return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>' + esc(otraCosa(i.nombre, r.fecha, r.hora) || 'ocupado') + '</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
           <div class='es-acc'><button class='es-btn' data-go='ins'${sel.length ? '' : ' disabled'}>Guardar${sel.length && sel.length !== n ? ' (' + sel.length + ' instructor' + (sel.length === 1 ? '' : 'es') + ')' : ''}</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'mover') {
-        h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' min='${E.hoy}'></label><label>Hora<select id='es-mh'>${horasMano().map(x => `<option value='${x}'${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
+        h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' ></label><label>Hora<select id='es-mh'>${horasMano().map(x => `<option value='${x}'${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
           <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Se mantiene el mismo instructor. Avísale al cliente por WhatsApp.</p>
           <div class='es-acc'><button class='es-btn' data-go='mover'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'datos') {
@@ -367,32 +457,125 @@
         h += `<div class='es-box'><p>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.medio === 'Mercado Pago' ? ' Si hay que devolver el dinero, hazlo desde Mercado Pago.' : ''}</p>
           <div class='es-acc'><button class='es-btn peligro' data-go='cancelar'>Sí, cancelar</button><button class='pn-link' data-cerrar>No</button></div><p class='es-err vivo'></p></div>`;
       }
+    return h;
+  }
+  const cabeza = t => `<header class='es-pgh'><button class='es-back' data-pgx aria-label='Volver'>${ICO_S.atras}</button><h2>${t}</h2></header>`;
+  const botonesContacto = (tel, correo) => { const n = wa(tel); return n || correo ? `<div class='es-cta'>${n ? `<a class='wa' target='_blank' rel='noopener' href='https://wa.me/${n}'>${ICO_S.wa}WhatsApp</a><a href='tel:+${n}'>${ICO_S.tel}Llamar</a>` : ''}${correo ? `<a href='mailto:${esc(correo)}'>${ICO_S.mail}Correo</a>` : ''}</div>` : ''; };
+  // página de una clase: todo lo de esa clase en un solo lugar
+  function paginaClase(r, admin) {
+    const E0 = estadoDe(r), nf = (r.fichas || []).length, viva = r.estado !== 'cancelada';
+    const pide = 'Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + (r.linkFicha || '');
+    const ml = r.linkPago ? msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }) : '';
+    let h = `<div class='es-pg'>${cabeza('Clase')}<div class='es-pgb'>`;
+    h += `<div class='es-hero'>${avatar(r.nombre, 'xl')}<div><b>${esc(r.nombre)}</b><small>${esc(flarga(r.fecha))} · ${esc(r.hora)} a ${fin(r.hora, r.duracion)}</small></div></div>`;
+    h += botonesContacto(r.telefono, admin ? r.correo : '');
+    h += grupo('Clase', [
+      fila(ICO_S.cal, esc(flarga(r.fecha)), esc(r.hora) + ' a ' + fin(r.hora, r.duracion)),
+      fila(ICO_S.gente, gentes(r), ''),
+      fila(ICO_S.persona, r.instructores.length === 1 ? 'Instructor' : 'Instructores', esc(r.instructores.join(', ') || 'Sin asignar')),
+      r.comentario ? fila(ICO_S.nota, 'Comentario', esc(r.comentario)) : ''
+    ]);
+    if (admin) {
+      let pago = fila('$', esc(E0.t), clp(r.total), { ic: E0.c });
+      if (viva && r.medio === 'Por pagar') pago += `<div class='es-rpago'><span>¿Ya pagó? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
+      h += grupo('Pago', [pago,
+        r.linkPago && wa(r.telefono) ? fila(ICO_S.wa, 'Mandar link de pago por WhatsApp', '', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(ml)}'`, ic: 'ok' }) : '',
+        r.linkPago ? fila(ICO_S.link, 'Copiar link de pago', '', { tag: 'button', at: `data-lf='${esc(ml)}'` }) : '']);
     }
-    return h + '</div>';
+    if (r.estado !== 'pendiente') {
+      const okF = r.fichasPapel || nf >= r.personas;
+      h += grupo('Fichas', [
+        fila(ICO_S.ficha, r.fichasPapel ? 'Hechas en papel' : nf + ' de ' + r.personas + ' fichas listas', r.fichasPapel ? 'Las llenaron en persona' : okF ? 'Todas listas' : 'Faltan ' + (r.personas - nf), { ic: okF ? 'ok' : 'pend' }),
+        admin && viva ? fila(ICO_S.nota, 'Se hicieron en papel', 'Márcalo si las llenaron en persona', { tag: 'label', fin: `<span class='es-sw'><input type='checkbox' data-papel='${esc(r.ref)}'${r.fichasPapel ? ' checked' : ''}><span class='es-tg'></span></span>` }) : '',
+        nf ? fila(ICO_S.ficha, 'Ver fichas', 'Para imprimir o guardar en PDF', { tag: 'a', at: `href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'` }) : '',
+        !okF && r.linkFicha && wa(r.telefono) ? fila(ICO_S.wa, 'Pedir fichas por WhatsApp', '', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(pide)}'`, ic: 'ok' }) : '',
+        !okF && r.linkFicha ? fila(ICO_S.link, 'Copiar link de la ficha', '', { tag: 'button', at: `data-lf='${esc(r.linkFicha)}'` }) : '']);
+    }
+    // clases pasadas: se pueden editar o cancelar (por ejemplo, pruebas o errores)
+    if (admin && viva) {
+      if (abierta === r.ref) h += `<p class='es-gt'>${{ ins: 'Cambiar instructor', mover: 'Mover', datos: 'Editar', cancelar: 'Cancelar clase' }[modo] || ''}</p>` + editor(r);
+      else h += grupo('Cambiar', [
+        fila(ICO_S.nota, 'Editar datos y pago', 'Nombre, personas, total, cómo pagó', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='datos'` }),
+        fila(ICO_S.mover, 'Mover día u hora', 'Se mantiene el instructor', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='mover'` }),
+        fila(ICO_S.persona, 'Cambiar instructor', '', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='ins'` }),
+        fila(ICO_S.borrar, 'Cancelar clase', 'El horario queda libre', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='cancelar'`, ic: 'mal', cl: 'rojo' })]);
+    }
+    return h + `</div></div>`;
+  }
+  const clasesDe = c => { const t = wa(c.telefono), n = String(c.nombre || '').trim().toLowerCase(); return E.reservas.filter(r => r.nombre.trim().toLowerCase() === n || (t && wa(r.telefono) === t)).sort((a, b) => (b.fecha + b.hora).localeCompare(a.fecha + a.hora)); };
+  function clientesVista() {
+    const l = E.clientes || [];
+    return `<div class='es-srch'>${ICO_S.buscar}<input data-cq type='search' placeholder='Buscar por nombre, teléfono o correo' autocomplete='off'></div>
+      <div class='es-grp'>${l.map(c => `<button class='es-row' data-cliv='${esc(c.nombre)}' data-q='${esc((c.nombre + ' ' + c.telefono + ' ' + c.correo).toLowerCase())}'>${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b><small>${esc([c.telefono, c.clases + (c.clases === 1 ? ' clase' : ' clases')].filter(Boolean).join(' · '))}</small></span><span class='es-rc'>›</span></button>`).join('') || `<p class='pn-empty' style='padding:16px'>Todavía no hay clientes.</p>`}</div>
+      <p class='pn-note'>Cada persona que reserva queda guardada aquí.</p>`;
+  }
+  function paginaCliente(nombre) {
+    const c = (E.clientes || []).find(x => x.nombre === nombre) || { nombre, telefono: '', correo: '', clases: 0 }, cl = clasesDe(c);
+    let h = `<div class='es-pg'>${cabeza('Cliente')}<div class='es-pgb'>`;
+    h += `<div class='es-hero'>${avatar(c.nombre, 'xl')}<div><b>${esc(c.nombre)}</b><small>${c.clases} clase${c.clases === 1 ? '' : 's'} con Storm</small></div></div>`;
+    h += botonesContacto(c.telefono, c.correo);
+    h += grupo('Datos', [c.telefono ? fila(ICO_S.tel, esc(c.telefono), 'Teléfono') : '', c.correo ? fila(ICO_S.mail, esc(c.correo), 'Correo') : '', !c.telefono && !c.correo ? fila(ICO_S.persona, 'Sin teléfono ni correo', '') : '']);
+    h += grupo('Clases', cl.map(r => { const E0 = estadoDe(r); return fila(ICO_S.cal, esc(flarga(r.fecha)) + ' · ' + esc(r.hora), esc(gentes(r) + ' · ' + E0.t), { tag: 'button', at: `data-ver='${esc(r.ref)}'`, ic: E0.c }); }));
+    if (!cl.length) h += `<p class='pn-note'>Sus clases antiguas no se muestran aquí.</p>`;
+    return h + `</div><div class='es-pgf'><button class='es-big' data-agendar='${esc(c.nombre)}'>Agendar clase</button></div></div>`;
   }
 
+  // Nueva clase: página completa, con flecha para volver
   function manualForm() {
-    const a = E.ajustes || {};
-    return `<div class='pn-card'><div class='es-mh'><h3>Nueva clase</h3><button class='es-x' data-manual aria-label='Cerrar'>✕</button></div><p class='pn-sub'>Para clases que llegan por WhatsApp, empresas o familias grandes. Puedes elegir cualquier hora.</p>
-      <div class='es-f' style='margin-top:10px'>
-        <label>Día<input type='date' name='fecha' min='${E.hoy}' value='${E.hoy}'></label>
-        <label>Hora<select name='hora'>${horasMano().map(x => `<option value='${x}'${x === E.horarios[0] ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
-        <label>Duración<select name='duracion'><option value='60'>1 hora</option><option value='90' selected>1 hora y media</option><option value='120'>2 horas</option></select></label>
-        <label>Personas<input type='number' name='personas' min='1' value='2' inputmode='numeric'></label>
-        <label>Menores de 8<input type='number' name='menores' min='0' value='0' inputmode='numeric'></label>
-        <label class='w'>Nombre del cliente<input name='nombre' list='es-clientes' autocomplete='off' placeholder='Escribe y elige si ya reservó antes'></label><datalist id='es-clientes'>${(E.clientes || []).map(c => `<option value='${esc(c.nombre)}'>${esc([c.telefono, c.clases + (c.clases === 1 ? ' clase' : ' clases')].filter(Boolean).join(' · '))}</option>`).join('')}</datalist>
-        <label>Teléfono<input name='telefono' type='tel'></label>
-        <label>Correo (opcional)<input name='correo' type='email'></label>
-        <label>Total a cobrar<input name='total' inputmode='numeric' value='${(cotiza(2, 0).precio || '')}' data-auto='1'></label>
-        <label>N° de instructores<input type='number' name='nInstructores' min='1' value='${cotiza(2, 0).ins}' inputmode='numeric' data-auto='1'></label>
-        <label class='w'>¿Cómo paga?<select name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}<option value='Link de pago'>Aún no paga: mandarle link de pago</option></select></label>
-        <div style='grid-column:1/-1'><b style='font-size:1.3rem'>Instructores</b> <span style='font-size:1.2rem;opacity:.7'>(elige uno o varios; si no eliges, o faltan, la app elige al azar entre los libres)</span>
-          <div class='es-chips' style='margin-top:6px'>${E.instructores.filter(i => i.activo).map(i => `<button type='button' class='es-chip' data-mi='${esc(i.nombre)}'>${esc(i.nombre)}</button>`).join('')}</div></div>
-        <label class='w'>Comentario<textarea name='comentario' rows='2'></textarea></label>
-        <label class='w' style='font-weight:500'><input type='checkbox' name='avisar' style='display:inline;width:auto;margin:0 6px 0 0'>Si ya pagó: mandarle el comprobante por correo</label>
-      </div>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>El total y los instructores salen solos de la tabla; puedes cambiarlos. Con "mandarle link de pago" el horario queda guardado 24 horas (o hasta la clase) y te damos el link para WhatsApp. El pago a cada instructor sale de la tabla (se cambia después en Editar › Opciones avanzadas).</p>
-      <div class='es-acc'><button class='es-btn' data-manual-go>Guardar clase</button></div><p class='es-err vivo'></p></div>`;
+    const n = E.instructores.filter(i => i.activo);
+    return `<div class='es-pg' data-nf>${cabeza('Nueva clase')}<div class='es-pgb'>
+      <div class='es-2'><label><span class='es-lb'>Fecha</span><input class='es-in' type='date' name='fecha' value='${E.hoy}'></label>
+        <label><span class='es-lb'>Hora</span><select class='es-in' name='hora'>${horasMano().map(x => `<option value='${x}'${x === E.horarios[0] ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
+      <span class='es-lb'>Cliente</span>
+      <button type='button' class='es-pick vacio' data-cli><span class='es-avl' style='background:#EFE8FB;color:#6B3FA0'>${ICO_S.persona}</span><span class='es-rx'><b>Buscar cliente…</b></span><span class='es-rc'>›</span></button>
+      <input type='hidden' name='nombre'><input type='hidden' name='telefono'><input type='hidden' name='correo'>
+      <div class='es-3'><label><span class='es-lb'>Personas</span><input class='es-in' type='number' name='personas' min='1' value='2' inputmode='numeric'></label>
+        <label><span class='es-lb'>Niños &lt;8</span><input class='es-in' type='number' name='menores' min='0' value='0' inputmode='numeric'></label>
+        <label><span class='es-lb'>Duración</span><select class='es-in' name='duracion'><option value='60'>1 h</option><option value='90' selected>1 h 30</option><option value='120'>2 h</option></select></label></div>
+      <span class='es-lb'>Instructores <small>· si no eliges, la app elige entre los libres</small></span>
+      <div class='es-mchips'>${n.map(i => `<button type='button' class='es-chip' data-mi='${esc(i.nombre)}'>${esc(i.nombre)}</button>`).join('')}</div>
+      <div class='es-caja'><b>Pago</b>
+        <div class='es-2'><label><span class='es-lb'>Total a cobrar</span><input class='es-in' name='total' inputmode='numeric' value='${(cotiza(2, 0).precio || '')}' data-auto='1'></label>
+          <label><span class='es-lb'>N° instructores</span><input class='es-in' type='number' name='nInstructores' min='1' value='${cotiza(2, 0).ins}' inputmode='numeric' data-auto='1'></label></div>
+        <label><span class='es-lb'>¿Cómo paga?</span><select class='es-in' name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}<option value='Link de pago'>Aún no paga: mandarle link de pago</option></select></label>
+        <label class='es-chk'><input type='checkbox' name='avisar'>Si ya pagó, mandarle el comprobante por correo</label></div>
+      <label><span class='es-lb'>Nota interna</span><textarea class='es-in' name='comentario' rows='2' placeholder='Solo la ve el equipo'></textarea></label>
+      <p class='es-nota' style='margin-top:14px'>El total y los instructores salen de la tabla de precios; puedes cambiarlos. Se pueden anotar clases que ya pasaron.</p>
+      </div><div class='es-pgf'><p class='es-err vivo'></p><button class='es-big' data-manual-go>Crear clase</button></div></div>`;
+  }
+  // hoja para buscar o crear el cliente (sin volver a pintar la página)
+  function hojaCliente(pg, crear) {
+    const fuera = () => w.remove();
+    const w = document.createElement('div'); w.className = 'es-hf';
+    const elegir = c => { pg.querySelector('[name=nombre]').value = c.nombre; pg.querySelector('[name=telefono]').value = c.telefono || ''; pg.querySelector('[name=correo]').value = c.correo || '';
+      const b = pg.querySelector('[data-cli]'); b.classList.remove('vacio'); b.innerHTML = `${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b>${c.telefono || c.correo ? `<small>${esc(c.telefono || c.correo)}</small>` : ''}</span><span class='es-rc'>›</span>`; fuera(); };
+    const lista = q => (E.clientes || []).filter(c => !q || (c.nombre + ' ' + c.telefono + ' ' + c.correo).toLowerCase().includes(q)).slice(0, 60)
+      .map((c, k) => `<button class='es-row' data-k='${(E.clientes || []).indexOf(c)}'>${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b>${c.telefono ? `<small>${esc(c.telefono)}</small>` : ''}</span></button>`).join('') || `<p class='es-nota'>No hay nadie con ese nombre. Créalo con el botón de arriba.</p>`;
+    const buscar = () => {
+      w.innerHTML = `<div class='es-hj'><div class='es-hjh'><b>Buscar cliente</b><button data-hx aria-label='Cerrar'>${ICO_S.x}</button></div><div class='es-hjb'>
+        <div class='es-srch' style='margin:4px 0 4px'>${ICO_S.buscar}<input data-hq type='search' placeholder='Nombre, teléfono o correo…' autocomplete='off'></div>
+        <button class='es-crear' data-hn><i>+</i>Crear cliente nuevo</button><p class='es-gt' style='margin-top:6px'>RECIENTES</p><div data-hl>${lista('')}</div></div></div>`;
+      const q = w.querySelector('[data-hq]'), l = w.querySelector('[data-hl]');
+      q.oninput = () => { const v = q.value.trim().toLowerCase(); w.querySelector('.es-gt').textContent = v ? 'RESULTADOS' : 'RECIENTES'; l.innerHTML = lista(v); };
+      w.querySelector('[data-hn]').onclick = () => nuevo(q.value.trim());
+      setTimeout(() => q.focus(), 50);
+    };
+    const nuevo = pre => {
+      const p = /^[+\d\s()-]{6,}$/.test(pre) ? ['', pre] : [pre, ''];
+      w.innerHTML = `<div class='es-hj'><div class='es-hjh'><b>Nuevo cliente</b><button data-hx aria-label='Cerrar'>${ICO_S.x}</button></div><div class='es-hjb'>
+        <label><span class='es-lb'>Nombre y apellido</span><input class='es-in' data-nn value='${esc(p[0])}' placeholder='Ingresa nombre' autocomplete='off'></label>
+        <label><span class='es-lb'>Teléfono</span><input class='es-in' data-nt type='tel' value='${esc(p[1])}' placeholder='Ej: +56 9 1234 5678'></label>
+        <label><span class='es-lb'>Correo electrónico <small>(opcional)</small></span><input class='es-in' data-nc type='email' placeholder='Ej: nombre@mail.com'></label>
+        <p class='es-err' data-ne></p></div><div class='es-hjf'><button class='es-big' data-nok>Crear cliente</button></div></div>`;
+      w.querySelector('[data-nok]').onclick = () => { const nn = w.querySelector('[data-nn]').value.trim().replace(/\s+/g, ' ');
+        if (nn.length < 2) { w.querySelector('[data-ne]').textContent = 'Escribe el nombre.'; return; }
+        elegir({ nombre: nn.replace(/(^|\s)\S/g, x => x.toUpperCase()), telefono: w.querySelector('[data-nt]').value.trim(), correo: w.querySelector('[data-nc]').value.trim() }); };
+      setTimeout(() => w.querySelector('[data-nn]').focus(), 50);
+    };
+    w.onclick = e => { if (e.target === w || e.target.closest('[data-hx]')) return fuera(); const b = e.target.closest('[data-k]'); if (b) elegir(E.clientes[+b.dataset.k]); };
+    if (crear) nuevo(''); else buscar();
+    document.body.appendChild(w);
+    return elegir;
   }
 
   // Atajos por día: Todo / Mañana (antes de las 13:00) / Tarde / No
@@ -520,8 +703,19 @@
 
   function ajustes() {
     const a = E.ajustes;
-    const TABS = [['instructores', 'Instructores'], ['precios', 'Precios'], ['reglas', 'Reglas para reservar'], ['bloqueos', 'Horas bloqueadas'], ['admins', 'Administradores']];
-    let h = `<div class='es-chips es-ajt'>${TABS.map(([k, t]) => `<button class='es-chip${ajTab === k ? ' on' : ''}' data-ajt='${k}'>${t}</button>`).join('')}</div><div class='es-ajw'>`;
+    const TABS = [['instructores', 'Instructores'], ['precios', 'Precios'], ['reglas', 'Reglas para reservar'], ['bloqueos', 'Horas bloqueadas'], ['admins', 'Administradores y avisos']];
+    if (!ajTab) {
+      const it = (k, ic, c, t, d) => fila(ic, t, d, { tag: 'button', at: `data-ajt='${k}'`, ic: c });
+      return `<div class='es-ajw'>` + grupo('Equipo', [
+          it('instructores', ICO_S.gente, 'pend', 'Instructores', 'Quiénes dan clases, correos y pagos'),
+          it('admins', ICO_S.llave, 'lila', 'Administradores y avisos', 'Quién ve todo y notificaciones')])
+        + grupo('Clases', [
+          it('precios', '$', 'ok', 'Precios', 'Lo que paga el cliente y recibe el instructor'),
+          it('reglas', ICO_S.regla, '', 'Horarios y reglas para reservar', 'Horas de clase y hasta cuándo se reserva'),
+          it('bloqueos', ICO_S.candado, 'gris', 'Horas bloqueadas', 'Academia Anual y compromisos fijos')])
+        + grupo('Reserva online', [fila(ICO_S.link, 'Link para reservar', esc(E.link.replace('https://', '')), { tag: 'button', at: 'data-copiar', fin: `<span class='es-btn sec' style='flex:none'>Copiar</span>` })]) + `</div>`;
+    }
+    let h = `<div class='es-ajw'><button class='es-volver' data-ajt=''>${ICO_S.atras.replace('<svg', "<svg width='20' height='20'")}Ajustes</button><h2 class='es-ajh'>${(TABS.find(t => t[0] === ajTab) || [, ''])[1]}</h2>`;
     const nota = t => `<p class='es-nota'>${t}</p>`;
     if (ajTab === 'instructores') {
       h += `<p class='es-intro'>Quiénes dan clases particulares. Con su correo entran a Agenda Storm y ven sus clases. Si apagas a alguien, no recibe clases nuevas.</p>`;
@@ -593,7 +787,13 @@
     $$('[data-lnx]').forEach(b => b.onclick = () => { linkNuevo = null; pintar(); });
     $$('[data-lf]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.lf); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', b.dataset.lf); } });
     $$('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(E.link); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', E.link); } });
-    $$('[data-manual]').forEach(b => b.onclick = () => { manualOn = !manualOn; pintar(); });
+    $$('[data-pgx]').forEach(b => b.onclick = () => { if (manualOn) manualOn = false; else if (abierta) { abierta = ''; modo = ''; } else vista = pila.pop() || null; msg = ''; pintar(); });
+    const abrir = v => { if (vista) pila.push(vista); vista = v; abierta = ''; modo = ''; msg = ''; pintar(); const b = pane.querySelector('.es-pgb'); if (b) b.scrollTop = 0; };
+    $$('[data-ver]').forEach(c => c.onclick = e => { if (e.target.closest('a') || (e.target.closest('button') && e.target.closest('button') !== c)) return; abrir({ t: 'clase', ref: c.dataset.ver }); });
+    $$('[data-cliv]').forEach(b => b.onclick = () => abrir({ t: 'cliente', nombre: b.dataset.cliv }));
+    const cq = $('[data-cq]'); if (cq) cq.oninput = () => { const v = cq.value.trim().toLowerCase(); $$('[data-cliv]').forEach(b => b.style.display = !v || b.dataset.q.includes(v) ? '' : 'none'); };
+    $$('[data-agendar]').forEach(b => b.onclick = () => { const c = (E.clientes || []).find(x => x.nombre === b.dataset.agendar); manualPre = { cliente: c }; manualOn = true; pintar(); });
+    const pgN = $('[data-nf]'); if (pgN) pgN.querySelector('[data-cli]').onclick = () => hojaCliente(pgN);
     $$('[data-nueva]').forEach(b => b.onclick = () => { manualOn = true; msg = ''; pintar(); });
     const fondo = $('[data-fondo]'); if (fondo) fondo.onclick = e => { if (e.target === fondo) { manualOn = false; pintar(); } };
     $$('[data-salir]').forEach(b => b.onclick = () => { const o = document.getElementById('pn-out'); if (o) o.click(); });
@@ -617,19 +817,19 @@
       if (go.dataset.go === 'cancelar') accion({ accion: 'cancelar', ref: abierta }, go).then(ok => { if (ok) { msg = 'Clase de ' + r.nombre + ' cancelada.'; pintar(); } });
     };
     $$('[data-pago]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.pago); accion({ accion: 'datos', ref: b.dataset.pago, medio: b.dataset.m }, b).then(ok => { if (ok) { msg = (r ? r.nombre + ': ' : '') + 'pagada con ' + b.textContent + '.'; pintar(); } }); });
-    $$('[data-papel]').forEach(c => c.onchange = () => accion({ accion: 'datos', ref: c.dataset.papel, fichasPapel: c.checked ? 1 : 0 }, c).then(ok => { if (ok) { msg = c.checked ? 'Fichas en papel anotadas.' : 'Listo.'; pintar(); } }));
-    $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
+    $$('[data-papel]').forEach(c => c.onchange = () => accion({ accion: 'datos', ref: c.dataset.papel, fichasPapel: c.checked ? 1 : 0 }, null).then(ok => { if (ok) { msg = c.checked ? 'Fichas en papel anotadas.' : 'Listo.'; pintar(); } }));
+    $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.es-pg, .pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
     const nomIn = $('[name=nombre][list=es-clientes]');
     if (nomIn) nomIn.onchange = () => { const c = (E.clientes || []).find(x => x.nombre.toLowerCase() === nomIn.value.trim().toLowerCase()); if (!c) return; const f = nomIn.closest('.pn-card'); const t = f.querySelector('[name=telefono]'), m = f.querySelector('[name=correo]'); if (t && !t.value) t.value = c.telefono; if (m && !m.value) m.value = c.correo; };
     $$('[data-dv]').forEach(b => b.onclick = () => { diaVer = b.dataset.dv === 'hoy' ? E.hoy : sumar(diaVer, +b.dataset.dv); pintar(); });
-    $$('[data-dr]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.dr); sub = 'reservas'; verPasadas = r && r.fecha < E.hoy; filtroIns = ''; pintar(); const el = pane.querySelector(`[data-abre='${CSS.escape(b.dataset.dr)}']`); if (el) el.closest('.es-r').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+    $$('[data-dr]').forEach(b => b.onclick = () => abrir({ t: 'clase', ref: b.dataset.dr }));
     $$('[data-dn]').forEach(b => b.onclick = () => { if (b.classList.contains('no') && !confirm(b.dataset.dn + ' no marcó disponible a esa hora. ¿Anotar igual?')) return; manualPre = { fecha: diaVer, hora: b.dataset.dh, ins: b.dataset.dn }; manualOn = true; pintar(); });
-    if (manualPre) { const c = pane.querySelector('.pn-card:has([data-manual-go])'); if (c) { c.querySelector('[name=fecha]').value = manualPre.fecha; c.querySelector('[name=hora]').value = manualPre.hora; const ch = c.querySelector(`[data-mi="${CSS.escape(manualPre.ins)}"]`); if (ch) ch.classList.add('on'); } manualPre = null; }
+    if (manualPre) { const c = pgN; if (c) { if (manualPre.fecha) c.querySelector('[name=fecha]').value = manualPre.fecha; if (manualPre.hora) c.querySelector('[name=hora]').value = manualPre.hora; const ch = manualPre.ins && c.querySelector(`[data-mi="${CSS.escape(manualPre.ins)}"]`); if (ch) ch.classList.add('on'); if (manualPre.cliente) { hojaCliente(c)(manualPre.cliente); } } manualPre = null; }
     $$('[data-psw]').forEach(b => b.onclick = () => { psLunes = sumar(PS.lunes, +b.dataset.psw); psAbierto = ''; cargarPagos(); });
     $$('[data-psa]').forEach(b => b.onclick = () => { psAbierto = psAbierto === b.dataset.psa ? '' : b.dataset.psa; pintar(); });
     $$('[data-psr]').forEach(b => b.onclick = () => { PS = null; cargarPagos(); });
     $$('[data-psp]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = 'Guardando…'; cargarPagos({ marcar: { instructor: b.dataset.psp, monto: +b.dataset.pm, pagado: b.dataset.pv === '1' } }); });
-    const mc = pane.querySelector('.pn-card:has([data-manual-go])');
+    const mc = pgN;
     if (mc) {
       const re = () => { const c = cotiza(mc.querySelector('[name=personas]').value, mc.querySelector('[name=menores]').value), t = mc.querySelector('[name=total]'), n = mc.querySelector('[name=nInstructores]');
         if (t.dataset.auto) t.value = c.precio || ''; t.placeholder = c.precio ? '' : 'escribe el total (grupo grande)';
@@ -639,10 +839,11 @@
     }
     const mg = $('[data-manual-go]');
     if (mg) mg.onclick = () => {
-      const c = mg.closest('.pn-card'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
+      const c = mg.closest('.es-pg'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
       const elegidos = [...c.querySelectorAll('[data-mi].on')].map(b => b.dataset.mi);
       const body = Object.assign({ accion: 'manual' }, v, { instructores: elegidos });
-      accion(body, mg).then(ok => { if (ok) { manualOn = false; msg = E.nuevoLink ? '' : 'Reserva de ' + v.nombre + ' guardada.'; linkNuevo = E.nuevoLink || null; sub = 'reservas'; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+      if (!v.nombre) { c.querySelector('.es-err').textContent = 'Elige o crea el cliente.'; return; }
+      accion(body, mg).then(ok => { if (ok) { manualOn = false; vista = null; pila = []; msg = E.nuevoLink ? '' : 'Clase de ' + v.nombre + ' guardada.'; linkNuevo = E.nuevoLink || null; sub = 'reservas'; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
     };
     // calendario
     $$('[data-ci]').forEach(b => b.onclick = () => { calIns = b.dataset.ci; pintar(); });
@@ -727,5 +928,5 @@
       if (!E) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
     }
   }
-  window.StormEscuela = { cargar, datos: () => E, ir: x => { sub = x; msg = ''; if (pane) pintar(); }, nueva: () => { manualOn = true; msg = ''; if (pane) pintar(); } };
+  window.StormEscuela = { cargar, datos: () => E, ir: x => { sub = x; msg = ''; vista = null; pila = []; manualOn = false; if (x === 'ajustes') ajTab = ''; if (pane) pintar(); }, nueva: () => { manualOn = true; msg = ''; if (pane) pintar(); }, clase: ref => { vista = { t: 'clase', ref }; pila = []; if (pane) pintar(); } };
 })();
