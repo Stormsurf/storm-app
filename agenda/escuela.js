@@ -46,6 +46,13 @@
   .es-db{position:absolute;left:3px;right:3px;border:0;border-radius:8px;background:#0f6e74;color:#fff;text-align:left;padding:4px 6px;font:inherit;font-size:1.15rem;line-height:1.25;overflow:hidden;cursor:pointer;z-index:2}
   .es-db b{display:block;font-size:1.2rem;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .es-db small{display:block;opacity:.9}
+  .es-dbh{display:block;font-style:normal;font-size:1.1rem;font-weight:700;opacity:.85;white-space:nowrap;padding-right:18px}
+  @media (max-width:600px){.es-dbf{display:none}}
+  .es-f input[type=date]{-webkit-appearance:none;appearance:none;min-width:0;width:100%;box-sizing:border-box;min-height:44px;text-align:left}
+  .es-f input[type=date]::-webkit-date-and-time-value{text-align:left}
+  .es-f label{min-width:0}
+  .es-dbp{float:right;font-style:normal;width:18px;height:18px;border-radius:50%;background:#2f9a6a;color:#fff;font-size:1.1rem;font-weight:800;display:grid;place-items:center;margin-left:4px}
+  .es-dbp.no{background:#e0a03a}
   .es-db.pend{background:#E3F1F1;color:#0f6e74;border:1.5px dashed #0f6e74}
   .es-db.otra{background:#F3F1EC;color:#6b6a67;border:1.5px dashed #c9c5bd;cursor:default;z-index:1}
   .es-ahora{position:absolute;left:0;right:0;border-top:2px solid #e0484e;z-index:3}
@@ -148,6 +155,12 @@
   .es-tg:after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
   .es-sw input:checked+.es-tg{background:#0f6e74}.es-sw input:checked+.es-tg:after{left:19px}
   .es-ajt{margin-bottom:12px}
+  .es-pago{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;padding:10px;border-radius:12px;background:#fbeee2}
+  .es-pago span{font-size:1.3rem;font-weight:700;color:#b5662b;margin-right:4px}
+  .es-pago button{border:1.5px solid #e0a03a;background:#fff;color:#7a4a1a;border-radius:999px;padding:7px 12px;font:inherit;font-size:1.3rem;font-weight:600;cursor:pointer}
+  .es-papel{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:1.3rem;color:#55544f;cursor:pointer}.es-papel input{width:20px;height:20px;accent-color:#0f6e74}
+  .es-modal .es-sheet{position:relative}
+  .es-x{position:sticky;top:0}
   .es-tabs2{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 14px}.es-tabs2 .es-nueva{margin-left:auto}
   .es-tabs2 .es-chip.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
   @media (max-width:999px){.es-tabs2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-16px;padding-right:16px}.es-tabs2 .es-chip{flex:none}.es-tabs2 .es-nueva{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;padding:14px 20px;font-size:1.5rem;box-shadow:0 8px 24px rgba(15,110,116,.35)}}
@@ -290,11 +303,24 @@
     return h;
   }
 
+  const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Por pagar', 'Aún no paga']];
+  const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m;
+  // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 5
+  function cotiza(p, m) {
+    const a = E.ajustes || {}, g = [];
+    p = Math.max(1, Math.floor(+p || 1)); m = Math.max(0, Math.min(p, Math.floor(+m || 0)));
+    const pares = Math.floor(m / 2); for (let k = 0; k < pares; k++) g.push(2);
+    let resto = p - pares * 2; if (pares && resto === 1) { g[g.length - 1]++; resto = 0; }
+    if (resto > 0) { const n = p > (a.maxWeb || 5) ? 1 : Math.max(Math.ceil(resto / 5), 1); for (let k = 0; k < n; k++) g.push(Math.floor(resto / n) + (k < resto % n ? 1 : 0)); }
+    const precios = g.map(x => Number((a.precios || {})[x]) || 0);
+    return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
+  }
   function estadoDe(r) {
     if (r.estado === 'cancelada') return { c: 'gris', i: '×', t: 'Cancelada' };
-    if (r.estado === 'pendiente') return { c: 'pend', i: ICO_S.reloj, t: r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago' : 'Pagando ahora' };
+    if (r.estado === 'pendiente') return { c: 'pend', i: '$', t: r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago' : 'Pagando ahora' };
     if (r.estado === 'revisar') return { c: 'mal', i: '!', t: 'Revisar: ' + (r.nota || '') };
-    if (r.medio === 'Por pagar') return { c: 'pend', i: ICO_S.reloj, t: 'Por cobrar' };
+    if (r.medio === 'Por pagar') return { c: 'pend', i: '$', t: 'No ha pagado' };
+    if (r.medio) return { c: 'ok', i: '$', t: 'Pagada · ' + medioTxt(r.medio) };
     return { c: 'ok', i: '✓', t: 'Confirmada' };
   }
   const contacto = r => wa(r.telefono) ? `<div class='es-ct'><a class='es-ctb wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}' title='WhatsApp' aria-label='WhatsApp'>${ICO_S.wa}</a><a class='es-ctb' href='tel:+${wa(r.telefono)}' title='Llamar' aria-label='Llamar'>${ICO_S.tel}</a></div>` : '';
@@ -302,11 +328,13 @@
     const E0 = estadoDe(r), est = `<span class='es-st ${E0.c}'><i>${E0.i}</i>${esc(E0.t)}</span>`;
     let h = `<div class='es-r es-r--${E0.c}'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora, r.duracion)}</small></div>
       <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 7 a 11' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
-      <div class='es-tags'>${est}<span class='es-st ${(r.fichas || []).length >= r.personas ? 'ok' : 'pend'}'><i>${ICO_S.ficha}</i>Fichas ${(r.fichas || []).length}/${r.personas}</span>${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}</div></div>
+      <div class='es-tags'>${est}<span class='es-st ${r.fichasPapel || (r.fichas || []).length >= r.personas ? 'ok' : 'pend'}'><i>${ICO_S.ficha}</i>${r.fichasPapel ? 'Fichas en papel ✓' : 'Fichas ' + (r.fichas || []).length + '/' + r.personas}</span>${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}</div></div>
       ${contacto(r)}</div>
       ${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}
       ${admin && r.linkPago ? `<div class='es-acc'><button class='es-btn' data-lf='${esc(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Copiar link de pago</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Reenviar por WhatsApp</a>` : ''}</div>` : ''}
-      <div class='es-acc'>${r.estado === 'pendiente' ? '' : (r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${r.estado !== 'pendiente' && (r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
+      <div class='es-acc'>${r.estado === 'pendiente' ? '' : (r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${r.estado !== 'pendiente' && !r.fichasPapel && (r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
+    if (admin && r.estado !== 'cancelada' && r.medio === 'Por pagar') h += `<div class='es-pago'><span>¿Ya pagó?</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
+    if (admin && r.estado !== 'cancelada' && r.estado !== 'pendiente' && (r.fichas || []).length < r.personas) h += `<label class='es-papel'><input type='checkbox' data-papel='${esc(r.ref)}'${r.fichasPapel ? ' checked' : ''}>Las fichas se hicieron en papel</label>`;
     // clases pasadas: solo se pueden cancelar (por ejemplo, pruebas o errores), así no cuentan en las ventas ni en los pagos
     if (admin && (r.fecha >= E.hoy || r.estado !== 'cancelada')) {
       if (abierta !== r.ref) h += `<div class='es-acc'><button class='es-btn sec' data-abre='${r.ref}' data-modo='datos'>Editar</button>${r.fecha >= E.hoy ? `<button class='es-btn sec' data-abre='${r.ref}' data-modo='ins'>Cambiar instructor</button><button class='es-btn sec' data-abre='${r.ref}' data-modo='mover'>Mover</button>` : ''}<button class='es-btn peligro' data-abre='${r.ref}' data-modo='cancelar'>Cancelar</button></div>`;
@@ -321,7 +349,7 @@
           <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Se mantiene el mismo instructor. Avísale al cliente por WhatsApp.</p>
           <div class='es-acc'><button class='es-btn' data-go='mover'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'datos') {
-        const dur = r.duracion || E.duracion, med = ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'];
+        const dur = r.duracion || E.duracion;
         h += `<div class='es-box es-datos'><div class='es-f'>
           <label class='w'>Nombre del cliente<input name='nombre' value='${esc(r.nombre)}'></label>
           <label>Teléfono<input name='telefono' type='tel' value='${esc(r.telefono || '')}'></label>
@@ -329,10 +357,10 @@
           <label>Personas<input name='personas' type='number' min='1' value='${r.personas}' inputmode='numeric'></label>
           <label>Menores de 8<input name='menores' type='number' min='0' value='${r.menores || 0}' inputmode='numeric'></label>
           <label>Duración<select name='duracion'>${[[60, '1 hora'], [90, '1 hora y media'], [120, '2 horas']].map(([v, t]) => `<option value='${v}'${v === dur ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-          <label>Medio de pago<select name='medio'>${med.map(m => `<option${m === r.medio ? ' selected' : ''}>${m}</option>`).join('')}</select></label>
+          <label>¿Cómo pagó?<select name='medio'>${MEDIOS.map(([v, t]) => `<option value='${v}'${v === r.medio ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
           <label>Total cobrado<input name='total' inputmode='numeric' value='${r.total || 0}'></label>
-          ${(() => { const v = Object.values(r.pagos || {}), uno = v.length && v.every(x => x === v[0]) ? v[0] : ''; return `<label>Pago por instructor<input name='pagoInstructor' inputmode='numeric' value='${uno}' data-orig='${uno}' placeholder='según la tabla'></label>`; })()}
           <label class='w'>Comentario<input name='comentario' value='${esc(r.comentario || '')}'></label></div>
+          <details class='es-det'><summary>Opciones avanzadas</summary><div class='es-f'>${(() => { const v = Object.values(r.pagos || {}), uno = v.length && v.every(x => x === v[0]) ? v[0] : ''; return `<label>Pago por instructor<input name='pagoInstructor' inputmode='numeric' value='${uno}' data-orig='${uno}' placeholder='según la tabla'></label>`; })()}</div></details>
           <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Si cambias las personas y no tocas el pago, se calcula solo con la tabla. Para cambiar día, hora o instructor usa Mover o Cambiar instructor.</p>
           <div class='es-acc'><button class='es-btn' data-go='datos'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'cancelar') {
@@ -355,17 +383,16 @@
         <label class='w'>Nombre del cliente<input name='nombre' list='es-clientes' autocomplete='off' placeholder='Escribe y elige si ya reservó antes'></label><datalist id='es-clientes'>${(E.clientes || []).map(c => `<option value='${esc(c.nombre)}'>${esc([c.telefono, c.clases + (c.clases === 1 ? ' clase' : ' clases')].filter(Boolean).join(' · '))}</option>`).join('')}</datalist>
         <label>Teléfono<input name='telefono' type='tel'></label>
         <label>Correo (opcional)<input name='correo' type='email'></label>
-        <label>Total cobrado<input name='total' inputmode='numeric' placeholder='según la tabla'></label>
-        <label>Pago por instructor<input name='pagoInstructor' inputmode='numeric' placeholder='según la tabla'></label>
-        <label>Pago<select name='medio'><option value='Link de pago'>Mandar link de pago</option><option>Transferencia</option><option>Efectivo</option><option>Por pagar</option><option value='Mercado Pago'>Ya pagó por Mercado Pago</option></select></label>
-        <label>N° de instructores<input type='number' name='nInstructores' min='1' value='1' inputmode='numeric'></label>
+        <label>Total a cobrar<input name='total' inputmode='numeric' value='${(cotiza(2, 0).precio || '')}' data-auto='1'></label>
+        <label>N° de instructores<input type='number' name='nInstructores' min='1' value='${cotiza(2, 0).ins}' inputmode='numeric' data-auto='1'></label>
+        <label class='w'>¿Cómo paga?<select name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}<option value='Link de pago'>Aún no paga: mandarle link de pago</option></select></label>
         <div style='grid-column:1/-1'><b style='font-size:1.3rem'>Instructores</b> <span style='font-size:1.2rem;opacity:.7'>(elige uno o varios; si no eliges, o faltan, la app elige al azar entre los libres)</span>
           <div class='es-chips' style='margin-top:6px'>${E.instructores.filter(i => i.activo).map(i => `<button type='button' class='es-chip' data-mi='${esc(i.nombre)}'>${esc(i.nombre)}</button>`).join('')}</div></div>
         <label class='w'>Comentario<textarea name='comentario' rows='2'></textarea></label>
         <label class='w' style='font-weight:500'><input type='checkbox' name='avisar' style='display:inline;width:auto;margin:0 6px 0 0'>Si ya pagó: mandarle el comprobante por correo</label>
       </div>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Con "Mandar link de pago" el horario queda guardado 24 horas (o hasta la clase) y te damos el link para mandarlo por WhatsApp. Si no paga, se libera solo. Si dejas vacíos el total y el pago, se usa la tabla (${clp(a.precios && a.precios[2])} para 2 personas; grupos de más de 5: ${clp(a.pagos && a.pagos.grupo)} por instructor).</p>
-      <div class='es-acc'><button class='es-btn' data-manual-go>Guardar reserva</button><button class='pn-link' data-manual>Cerrar</button></div><p class='es-err vivo'></p></div>`;
+      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>El total y los instructores salen solos de la tabla; puedes cambiarlos. Con "mandarle link de pago" el horario queda guardado 24 horas (o hasta la clase) y te damos el link para WhatsApp. El pago a cada instructor sale de la tabla (se cambia después en Editar › Opciones avanzadas).</p>
+      <div class='es-acc'><button class='es-btn' data-manual-go>Guardar clase</button></div><p class='es-err vivo'></p></div>`;
   }
 
   // Atajos por día: Todo / Mañana (antes de las 13:00) / Tarde / No
@@ -453,7 +480,7 @@
       });
       E.reservas.filter(r => r.fecha === f && r.instructores.includes(n)).forEach(r => {
         const a = aMin(r.hora);
-        col += `<button class='es-db${r.estado === 'pendiente' ? ' pend' : ''}' data-dr='${esc(r.ref)}' style='top:${top(a)}px;height:${alto(r.duracion || E.duracion) - 2}px'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' <7' : ''}</small><small>${esc(r.hora)} - ${esc(fin(r.hora, r.duracion))}${r.estado === 'pendiente' ? ' · esperando pago' : ''}</small></button>`;
+        col += `<button class='es-db${r.estado === 'pendiente' ? ' pend' : ''}' data-dr='${esc(r.ref)}' style='top:${top(a)}px;height:${alto(r.duracion || E.duracion) - 2}px'>${r.medio ? `<i class='es-dbp${estadoDe(r).c === 'ok' ? '' : ' no'}'>$</i>` : ''}<em class='es-dbh'>${esc(r.hora)}<span class='es-dbf'>–${esc(fin(r.hora, r.duracion))}</span></em><b>${esc(r.nombre)}</b><small>${r.personas} pers.${r.menores ? ' · ' + r.menores + ' niños' : ''}${r.estado === 'pendiente' ? ' · esperando pago' : ''}</small></button>`;
       });
       if (f === E.hoy) { const ahora = new Date(), m = ahora.getHours() * 60 + ahora.getMinutes(); if (m > D_INI && m < D_FIN) col += `<div class='es-ahora' style='top:${top(m)}px'></div>`; }
       h += col + `</div>`;
@@ -589,6 +616,8 @@
       }
       if (go.dataset.go === 'cancelar') accion({ accion: 'cancelar', ref: abierta }, go).then(ok => { if (ok) { msg = 'Clase de ' + r.nombre + ' cancelada.'; pintar(); } });
     };
+    $$('[data-pago]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.pago); accion({ accion: 'datos', ref: b.dataset.pago, medio: b.dataset.m }, b).then(ok => { if (ok) { msg = (r ? r.nombre + ': ' : '') + 'pagada con ' + b.textContent + '.'; pintar(); } }); });
+    $$('[data-papel]').forEach(c => c.onchange = () => accion({ accion: 'datos', ref: c.dataset.papel, fichasPapel: c.checked ? 1 : 0 }, c).then(ok => { if (ok) { msg = c.checked ? 'Fichas en papel anotadas.' : 'Listo.'; pintar(); } }));
     $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
     const nomIn = $('[name=nombre][list=es-clientes]');
     if (nomIn) nomIn.onchange = () => { const c = (E.clientes || []).find(x => x.nombre.toLowerCase() === nomIn.value.trim().toLowerCase()); if (!c) return; const f = nomIn.closest('.pn-card'); const t = f.querySelector('[name=telefono]'), m = f.querySelector('[name=correo]'); if (t && !t.value) t.value = c.telefono; if (m && !m.value) m.value = c.correo; };
@@ -600,6 +629,14 @@
     $$('[data-psa]').forEach(b => b.onclick = () => { psAbierto = psAbierto === b.dataset.psa ? '' : b.dataset.psa; pintar(); });
     $$('[data-psr]').forEach(b => b.onclick = () => { PS = null; cargarPagos(); });
     $$('[data-psp]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = 'Guardando…'; cargarPagos({ marcar: { instructor: b.dataset.psp, monto: +b.dataset.pm, pagado: b.dataset.pv === '1' } }); });
+    const mc = pane.querySelector('.pn-card:has([data-manual-go])');
+    if (mc) {
+      const re = () => { const c = cotiza(mc.querySelector('[name=personas]').value, mc.querySelector('[name=menores]').value), t = mc.querySelector('[name=total]'), n = mc.querySelector('[name=nInstructores]');
+        if (t.dataset.auto) t.value = c.precio || ''; t.placeholder = c.precio ? '' : 'escribe el total (grupo grande)';
+        if (n.dataset.auto) n.value = Math.max(c.ins, mc.querySelectorAll('[data-mi].on').length); };
+      mc.querySelectorAll('[name=personas],[name=menores]').forEach(i => i.addEventListener('input', re));
+      mc.querySelectorAll('[name=total],[name=nInstructores]').forEach(i => i.addEventListener('input', () => { delete i.dataset.auto; }));
+    }
     const mg = $('[data-manual-go]');
     if (mg) mg.onclick = () => {
       const c = mg.closest('.pn-card'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());

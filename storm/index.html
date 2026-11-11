@@ -16,9 +16,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css?v=1">
-<link rel="stylesheet" href="/panel/panel.css?v=1">
+<link rel="stylesheet" href="/panel/panel.css?v=2">
 <script>window.STORM_SHELL = true;</script>
-<script src="/agenda/escuela.js?v=15"></script>
+<script src="/agenda/escuela.js?v=17"></script>
 <style>
 .pn-go{background:#0f6e74}.pn-in:focus{border-color:#0f6e74}
 .ap-top{display:none}
@@ -98,6 +98,7 @@ main .pn{max-width:1440px}
 .sp-ri b{display:block;font-size:1.45rem;font-weight:600}.sp-ri small{display:block;font-size:1.2rem;color:#8a8986}
 .sp-ri em{margin-left:auto;flex:none;font-style:normal;font-size:1.1rem;font-weight:700;border-radius:999px;padding:3px 10px;background:#E3F1F1;color:#0f6e74}.sp-ri em.a{background:#E6F1F8;color:#2d6e94}
 .sp-wa{flex:none;width:38px;height:38px;border-radius:50%;background:#25D366;color:#fff;display:grid;place-items:center}.sp-wa svg{width:20px;height:20px}
+.sp-tap,.sp-panel .pn-alb{cursor:pointer}.sp-panel .pn-alb:hover{text-decoration:underline}
 .sp-nada{margin:10px;color:#8a8986;font-size:1.35rem}
 @media (min-width:1000px){.sp-bus{flex:0 1 360px;order:0}}
 .sp-fi>div{position:relative;max-height:88vh;overflow:auto;background:#EFECE8;padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
@@ -189,7 +190,7 @@ main .pn{max-width:1440px}
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='st'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
 </section>
-<script src="/panel/panel.js?v=1"></script>
+<script src="/panel/panel.js?v=2"></script>
 <script>
 (()=>{
   const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
@@ -301,6 +302,11 @@ main .pn{max-width:1440px}
     </div></div>`;
     StormEscuela.cargar(root.querySelector('.pn-escuela'), auth, salir);
     const pn = root.querySelector('.sp-pn'); StormPanel.montar(pn, auth);
+    pn.addEventListener('click', e => {
+      if(!['anual'].includes(area)) return;
+      const c = e.target.closest('.pn-chip[data-nombre], .pn-alb'); if(!c) return;
+      const n = c.dataset.nombre || c.textContent.trim(); ficha({ n, tipo: 'Anual', sub: '', go: 'anual:alumnos' });
+    });
     let rz = 0; new MutationObserver(() => { if(rz) return; rz = requestAnimationFrame(() => { rz = 0; realzar(pn); }); }).observe(pn, { childList: true, subtree: true });
     ir(area);
     buscador();
@@ -350,13 +356,15 @@ main .pn{max-width:1440px}
 
   // ---------- Anotar en 3 toques: monto, en qué, área ----------
   const AREAS = [['Verano', 'Verano', 'verano'], ['Anual', 'Anual', 'anual'], ['Adultos', 'Adultos', 'adultos'], ['Escuela', 'Particulares', 'particulares'], ['Rentas', 'Rentas', 'tabla'], ['Surfshop', 'Surf Shop', 'tienda'], ['Casa', 'Casa Storm', 'casa']];
-  const ATAJOS = { gasto: { Verano: ['Comida', 'Premios', 'Sala de yoga', 'Materiales', 'Bencina'], Casa: ['Mantención oficina', 'Crecimiento', 'Marketing', 'Luz', 'Internet'], _: ['Bencina', 'Comida', 'Parafina', 'Materiales', 'Hielo', 'Reparación'] },
+  const ATAJOS = { gasto: { Verano: ['Comida', 'Premios', 'Sala de yoga', 'Materiales', 'Bencina'], Casa: ['Mantención oficina', 'Crecimiento', 'Marketing'], _: ['Bencina', 'Comida', 'Parafina', 'Materiales', 'Hielo', 'Reparación'] },
                    ingreso: { Rentas: ['Arriendo tabla', 'Arriendo traje'], Surfshop: ['Venta tienda'], Escuela: ['Clase particular'], _: ['Clase particular', 'Arriendo tabla', 'Venta tienda', 'Auspicio'] } };
+  const GASTA = ['Verano', 'Anual', 'Surfshop', 'Casa']; // Adultos, particulares y rentas no tienen gastos propios (solo sueldos, que se calculan solos)
   const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
   let AN = null;
   function anotar(){
     const m = new Date().getMonth();
     AN = { tipo: 'gasto', monto: '', detalle: '', area: (() => { try{ return localStorage.getItem('storm-ultima-area') || ''; }catch(_){ return ''; } })() || ([10, 11, 0, 1].includes(m) ? 'Verano' : 'Anual'), corr: m === 1 ? 'febrero' : 'enero' };
+    if(!GASTA.includes(AN.area)) AN.area = 'Casa';
     const w = document.createElement('div'); w.className = 'sp-mas sp-an'; document.body.appendChild(w);
     pintarAnotar(w);
     setTimeout(() => { const i = w.querySelector('#an-monto'); if(i) i.focus(); }, 60);
@@ -371,7 +379,7 @@ main .pn{max-width:1440px}
       <div class='an-chips'>${at.map(x => `<button class='${AN.detalle === x ? 'on' : ''}' data-det='${esc(x)}'>${esc(x)}</button>`).join('')}</div>
       <input id='an-det' class='an-det' placeholder='O escribe aquí' value='${at.includes(AN.detalle) ? '' : esc(AN.detalle)}'>
       <p class='an-q'>¿De qué área?</p>
-      <div class='an-areas'>${AREAS.map(([k, t, ic]) => `<button class='${AN.area === k ? 'on' : ''}' data-ar='${k}'>${I[ic] || ''}<span>${t}</span></button>`).join('')}</div>
+      <div class='an-areas'>${AREAS.filter(x => AN.tipo === 'ingreso' || GASTA.includes(x[0])).map(([k, t, ic]) => `<button class='${AN.area === k ? 'on' : ''}' data-ar='${k}'>${I[ic] || ''}<span>${t}</span></button>`).join('')}</div>
       ${AN.area === 'Verano' ? `<p class='an-q'>¿A qué mes del Verano?</p><div class='an-chips'>${['enero', 'febrero', 'ambos'].map(c => `<button class='${AN.corr === c ? 'on' : ''}' data-corr='${c}'>${c === 'ambos' ? 'Enero y febrero' : c[0].toUpperCase() + c.slice(1)}</button>`).join('')}</div>` : ''}
       <button class='an-go' data-go>Guardar ${AN.tipo}</button><p class='an-err'></p>
       <div class='an-otros'><button data-tipo='${AN.tipo === 'gasto' ? 'ingreso' : 'gasto'}'>${AN.tipo === 'gasto' ? 'Es un ingreso' : 'Es un gasto'}</button><button data-clase>Agendar clase particular</button></div></div>`;
@@ -381,7 +389,7 @@ main .pn{max-width:1440px}
       if(e.target === w || e.target.closest('.sp-fx')) return w.remove();
       const t = e.target.closest('button'); if(!t) return;
       if(t.dataset.clase !== undefined){ w.remove(); ir('particulares'); return StormEscuela.nueva(); }
-      if(t.dataset.tipo){ leerCampos(); AN.tipo = t.dataset.tipo; AN.detalle = ''; return pintarAnotar(w); }
+      if(t.dataset.tipo){ leerCampos(); AN.tipo = t.dataset.tipo; AN.detalle = ''; if(AN.tipo === 'gasto' && !GASTA.includes(AN.area)) AN.area = 'Casa'; return pintarAnotar(w); }
       if(t.dataset.det){ leerCampos(); AN.detalle = AN.detalle === t.dataset.det ? '' : t.dataset.det; return pintarAnotar(w); }
       if(t.dataset.ar){ leerCampos(); AN.area = t.dataset.ar; return pintarAnotar(w); }
       if(t.dataset.corr){ leerCampos(); AN.corr = t.dataset.corr; return pintarAnotar(w); }
@@ -491,7 +499,10 @@ main .pn{max-width:1440px}
       const g = {}; (P.clases || []).forEach(c => (c.alumnos || []).forEach(a => { if(norm(a.nombre) === n) g.grupo = a.grupo; }));
       const pg = ((P.actual || {}).pagaron || []).find(p => norm(p.alumno) === n);
       const fa = ((P.actual || {}).faltan || []).find(f => f.alumnos.some(a => norm(a) === n) || norm(f.apoderado) === n);
-      if(g.grupo || pg || fa) anual.push({ grupo: g.grupo || (pg && pg.grupo) || '', plan: pg && pg.plan, pago: pg ? (pg.monto ? 'Pagó ' + clpS(pg.monto) : 'Beca Storm') : fa ? 'Falta pagar' + (fa.monto && adm ? ' ' + clpS(fa.monto) : '') : '', debe: !!fa, hijos: fa && norm(fa.apoderado) === n ? fa.alumnos : null });
+      const dias = [...new Set((P.clases || []).filter(c => !c.cancelada && (c.alumnos || []).some(a => norm(a.nombre) === n)).map(c => String(c.texto || '').split(' ')[0].toLowerCase()).filter(Boolean))];
+      const NT = StormPanel.alumnos(); const nt = NT && NT.notas ? NT.notas.filter(x => norm(x.alumno) === n).length : 0;
+      const al = NT && NT.alumnos ? NT.alumnos.find(a => norm(a.nombre) === n) : null; if(al && al.grupo) g.grupo = al.grupo;
+      if(g.grupo || pg || fa || al) anual.push({ dias, nt, grupo: g.grupo || (pg && pg.grupo) || '', plan: pg && pg.plan, pago: pg ? (pg.monto ? 'Pagó ' + clpS(pg.monto) : 'Beca Storm') : fa ? 'Falta pagar' + (fa.monto && adm ? ' ' + clpS(fa.monto) : '') : '', debe: !!fa, hijos: fa && norm(fa.apoderado) === n ? fa.alumnos : null });
     }
     const tel = x.tel || (mismas[0] && mismas[0].telefono) || '';
     const k = [...x.n].reduce((k, ch) => (k * 31 + ch.charCodeAt(0)) % 997, 0);
@@ -500,12 +511,15 @@ main .pn{max-width:1440px}
     w.innerHTML = `<div><button class='sp-fx' aria-label='Cerrar'>✕</button>
       <div class='sp-fh'><span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(x.n.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span><div><h2>${esc(x.n)}</h2><p>${[mismas.length ? 'Particulares' : '', anual.length ? 'Academia Anual' : ''].filter(Boolean).join(' · ') || esc(x.tipo)}</p></div></div>
       ${wa(tel) ? `<div class='sp-fc'><a class='w' href='https://wa.me/${wa(tel)}' target='_blank' rel='noopener'>${WA}<span>WhatsApp</span></a><a href='tel:+${wa(tel)}'>${I.tel}<span>Llamar</span></a></div>` : ''}
-      ${anual.map(a => `<p class='sp-h3'>Academia Anual</p><div class='sp-fb anual'>${a.hijos ? `<div><small>Apoderado de</small><b>${a.hijos.map(esc).join(', ')}</b></div>` : ''}${a.grupo ? `<div><small>Grupo</small><b>${esc(a.grupo)}</b></div>` : ''}${a.plan ? `<div><small>Plan</small><b>${esc(a.plan)}</b></div>` : ''}${a.pago ? `<div><small>Este mes</small><b class='${a.debe ? 'pend' : 'ok'}'>${a.debe ? '● ' : '✓ '}${esc(a.pago)}</b></div>` : ''}</div><button class='sp-fgo' data-fgo='anual:${a.debe ? 'pagos' : 'alumnos'}'>Ver en Academia Anual ›</button>`).join('')}
+      ${anual.map(a => `<p class='sp-h3'>Academia Anual</p><div class='sp-fb anual'>${a.hijos ? `<div><small>Apoderado de</small><b>${a.hijos.map(esc).join(', ')}</b></div>` : ''}${a.grupo ? `<div><small>Grupo</small><b>${esc(a.grupo)}</b></div>` : ''}${a.plan ? `<div><small>Plan</small><b>${esc(a.plan)}</b></div>` : ''}${a.dias && a.dias.length ? `<div><small>Viene</small><b>${esc(a.dias.join(' y '))}</b></div>` : ''}${a.pago ? `<div><small>Este mes</small><b class='${a.debe ? 'pend' : 'ok'}'>${a.debe ? '● ' : '✓ '}${esc(a.pago)}</b></div>` : ''}</div>
+      ${a.hijos ? '' : `<div class='sp-fc' style='margin-top:8px'>${adm ? `<a href='#' data-alu='nivel'>${I.anual}<span>Cambiar nivel</span></a>` : ''}<a href='#' data-alu='notas'>${I.ficha}<span>Notas${a.nt ? ' (' + a.nt + ')' : ''}</span></a></div>`}
+      <button class='sp-fgo' data-fgo='anual:${a.debe ? 'pagos' : 'alumnos'}'>Ver en Academia Anual ›</button>`).join('')}
       ${mismas.length ? `<p class='sp-h3'>Clases particulares · ${mismas.length}</p>` + mismas.slice().sort((a, b) => a.fecha < b.fecha ? 1 : -1).map(r => { const [c, t] = est(r); return `<div class='sp-fr ${c}'><b>${r.fecha.split('-').reverse().join('/')} · ${esc(r.hora)}</b><span>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}${adm && r.total ? ' · ' + clpS(r.total) : ''}</span><em>${t}</em></div>`; }).join('') + `<button class='sp-fgo' data-fgo='particulares:reservas'>Ver en Particulares ›</button>` : ''}
     </div>`;
     document.body.appendChild(w);
     w.onclick = e => {
       if(e.target === w || e.target.closest('.sp-fx')) return w.remove();
+      const al = e.target.closest('[data-alu]'); if(al){ e.preventDefault(); w.remove(); ir('anual'); return StormPanel.alumno(x.n, al.dataset.alu); }
       const g = e.target.closest('[data-fgo]'); if(!g) return;
       w.remove(); const [a, s2] = g.dataset.fgo.split(':'); ir(a); if(a === 'particulares') StormEscuela.ir(s2); else setTimeout(() => StormPanel.tab(s2), 60);
     };
@@ -515,7 +529,7 @@ main .pn{max-width:1440px}
   const WA = `<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 2.2a9.7 9.7 0 0 0-8.4 14.6L2.2 21.8l5.1-1.3A9.7 9.7 0 1 0 12 2.2Zm0 17.7c-1.5 0-2.9-.4-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 19.9Zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.8 1c-.1.2-.3.2-.5.1a6.6 6.6 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1l-.4-.2Z'/></svg>`;
   function realzar(el){
     el.querySelectorAll('.pn-chip:not([data-av])').forEach(c => {
-      c.dataset.av = 1; const t = c.textContent.replace(/[↪\s]+/, ' ').trim(); if(!t) return;
+      c.dataset.av = 1; const t = c.textContent.replace(/[↪\s]+/, ' ').trim(); if(!t) return; c.dataset.nombre = t; c.classList.add('sp-tap');
       const ini = t.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
       let k = 0; for(const ch of t) k = (k * 31 + ch.charCodeAt(0)) % 997;
       c.insertAdjacentHTML('afterbegin', `<span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(ini)}</span>`);

@@ -189,7 +189,9 @@
     };
   }
 
+  let ULT = null;
   function render(d){
+    ULT = d;
     CL = []; ES_ADMIN = d.rol !== 'instructor';
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
@@ -593,14 +595,17 @@
   }
   function pintarAlumnos(){
     const pane = app.querySelector("[data-pane='alumnos']"); if(!pane || !NOTAS) return;
-    const al = (NOTAS.alumnos || []).slice().sort((a,b) => primeroMio()(a.grupo, b.grupo) || a.nombre.localeCompare(b.nombre));
+    const nn = t => String(t || '').trim().toLowerCase();
+    const delMes = ULT && ULT.actual ? new Set([...(ULT.actual.pagaron || []).filter(p => !/^\s*skate\s*$/i.test(p.plan || '')).map(p => nn(p.alumno)), ...(ULT.actual.faltan || []).flatMap(f => f.alumnos.map(nn))]) : null;
+    const soloSkate = ULT && ULT.actual ? new Set((ULT.actual.pagaron || []).filter(p => /^\s*skate\s*$/i.test(p.plan || '')).map(p => nn(p.alumno))) : new Set();
+    const al = (NOTAS.alumnos || []).filter(a => !soloSkate.has(nn(a.nombre)) && (!delMes || !delMes.size || delMes.has(nn(a.nombre)))).sort((a,b) => primeroMio()(a.grupo, b.grupo) || a.nombre.localeCompare(b.nombre));
     const grupos = [...new Set(al.map(a => a.grupo || 'Sin grupo'))];
     const lista = aGrupo ? al.filter(a => (a.grupo || 'Sin grupo') === aGrupo) : al;
     pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + informesHTML() + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
       `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
       <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}${aGrupo && mio(aGrupo) ? `<span class='pn-tu'>Tu grupo</span>` : ''}<span class='pn-count'>${lista.length}</span></h3>${aGrupo && ACARGO[aGrupo] ? `<p class='pn-sub' style='margin-bottom:4px'>A cargo: ${esc(ACARGO[aGrupo])}</p>` : ''}
       <p class='pn-sub'>Anota cómo va cada alumno. Las notas son solo para el equipo.</p>
-      ${lista.map(a => `<div class='pn-al'><div><b>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div><div>${notaBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
+      ${lista.map(a => `<div class='pn-al' data-alumno='${esc(a.nombre)}'><div><b class='pn-alb'>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div><div>${notaBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
     pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
     bindInformes(pane);
     pane.querySelectorAll('[data-acn]').forEach(b => b.onclick = () => { aCambio = b.dataset.acn; aNuevo = ''; aMsg = ''; pintarAlumnos(); });
@@ -764,6 +769,14 @@
       montar(el, a){ app = el; auth = a; load(); },
       ir(x){ acad = x; try{ sessionStorage.setItem(KEY + '-acad', x); }catch(_){} if(app && app.querySelector('.pn-sw')) mostrarAcad(); },
       tab(t){ tab = t; const b = app && app.querySelector(`.pn-tab[data-tab='${t}']`); if(b) b.click(); },
+      alumnos: () => NOTAS,
+      async alumno(nombre, que){
+        tab = 'alumnos'; const b = app && app.querySelector(".pn-tab[data-tab='alumnos']"); if(b) b.click();
+        await cargarNotas(); aGrupo = ''; aMsg = '';
+        if(que === 'nivel'){ aCambio = nombre; aNuevo = ''; } else { ntAbierta = nombre; }
+        pintarAlumnos();
+        const row = [...app.querySelectorAll('[data-alumno]')].find(x => x.dataset.alumno === nombre); if(row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      },
       fsub(x){ fSub = x; if(app && app.querySelector('.pn-finz')) mostrarFsub(); },
       async anotar(b){ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes}, b)); fMes = FIN.mes; if(app && app.querySelector("[data-pane='finanzas']")) pintarFinanzas(); return FIN; },
       fin: () => FIN,

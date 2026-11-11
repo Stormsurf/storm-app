@@ -119,6 +119,8 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
  *  Ej.: 4 niños = 2+2; 3 niños = 3; 5 niños = 2+3; 3 niños + 1 adulto = 2+2; 3 niños + 2 adultos = 2+3; 4 niños + 1 adulto = 2+3; 4 adultos + 1 niño = 5. */
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return t.length ? ' (' + t.join(', ') + ')' : ''; };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
+// Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
+const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago'];
 function cotizar(a, personas, menores, ninos) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   if (!(personas >= 1)) throw err('Elige cuántas personas son.');
@@ -573,7 +575,7 @@ async function quien(env, d) {
   throw err('Tu correo no está en la Escuela. Pídele a Isidora que lo agregue en Agenda Storm > Ajustes.');
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
-const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, instructores: parseLista(r.instructores),
+const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, fichasPapel: !!r.fichas_papel, instructores: parseLista(r.instructores),
   nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? r.link_pago : '' } : {}) });
 
 async function panel(env, q) {
@@ -701,7 +703,8 @@ async function datos(env, q, d) {
   const menores = d.menores != null ? Math.max(0, Math.min(personas, Math.floor(Number(d.menores) || 0))) : Math.min(personas, r.menores || 0);
   const num = v => Math.round(Number(String(v).replace(/\D/g, '')) || 0);
   const total = d.total != null && d.total !== '' ? num(d.total) : r.total;
-  const medio = ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : r.medio;
+  const medio = MEDIOS.includes(d.medio) ? d.medio : r.medio;
+  const papel = d.fichasPapel != null ? (d.fichasPapel ? 1 : 0) : (r.fichas_papel || 0);
   const dur = d.duracion != null && [60, 90, 120].includes(Number(d.duracion)) ? (Number(d.duracion) === a.duracion ? 0 : Number(d.duracion)) : (Number(r.duracion) || 0);
   const ins = parseLista(r.instructores);
   let viejo = null; try { viejo = JSON.parse(r.pagos || 'null'); } catch (_) {}
@@ -714,9 +717,9 @@ async function datos(env, q, d) {
     st.push(db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref));
     ins.forEach(i => bloquesDe(r.hora, dur || a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, fijo))));
   }
-  st.push(db.prepare('UPDATE reservas SET nombre = ?, telefono = ?, correo = ?, comentario = ?, personas = ?, menores = ?, total = ?, medio = ?, duracion = ?, pagos = ?, pago_instructor = ? WHERE ref = ?')
+  st.push(db.prepare('UPDATE reservas SET nombre = ?, telefono = ?, correo = ?, comentario = ?, personas = ?, menores = ?, total = ?, medio = ?, duracion = ?, pagos = ?, pago_instructor = ?, fichas_papel = ? WHERE ref = ?')
     .bind(nombre, d.telefono != null ? String(d.telefono).trim() : r.telefono, d.correo != null ? norm(d.correo) : r.correo, d.comentario != null ? String(d.comentario).trim().slice(0, 500) : r.comentario,
-      personas, menores, total, medio, dur, JSON.stringify(pagos), sumaPagos(pagos), r.ref));
+      personas, menores, total, medio, dur, JSON.stringify(pagos), sumaPagos(pagos), papel, r.ref));
   try { await db.batch(st); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Con esa duración choca con otra clase del instructor.'); throw x; }
   await anotar(db, q, 'datos ' + r.ref);
@@ -776,7 +779,7 @@ async function manual(env, q, d, ctx) {
   // Si van más instructores que los de la tabla (grupo grande), cada uno se paga como grupo
   const pagoManual = d.pagoInstructor === '' || d.pagoInstructor == null ? null : Math.round(Number(String(d.pagoInstructor).replace(/\D/g, '')) || 0);
   const conLink = d.medio === 'Link de pago';
-  const medio = conLink ? 'Mercado Pago' : ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : 'Transferencia';
+  const medio = conLink ? 'Mercado Pago' : MEDIOS.includes(d.medio) ? d.medio : 'Por pagar';
   if (conLink && !(total > 0)) throw err('Escribe el total a cobrar.');
   if (conLink && !env.MP_TOKEN) throw err('Falta conectar Mercado Pago (MP_TOKEN).');
   const duracion = [60, 90, 120].includes(Number(d.duracion)) && Number(d.duracion) !== a.duracion ? Number(d.duracion) : 0;
