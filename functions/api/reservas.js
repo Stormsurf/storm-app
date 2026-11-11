@@ -399,6 +399,7 @@ async function confirmar(env, r, monto, ctx) {
   }
   const final = Object.assign({}, r, { estado: 'pagada' });
   tarea(ctx, avisarReserva(env, final, a));
+  tarea(ctx, pushNueva(env, final, a, true));
   return 'pagada';
 }
 const tarea = (ctx, p) => { if (ctx && ctx.waitUntil) ctx.waitUntil(p.catch(e => console.error(e))); else return p.catch(e => console.error(e)); };
@@ -409,6 +410,50 @@ async function estado(env, d, ctx) {
   const est = await revisarPago(env, r, ctx);
   return { ok: true, estado: est, fecha: r.fecha, fechaLarga: fechaLarga(r.fecha), hora: r.hora, personas: r.personas, total: r.total, nombre: r.nombre.split(' ')[0], correo: r.correo,
     ficha: est === 'pagada' || est === 'revisar' ? linkFicha(r) : '' };
+}
+
+// ---------- notificaciones a la app (Panel Storm / Agenda Storm, OneSignal) ----------
+// Llegan a quien tenga la app con notificaciones activadas y haya entrado con ese correo. Requiere ONESIGNAL_KEY (secreto en Cloudflare).
+const ONESIGNAL_APP = 'be18352b-5820-4912-aa46-d851890394a3';
+async function enviarPush(env, correos, titulo, texto) {
+  const a = [...new Set((correos || []).map(norm).filter(Boolean))];
+  if (!env.ONESIGNAL_KEY || !a.length) return false;
+  const r = await fetch('https://api.onesignal.com/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: (/^os_v2_/.test(env.ONESIGNAL_KEY) ? 'Key ' : 'Basic ') + env.ONESIGNAL_KEY }, // llaves nuevas (os_v2_) o antiguas
+    body: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: 'push', include_aliases: { external_id: a }, headings: { en: titulo, es: titulo }, contents: { en: texto, es: texto }, url: PANEL }) });
+  if (!r.ok) console.error('push', r.status, await r.text());
+  return r.ok;
+}
+const correosDe = async (db, nombres) => (await db.prepare('SELECT nombre, correo FROM instructores').all()).results.filter(i => nombres.includes(i.nombre) && i.correo).map(i => i.correo);
+const diaCorto = f => { const t = fechaLarga(f); return t.charAt(0).toUpperCase() + t.slice(1); };
+const quienClase = r => r.nombre + ' · ' + r.personas + ' persona' + (r.personas === 1 ? '' : 's');
+/** Clase nueva: a los instructores de la clase y (si reservó el cliente) a las administradoras */
+async function pushNueva(env, r, a, aAdmins) {
+  const ins = parseLista(r.instructores), dur = durDe(a, r);
+  const cuando = diaCorto(r.fecha) + ' · ' + r.hora + ' a ' + deMin(aMin(r.hora) + dur);
+  const p = [enviarPush(env, await correosDe(env.DB, ins), 'Nueva clase particular 🏄', cuando + '\n' + quienClase(r) + (ins.length > 1 ? ' · con ' + ins.join(' y ') : ''))];
+  if (aAdmins) p.push(enviarPush(env, a.admins, 'Nueva reserva 🏄 ' + clp(r.total), cuando + '\n' + quienClase(r) + ' · ' + ins.join(' y ')));
+  await Promise.all(p);
+}
+/** Resumen del día siguiente (una vez, desde las 19:00): a cada instructor sus clases y a las administradoras todas */
+async function pushResumen(env, a) {
+  const t = ahoraChile();
+  if (aMin(t.hora) < aMin('19:00') || aMin(t.hora) > aMin('21:30')) return 0;
+  const man = sumarDias(t.fecha, 1);
+  const ya = await env.DB.prepare("SELECT valor FROM ajustes WHERE clave = 'resumenPush'").first();
+  if (ya && JSON.parse(ya.valor) === man) return 0;
+  await env.DB.prepare("INSERT OR REPLACE INTO ajustes (clave, valor) VALUES ('resumenPush', ?)").bind(JSON.stringify(man)).run();
+  const { results } = await env.DB.prepare("SELECT * FROM reservas WHERE fecha = ? AND estado IN ('pagada', 'revisar') ORDER BY hora").bind(man).all();
+  if (!results.length) return 0;
+  const porIns = {};
+  results.forEach(r => parseLista(r.instructores).forEach(i => (porIns[i] = porIns[i] || []).push(r)));
+  const linea = r => r.hora + ' ' + quienClase(r);
+  const lista = (await env.DB.prepare('SELECT nombre, correo FROM instructores').all()).results;
+  const p = Object.keys(porIns).map(i => { const l = porIns[i], c = (lista.find(x => x.nombre === i) || {}).correo;
+    return c ? enviarPush(env, [c], 'Mañana tienes ' + l.length + ' clase' + (l.length === 1 ? '' : 's') + ' 🌊', l.map(linea).join('\n')) : null; }).filter(Boolean);
+  p.push(enviarPush(env, a.admins, 'Mañana: ' + results.length + ' clase' + (results.length === 1 ? '' : 's') + ' particular' + (results.length === 1 ? '' : 'es') + ' 🌊',
+    Object.keys(porIns).map(i => i + ': ' + porIns[i].map(r => r.hora).join(', ')).join('\n')));
+  await Promise.all(p);
+  return results.length;
 }
 
 // ---------- correos ----------
@@ -503,7 +548,8 @@ async function revisionAutomatica(env, ctx) {
   }
   let anual = null; try { anual = await sincronizarAnual(env); } catch (x) { console.error(x); anual = { error: x.message }; }
   const rec = await recordatorios(env, a);
-  return { ok: true, revisadas: results.length, pagadas, recordatorios: rec, anual };
+  let resumen = 0; try { resumen = await pushResumen(env, a); } catch (x) { console.error(x); }
+  return { ok: true, revisadas: results.length, pagadas, recordatorios: rec, anual, resumen };
 }
 
 // ---------- Panel ----------
@@ -558,7 +604,7 @@ async function panel(env, q) {
     const pagoPor = {};
     porIns.results.forEach(r => { const p = pagosDe(r); Object.keys(p).forEach(i => { pagoPor[i] = (pagoPor[i] || 0) + p[i]; }); });
     out.mes = { mes, clases: m.n, total: m.total, pagoInstructores: m.pago, pagoPor };
-    out.faltaConfigurar = ['MP_TOKEN', 'CLAVE_CORREO', 'TAREA_CLAVE'].filter(k => !env[k]);
+    out.faltaConfigurar = ['MP_TOKEN', 'CLAVE_CORREO', 'TAREA_CLAVE', 'ONESIGNAL_KEY'].filter(k => !env[k]);
   } else {
     const mes = hoy.slice(0, 7);
     const porIns = await db.prepare("SELECT instructores, pago_instructor, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all();
@@ -610,7 +656,7 @@ async function finanzasMes(env, d) {
     instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor };
 }
 
-async function editar(env, q, d) {
+async function editar(env, q, d, ctx) {
   const db = env.DB, a = await ajustes(db);
   const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
   if (!r) throw err('No encontramos la reserva.');
@@ -629,12 +675,24 @@ async function editar(env, q, d) {
   try { await db.batch(st); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Ese instructor ya tiene otra clase a esa hora.'); throw x; }
   await anotar(db, q, 'editar ' + r.ref + ' → ' + fecha + ' ' + hora + ' ' + ins.join(', '));
+  if (r.estado === 'pagada' || r.estado === 'revisar') {
+    const antes = parseLista(r.instructores), nuevos = ins.filter(i => !antes.includes(i)), salen = antes.filter(i => !ins.includes(i));
+    const cuando = diaCorto(fecha) + ' · ' + hora, movida = fecha !== r.fecha || hora !== r.hora;
+    tarea(ctx, (async () => {
+      if (nuevos.length) await enviarPush(env, await correosDe(db, nuevos), 'Te asignaron una clase 🏄', cuando + '\n' + quienClase(r));
+      if (salen.length) await enviarPush(env, await correosDe(db, salen), 'Ya no tienes esta clase', diaCorto(r.fecha) + ' · ' + r.hora + '\n' + quienClase(r));
+      const siguen = ins.filter(i => antes.includes(i));
+      if (movida && siguen.length) await enviarPush(env, await correosDe(db, siguen), 'Clase cambiada de hora', 'Ahora: ' + cuando + '\n' + quienClase(r));
+    })());
+  }
   return panel(env, q);
 }
-async function cancelar(env, q, d) {
+async function cancelar(env, q, d, ctx) {
   const db = env.DB, ref = String(d.ref || '');
+  const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(ref).first();
   await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = TRIM(nota || ' ' || ?) WHERE ref = ?").bind(String(d.motivo || 'Cancelada en Agenda Storm'), ref)]);
   await anotar(db, q, 'cancelar ' + ref);
+  if (r && (r.estado === 'pagada' || r.estado === 'revisar') && r.fecha >= ahoraChile().fecha) tarea(ctx, (async () => enviarPush(env, await correosDe(db, parseLista(r.instructores)), 'Clase cancelada', diaCorto(r.fecha) + ' · ' + r.hora + '\n' + quienClase(r)))());
   return panel(env, q);
 }
 async function disponible(env, q, d) {
@@ -699,6 +757,7 @@ async function manual(env, q, d, ctx) {
     return out;
   }
   if (d.avisar && r.correo) tarea(ctx, avisarReserva(env, Object.assign({}, r, { instructores: JSON.stringify(ins) }), a));
+  tarea(ctx, pushNueva(env, Object.assign({}, r, { instructores: JSON.stringify(ins) }), a, false));
   return panel(env, q);
 }
 async function guardarInstructor(env, q, d) {
@@ -837,8 +896,8 @@ export async function onRequest(context) {
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (q.rol !== 'admin') throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
-    if (acc === 'editar') return json(await editar(env, q, d));
-    if (acc === 'cancelar') return json(await cancelar(env, q, d));
+    if (acc === 'editar') return json(await editar(env, q, d, context));
+    if (acc === 'cancelar') return json(await cancelar(env, q, d, context));
     if (acc === 'manual') return json(await manual(env, q, d, context));
     if (acc === 'instructor') return json(await guardarInstructor(env, q, d));
     if (acc === 'ajustes') return json(await guardarAjustes(env, q, d));
