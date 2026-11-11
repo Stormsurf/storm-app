@@ -148,6 +148,9 @@
   .es-tg:after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
   .es-sw input:checked+.es-tg{background:#0f6e74}.es-sw input:checked+.es-tg:after{left:19px}
   .es-ajt{margin-bottom:12px}
+  .es-op{padding:12px 0;border-bottom:1px solid var(--line)}.es-op:last-child{border-bottom:0}.es-op b{font-size:1.4rem}.es-op p{margin:3px 0 8px;font-size:1.25rem;color:#6b6a67}
+  .es-op select{border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:1.35rem;background:#fff;max-width:100%}
+  .es-op .es-f{margin-top:10px}
   .es-toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;background:#1f2b2b;color:#fff;border-radius:14px;padding:12px 16px;font-size:1.4rem;max-width:min(92vw,520px);box-shadow:0 10px 30px rgba(0,0,0,.18);animation:esT 5s forwards}
   .es-toast.mal{background:#8a2f22}
   .es-ti{flex:none;width:24px;height:24px;border-radius:50%;background:#2f9a6a;display:grid;place-items:center;font-weight:800;font-size:1.3rem}.es-toast.mal .es-ti{background:#fff;color:#8a2f22}
@@ -511,10 +514,15 @@
         <label>Se puede reservar con hasta… días de anticipación<input id='es-dias' type='number' min='1' value='${a.diasAdelante}'></label>
         <label class='w'>Horas en que parten las clases (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>
         <label class='w'>Lugar (sale en el comprobante)<input id='es-lugar' value='${esc(a.lugar)}'></label></div>
-        <details class='es-det'><summary>Opciones avanzadas</summary><div class='es-f'>
-          <label>Clases seguidas por instructor (máximo)<input id='es-seg' type='number' min='1' value='${a.maxSeguidas || 2}'></label>
-          <label>Clases desde esta hora se reservan el mismo día (23:59 = ninguna)<input id='es-tarde' value='${esc(a.horaTarde)}'></label>
-          <label>Para esas, anticipación mínima (horas)<input id='es-min' type='number' min='0' value='${a.minHoras}'></label></div></details>
+        <details class='es-det'><summary>Opciones avanzadas</summary>
+          <div class='es-op'><b>Clases seguidas</b><p>¿Cuántas clases puede hacer un instructor una tras otra sin descanso?</p>
+            <select id='es-seg'>${[1, 2, 3, 4].map(n => `<option value='${n}'${+(a.maxSeguidas || 2) === n ? ' selected' : ''}>${n === 1 ? '1 clase (siempre con descanso)' : n + ' clases seguidas'}</option>`).join('')}</select></div>
+          <div class='es-op'><b>Reservar el mismo día</b><p>Hoy todas las clases se reservan hasta las ${esc(a.cierreNoche)} del día anterior. En verano puedes dejar que las de la tarde se reserven el mismo día.</p>
+            <label class='es-sw' style='color:var(--ink)'><input type='checkbox' id='es-mismo'${a.horaTarde && a.horaTarde < '23:00' ? ' checked' : ''}><span class='es-tg'></span>Permitir reservar el mismo día</label>
+            <div class='es-f es-mismo'${a.horaTarde && a.horaTarde < '23:00' ? '' : " style='display:none'"}>
+              <label>Las clases desde las…<select id='es-tarde'>${['12:00', '13:00', '13:30', '15:00', '16:30'].map(x => `<option${a.horaTarde === x || (a.horaTarde >= '23:00' && x === '13:00') ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+              <label>…se pueden reservar hasta<select id='es-min'>${[1, 2, 3, 4, 6].map(n => `<option value='${n}'${+a.minHoras === n ? ' selected' : ''}>${n} hora${n === 1 ? '' : 's'} antes</option>`).join('')}</select></label></div></div>
+        </details>
         <div class='es-acc'><button class='es-btn' data-aj='reglas'>Guardar</button></div><p class='es-err vivo'></p></div>
         <div class='pn-card es-como'><h3>Así funciona hoy</h3><ul>
           <li>Todas las clases se reservan hasta las ${esc(a.cierreNoche)} del día anterior.</li>
@@ -629,6 +637,7 @@
     // ajustes
     $$('[data-ia]').forEach(c => c.onchange = () => { c.parentElement.lastChild.textContent = c.checked ? 'Activo' : 'Inactivo'; });
     $$('[data-irv]').forEach(b => b.onclick = () => { sub = b.dataset.irv; verPasadas = false; filtroIns = ''; pintar(); window.scrollTo({ top: 0 }); });
+    const mi = $('#es-mismo'); if (mi) mi.onchange = () => { $('.es-mismo').style.display = mi.checked ? '' : 'none'; };
     $$('[data-ajt]').forEach(b => b.onclick = () => { ajTab = b.dataset.ajt; msg = ''; pintar(); });
     $$('[data-sync]').forEach(b => b.onclick = () => accion({ accion: 'sincronizar' }, b).then(ok => { if (ok) { msg = 'Academia Anual actualizada.'; pintar(); } }));
     $$('[data-fdel]').forEach(b => b.onclick = () => accion({ accion: 'fijo', borrar: b.dataset.fdel }, b));
@@ -643,7 +652,7 @@
         const precios = {}, pagos = {}; $$('[data-pr]').forEach(i => precios[i.dataset.pr] = i.value); $$('[data-pa]').forEach(i => pagos[i.dataset.pa] = i.value);
         if (await accion({ accion: 'ajustes', precios, pagos }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
       }
-      if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, maxSeguidas: $('#es-seg').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-tarde').value, cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
+      if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, maxSeguidas: $('#es-seg').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-mismo').checked ? $('#es-tarde').value : '23:59', cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
       if (t === 'admins' && await accion({ accion: 'ajustes', admins: $('#es-adm').value.split(/[,\s]+/).filter(Boolean) }, b)) { msg = 'Administradores guardados.'; pintar(); }
       if (t === 'instructores') {
         b.disabled = true; b.textContent = 'Guardando…';
