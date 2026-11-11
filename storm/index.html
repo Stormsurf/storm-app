@@ -60,6 +60,45 @@ main .pn{max-width:1440px}
 .sp-vacio{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:#8a8986;font-size:1.35rem;margin-top:8px}
 .sp-pronto{background:#fff;border-radius:18px;padding:22px;border:1px solid var(--line)}
 .sp-pronto h3{margin:0 0 6px}.sp-pronto p{margin:0;font-size:1.4rem;color:#55544f;line-height:1.5}
+/* Anual / Verano / Finanzas con el mismo diseño de la plataforma (cada academia mantiene su color) */
+.sp-panel .pn-tabs{gap:6px;margin:16px 0 4px;padding:0}
+.sp-panel .pn-tab{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:1.35rem;font-weight:600}
+.sp-panel .pn-tab.on{background:var(--aa);border-color:var(--aa);color:#fff}
+.sp-panel .pn-tab i{background:#e0a03a}
+.sp-panel .pn-stats{gap:10px;margin-top:4px}
+.sp-panel .pn-stat{border-radius:18px;padding:14px 16px}
+.sp-panel .pn-stat--warn{background:#fff;box-shadow:inset 5px 0 0 #e0a03a}
+.sp-panel .pn-stat--warn b{color:#b5662b}
+.sp-panel .pn-card{border-radius:18px;box-shadow:inset 5px 0 0 var(--aa)}
+.sp-panel .pn-cancel{box-shadow:inset 5px 0 0 #c9c6c0;opacity:.7}
+.sp-panel .pn-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sp-panel .pn-chip{display:inline-flex;align-items:center;gap:7px;padding:4px 12px 4px 4px;background:#fff;border:1px solid var(--line)}
+.sp-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:1.1rem;font-weight:700;color:#fff;flex:none}
+.sp-panel .pn-wa{width:44px;height:44px;padding:0;justify-content:center;font-size:0;border-radius:50%}
+.sp-panel .pn-wa svg{width:22px;height:22px}
+.sp-panel .pn-paid{background:#2f9a6a;border-color:#2f9a6a;color:#fff;padding:9px 14px}
+.sp-panel .pn-row{gap:10px}
+.sp-panel .pn-verano{--aa:#e0b43a;--aa-dk:#7a5a00;--aa-soft:#FFF4CC}
+.sp-panel .pn-verano .pn-tab.on,.sp-panel .pn-verano .pn-gbtn.on{color:#3B2610}
+.sp-panel .pn-finz{--aa:#2C2C2B;--aa-dk:#2C2C2B;--aa-soft:#eeece8}
+.sp-panel .pn-fsub{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.sp-panel .pn-fsub button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:1.35rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.sp-panel .pn-fsub button.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
+.sp-top{flex-wrap:wrap}
+.sp-bus{position:relative;flex:1 1 100%;order:2}
+.sp-bus>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8a8986;display:flex}.sp-bus>span svg{width:20px;height:20px}
+.sp-bus input{width:100%;box-sizing:border-box;border:1px solid var(--line);background:#fff;border-radius:999px;padding:11px 14px 11px 42px;font:inherit;font-size:1.45rem;color:var(--ink)}
+.sp-bus input:focus{outline:none;border-color:#0f6e74}
+.sp-res{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:35;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.12);padding:6px;max-height:60vh;overflow:auto}
+.sp-ri{display:flex;align-items:center;gap:6px}
+.sp-ri button{flex:1;display:flex;align-items:center;gap:12px;border:0;background:none;font:inherit;text-align:left;padding:9px 8px;border-radius:12px;cursor:pointer;color:var(--ink);min-width:0}
+.sp-ri button:hover{background:#F3F1EC}
+.sp-ri .sp-av{width:36px;height:36px;font-size:1.25rem}
+.sp-ri b{display:block;font-size:1.45rem;font-weight:600}.sp-ri small{display:block;font-size:1.2rem;color:#8a8986}
+.sp-ri em{margin-left:auto;flex:none;font-style:normal;font-size:1.1rem;font-weight:700;border-radius:999px;padding:3px 10px;background:#E3F1F1;color:#0f6e74}.sp-ri em.a{background:#E6F1F8;color:#2d6e94}
+.sp-wa{flex:none;width:38px;height:38px;border-radius:50%;background:#25D366;color:#fff;display:grid;place-items:center}.sp-wa svg{width:20px;height:20px}
+.sp-nada{margin:10px;color:#8a8986;font-size:1.35rem}
+@media (min-width:1000px){.sp-bus{flex:0 1 360px;order:0}}
 @media (min-width:640px){.sp-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (min-width:1000px){
   .sp-app{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;align-items:start;margin-top:8px}
@@ -107,6 +146,7 @@ main .pn{max-width:1440px}
     mas: sv("<circle cx='5' cy='12' r='1.6'/><circle cx='12' cy='12' r='1.6'/><circle cx='19' cy='12' r='1.6'/>"),
     pago: sv("<rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18'/>"),
     ficha: sv("<rect x='5' y='3.5' width='14' height='17' rx='2.5'/><path d='M9 9h6M9 13h6M9 17h3'/>"),
+    lupa: sv("<circle cx='11' cy='11' r='6.5'/><path d='m20 20-4-4'/>"),
     grupo: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M17 11v6M14 14h6'/>")
   };
   const TIT = { hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academia Anual', verano: 'Academia de Verano', adultos: 'Academia de Adultos', finanzas: 'Finanzas' };
@@ -175,15 +215,17 @@ main .pn{max-width:1440px}
   function abrir(){
     if(!auth) return login();
     root.innerHTML = `<div class='sp-app'>${nav()}<div class='sp-main'>
-      <div class='sp-top'><div><h1></h1><p></p></div></div>
+      <div class='sp-top'><div><h1></h1><p></p></div><div class='sp-bus'><span>${I.lupa}</span><input id='sp-q' type='search' placeholder='Buscar alumno o cliente' autocomplete='off'><div class='sp-res' hidden></div></div></div>
       <div class='sp-area' data-a='hoy'></div>
       <div class='sp-area' data-a='particulares' hidden><div class='pn-escuela'></div></div>
       <div class='sp-area sp-panel' data-a='panel' hidden><div class='sp-pn'></div></div>
       <div class='sp-area' data-a='adultos' hidden><div class='sp-pronto'><h3>Academia de Adultos</h3><p>La estamos armando: asistencia (los alumnos marcan "Vine" y Emerson pasa lista), quién debe y el pago de Emerson. Cuando la apruebes, aparece aquí.</p></div></div>
     </div></div>`;
     StormEscuela.cargar(root.querySelector('.pn-escuela'), auth, salir);
-    StormPanel.montar(root.querySelector('.sp-pn'), auth);
+    const pn = root.querySelector('.sp-pn'); StormPanel.montar(pn, auth);
+    let rz = 0; new MutationObserver(() => { if(rz) return; rz = requestAnimationFrame(() => { rz = 0; realzar(pn); }); }).observe(pn, { childList: true, subtree: true });
     ir(area);
+    buscador();
     // los datos llegan solos: refrescamos Hoy y el menú cuando cambian
     let firma = '';
     setInterval(() => {
@@ -263,6 +305,49 @@ main .pn{max-width:1440px}
       if(a === 'particulares' && s) StormEscuela.ir(s);
       if(a === 'anual' && s) setTimeout(() => StormPanel.tab(s), 50);
     });
+  }
+  // ---------- buscador: una persona, todas las áreas ----------
+  const norm = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function personas(){
+    const out = [], ya = {};
+    const add = (n, tipo, sub, go, tel) => { const k = norm(n) + '|' + tipo; if(!n || ya[k]) return; ya[k] = 1; out.push({ n, tipo, sub, go, tel }); };
+    const E = StormEscuela.datos(), P = StormPanel.datos();
+    if(E) E.reservas.slice().reverse().forEach(r => add(r.nombre, 'Particular', (r.fecha >= E.hoy ? 'Próxima clase ' : 'Última clase ') + r.fecha.split('-').reverse().slice(0, 2).join('/') + ' ' + r.hora, 'particulares:reservas', r.telefono));
+    if(P){
+      (P.clases || []).forEach(c => (c.alumnos || []).forEach(a => add(a.nombre, 'Anual', a.grupo || '', 'anual:alumnos')));
+      ((P.actual || {}).faltan || []).forEach(f => { f.alumnos.forEach(a => add(a, 'Anual', 'Falta pagar este mes', 'anual:pagos', f.telefono)); if(f.apoderado) add(f.apoderado, 'Apoderado', 'de ' + f.alumnos.join(' y '), 'anual:pagos', f.telefono); });
+      ((P.actual || {}).pagaron || []).forEach(x => add(x.alumno, 'Anual', 'Plan ' + (x.plan || '') + (x.grupo ? ' · ' + x.grupo : ''), 'anual:alumnos'));
+    }
+    return out;
+  }
+  function buscador(){
+    const q = root.querySelector('#sp-q'), res = root.querySelector('.sp-res'); if(!q) return;
+    const pintar = () => {
+      const t = norm(q.value.trim()); if(t.length < 2){ res.hidden = true; return; }
+      const l = personas().filter(x => norm(x.n).split(/\s+/).some(w => w.startsWith(t)) || norm(x.n).includes(t)).slice(0, 12);
+      res.hidden = false;
+      res.innerHTML = l.length ? l.map((x, i) => { let k = 0; for(const ch of x.n) k = (k * 31 + ch.charCodeAt(0)) % 997;
+        return `<div class='sp-ri'><button data-ri='${i}'><span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(x.n.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span><span><b>${esc(x.n)}</b><small>${esc(x.sub)}</small></span><em class='${x.tipo === 'Particular' ? '' : 'a'}'>${x.tipo}</em></button>${wa(x.tel) ? `<a class='sp-wa' href='https://wa.me/${wa(x.tel)}' target='_blank' rel='noopener' aria-label='WhatsApp'>${WA}</a>` : ''}</div>`; }).join('')
+        : `<p class='sp-nada'>No encontré a nadie con ese nombre.</p>`;
+      res.querySelectorAll('[data-ri]').forEach(b => b.onclick = () => {
+        const x = l[+b.dataset.ri], [a, s2] = x.go.split(':'); q.value = ''; res.hidden = true;
+        ir(a); if(a === 'particulares') StormEscuela.ir(s2); else setTimeout(() => StormPanel.tab(s2), 60);
+      });
+    };
+    q.oninput = pintar; q.onfocus = pintar;
+    document.addEventListener('click', e => { if(!e.target.closest('.sp-bus')) res.hidden = true; });
+  }
+  const wa = t => { let n = String(t || '').replace(/\D/g, ''); if(n.length === 9 && n[0] === '9') n = '56' + n; if(n.length === 8) n = '569' + n; return n.length >= 10 ? n : ''; };
+  const COL = ['#0f6e74', '#2d6e94', '#b5662b', '#7a5a9e', '#2f7a4d', '#a6402c', '#5b6b7a', '#9a7b1f'];
+  const WA = `<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 2.2a9.7 9.7 0 0 0-8.4 14.6L2.2 21.8l5.1-1.3A9.7 9.7 0 1 0 12 2.2Zm0 17.7c-1.5 0-2.9-.4-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 19.9Zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.8 1c-.1.2-.3.2-.5.1a6.6 6.6 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1l-.4-.2Z'/></svg>`;
+  function realzar(el){
+    el.querySelectorAll('.pn-chip:not([data-av])').forEach(c => {
+      c.dataset.av = 1; const t = c.textContent.replace(/[↪\s]+/, ' ').trim(); if(!t) return;
+      const ini = t.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      let k = 0; for(const ch of t) k = (k * 31 + ch.charCodeAt(0)) % 997;
+      c.insertAdjacentHTML('afterbegin', `<span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(ini)}</span>`);
+    });
+    el.querySelectorAll('.pn-wa:not([data-ic])').forEach(a => { a.dataset.ic = 1; a.title = a.title || 'WhatsApp'; a.setAttribute('aria-label', 'WhatsApp'); a.innerHTML = WA; });
   }
   const sumar = (f, n) => { const d = new Date(f + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
   abrir();
