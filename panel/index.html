@@ -1049,16 +1049,19 @@
   }
   async function load(){
     if(!auth) return login();
-    const viejo = cacheLeer('anual');
+    let viejo = cacheLeer('anual');
     let tocado = false;
     const tocar = () => { tocado = true; };
-    if(viejo){ render(viejo); app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); }
+    // Si lo guardado ya no se puede mostrar (datos viejos o de otro programa), se borra y se espera lo nuevo.
+    if(viejo){ try{ render(viejo); } catch(e){ console.warn('Panel: datos guardados no sirven', e); viejo = null; try{ localStorage.removeItem(KEY+'-datos'); }catch(_){} } }
+    if(viejo){ app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); }
     else app.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div><div class='pn-skel'></div>`;
     try{
       const d = await post(Object.assign({}, auth, {accion:'panel'}));
-      cacheGuardar('anual', d);
+      if(!d.actual && d.rol !== 'instructor') throw new Error('El programa de la planilla Anual no respondió como Panel. Revisa que esté pegado el programa de la Academia Anual.');
       if(viejo && JSON.stringify(viejo) === JSON.stringify(d)) return;
-      if(!viejo || !tocado) return render(d);
+      if(!viejo || !tocado){ render(d); cacheGuardar('anual', d); return; }
+      cacheGuardar('anual', d);
       // Ya estás usando el Panel: no te cambiamos la pantalla, te dejamos el botón para actualizar.
       if(!app.querySelector('.pn-nuevo')) app.insertAdjacentHTML('afterbegin', `<button class='pn-nuevo' style='display:block;width:100%;margin:0 0 10px;padding:10px;border:0;border-radius:12px;background:#0f6e74;color:#fff;font:inherit;cursor:pointer'>Hay datos nuevos · Toca para actualizar</button>`);
       app.querySelector('.pn-nuevo').onclick = () => render(d);
