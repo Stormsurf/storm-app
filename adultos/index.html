@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Academia de Adultos · Storm</title>
+<meta name="theme-color" content="#EFECE8">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="apple-touch-icon" href="/icons/storm-app-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1">
+<style>
+.ad{--ac:#4F7F86;--ac-dk:#335a60;--ac-soft:#E3EDEE;--ink:#2C2C2B;--line:rgba(44,44,43,.09);max-width:560px;margin:0 auto;padding:0 16px 40px;color:var(--ink)}
+.ad-hero{text-align:center;margin-top:10px}
+.ad-hero small{display:block;font-size:1.2rem;letter-spacing:.12em;text-transform:uppercase;opacity:.55;font-weight:600}
+.ad-hero h1{margin:4px 0 0;font-weight:500;font-size:3rem;line-height:1.15}
+.ad-hero p{margin:8px auto 0;max-width:40ch;font-size:1.5rem;opacity:.75}
+.ad-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:16px}
+.ad-info{display:grid;gap:10px;font-size:1.45rem}
+.ad-info div{display:flex;gap:10px;align-items:flex-start}
+.ad-info i{font-style:normal;flex:none}
+.ad-h2{margin:26px 0 0;font-weight:500;font-size:2rem;display:flex;align-items:center;gap:10px}
+.ad-h2:before{content:'';width:10px;height:10px;border-radius:50%;background:var(--ac);flex:none}
+.ad-pay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.ad-opt{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;text-align:left;font:inherit;cursor:pointer;color:var(--ink)}
+.ad-opt b{display:block;font-size:2rem;font-weight:600}
+.ad-opt small{opacity:.65;font-size:1.25rem}
+.ad-opt.on{border-color:var(--ac);background:var(--ac-soft);box-shadow:inset 0 0 0 1px var(--ac)}
+.ad-in{display:block;width:100%;margin-top:10px;border:1.5px solid rgba(44,44,43,.18);border-radius:12px;padding:13px 14px;font:inherit;font-size:1.6rem;background:#fff;color:var(--ink)}
+.ad-in:focus{outline:none;border-color:var(--ac)}
+.ad-go{display:block;width:100%;margin-top:16px;border:0;border-radius:999px;background:var(--ac);color:#fff;font:inherit;font-weight:700;font-size:1.6rem;padding:15px;cursor:pointer}
+.ad-go[disabled]{opacity:.6}
+.ad-err{margin-top:12px;padding:12px 14px;border-radius:12px;background:#F6E3DF;font-size:1.4rem}
+.ad-note{font-size:1.3rem;opacity:.65;margin-top:14px;line-height:1.5;text-align:center}
+</style>
+</head>
+<body>
+<header class="ap-top"><a href="https://www.stormsurf.cl" aria-label="Storm"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></a></header>
+<main class="ad">
+  <div class="ad-hero"><small>Storm Surf Academy</small><h1>Academia de Adultos</h1><p>Clases de surf para adultos en Playa de Matanzas, con un instructor de Storm.</p></div>
+  <div class="ad-card ad-info">
+    <div><i>📅</i><span>Lunes y sábados de 9:00 a 11:00.</span></div>
+    <div><i>🌊</i><span>Si el pronóstico obliga a cambiar la clase, te avisamos en la app y por WhatsApp.</span></div>
+    <div><i>📱</i><span>En la app Storm ves tus clases, cuántas te quedan y marcas cuando vas.</span></div>
+  </div>
+  <h2 class="ad-h2">Elige tu plan</h2>
+  <div class="ad-pay" id="planes">
+    <button class="ad-opt on" data-plan="4 clases"><small>4 clases · 6 semanas</small><b>$60.000</b><small>Sale $15.000 la clase</small></button>
+    <button class="ad-opt" data-plan="8 clases"><small>8 clases · 6 semanas</small><b>$100.000</b><small>Sale $12.500 la clase</small></button>
+    <button class="ad-opt" data-plan="Suelta" style="grid-column:1/-1"><small>Clase suelta</small><b>$18.000</b><small>Con un plan te ahorras hasta $5.500 por clase</small></button>
+  </div>
+  <h2 class="ad-h2">Tus datos</h2>
+  <div class="ad-card">
+    <input class="ad-in" id="nombre" autocomplete="name" placeholder="Nombre y apellido" style="margin-top:0">
+    <input class="ad-in" id="correo" type="email" autocomplete="email" placeholder="tu@correo.cl">
+    <input class="ad-in" id="tel" type="tel" autocomplete="tel" placeholder="Teléfono (WhatsApp)">
+    <button class="ad-go" id="pagar">Pagar con Mercado Pago</button>
+    <div id="err"></div>
+    <p class="ad-note">Usa este mismo correo para entrar después a la app Storm.</p>
+  </div>
+  <p class="ad-note">¿Ya eres alumno? <a href="/">Entra a Mi clase</a> · <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>
+</main>
+<script>
+(() => {
+  const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
+  let plan = '4 clases';
+  const $ = s => document.querySelector(s);
+  document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => { plan = b.dataset.plan; document.querySelectorAll('[data-plan]').forEach(x => x.classList.toggle('on', x === b)); });
+  const err = t => { $('#err').innerHTML = t ? `<div class="ad-err">${t.replace(/[<>&]/g, '')}</div>` : ''; };
+  $('#pagar').onclick = async () => {
+    const nombre = $('#nombre').value.trim(), correo = $('#correo').value.trim().toLowerCase(), telefono = $('#tel').value.trim();
+    if(!nombre) return err('Escribe tu nombre.');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return err('Revisa tu correo.');
+    err(''); const b = $('#pagar'); b.disabled = true; b.textContent = 'Abriendo Mercado Pago…';
+    try{
+      const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({accion:'adultos-inscribir', nombre, correo, telefono, plan})});
+      const d = await r.json(); if(!d.ok) throw new Error(d.error || 'No se pudo crear el pago.');
+      location.href = d.url;
+    }catch(x){ err(x.message); b.disabled = false; b.textContent = 'Pagar con Mercado Pago'; }
+  };
+})();
+</script>
+</body>
+</html>
