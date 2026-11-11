@@ -370,6 +370,15 @@ body:has(.mc-hero--login) .ap-top{display:none}
     return d;
   }
   const call = body => post(Object.assign({}, auth, body));
+  // Uso de la app: avisa al programa cuándo entra la familia y qué recurso abre (solo correo, fecha y qué abrió).
+  function uso(que, detalle){
+    if(!auth || !API) return;
+    if(que === 'entro'){ const k = 'storm-uso-' + new Date().toISOString().slice(0,10); try{ if(localStorage.getItem(k)) return; localStorage.setItem(k, '1'); }catch(_){} }
+    const ap = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const av = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    try{ fetch(API, {method:'POST', keepalive:true, headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({}, auth, {accion:'uso', que, detalle: detalle || '', app: ap, avisos: av}))}).catch(()=>{}); }catch(_){}
+  }
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a.mc-res'); if(!a) return; const r = RECURSOS.find(x => x.url === new URL(a.href, location.href).pathname); if(r) uso('recurso', r.titulo); });
 
   // ---------- Entrar con código ----------
   function login(email, err, paso){
@@ -961,6 +970,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
       const adu = call({accion:'adultos-mi'}).catch(() => null);
       const [a, v, ad] = await Promise.all([anu, ver, adu]);
       if(!a && !(v && v.hijos && v.hijos.length) && !(ad && ad.alumno)){ if(viejo) return; throw new Error('No pudimos cargar tus clases. Intenta de nuevo en un rato.'); }
+      uso('entro');
       const nuevo = {anual: a || {alumnos:[]}, verano: v, adultos: ad && ad.alumno ? ad : null};
       guardarDatos(nuevo);
       if(viejo && JSON.stringify(viejo) === JSON.stringify(nuevo)) return;

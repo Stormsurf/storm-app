@@ -73,6 +73,12 @@
 .pn-tu{display:inline-block;background:var(--aa);color:#fff;border-radius:999px;padding:1px 8px;font-size:1.1rem;font-weight:700;margin-left:6px;vertical-align:1px}
 .pn-verano .pn-tu{background:#FADF70;color:#3B2610}
 .pn-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pn-uso{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pn-uso div{background:#f4f1ec;border-radius:14px;padding:12px 14px}
+.pn-uso small{display:block;font-size:1.2rem;opacity:.65;line-height:1.3}
+.pn-uso b{display:block;font-size:2.2rem;font-weight:600;line-height:1.15;margin-top:2px}
+.pn-uso b span{font-size:1.4rem;font-weight:500;opacity:.55}
+.pn-uso__h{font-size:1.3rem;font-weight:600;margin:16px 0 2px;opacity:.8}
 .pn-chip{font-size:1.35rem;padding:5px 11px;border-radius:999px;background:#f4f1ec}
 .pn-chip--in{background:var(--ok-soft);color:var(--ok)}
 .pn-cancel{opacity:.55}
@@ -472,6 +478,18 @@
       <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
         ${d.sinGrupo.length ? `<div class='pn-chips' style='margin-top:10px'>${d.sinGrupo.map(n=>`<span class='pn-chip'>${esc(n)}</span>`).join('')}</div><p class='pn-sub' style='margin-top:10px'>Anótalos en la pestaña Alumnos de la planilla (columna amarilla).</p>` : `<p class='pn-empty'>Todos tienen grupo. 👌</p>`}
       </div>
+      ${d.uso ? (() => { const u = d.uso, de = n => `<span>de ${u.familias}</span>`;
+        return `<div class='pn-card'><h3>Uso de la app</h3>
+        <p class='pn-sub'>Familias de la Academia Anual de este mes con correo (${u.familias}). Se cuenta desde el ${esc(dm(u.desde).replace('pagó el ',''))}.</p>
+        <div class='pn-uso'><div><small>Entraron esta semana</small><b>${u.semana} ${de()}</b></div><div><small>Entraron este mes</small><b>${u.mes} ${de()}</b></div>
+          <div><small>Con la app instalada</small><b>${u.app} ${de()}</b></div><div><small>Con avisos activados</small><b>${u.avisos} ${de()}</b></div></div>
+        <p class='pn-uso__h'>Recursos más vistos (últimos 30 días)</p>
+        ${u.recursos.length ? u.recursos.map(r => `<div class='pn-row'><div><b>${esc(r.titulo)}</b></div><span class='pn-amt'>${r.familias} ${r.familias === 1 ? 'familia' : 'familias'}</span></div>`).join('') : `<p class='pn-empty'>Todavía nadie abre un recurso.</p>`}
+        <p class='pn-uso__h'>No han entrado nunca${u.nunca.length ? ` (${u.nunca.length})` : ''}</p>
+        ${u.nunca.length ? u.nunca.map(f => `<div class='pn-row pn-row--wrap'><div><b>${esc(f.apoderado || f.correo)}</b><small>${esc(f.alumnos.join(', '))}</small></div><div class='pn-acts'>${wa(f.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(f.telefono)}?text=${encodeURIComponent('Hola '+String(f.apoderado||'').split(' ')[0]+'! Te comparto Mi clase de Storm, donde ves las clases de '+f.alumnos.join(' y ')+', los avisos y recursos para la familia: https://app.stormsurf.cl · Entras con el correo que usaste al pagar y te llega un código.')}'>WhatsApp</a>` : ''}</div></div>`).join('') : `<p class='pn-empty'>Todas las familias ya entraron. 👌</p>`}
+        ${u.sinCorreo ? `<p class='pn-sub' style='margin-top:10px'>${u.sinCorreo} ${u.sinCorreo === 1 ? 'alumno no tiene' : 'alumnos no tienen'} correo en la planilla, así que no se pueden contar.</p>` : ''}
+        ${u.otras ? `<p class='pn-sub' style='margin-top:6px'>Además, ${u.otras} ${u.otras === 1 ? 'familia' : 'familias'} de otras academias (Verano) entraron esta semana.</p>` : ''}
+      </div>`; })() : ''}
       <div class='pn-card'><h3>Encuesta a las familias${d.encuesta?`<span class='pn-count'>${d.encuesta.respuestas}</span>`:''}</h3>
         ${d.encuesta ? `<p class='pn-sub'>${esc(cap(d.encuesta.mes))}: promedio <b>${String(d.encuesta.promedio).replace('.',',')}</b> de 5 <span class='pn-stars'>${'★'.repeat(Math.round(d.encuesta.promedio))}</span></p>
           ${d.encuesta.comentarios.map(c => `<div class='pn-row'><div><b>${esc(c.alumno)} <span class='pn-stars'>${'★'.repeat(c.nota)}</span></b><small>“${esc(c.comentario)}”</small></div></div>`).join('')}`
