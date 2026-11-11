@@ -99,6 +99,20 @@ main .pn{max-width:1440px}
 .sp-wa{flex:none;width:38px;height:38px;border-radius:50%;background:#25D366;color:#fff;display:grid;place-items:center}.sp-wa svg{width:20px;height:20px}
 .sp-nada{margin:10px;color:#8a8986;font-size:1.35rem}
 @media (min-width:1000px){.sp-bus{flex:0 1 360px;order:0}}
+.sp-fi>div{position:relative;max-height:88vh;overflow:auto;background:#EFECE8;padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
+.sp-fx{position:absolute;right:12px;top:12px;width:38px!important;height:38px;border-radius:50%!important;background:#fff!important;justify-content:center;padding:0!important;font-size:1.5rem!important;border:0!important;color:#555!important}
+.sp-fh{display:flex;align-items:center;gap:14px;margin-bottom:14px}.sp-fh .sp-av{width:58px;height:58px;font-size:2rem}
+.sp-fh h2{margin:0;font-size:2.2rem;font-weight:600;line-height:1.15}.sp-fh p{margin:2px 0 0;color:#8a8986;font-size:1.3rem}
+.sp-fc{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sp-fc a{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:12px;background:#fff;color:#0f6e74;text-decoration:none;font-weight:700;font-size:1.4rem;border:1px solid var(--line)}
+.sp-fc a.w{background:#25D366;color:#fff;border-color:#25D366}.sp-fc svg{width:22px;height:22px}
+.sp-fb{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#fff;border-radius:16px;padding:14px;box-shadow:inset 5px 0 0 #61A1C8}
+.sp-fb small{display:block;font-size:1.15rem;color:#8a8986}.sp-fb b{font-size:1.45rem;font-weight:600}.sp-fb b.pend{color:#b5662b}.sp-fb b.ok{color:#2f7a4d}
+.sp-fr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;background:#fff;border-radius:14px;padding:11px 14px;margin-top:6px;box-shadow:inset 5px 0 0 #2f9a6a}
+.sp-fr b{font-size:1.4rem}.sp-fr span{grid-column:1;font-size:1.2rem;color:#8a8986}.sp-fr em{grid-row:1/3;grid-column:2;align-self:center;font-style:normal;font-size:1.15rem;font-weight:700;border-radius:999px;padding:3px 10px;background:#e5f2ea;color:#2f7a4d}
+.sp-fr.pend{box-shadow:inset 5px 0 0 #e0a03a}.sp-fr.pend em{background:#fbeee2;color:#b5662b}.sp-fr.gris{opacity:.6;box-shadow:inset 5px 0 0 #c9c6c0}.sp-fr.gris em{background:#eeece8;color:#8a8986}
+.sp-fgo{display:block!important;width:100%;margin-top:8px;border:0!important;background:none!important;color:#0f6e74!important;font-weight:700;font-size:1.35rem!important;padding:8px 4px!important;text-align:right!important}
+@media (min-width:1000px){.sp-fi{align-items:center;justify-content:center}.sp-fi>div{max-width:560px;border-radius:22px}}
 @media (min-width:640px){.sp-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (min-width:1000px){
   .sp-app{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;align-items:start;margin-top:8px}
@@ -146,6 +160,7 @@ main .pn{max-width:1440px}
     mas: sv("<circle cx='5' cy='12' r='1.6'/><circle cx='12' cy='12' r='1.6'/><circle cx='19' cy='12' r='1.6'/>"),
     pago: sv("<rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18'/>"),
     ficha: sv("<rect x='5' y='3.5' width='14' height='17' rx='2.5'/><path d='M9 9h6M9 13h6M9 17h3'/>"),
+    tel: sv("<path d='M5 3.5h3.2l1.6 4-2 1.3a11 11 0 0 0 5.4 5.4l1.3-2 4 1.6V17a3 3 0 0 1-3 3A14.5 14.5 0 0 1 2 6.5a3 3 0 0 1 3-3Z'/>"),
     lupa: sv("<circle cx='11' cy='11' r='6.5'/><path d='m20 20-4-4'/>"),
     grupo: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M17 11v6M14 14h6'/>")
   };
@@ -330,12 +345,40 @@ main .pn{max-width:1440px}
         return `<div class='sp-ri'><button data-ri='${i}'><span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(x.n.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span><span><b>${esc(x.n)}</b><small>${esc(x.sub)}</small></span><em class='${x.tipo === 'Particular' ? '' : 'a'}'>${x.tipo}</em></button>${wa(x.tel) ? `<a class='sp-wa' href='https://wa.me/${wa(x.tel)}' target='_blank' rel='noopener' aria-label='WhatsApp'>${WA}</a>` : ''}</div>`; }).join('')
         : `<p class='sp-nada'>No encontré a nadie con ese nombre.</p>`;
       res.querySelectorAll('[data-ri]').forEach(b => b.onclick = () => {
-        const x = l[+b.dataset.ri], [a, s2] = x.go.split(':'); q.value = ''; res.hidden = true;
-        ir(a); if(a === 'particulares') StormEscuela.ir(s2); else setTimeout(() => StormPanel.tab(s2), 60);
+        const x = l[+b.dataset.ri]; q.value = ''; res.hidden = true; ficha(x);
       });
     };
     q.oninput = pintar; q.onfocus = pintar;
     document.addEventListener('click', e => { if(!e.target.closest('.sp-bus')) res.hidden = true; });
+  }
+  // ---------- ficha de una persona: todo lo de ella en un lugar ----------
+  const clpS = n => '$' + Math.round(n || 0).toLocaleString('es-CL');
+  function ficha(x){
+    const E = StormEscuela.datos(), P = StormPanel.datos(), n = norm(x.n), adm = esAdmin();
+    const mismas = E ? E.reservas.filter(r => norm(r.nombre) === n || (x.tel && wa(r.telefono) === wa(x.tel))) : [];
+    const anual = [];
+    if(P){
+      const g = {}; (P.clases || []).forEach(c => (c.alumnos || []).forEach(a => { if(norm(a.nombre) === n) g.grupo = a.grupo; }));
+      const pg = ((P.actual || {}).pagaron || []).find(p => norm(p.alumno) === n);
+      const fa = ((P.actual || {}).faltan || []).find(f => f.alumnos.some(a => norm(a) === n) || norm(f.apoderado) === n);
+      if(g.grupo || pg || fa) anual.push({ grupo: g.grupo || (pg && pg.grupo) || '', plan: pg && pg.plan, pago: pg ? (pg.monto ? 'Pagó ' + clpS(pg.monto) : 'Beca Storm') : fa ? 'Falta pagar' + (fa.monto && adm ? ' ' + clpS(fa.monto) : '') : '', debe: !!fa, hijos: fa && norm(fa.apoderado) === n ? fa.alumnos : null });
+    }
+    const tel = x.tel || (mismas[0] && mismas[0].telefono) || '';
+    const k = [...x.n].reduce((k, ch) => (k * 31 + ch.charCodeAt(0)) % 997, 0);
+    const est = r => r.estado === 'cancelada' ? ['gris', 'Cancelada'] : r.estado === 'pendiente' || r.medio === 'Por pagar' ? ['pend', 'Falta pagar'] : ['ok', 'Pagada'];
+    const w = document.createElement('div'); w.className = 'sp-mas sp-fi';
+    w.innerHTML = `<div><button class='sp-fx' aria-label='Cerrar'>✕</button>
+      <div class='sp-fh'><span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(x.n.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span><div><h2>${esc(x.n)}</h2><p>${[mismas.length ? 'Particulares' : '', anual.length ? 'Academia Anual' : ''].filter(Boolean).join(' · ') || esc(x.tipo)}</p></div></div>
+      ${wa(tel) ? `<div class='sp-fc'><a class='w' href='https://wa.me/${wa(tel)}' target='_blank' rel='noopener'>${WA}<span>WhatsApp</span></a><a href='tel:+${wa(tel)}'>${I.tel}<span>Llamar</span></a></div>` : ''}
+      ${anual.map(a => `<p class='sp-h3'>Academia Anual</p><div class='sp-fb anual'>${a.hijos ? `<div><small>Apoderado de</small><b>${a.hijos.map(esc).join(', ')}</b></div>` : ''}${a.grupo ? `<div><small>Grupo</small><b>${esc(a.grupo)}</b></div>` : ''}${a.plan ? `<div><small>Plan</small><b>${esc(a.plan)}</b></div>` : ''}${a.pago ? `<div><small>Este mes</small><b class='${a.debe ? 'pend' : 'ok'}'>${a.debe ? '● ' : '✓ '}${esc(a.pago)}</b></div>` : ''}</div><button class='sp-fgo' data-fgo='anual:${a.debe ? 'pagos' : 'alumnos'}'>Ver en Academia Anual ›</button>`).join('')}
+      ${mismas.length ? `<p class='sp-h3'>Clases particulares · ${mismas.length}</p>` + mismas.slice().sort((a, b) => a.fecha < b.fecha ? 1 : -1).map(r => { const [c, t] = est(r); return `<div class='sp-fr ${c}'><b>${r.fecha.split('-').reverse().join('/')} · ${esc(r.hora)}</b><span>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}${adm && r.total ? ' · ' + clpS(r.total) : ''}</span><em>${t}</em></div>`; }).join('') + `<button class='sp-fgo' data-fgo='particulares:reservas'>Ver en Particulares ›</button>` : ''}
+    </div>`;
+    document.body.appendChild(w);
+    w.onclick = e => {
+      if(e.target === w || e.target.closest('.sp-fx')) return w.remove();
+      const g = e.target.closest('[data-fgo]'); if(!g) return;
+      w.remove(); const [a, s2] = g.dataset.fgo.split(':'); ir(a); if(a === 'particulares') StormEscuela.ir(s2); else setTimeout(() => StormPanel.tab(s2), 60);
+    };
   }
   const wa = t => { let n = String(t || '').replace(/\D/g, ''); if(n.length === 9 && n[0] === '9') n = '56' + n; if(n.length === 8) n = '569' + n; return n.length >= 10 ? n : ''; };
   const COL = ['#0f6e74', '#2d6e94', '#b5662b', '#7a5a9e', '#2f7a4d', '#a6402c', '#5b6b7a', '#9a7b1f'];
