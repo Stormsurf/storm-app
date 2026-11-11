@@ -84,6 +84,11 @@
 .ad-aviso p{margin:4px 0 0;font-size:1.4rem}
 .ad-mini{border:1.5px solid var(--ac);background:#fff;color:var(--ac-dk);border-radius:999px;font:inherit;font-weight:600;font-size:1.3rem;padding:7px 16px;cursor:pointer;white-space:nowrap}
 .ad-mini.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.ad-res{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.ad-res a{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;color:var(--ink)}
+.ad-res a i{font-style:normal;font-size:2.2rem}
+.ad-res a h3{margin:6px 0 2px;font-size:1.5rem;font-weight:600;line-height:1.25}
+.ad-res a p{margin:0;font-size:1.25rem;opacity:.65;line-height:1.35}
 .ad-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:1.4rem;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 [hidden]{display:none!important}
 </style>
@@ -162,6 +167,15 @@
     return `<span class="ad-tag t-ok">Le ${c.quedan === 1 ? 'queda 1 clase' : 'quedan ' + c.quedan + ' clases'}</span>`;
   };
 
+  // Recursos gratis de Storm para adultos (sin los de competencia ni los de papás).
+  const RECURSOS = [
+    { url:'/familias/seguridad-en-el-mar.html', icono:'🛟', titulo:'Seguridad en el mar', texto:'Las 4 señales del agua, corrientes y qué hacer si te caes.' },
+    { url:'/familias/cuida-tu-equipo.html', icono:'🏄', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren.' },
+    { url:'/familias/habla-como-surfista.html', icono:'🌊', titulo:'Habla como surfista', texto:'Frontside o backside, el lineup y el diccionario del surf.' },
+    { url:'/familias/respira-como-surfista.html', icono:'🌬️', titulo:'Respira como surfista', texto:'Respiración y calma para entrenar fuera del agua.' },
+    { url:'/familias/surf-desde-cero.html', icono:'🏄', titulo:'Surf desde cero', texto:'Las partes de tu tabla y si eres regular o goofy.' }
+  ];
+
   // ---------- Vista del alumno ----------
   function vAlumno(){
     const a = S.alumnos.find(x => x.id === S.yo), c = cuenta(a);
@@ -191,6 +205,7 @@
         return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.h}${x.cambio ? ' · ' + x.cambio : ''}</small></div><button class="ad-mini${v ? ' on' : ''}" data-voy="${x.f}">${v ? '✓ Voy' : 'Voy'}</button></div>`;
       }).join('') + `</div><p class="ad-note">Marca "Voy" para que Emerson sepa cuántos llegan. El día antes a las 19:00 te llega un recordatorio al celular.</p>`;
     }
+    h += `<h2 class="ad-h2">Recursos Storm</h2><div class="ad-res">` + RECURSOS.map(r => `<a href="${r.url}"><i>${r.icono}</i><h3>${r.titulo}</h3><p>${r.texto}</p></a>`).join('') + `</div>`;
     h += `<h2 class="ad-h2">Pagar</h2><div class="ad-pay">
       <button class="ad-opt best" data-pay="pack"><small>8 clases al mes</small><b>${fmt(PRECIO_PACK)}</b><small>Sale ${fmt(PRECIO_PACK/PACK)} la clase</small></button>
       <button class="ad-opt" data-pay="suelta"><small>Clase suelta</small><b>${fmt(PRECIO_CLASE)}</b><small>Una clase</small></button></div>
