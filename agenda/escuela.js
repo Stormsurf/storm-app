@@ -265,6 +265,30 @@
   .es-crear{display:flex;align-items:center;gap:14px;border:0;background:none;padding:14px 0;font:inherit;font-size:1.6rem;font-weight:600;color:#0f6e74;cursor:pointer;width:100%;text-align:left}
   .es-crear i{width:44px;height:44px;border-radius:50%;background:#F1EFEB;display:grid;place-items:center;font-style:normal;font-size:2.2rem;font-weight:400;color:#55544f}
   .es-hjf{padding:12px 20px calc(14px + env(safe-area-inset-bottom))}
+  .es-ed{padding-top:2px}.es-ed .es-big{margin-top:16px}.es-edp{font-size:1.35rem;color:#77756f;margin:14px 0 0;line-height:1.45}.es-ed .es-mchips{margin-top:14px}.es-ed .es-chip small{display:block;font-size:1.05rem}
+  .es-big.rojo{background:#b23a26}
+  .es-no{display:block;width:100%;border:0;background:none;padding:14px;font:inherit;font-size:1.5rem;font-weight:600;color:#55544f;cursor:pointer}
+  .es-ed .es-det{border-top:0;margin-top:16px;padding-top:0}
+  .es-tapn{cursor:pointer}.es-tapn span{color:#a5a39f;font-weight:400}
+  .es-mas{display:block;margin:18px auto 0;border:1px solid #d9d6d0;background:#fff;border-radius:999px;padding:12px 22px;font:inherit;font-size:1.45rem;font-weight:600;color:var(--ink);cursor:pointer}
+  .es-monto{flex:none;font-size:1.7rem;font-weight:700}.es-monto.ok{color:#2f7a4d}
+  .es-psd{padding:0 16px 14px;border-top:1px solid #eeebe6;background:#FAF9F7}
+  .es-psl{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #eeebe6;font-size:1.4rem}.es-psl small{display:block;color:#77756f;font-size:1.25rem}
+  .es-psd .es-big{margin-top:14px}
+  .pn-stats+.es-grp{margin-top:14px}
+  /* ajustes y disponibilidad: mismos campos y botones */
+  .es-ajw .es-f input,.es-ajw .es-f select,.es-ajw .es-tab input,.es-ajw .es-op select,.es-ajw .es-tar input,.es-ajw .es-insrow input{min-height:48px;border-radius:12px;border:1px solid #d9d6d0;font-size:1.5rem;padding:10px 12px;box-sizing:border-box}
+  .es-ajw .es-f label,.es-ajw .es-tar label{font-weight:500;font-size:1.35rem;color:#55544f}
+  .es-ajw .pn-card{border-radius:18px;border:1px solid #e3e0da;box-shadow:none;padding:18px}
+  .es-ajw .es-acc .es-btn:not(.sec){background:#0f6e74;padding:14px 26px;font-size:1.55rem}
+  .es-ajw .es-btn.sec{padding:10px 16px;font-size:1.4rem}
+  .es-ajw .es-ich b{font-size:1.8rem}
+  .es-cal+*,.es-2c .pn-card{border-radius:18px}
+  .es-2c .pn-card{border:1px solid #e3e0da;box-shadow:none}
+  .es-s{min-height:40px;padding:8px 12px;border-radius:12px;font-size:1.35rem}
+  .es-chips .es-chip{padding:9px 15px;font-size:1.4rem}
+  .es-wk button{min-width:44px;min-height:40px}
+  @media (max-width:999px){.sp-shell .es-toast,.es-toast{bottom:calc(150px + env(safe-area-inset-bottom))}}
   `;
 
   let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = '', vista = null, pila = [];
@@ -344,9 +368,9 @@
     if (linkNuevo) { const L = linkNuevo;
       cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
-    const IT = admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['clientes', 'Clientes'], ['calendario', 'Disponibilidad'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
+    const IT = admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
     const TIT = { dia: 'Agenda del día', clientes: 'Clientes', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };
-    if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip' data-sub='${k}'>${t}</button>`).join('')}${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
+    if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip' data-sub='${k}'>${t}</button>`).join('')}${admin && ['dia', 'reservas'].includes(sub) ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
     else h += `<div class='es-app'><nav class='es-nav'><div class='es-brand'><img src='/img/storm-logo.png' alt='Storm'><span>Agenda</span></div>${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}${IT.map(([k, t]) => `<button class='es-ni' data-sub='${k}'>${ICO[k]}<span>${t}</span></button>`).join('')}<div class='es-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>
       <div class='es-main'><div class='es-top'><h2>${TIT[sub] || ''}</h2><div class='es-topb'>${admin ? `<button class='es-nueva' data-nueva>+ Nueva</button>` : ''}<button class='es-salir-m' data-salir>Salir</button></div></div>` + cuerpo;
     cuerpo = '';
@@ -377,7 +401,7 @@
       ? `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Clases particulares en ${mesTxt}</small><b>${m.clases || 0}</b><em>${clp(m.total)} vendido</em></div>
          <div class='pn-stat'><small>Para instructores</small><b>${clp(m.pagoInstructores)}</b><em>${Object.entries(m.pagoPor || {}).map(([k, v]) => esc(k) + ' ' + clp(v)).join(' · ') || 'este mes'}</em></div>
          <div class='pn-stat'><small>Queda para Storm</small><b>${clp((m.total || 0) - (m.pagoInstructores || 0))}</b><em>antes de comisión</em></div></div>
-         <div class='pn-card es-link'><div style='min-width:0'><b style='font-size:1.4rem'>Link para reservar</b><br><code>${esc(E.link.replace('https://', ''))}</code></div><button class='es-btn' data-copiar>Copiar</button></div>`
+`
       : `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Tus clases particulares en ${mesTxt}</small><b>${m.clases || 0}</b><em>${clp(m.pagoYo)} a pagarte</em></div></div>`;
     const lista = E.reservas.filter(r => verPasadas ? r.fecha < E.hoy : r.fecha >= E.hoy).filter(r => !filtroIns || r.instructores.includes(filtroIns));
     if (verPasadas) lista.reverse();
@@ -389,7 +413,7 @@
     const porDia = []; lista.forEach(r => { const u = porDia[porDia.length - 1]; if (u && u.f === r.fecha) u.l.push(r); else porDia.push({ f: r.fecha, l: [r] }); });
     h += lista.length ? porDia.map(g => `<p class='es-dia'>${g.f === E.hoy ? 'Hoy · ' : g.f === sumar(E.hoy, 1) ? 'Mañana · ' : ''}${esc(flarga(g.f))}</p><div class='es-dl'>${g.l.map(r => tarjeta(r, admin)).join('')}</div>`).join('')
       : `<div class='pn-card'><p class='pn-empty'>${verPasadas ? 'No hay clases anteriores.' : 'Todavía no hay clases reservadas.'}</p></div>`;
-    h += `<p class='pn-note'><button class='pn-link' data-pasadas>${verPasadas ? 'Ver próximas clases' : 'Ver clases anteriores'}</button></p>`;
+    h += `<button class='es-mas' data-pasadas>${verPasadas ? 'Ver próximas clases' : 'Ver clases anteriores'}</button>`;
     return h;
   }
 
@@ -426,38 +450,37 @@
   }
   // editores de una clase (cambiar instructor, mover, datos, cancelar)
   function editor(r) {
-    let h = '';
-    if (abierta !== r.ref) return h;
+    if (abierta !== r.ref) return '';
+    const pie = (go, txt, cl = '') => `<p class='es-err vivo'></p><button class='es-big${cl}' data-go='${go}'${go === 'ins' && !sel.length ? ' disabled' : ''}>${txt}</button><button class='es-no' data-cerrar>${go === 'cancelar' ? 'No, volver' : 'Cancelar'}</button>`;
     if (modo === 'ins') {
-        const n = r.instructores.length;
-        h += `<div class='es-box'><p>Elige ${n === 1 ? 'el instructor' : 'los ' + n + ' instructores'} para esta clase. Puedes sumar o quitar instructores si el caso lo necesita.</p><div class='es-chips' style='margin-top:0'>${E.instructores.filter(i => i.activo).map(i => {
-          const otra = reservaEn(i.nombre, r.fecha, r.hora); const ocup = (otra && otra.ref !== r.ref) || !!otraCosa(i.nombre, r.fecha, r.hora);
-          return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>' + esc(otraCosa(i.nombre, r.fecha, r.hora) || 'ocupado') + '</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
-          <div class='es-acc'><button class='es-btn' data-go='ins'${sel.length ? '' : ' disabled'}>Guardar${sel.length && sel.length !== n ? ' (' + sel.length + ' instructor' + (sel.length === 1 ? '' : 'es') + ')' : ''}</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
-      } else if (modo === 'mover') {
-        h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' ></label><label>Hora<select id='es-mh'>${horasMano().map(x => `<option value='${x}'${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
-          <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Se mantiene el mismo instructor. Avísale al cliente por WhatsApp.</p>
-          <div class='es-acc'><button class='es-btn' data-go='mover'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
-      } else if (modo === 'datos') {
-        const dur = r.duracion || E.duracion;
-        h += `<div class='es-box es-datos'><div class='es-f'>
-          <label class='w'>Nombre del cliente<input name='nombre' value='${esc(r.nombre)}'></label>
-          <label>Teléfono<input name='telefono' type='tel' value='${esc(r.telefono || '')}'></label>
-          <label>Correo<input name='correo' type='email' value='${esc(r.correo || '')}'></label>
-          <label>Personas<input name='personas' type='number' min='1' value='${r.personas}' inputmode='numeric'></label>
-          <label>Menores de 8<input name='menores' type='number' min='0' value='${r.menores || 0}' inputmode='numeric'></label>
-          <label>Duración<select name='duracion'>${[[60, '1 hora'], [90, '1 hora y media'], [120, '2 horas']].map(([v, t]) => `<option value='${v}'${v === dur ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-          <label>¿Cómo pagó?<select name='medio'>${MEDIOS.map(([v, t]) => `<option value='${v}'${v === r.medio ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-          <label>Total cobrado<input name='total' inputmode='numeric' value='${r.total || 0}'></label>
-          <label class='w'>Comentario<input name='comentario' value='${esc(r.comentario || '')}'></label></div>
-          <details class='es-det'><summary>Opciones avanzadas</summary><div class='es-f'>${(() => { const v = Object.values(r.pagos || {}), uno = v.length && v.every(x => x === v[0]) ? v[0] : ''; return `<label>Pago por instructor<input name='pagoInstructor' inputmode='numeric' value='${uno}' data-orig='${uno}' placeholder='según la tabla'></label>`; })()}</div></details>
-          <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Si cambias las personas y no tocas el pago, se calcula solo con la tabla. Para cambiar día, hora o instructor usa Mover o Cambiar instructor.</p>
-          <div class='es-acc'><button class='es-btn' data-go='datos'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
-      } else if (modo === 'cancelar') {
-        h += `<div class='es-box'><p>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.medio === 'Mercado Pago' ? ' Si hay que devolver el dinero, hazlo desde Mercado Pago.' : ''}</p>
-          <div class='es-acc'><button class='es-btn peligro' data-go='cancelar'>Sí, cancelar</button><button class='pn-link' data-cerrar>No</button></div><p class='es-err vivo'></p></div>`;
-      }
-    return h;
+      const n = r.instructores.length;
+      return `<div class='es-caja es-ed'><p class='es-edp'>Elige ${n === 1 ? 'el instructor' : 'los ' + n + ' instructores'} de esta clase. Puedes sumar o quitar si hace falta.</p>
+        <div class='es-mchips'>${E.instructores.filter(i => i.activo).map(i => {
+          const otra = reservaEn(i.nombre, r.fecha, r.hora), oc = otraCosa(i.nombre, r.fecha, r.hora), ocup = (otra && otra.ref !== r.ref) || !!oc;
+          return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>' + esc(oc || 'ocupado') + '</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
+        ${pie('ins', 'Guardar' + (sel.length && sel.length !== n ? ' (' + sel.length + ' instructor' + (sel.length === 1 ? '' : 'es') + ')' : ''))}</div>`;
+    }
+    if (modo === 'mover') return `<div class='es-caja es-ed'><div class='es-2'><label><span class='es-lb'>Nuevo día</span><input class='es-in' type='date' id='es-mf' value='${r.fecha}'></label>
+        <label><span class='es-lb'>Nueva hora</span><select class='es-in' id='es-mh'>${horasMano().map(x => `<option value='${x}'${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
+        <p class='es-edp'>Se mantiene el mismo instructor. Después avísale al cliente por WhatsApp.</p>${pie('mover', 'Mover clase')}</div>`;
+    if (modo === 'datos') {
+      const dur = r.duracion || E.duracion, v = Object.values(r.pagos || {}), uno = v.length && v.every(x => x === v[0]) ? v[0] : '';
+      return `<div class='es-caja es-ed es-datos'>
+        <label><span class='es-lb'>Nombre del cliente</span><input class='es-in' name='nombre' value='${esc(r.nombre)}'></label>
+        <div class='es-2'><label><span class='es-lb'>Teléfono</span><input class='es-in' name='telefono' type='tel' value='${esc(r.telefono || '')}'></label>
+          <label><span class='es-lb'>Correo</span><input class='es-in' name='correo' type='email' value='${esc(r.correo || '')}'></label></div>
+        <div class='es-3'><label><span class='es-lb'>Personas</span><input class='es-in' name='personas' type='number' min='1' value='${r.personas}' inputmode='numeric'></label>
+          <label><span class='es-lb'>Niños &lt;8</span><input class='es-in' name='menores' type='number' min='0' value='${r.menores || 0}' inputmode='numeric'></label>
+          <label><span class='es-lb'>Duración</span><select class='es-in' name='duracion'>${[[60, '1 h'], [90, '1 h 30'], [120, '2 h']].map(([x, t]) => `<option value='${x}'${x === dur ? ' selected' : ''}>${t}</option>`).join('')}</select></label></div>
+        <div class='es-2'><label><span class='es-lb'>¿Cómo pagó?</span><select class='es-in' name='medio'>${MEDIOS.map(([x, t]) => `<option value='${x}'${x === r.medio ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label><span class='es-lb'>Total</span><input class='es-in' name='total' inputmode='numeric' value='${r.total || 0}'></label></div>
+        <label><span class='es-lb'>Nota interna</span><input class='es-in' name='comentario' value='${esc(r.comentario || '')}'></label>
+        <details class='es-det'><summary>Opciones avanzadas</summary><label><span class='es-lb'>Pago a cada instructor</span><input class='es-in' name='pagoInstructor' inputmode='numeric' value='${uno}' data-orig='${uno}' placeholder='según la tabla'></label>
+          <p class='es-edp'>Vacío = según la tabla de precios. Si cambias las personas, se recalcula solo.</p></details>
+        ${pie('datos', 'Guardar cambios')}</div>`;
+    }
+    if (modo === 'cancelar') return `<div class='es-caja es-ed'><p class='es-edp' style='font-size:1.5rem;color:var(--ink)'>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.medio === 'Mercado Pago' ? ' Si hay que devolver el dinero, hazlo desde Mercado Pago.' : ''}</p>${pie('cancelar', 'Sí, cancelar clase', ' rojo')}</div>`;
+    return '';
   }
   const cabeza = t => `<header class='es-pgh'><button class='es-back' data-pgx aria-label='Volver'>${ICO_S.atras}</button><h2>${t}</h2></header>`;
   const botonesContacto = (tel, correo) => { const n = wa(tel); return n || correo ? `<div class='es-cta'>${n ? `<a class='wa' target='_blank' rel='noopener' href='https://wa.me/${n}'>${ICO_S.wa}WhatsApp</a><a href='tel:+${n}'>${ICO_S.tel}Llamar</a>` : ''}${correo ? `<a href='mailto:${esc(correo)}'>${ICO_S.mail}Correo</a>` : ''}</div>` : ''; };
@@ -467,7 +490,8 @@
     const pide = 'Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + (r.linkFicha || '');
     const ml = r.linkPago ? msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }) : '';
     let h = `<div class='es-pg'>${cabeza('Clase')}<div class='es-pgb'>`;
-    h += `<div class='es-hero'>${avatar(r.nombre, 'xl')}<div><b>${esc(r.nombre)}</b><small>${esc(flarga(r.fecha))} · ${esc(r.hora)} a ${fin(r.hora, r.duracion)}</small></div></div>`;
+    const esCli = admin && (E.clientes || []).some(c => c.nombre === r.nombre);
+    h += `<div class='es-hero'>${avatar(r.nombre, 'xl')}<div><b${esCli ? ` class='es-tapn' data-cliv='${esc(r.nombre)}'` : ''}>${esc(r.nombre)}${esCli ? ' <span>›</span>' : ''}</b><small>${esc(flarga(r.fecha))} · ${esc(r.hora)} a ${fin(r.hora, r.duracion)}</small></div></div>`;
     h += botonesContacto(r.telefono, admin ? r.correo : '');
     h += grupo('Clase', [
       fila(ICO_S.cal, esc(flarga(r.fecha)), esc(r.hora) + ' a ' + fin(r.hora, r.duracion)),
@@ -693,11 +717,9 @@
       h += `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Total a transferir el domingo</small><b>${clp(PS.total)}</b><em>${pend && pend !== PS.total ? 'falta pagar ' + clp(pend) : pend ? 'clases particulares de la semana' : PS.total ? 'todo pagado ✓' : 'sin clases esta semana'}</em></div></div>`;
     }
     if (!PS.instructores.length) return h + `<div class='pn-card'><p class='pn-empty'>No hay clases pagadas esta semana.</p></div>`;
-    h += PS.instructores.map(x => `<div class='pn-card'><div style='display:flex;justify-content:space-between;align-items:center;gap:10px'>
-        <div><b style='font-size:1.6rem'>${esc(x.instructor)}</b><br><small style='opacity:.7'>${x.clases.length} clase${x.clases.length === 1 ? '' : 's'}${x.pagado ? ' · ✓ pagado el ' + esc(fcorta(x.pagado.el)) : ''}</small></div>
-        <b style='font-size:2rem${x.pagado ? ';color:#2f7a4d' : ''}'>${clp(x.total)}</b></div>
-        ${psAbierto === x.instructor ? `<div style='margin-top:8px'>${x.clases.map(c => `<div style='display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:1.3rem'><span>${esc(fcorta(c.fecha))} ${esc(c.hora)} · ${esc(c.cliente)} · ${c.personas}p${c.menores ? ' (' + c.menores + ' menor' + (c.menores === 1 ? '' : 'es') + ' de 7)' : ''}</span><b>${clp(c.monto)}</b></div>`).join('')}</div>` : ''}
-        <div class='es-acc'><button class='es-btn sec' data-psa='${esc(x.instructor)}'>${psAbierto === x.instructor ? 'Ocultar clases' : 'Ver clases'}</button>${admin ? (x.pagado ? `<button class='pn-link' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='0'>Desmarcar pagado</button>` : x.total ? `<button class='es-btn' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='1'>Marcar pagado</button>` : '') : ''}</div></div>`).join('');
+    h += `<div class='es-grp'>` + PS.instructores.map(x => `<button class='es-row' data-psa='${esc(x.instructor)}'>${avatar(x.instructor)}<span class='es-rx'><b>${esc(x.instructor)}</b><small>${x.clases.length} clase${x.clases.length === 1 ? '' : 's'}${x.pagado ? ' · <span style="color:#2f7a4d">✓ pagado el ' + esc(fcorta(x.pagado.el)) + '</span>' : x.total ? ' · por pagar' : ''}</small></span><b class='es-monto${x.pagado ? ' ok' : ''}'>${clp(x.total)}</b><span class='es-rc' style='transform:rotate(${psAbierto === x.instructor ? 90 : 0}deg)'>›</span></button>
+        ${psAbierto === x.instructor ? `<div class='es-psd'>${x.clases.map(c => `<div class='es-psl'><span>${esc(fcorta(c.fecha))} · ${esc(c.hora)}<small>${esc(c.cliente)} · ${c.personas} persona${c.personas === 1 ? '' : 's'}${c.menores ? ' (' + c.menores + ' niño' + (c.menores === 1 ? '' : 's') + ')' : ''}</small></span><b>${clp(c.monto)}</b></div>`).join('')}
+          ${admin ? (x.pagado ? `<button class='es-no' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='0'>Desmarcar pagado</button>` : x.total ? `<button class='es-big' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='1'>Marcar pagado · ${clp(x.total)}</button>` : '') : ''}</div>` : ''}`).join('') + `</div>`;
     return h + `<p class='pn-note'>${admin ? 'Cuenta las clases pagadas de lunes a domingo. Cada instructor gana según su tarifa (en Ajustes) y el tamaño de su grupo.' : 'Tus clases de lunes a domingo y lo que te toca por cada una. Storm te transfiere el domingo.'}</p>`;
   }
 
@@ -785,8 +807,8 @@
     $$('[data-fi]').forEach(b => b.onclick = () => { filtroIns = b.dataset.fi; pintar(); });
     $$('[data-pasadas]').forEach(b => b.onclick = () => { verPasadas = !verPasadas; pintar(); });
     $$('[data-lnx]').forEach(b => b.onclick = () => { linkNuevo = null; pintar(); });
-    $$('[data-lf]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.lf); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', b.dataset.lf); } });
-    $$('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(E.link); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', E.link); } });
+    $$('[data-lf]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.lf); const t = b.querySelector('.es-rx b') || b; t.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', b.dataset.lf); } });
+    $$('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(E.link); (b.querySelector('.es-btn') || b).textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', E.link); } });
     $$('[data-pgx]').forEach(b => b.onclick = () => { if (manualOn) manualOn = false; else if (abierta) { abierta = ''; modo = ''; } else vista = pila.pop() || null; msg = ''; pintar(); });
     const abrir = v => { if (vista) pila.push(vista); vista = v; abierta = ''; modo = ''; msg = ''; pintar(); const b = pane.querySelector('.es-pgb'); if (b) b.scrollTop = 0; };
     $$('[data-ver]').forEach(c => c.onclick = e => { if (e.target.closest('a') || (e.target.closest('button') && e.target.closest('button') !== c)) return; abrir({ t: 'clase', ref: c.dataset.ver }); });
@@ -797,7 +819,7 @@
     $$('[data-nueva]').forEach(b => b.onclick = () => { manualOn = true; msg = ''; pintar(); });
     const fondo = $('[data-fondo]'); if (fondo) fondo.onclick = e => { if (e.target === fondo) { manualOn = false; pintar(); } };
     $$('[data-salir]').forEach(b => b.onclick = () => { const o = document.getElementById('pn-out'); if (o) o.click(); });
-    $$('[data-abre]').forEach(b => b.onclick = () => { abierta = b.dataset.abre; modo = b.dataset.modo; msg = ''; sel = (E.reservas.find(r => r.ref === abierta) || {}).instructores.slice(); pintar(); });
+    $$('[data-abre]').forEach(b => b.onclick = () => { abierta = b.dataset.abre; modo = b.dataset.modo; msg = ''; sel = (E.reservas.find(r => r.ref === abierta) || {}).instructores.slice(); pintar(); const ed = pane.querySelector('.es-ed'); if (ed) { const g = ed.previousElementSibling || ed; g.scrollIntoView({ block: 'start', behavior: 'smooth' }); } });
     $$('[data-cerrar]').forEach(b => b.onclick = () => { abierta = ''; modo = ''; pintar(); });
     $$('[data-sel]').forEach(b => b.onclick = () => {
       const v = b.dataset.sel; // se pueden sumar o quitar instructores (casos especiales)
