@@ -72,6 +72,16 @@
 .ad-calc .ad-row b{font-weight:500;font-size:1.45rem}
 .ad-calc .ad-row span{font-weight:600;font-size:1.5rem;white-space:nowrap}
 .ad-calc .tot b,.ad-calc .tot span{font-weight:700}
+.ad-form{margin-top:12px;padding:14px;background:var(--ac-soft);border-radius:14px}
+.ad-form .ad-pay{margin-top:0;grid-template-columns:1fr 1fr 1fr}
+.ad-form .ad-opt{padding:10px;text-align:center;font-weight:600;font-size:1.3rem}
+.ad-form .ad-opt.on{border-color:var(--ac);background:#fff;box-shadow:inset 0 0 0 1px var(--ac)}
+.ad-form label{display:block;font-size:1.3rem;margin-top:12px}
+.ad-form input[type=time],.ad-form input[type=date],.ad-form input[type=text]{display:block;width:100%;margin-top:4px;border:1.5px solid rgba(44,44,43,.18);border-radius:12px;padding:10px 12px;font:inherit;font-size:1.5rem;background:#fff}
+.ad-form .chk{display:flex;gap:8px;align-items:center}
+.ad-aviso{background:#FBF3DC;border:0;color:#4d3b06}
+.ad-aviso b{display:block;font-size:1.5rem}
+.ad-aviso p{margin:4px 0 0;font-size:1.4rem}
 .ad-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:1.4rem;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 [hidden]{display:none!important}
 </style>
@@ -152,10 +162,13 @@
   function vAlumno(){
     const a = S.alumnos.find(x => x.id === S.yo), c = cuenta(a);
     const hoy = S.clases.find(x => x.f === HOY);
+    const aviso = S.aviso ? `<div class="ad-card ad-aviso"><b>🔔 Aviso de Emerson</b><p>${S.aviso}</p></div>` : '';
     const marcada = hoy && S.asis[HOY] && S.asis[HOY][a.id];
-    const prox = S.clases.find(x => x.f > HOY);
+    const prox = S.clases.find(x => x.f > HOY && !x.cancelada);
     let h = `<div class="ad-hero"><small>Academia de Adultos</small><h1>Hola, ${a.nombre.split(' ')[0]}</h1><p>Lunes y sábados de 9:00 a 11:00.</p></div>`;
-    if (hoy) h += `<div class="ad-card ad-hoy"><small>Hoy hay clase</small><h3>${larga(hoy.f)}</h3><p>${hoy.h}${hoy.cambio ? ' · ' + hoy.cambio : ''}</p>
+    h += aviso;
+    if (hoy && hoy.cancelada) h += `<div class="ad-card ad-hoy"><small>Hoy no hay clase</small><h3>${larga(hoy.f)}</h3><p>${hoy.cambio}</p></div>`;
+    else if (hoy) h += `<div class="ad-card ad-hoy"><small>Hoy hay clase</small><h3>${larga(hoy.f)}</h3><p>${hoy.h}${hoy.cambio ? ' · ' + hoy.cambio : ''}</p>
       <button class="ad-big${marcada ? ' done' : ''}" id="fui">${marcada ? '✓ Quedó anotado que viniste' : 'Vine a la clase'}</button>
       <a class="ad-wa" href="#" onclick="return false">Si la clase cambia por el pronóstico, Emerson avisa por WhatsApp</a></div>`;
     const ringBg = c.debe ? 'var(--warn-soft)' : 'var(--ac-soft)';
@@ -164,6 +177,7 @@
       <div><h3>${c.tienePack ? 'Plan 8 clases' : 'Clase suelta'}</h3><p>Fuiste a ${c.fue.length} de ${c.pagadas} ${c.pagadas === 1 ? 'clase pagada' : 'clases pagadas'}.${c.debe ? ' Tienes ' + fmt(c.debe) + ' por pagar.' : ''}</p></div></div>`;
     h += `<div style="margin-top:14px;border-top:1px solid var(--line)">` + S.clases.filter(x => x.f <= HOY).slice().reverse().map(x => {
       const m = S.asis[x.f] && S.asis[x.f][a.id];
+      if (x.cancelada) return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.cambio}</small></div><span class="ad-tag t-chg">Cancelada</span></div>`;
       return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.h}${x.cambio ? ' · ' + x.cambio : ''}</small></div>${m ? '<span class="ad-tag t-ok">Fuiste</span>' : (x.f === HOY ? '<span class="ad-tag t-ac">Hoy</span>' : '<span class="ad-tag t-no">No fuiste</span>')}</div>`;
     }).join('') + `</div></div>`;
     if (prox) h += `<p class="ad-note">Próxima clase: <b>${larga(prox.f)}</b>, ${prox.h}.</p>`;
@@ -174,16 +188,34 @@
     return h;
   }
 
+  let formAbierto = false, formTipo = 'hora';
+  function form(cl){
+    if (!formAbierto) return `<p style="margin:10px 0 0"><button class="ad-ghost" id="abrir">Cambiar o cancelar esta clase</button></p>`;
+    const hi = cl.h.split(' a ')[0].padStart(5,'0');
+    let f = `<div class="ad-form"><div class="ad-pay"><button class="ad-opt${formTipo==='hora'?' on':''}" data-ft="hora">Otra hora</button><button class="ad-opt${formTipo==='dia'?' on':''}" data-ft="dia">Otro día</button><button class="ad-opt${formTipo==='cancelar'?' on':''}" data-ft="cancelar">Cancelar</button></div>`;
+    if (formTipo !== 'cancelar') f += `<label>Nueva hora de inicio<input type="time" id="fh" value="${hi}"></label>`;
+    if (formTipo === 'dia') f += `<label>Nuevo día<input type="date" id="fd" value="${cl.f}" min="${HOY}"></label>`;
+    f += `<label>Motivo<input type="text" id="fm" value="por el pronóstico"></label>
+      <label class="chk"><input type="checkbox" id="fa" checked> Avisar a los alumnos al celular</label>
+      <div style="display:flex;gap:8px;margin-top:14px"><button class="ad-go" id="guardar">Guardar cambio</button><button class="ad-ghost" id="cerrar">No cambiar</button></div></div>`;
+    return f;
+  }
+  const masDos = t => { const [h,m] = t.split(':').map(Number); return (h+2) + ':' + String(m).padStart(2,'0'); };
+  const horaBonita = t => t.replace(/^0/, '');
+
   // ---------- Emerson pasa lista ----------
   function vLista(){
-    const pas = S.clases.filter(x => x.f <= HOY);
-    if (!pas.find(x => x.f === claseSel)) claseSel = pas[pas.length-1].f;
+    const pas = S.clases.filter(x => x.f <= HOY).concat(S.clases.filter(x => x.f > HOY).slice(0, 2));
+    if (!pas.find(x => x.f === claseSel)) claseSel = HOY;
     const cl = S.clases.find(x => x.f === claseSel), as = S.asis[claseSel] || {};
-    let h = `<div class="ad-hero"><small>Panel · Academia de Adultos</small><h1>Pasar lista</h1><p>Toca a cada persona que vino. Si alguien no está en la lista, agrégalo abajo.</p></div>`;
-    h += `<div class="ad-sel">` + pas.slice().reverse().map(x => { const d = dd(x.f); return `<button data-cl="${x.f}" class="${x.f === claseSel ? 'on' : ''}${x.f === HOY ? ' hoy' : ''}"><small>${d.dia}</small><b>${d.n}</b></button>`; }).join('') + `</div>`;
+    let h = `<div class="ad-hero"><small>Panel · Academia de Adultos</small><h1>Pasar lista</h1><p>Toca a cada persona que vino. Si alguien no está en la lista, agrégalo abajo. Aquí también cambias o cancelas una clase.</p></div>`;
+    h += `<div class="ad-sel">` + pas.slice().reverse().map(x => { const d = dd(x.f); return `<button data-cl="${x.f}" class="${x.f === claseSel ? 'on' : ''}${x.f === HOY ? ' hoy' : ''}"${x.cancelada ? ' style="text-decoration:line-through;opacity:.5"' : ''}><small>${d.dia}</small><b>${d.n}</b></button>`; }).join('') + `</div>`;
     const n = Object.keys(as).length;
     h += `<div class="ad-card"><div class="ad-cnt"><b>${larga(cl.f)}${cl.f === HOY ? ' · hoy' : ''}</b><span class="ad-tag t-ac">${n} ${n === 1 ? 'vino' : 'vinieron'}</span></div>`;
-    h += `<p style="margin:6px 0 0;font-size:1.3rem;opacity:.65">${cl.h}${cl.cambio ? ' · ' + cl.cambio : ''} <button class="ad-ghost" id="cambio" style="margin-left:6px;padding:4px 10px;font-size:1.15rem">Anotar cambio</button></p>`;
+    h += `<p style="margin:6px 0 0;font-size:1.3rem;opacity:.65">${cl.h}${cl.cambio ? ' · ' + cl.cambio : ''} </p>`;
+    if (!cl.cancelada || cl.f >= HOY) h += form(cl);
+    if (cl.cancelada){ h += `<p class="ad-note">Esta clase está cancelada.</p></div>`; return h; }
+    if (cl.f > HOY){ h += `<p class="ad-note">Todavía no es esta clase. La lista se pasa el mismo día.</p></div>`; return h; }
     h += `<div class="ad-list" style="margin-top:10px;border-top:1px solid var(--line)">` + S.alumnos.map(a => {
       const m = as[a.id];
       const sub = m === 'alumno' ? 'Lo marcó desde su celular' : a.agregado ? 'Agregado por Emerson (no estaba inscrito)' : '';
@@ -201,7 +233,7 @@
     const mp = S.alumnos.reduce((s,a) => s + a.pagos.filter(p => p.medio === 'Mercado Pago').reduce((t,p) => t + p.monto, 0), 0);
     const com = mp * COMISION, neto = entro - com, emerson = neto / 2;
     const debe = lista.reduce((s,x) => s + x.c.debe, 0);
-    const hechas = S.clases.filter(c => c.f <= HOY);
+    const hechas = S.clases.filter(c => c.f <= HOY && !c.cancelada);
     const asist = hechas.reduce((s,c) => s + Object.keys(S.asis[c.f] || {}).length, 0);
     let h = `<div class="ad-hero"><small>Panel · Finanzas · Adultos</small><h1>Noviembre</h1><p>Se calcula solo con los pagos y la lista que pasa Emerson.</p></div>`;
     h += `<div class="ad-sum"><div class="ad-k hi"><small>Le toca a Emerson este mes</small><b>${fmt(emerson)}</b></div>
@@ -231,10 +263,24 @@
     if (t.id === 'reset'){ S = INICIAL(); save(); render(); toast('Prueba reiniciada'); return; }
     if (t.id === 'fui'){ const a = S.asis[HOY] = S.asis[HOY] || {}; if (!a[S.yo]){ a[S.yo] = 'alumno'; save(); render(); toast('¡Listo! Quedó anotado'); } return; }
     if (t.dataset.pay){ toast('Aquí se abre Mercado Pago (en la prueba no cobra)'); return; }
-    if (t.dataset.cl){ claseSel = t.dataset.cl; render(); return; }
+    if (t.dataset.cl){ claseSel = t.dataset.cl; formAbierto = false; render(); return; }
     if (t.dataset.al){ const a = S.asis[claseSel] = S.asis[claseSel] || {}; if (a[t.dataset.al]) delete a[t.dataset.al]; else a[t.dataset.al] = 'emerson'; save(); render(); return; }
     if (t.id === 'agregar'){ const v = $('#nuevo').value.trim(); if (!v) return; const id = 'n' + Date.now(); S.alumnos.push({ id, nombre: v, pagos: [], agregado: true }); (S.asis[claseSel] = S.asis[claseSel] || {})[id] = 'emerson'; save(); render(); toast(v + ' quedó en la lista'); return; }
-    if (t.id === 'cambio'){ const cl = S.clases.find(x => x.f === claseSel); cl.cambio = cl.cambio ? '' : 'Cambió por el pronóstico'; save(); render(); return; }
+    if (t.id === 'abrir'){ formAbierto = true; formTipo = 'hora'; render(); return; }
+    if (t.id === 'cerrar'){ formAbierto = false; render(); return; }
+    if (t.dataset.ft){ formTipo = t.dataset.ft; render(); return; }
+    if (t.id === 'guardar'){
+      const cl = S.clases.find(x => x.f === claseSel), mot = $('#fm').value.trim(), avisar = $('#fa').checked, antes = larga(cl.f);
+      let txt;
+      if (formTipo === 'cancelar'){ cl.cancelada = true; cl.cambio = 'Cancelada' + (mot ? ' ' + mot : ''); txt = `La clase del ${antes.toLowerCase()} se cancela${mot ? ' ' + mot : ''}.`; }
+      else {
+        const hi = horaBonita($('#fh').value || '09:00'); cl.h = hi + ' a ' + masDos(hi);
+        if (formTipo === 'dia'){ const nf = $('#fd').value; if (nf && nf !== cl.f){ if (S.asis[cl.f]){ S.asis[nf] = S.asis[cl.f]; delete S.asis[cl.f]; } cl.f = nf; claseSel = nf; S.clases.sort((a,b) => a.f < b.f ? -1 : 1); }
+          cl.cambio = 'Se movió desde el ' + antes.toLowerCase() + (mot ? ' ' + mot : ''); txt = `La clase del ${antes.toLowerCase()} se mueve al ${larga(cl.f).toLowerCase()}, de ${cl.h}${mot ? ', ' + mot : ''}.`; }
+        else { cl.cambio = 'Cambió de hora' + (mot ? ' ' + mot : ''); txt = `La clase del ${antes.toLowerCase()} cambia a las ${hi}${mot ? ', ' + mot : ''}.`; }
+      }
+      if (avisar) S.aviso = txt;
+      formAbierto = false; save(); render(); toast(avisar ? 'Cambio guardado y aviso enviado a ' + S.alumnos.length + ' alumnos' : 'Cambio guardado'); return; }
     if (t.dataset.cobro){ const a = S.alumnos.find(x => x.id === t.dataset.cobro), c = cuenta(a); const monto = c.debe || PRECIO_CLASE; a.pagos.push({ tipo:'suelta', monto, fecha:HOY, medio:'Transferencia' }); for (let i = 1; i < monto / PRECIO_CLASE; i++) a.pagos.push({ tipo:'suelta', monto:0, fecha:HOY, medio:'Transferencia' }); save(); render(); toast('Pago anotado'); return; }
   });
   render();
