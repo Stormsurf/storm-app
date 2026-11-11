@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Storm</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#EFECE8">
+<link rel="manifest" href="/storm/manifest.webmanifest">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="apple-touch-icon" href="/icons/storm-app-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Storm">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1">
+<link rel="stylesheet" href="/panel/panel.css?v=1">
+<script>window.STORM_SHELL = true;</script>
+<script src="/agenda/escuela.js?v=15"></script>
+<style>
+.pn-go{background:#0f6e74}.pn-in:focus{border-color:#0f6e74}
+.ap-top{display:none}
+main .pn{max-width:1440px}
+/* plataforma: barra abajo en el celular, menú a la izquierda en el computador */
+.sp-nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-around;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px rgba(0,0,0,.04)}
+.sp-brand,.sp-yo,.sp-sep,.sp-nav [data-solo-pc]{display:none}
+.sp-ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;font:inherit;font-size:1.05rem;font-weight:600;color:#8a8986;padding:6px 2px;cursor:pointer;border-radius:12px;min-width:0}
+.sp-ni span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.sp-ni svg{width:24px;height:24px}
+.sp-ni.on{color:#0f6e74}
+.sp-main{padding-bottom:100px;min-width:0}
+.sp-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 14px}
+.sp-top h1{margin:0;font-size:2.4rem;font-weight:600;line-height:1.15}
+.sp-top p{margin:2px 0 0;font-size:1.3rem;color:#8a8986}
+.sp-area[hidden]{display:none}
+.sp-panel{max-width:900px}
+.sp-panel .pn-sw{display:none}
+.sp-mas{position:fixed;inset:0;z-index:40;background:rgba(30,30,28,.45);display:flex;align-items:flex-end}
+.sp-mas>div{background:#fff;width:100%;border-radius:20px 20px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom))}
+.sp-mas button{display:flex;align-items:center;gap:14px;width:100%;border:0;background:none;font:inherit;font-size:1.6rem;padding:14px 8px;color:var(--ink);border-bottom:1px solid var(--line);cursor:pointer;text-align:left}
+.sp-mas button:last-child{border-bottom:0}
+.sp-mas svg{width:26px;height:26px;color:#0f6e74}
+.sp-mas small{display:block;font-size:1.2rem;color:#8a8986}
+/* Hoy */
+.sp-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sp-tile{display:flex;flex-direction:column;gap:4px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;font:inherit;color:var(--ink);cursor:pointer;min-width:0}
+.sp-tile i{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#E3F1F1;color:#0f6e74;margin-bottom:4px}.sp-tile i svg{width:22px;height:22px}
+.sp-tile b{font-size:2.6rem;line-height:1}.sp-tile span{font-size:1.3rem;color:#55544f}.sp-tile small{font-size:1.15rem;color:#8a8986}
+.sp-tile.warn i{background:#fbeee2;color:#b5662b}.sp-tile.ok i{background:#e5f2ea;color:#2f7a4d}
+.sp-h3{font-size:1.25rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0f6e74;margin:22px 0 8px}
+.sp-line{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-left:5px solid #0f6e74;border-radius:14px;padding:12px 14px;margin-top:8px;cursor:pointer;width:100%;font:inherit;text-align:left;color:var(--ink)}
+.sp-line .h{font-size:1.7rem;font-weight:700;min-width:58px}
+.sp-line b{display:block;font-size:1.45rem;font-weight:600}.sp-line small{display:block;font-size:1.2rem;color:#8a8986}
+.sp-line .tag{margin-left:auto;flex:none;border-radius:999px;padding:3px 10px;font-size:1.1rem;font-weight:700;background:#E3F1F1;color:#0f6e74}
+.sp-line.anual{border-left-color:#61A1C8}.sp-line.anual .tag{background:#E6F1F8;color:#2d6e94}
+.sp-line.verano{border-left-color:#e0b43a}.sp-line.verano .tag{background:#FFF4CC;color:#7a5a00}
+.sp-line.cancel{opacity:.55}
+.sp-vacio{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:#8a8986;font-size:1.35rem;margin-top:8px}
+.sp-pronto{background:#fff;border-radius:18px;padding:22px;border:1px solid var(--line)}
+.sp-pronto h3{margin:0 0 6px}.sp-pronto p{margin:0;font-size:1.4rem;color:#55544f;line-height:1.5}
+@media (min-width:640px){.sp-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1000px){
+  .sp-app{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;align-items:start;margin-top:8px}
+  .sp-nav{position:sticky;top:16px;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:2px;border:1px solid var(--line);border-radius:18px;padding:18px 12px;box-shadow:none}
+  .sp-brand{display:flex;align-items:center;gap:10px;padding:2px 8px 16px}.sp-brand img{width:84px;height:auto}
+  .sp-nav [data-solo-pc]{display:flex}.sp-nav [data-solo-cel]{display:none}
+  .sp-sep{display:block;font-size:1.1rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a9a6a0;padding:14px 12px 4px}
+  .sp-ni{flex:none;flex-direction:row;gap:12px;font-size:1.45rem;padding:10px 12px;color:var(--ink)}
+  .sp-ni:hover{background:#F3F1EC}
+  .sp-ni.on{background:#E3F1F1;color:#0f6e74}
+  .sp-yo{display:block;margin-top:18px;padding:14px 8px 0;border-top:1px solid var(--line);font-size:1.15rem;color:#8a8986;word-break:break-all}
+  .sp-yo button{display:block;margin-top:6px;border:0;background:none;padding:0;font:inherit;color:#0f6e74;text-decoration:underline;cursor:pointer}
+  .sp-main{padding-bottom:30px}
+  .sp-top{margin-top:0}
+  /* la Agenda va dentro: su propio menú no se muestra */
+  .sp-area .es-nav{display:none}
+}
+</style>
+</head>
+<body>
+<header class="ap-top"></header>
+<main>
+<section class='storm-section color-scheme-1 gradient'>
+  <div class='storm-wrap pn'><div id='st'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
+</section>
+<script src="/panel/panel.js?v=1"></script>
+<script>
+(()=>{
+  const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
+  const KEY = 'storm-panel';
+  const root = document.getElementById('st');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const guardar = s => { try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(_){} };
+  const leer = () => { try{ return JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(_){ return null; } };
+  const borrar = () => { try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY + '-datos'); localStorage.removeItem('storm-agenda-datos'); }catch(_){} };
+  let auth = leer(), area = (() => { try{ return sessionStorage.getItem('storm-area') || 'hoy'; }catch(_){ return 'hoy'; } })();
+  const sv = d => `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>${d}</svg>`;
+  const I = {
+    hoy: sv("<circle cx='12' cy='12' r='4'/><path d='M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4'/>"),
+    particulares: sv("<path d='M6.5 20.5c3-1 9-7 11-14.5.3-1.2-.8-2.3-2-2C8 6 2 12 1 15c-.4 1.1.5 2 1.5 2.5'/><path d='M8 14l2 2'/><path d='M3 21h18'/>"),
+    anual: sv("<rect x='3.5' y='5' width='17' height='15' rx='3'/><path d='M3.5 10h17M8 3v4M16 3v4M9 14.5h2M13 14.5h2M9 17h2'/>"),
+    verano: sv("<path d='M2 17c2.5 0 2.5-1.5 5-1.5S9.5 17 12 17s2.5-1.5 5-1.5 2.5 1.5 5 1.5M2 21c2.5 0 2.5-1.5 5-1.5S9.5 21 12 21s2.5-1.5 5-1.5 2.5 1.5 5 1.5'/><circle cx='12' cy='8' r='3.5'/><path d='M12 1.5v1M5.5 8h1M17.5 8h1M7.4 3.4l.7.7M15.9 4.1l.7-.7'/>"),
+    adultos: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><circle cx='17' cy='9' r='2.5'/><path d='M16 14.2c2.8-.4 5 1.8 5 4.8'/>"),
+    finanzas: sv("<path d='M4 20V10M10 20V4M16 20v-7M22 20H2'/>"),
+    mas: sv("<circle cx='5' cy='12' r='1.6'/><circle cx='12' cy='12' r='1.6'/><circle cx='19' cy='12' r='1.6'/>"),
+    pago: sv("<rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18'/>"),
+    ficha: sv("<rect x='5' y='3.5' width='14' height='17' rx='2.5'/><path d='M9 9h6M9 13h6M9 17h3'/>"),
+    grupo: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M17 11v6M14 14h6'/>")
+  };
+  const TIT = { hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academia Anual', verano: 'Academia de Verano', adultos: 'Academia de Adultos', finanzas: 'Finanzas' };
+
+  async function post(body){
+    const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error || 'Error');
+    return d;
+  }
+  function login(email, err, paso){
+    root.innerHTML = `<div class='pn-login'>
+      <img src='/img/storm-logo.png' alt='Storm' style='width:150px;height:auto;display:block;margin:10px auto 14px'>
+      ${paso==='codigo'
+        ? `<p>Te enviamos un código a <b>${esc(email)}</b>.</p>
+           <input class='pn-in pn-in--code' id='pn-code' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='······'>
+           <button class='pn-go' id='pn-ok'>Entrar</button>
+           <p class='pn-note'><button class='pn-link' id='pn-back'>Usar otro correo</button></p>`
+        : `<p>Solo para el equipo Storm. Entra con tu correo y te mandamos un código.</p>
+           <input class='pn-in' id='pn-email' type='email' autocomplete='email' placeholder='tu@correo.cl' value='${esc(email||'')}'>
+           <button class='pn-go' id='pn-ok'>Recibir código</button>`}
+      ${err ? `<div class='pn-msg'>${esc(err)}</div>` : ''}
+    </div>`;
+    const ok = document.getElementById('pn-ok');
+    const input = document.getElementById(paso==='codigo' ? 'pn-code' : 'pn-email');
+    input.focus();
+    input.addEventListener('keydown', e => { if(e.key==='Enter') ok.click(); });
+    if(paso==='codigo'){
+      document.getElementById('pn-back').onclick = () => login(email);
+      input.addEventListener('input', () => { input.value = input.value.replace(/\D/g,''); if(input.value.length===6) ok.click(); });
+      ok.onclick = async () => {
+        ok.disabled = true; ok.textContent = 'Entrando…';
+        try{ const s = await post({accion:'entrar', email, codigo:input.value}); auth = {email:s.email, ts:s.ts, firma:s.firma}; guardar(auth); abrir(); }
+        catch(x){ login(email, x.message, 'codigo'); }
+      };
+    } else {
+      ok.onclick = async () => {
+        const e = input.value.trim().toLowerCase();
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return login(e, 'Revisa el correo.');
+        ok.disabled = true; ok.textContent = 'Enviando…';
+        try{ await post({accion:'pedir-codigo', email:e}); login(e, '', 'codigo'); }
+        catch(x){ login(e, x.message); }
+      };
+    }
+  }
+  const salir = msg => { const e = auth && auth.email; borrar(); auth = null; login(e, msg); };
+
+  // ¿quién es? (lo dicen los datos de la Agenda o del Panel)
+  const esAdmin = () => { const E = StormEscuela.datos(); if(E) return E.rol === 'admin'; const d = StormPanel.datos(); return d ? d.rol !== 'instructor' : true; };
+
+  function items(){
+    const adm = esAdmin();
+    return [
+      ['hoy', 'Hoy', 1], ['particulares', adm ? 'Particulares' : 'Mis particulares', 1], ['anual', 'Anual', 1], ['verano', 'Verano', 1],
+      ['adultos', 'Adultos', 0], adm ? ['finanzas', 'Finanzas', 0] : null
+    ].filter(Boolean);
+  }
+  function nav(){
+    const it = items();
+    return `<nav class='sp-nav'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div>
+      ${it.map(([k, t, cel], n) => `${n === 1 ? `<div class='sp-sep'>Clases</div>` : n === 2 ? `<div class='sp-sep'>Academias</div>` : n === 5 ? `<div class='sp-sep'>Administración</div>` : ''}<button class='sp-ni' data-area='${k}'${cel ? '' : ' data-solo-pc'}>${I[k]}<span>${t}</span></button>`).join('')}
+      <button class='sp-ni' data-mas data-solo-cel>${I.mas}<span>Más</span></button>
+      <div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
+  }
+
+  function abrir(){
+    if(!auth) return login();
+    root.innerHTML = `<div class='sp-app'>${nav()}<div class='sp-main'>
+      <div class='sp-top'><div><h1></h1><p></p></div></div>
+      <div class='sp-area' data-a='hoy'></div>
+      <div class='sp-area' data-a='particulares' hidden><div class='pn-escuela'></div></div>
+      <div class='sp-area sp-panel' data-a='panel' hidden><div class='sp-pn'></div></div>
+      <div class='sp-area' data-a='adultos' hidden><div class='sp-pronto'><h3>Academia de Adultos</h3><p>La estamos armando: asistencia (los alumnos marcan "Vine" y Emerson pasa lista), quién debe y el pago de Emerson. Cuando la apruebes, aparece aquí.</p></div></div>
+    </div></div>`;
+    StormEscuela.cargar(root.querySelector('.pn-escuela'), auth, salir);
+    StormPanel.montar(root.querySelector('.sp-pn'), auth);
+    ir(area);
+    // los datos llegan solos: refrescamos Hoy y el menú cuando cambian
+    let firma = '';
+    setInterval(() => {
+      const f = JSON.stringify([!!StormEscuela.datos(), !!StormPanel.datos(), esAdmin(), (StormEscuela.datos() || {}).reservas && StormEscuela.datos().reservas.length]);
+      if(f === firma) return; firma = f;
+      const n = root.querySelector('.sp-nav'); if(n){ n.outerHTML = nav(); bindNav(); marcar(); }
+      if(area === 'hoy') pintarHoy();
+    }, 1200);
+  }
+  function bindNav(){
+    root.querySelectorAll('.sp-nav [data-area]').forEach(b => b.onclick = () => ir(b.dataset.area));
+    root.querySelectorAll('[data-salir]').forEach(b => b.onclick = () => salir());
+    const m = root.querySelector('[data-mas]'); if(m) m.onclick = mas;
+  }
+  function marcar(){ root.querySelectorAll('.sp-nav [data-area]').forEach(b => b.classList.toggle('on', b.dataset.area === area)); }
+  function mas(){
+    const extra = items().filter(x => !x[2]);
+    const w = document.createElement('div'); w.className = 'sp-mas';
+    w.innerHTML = `<div>${extra.map(([k, t]) => `<button data-ir='${k}'>${I[k]}<span>${TIT[k]}</span></button>`).join('')}<button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
+    document.body.appendChild(w);
+    w.onclick = e => { const b = e.target.closest('button'); if(e.target === w || b) w.remove(); if(b && b.dataset.ir) ir(b.dataset.ir); if(b && b.dataset.fuera !== undefined) salir(); };
+  }
+  function ir(a){
+    if(!TIT[a]) a = 'hoy';
+    area = a; try{ sessionStorage.setItem('storm-area', a); }catch(_){}
+    bindNav(); marcar();
+    const panel = ['anual', 'verano', 'finanzas'].includes(a);
+    root.querySelectorAll('.sp-area').forEach(x => x.hidden = !(x.dataset.a === a || (panel && x.dataset.a === 'panel')));
+    if(panel) StormPanel.ir(a);
+    root.querySelector('.sp-top h1').textContent = TIT[a];
+    root.querySelector('.sp-top p').textContent = a === 'hoy' ? hoyLargo() : '';
+    if(a === 'hoy') pintarHoy();
+    window.scrollTo(0, 0);
+  }
+  const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'], MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const hoyLargo = () => { const d = new Date(); return DIAS[d.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()]; };
+
+  function pintarHoy(){
+    const el = root.querySelector('[data-a="hoy"]'); if(!el) return;
+    const E = StormEscuela.datos(), P = StormPanel.datos(), V = StormPanel.verano(), adm = esAdmin();
+    if(!E && !P){ el.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`; return; }
+    const yo = E && E.yo;
+    const part = E ? E.reservas.filter(r => r.estado !== 'cancelada' && (adm || r.instructores.includes(yo))) : [];
+    const hoyF = E ? E.hoy : '';
+    const partHoy = part.filter(r => r.fecha === hoyF);
+    const espera = part.filter(r => r.fecha >= hoyF && (r.estado === 'pendiente' || r.medio === 'Por pagar'));
+    const sinFicha = part.filter(r => r.fecha >= hoyF && r.estado !== 'pendiente' && (r.fichas || []).length < r.personas);
+    const acadHoy = P ? (P.clases || []).filter(c => c.cuando === 'Hoy') : [];
+    const faltan = P && P.actual ? P.actual.faltan.reduce((t, f) => t + f.alumnos.length, 0) : 0;
+    const avisos = P && P.sinGrupo ? P.sinGrupo.length + (P.revisar || []).length : 0;
+    const tile = (cls, ico, n, t, s, go) => `<button class='sp-tile ${cls}' data-go='${go}'><i>${ico}</i><b>${n}</b><span>${t}</span>${s ? `<small>${s}</small>` : ''}</button>`;
+    let h = `<div class='sp-tiles'>
+      ${tile('', I.hoy, partHoy.length + acadHoy.filter(c => !c.cancelada).length, 'clases hoy', partHoy.length ? partHoy.length + ' particular' + (partHoy.length === 1 ? '' : 'es') : '', 'hoy-lista')}
+      ${adm ? tile(faltan ? 'warn' : 'ok', I.pago, faltan, 'faltan por pagar', 'Academia Anual', 'anual:pagos') : ''}
+      ${adm ? tile(espera.length ? 'warn' : 'ok', I.pago, espera.length, 'particulares sin pagar', '', 'particulares:reservas') : ''}
+      ${tile(sinFicha.length ? 'warn' : 'ok', I.ficha, sinFicha.length, 'clases sin fichas', 'particulares', 'particulares:reservas')}
+      ${adm && avisos ? tile('warn', I.grupo, avisos, 'avisos de la Anual', 'alumnos sin grupo o pagos', 'anual:avisos') : ''}
+    </div>`;
+    // línea de tiempo del día
+    const lineas = [];
+    partHoy.forEach(r => lineas.push({ h: r.hora, html: `<button class='sp-line' data-go='particulares:dia'><span class='h'>${esc(r.hora)}</span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}</small></span><span class='tag'>Particular</span></button>` }));
+    acadHoy.forEach(c => lineas.push({ h: String(c.horario || '').slice(0, 5), html: `<button class='sp-line anual${c.cancelada ? ' cancel' : ''}' data-go='anual:clases'><span class='h'>${esc(String(c.horario || '').replace(/\s*hrs?\.?$/i, ''))}</span><span><b>${esc(c.clase)}</b><small>${c.cancelada ? 'Cancelada' : (c.van || 0) + ' alumnos'}</small></span><span class='tag'>Anual</span></button>` }));
+    lineas.sort((a, b) => a.h < b.h ? -1 : 1);
+    h += `<p class='sp-h3' id='hoy-lista'>El día de hoy</p>` + (lineas.length ? lineas.map(l => l.html).join('') : `<div class='sp-vacio'>Hoy no hay clases. 🌊</div>`);
+    // lo que viene mañana
+    const man = E ? part.filter(r => r.fecha === sumar(hoyF, 1)) : [];
+    const acadMan = P ? (P.clases || []).filter(c => c.cuando === 'Mañana') : [];
+    if(man.length || acadMan.length){
+      h += `<p class='sp-h3'>Mañana</p>` + man.map(r => `<button class='sp-line' data-go='particulares:dia'><span class='h'>${esc(r.hora)}</span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}</small></span><span class='tag'>Particular</span></button>`).join('')
+        + acadMan.map(c => `<button class='sp-line anual${c.cancelada ? ' cancel' : ''}' data-go='anual:clases'><span class='h'>${esc(String(c.horario || '').replace(/\s*hrs?\.?$/i, ''))}</span><span><b>${esc(c.clase)}</b><small>${c.cancelada ? 'Cancelada' : (c.van || 0) + ' alumnos'}</small></span><span class='tag'>Anual</span></button>`).join('');
+    }
+    el.innerHTML = h;
+    el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+      const [a, s] = b.dataset.go.split(':');
+      if(a === 'hoy-lista') return document.getElementById('hoy-lista').scrollIntoView({ behavior: 'smooth' });
+      ir(a);
+      if(a === 'particulares' && s) StormEscuela.ir(s);
+      if(a === 'anual' && s) setTimeout(() => StormPanel.tab(s), 50);
+    });
+  }
+  const sumar = (f, n) => { const d = new Date(f + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+  abrir();
+})();
+</script>
+</main>
+<script>window.STORM_APP = { appId: "be18352b-5820-4912-aa46-d851890394a3", safariId: "web.onesignal.auto.1afb9025-a2b0-4a54-8c00-23b218b2b39b", clave: "storm-panel", nombre: "Storm", raiz: "/" };</script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script src="/app.js?v=2" defer></script>
+</body>
+</html>

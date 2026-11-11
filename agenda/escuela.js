@@ -148,6 +148,9 @@
   .es-tg:after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
   .es-sw input:checked+.es-tg{background:#0f6e74}.es-sw input:checked+.es-tg:after{left:19px}
   .es-ajt{margin-bottom:12px}
+  .es-tabs2{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 14px}.es-tabs2 .es-nueva{margin-left:auto}
+  .es-tabs2 .es-chip.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
+  @media (max-width:999px){.es-tabs2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-16px;padding-right:16px}.es-tabs2 .es-chip{flex:none}.es-tabs2 .es-nueva{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;padding:14px 20px;font-size:1.5rem;box-shadow:0 8px 24px rgba(15,110,116,.35)}}
   .es-op{padding:12px 0;border-bottom:1px solid var(--line)}.es-op:last-child{border-bottom:0}.es-op b{font-size:1.4rem}.es-op p{margin:3px 0 8px;font-size:1.25rem;color:#6b6a67}
   .es-op select{border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:1.35rem;background:#fff;max-width:100%}
   .es-op .es-f{margin-top:10px}
@@ -245,7 +248,8 @@
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
     const IT = admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
     const TIT = { dia: 'Agenda del día', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };
-    h += `<div class='es-app'><nav class='es-nav'><div class='es-brand'><img src='/img/storm-logo.png' alt='Storm'><span>Agenda</span></div>${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}${IT.map(([k, t]) => `<button class='es-ni' data-sub='${k}'>${ICO[k]}<span>${t}</span></button>`).join('')}<div class='es-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>
+    if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip' data-sub='${k}'>${t}</button>`).join('')}${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
+    else h += `<div class='es-app'><nav class='es-nav'><div class='es-brand'><img src='/img/storm-logo.png' alt='Storm'><span>Agenda</span></div>${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}${IT.map(([k, t]) => `<button class='es-ni' data-sub='${k}'>${ICO[k]}<span>${t}</span></button>`).join('')}<div class='es-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>
       <div class='es-main'><div class='es-top'><h2>${TIT[sub] || ''}</h2><div class='es-topb'>${admin ? `<button class='es-nueva' data-nueva>+ Nueva</button>` : ''}<button class='es-salir-m' data-salir>Salir</button></div></div>` + cuerpo;
     cuerpo = '';
     if (sub === 'dia') h += diaVista(admin);
@@ -253,7 +257,7 @@
     else if (sub === 'pagos') h += pagosVista(admin);
     else if (sub === 'ajustes' && admin) h += ajustes();
     else h += reservas(admin);
-    h += `</div></div>`;
+    h += window.STORM_SHELL ? `</div>` : `</div></div>`;
     if (toast) h += `<div class='es-toast${/^No /.test(toast) ? ' mal' : ''}' role='status'><span class='es-ti'>${/^No /.test(toast) ? '!' : '✓'}</span>${esc(toast)}</div>`;
     if (manualOn && admin) h += `<div class='es-modal' data-fondo><div class='es-sheet'>${manualForm()}</div></div>`;
     pane.innerHTML = h;
@@ -686,5 +690,5 @@
       if (!E) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
     }
   }
-  window.StormEscuela = { cargar };
+  window.StormEscuela = { cargar, datos: () => E, ir: x => { sub = x; msg = ''; if (pane) pintar(); }, nueva: () => { manualOn = true; msg = ''; if (pane) pintar(); } };
 })();
