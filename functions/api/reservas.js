@@ -740,14 +740,26 @@ async function disponible(env, q, d) {
     st.push(db.prepare('INSERT OR REPLACE INTO excepciones (instructor, fecha, hora, libre) VALUES (?, ?, ?, ?)').bind(inst, fecha, hora, d.libre ? 1 : 0));
     await db.batch(st);
   }
-  return panel(env, q);
+  return d.ligero ? { ok: true } : panel(env, q);
+}
+/** Un día puntual de un golpe: horas = las que puede (Todo / Mañana / Tarde / No puedo); volver = vuelve a su semana tipo */
+async function diaHoras(env, q, d) {
+  const db = env.DB, inst = q.rol === 'admin' ? String(d.instructor || '') : q.yo, fecha = String(d.fecha || '');
+  if (!inst || !esFecha(fecha)) throw err('Faltan datos.');
+  const st = [db.prepare('DELETE FROM excepciones WHERE instructor = ? AND fecha = ?').bind(inst, fecha)];
+  if (!d.volver) {
+    st.push(db.prepare("INSERT INTO excepciones (instructor, fecha, hora, libre) VALUES (?, ?, '', 0)").bind(inst, fecha));
+    [...new Set((d.horas || []).map(normHora).filter(Boolean))].forEach(h => st.push(db.prepare('INSERT INTO excepciones (instructor, fecha, hora, libre) VALUES (?, ?, ?, 1)').bind(inst, fecha, h)));
+  }
+  await db.batch(st);
+  return d.ligero ? { ok: true } : panel(env, q);
 }
 async function semanaTipo(env, q, d) {
   const inst = q.rol === 'admin' ? String(d.instructor || '') : q.yo, dia = Math.floor(Number(d.dia));
   if (!inst || !(dia >= 0 && dia <= 6)) throw err('Faltan datos.');
   const horas = [...new Set((d.horas || []).map(normHora).filter(Boolean))].sort();
   await env.DB.prepare('INSERT OR REPLACE INTO semana (instructor, dia, horas) VALUES (?, ?, ?)').bind(inst, dia, JSON.stringify(horas)).run();
-  return panel(env, q);
+  return d.ligero ? { ok: true } : panel(env, q);
 }
 async function manual(env, q, d, ctx) {
   const db = env.DB, a = await ajustes(db);
@@ -929,6 +941,7 @@ export async function onRequest(context) {
     if (acc === 'pagos-semana') return json(await pagosSemana(env, q, d));
     if (acc === 'disponible') return json(await disponible(env, q, d));
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
+    if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
     if (q.rol !== 'admin') throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }

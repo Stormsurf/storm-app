@@ -84,6 +84,9 @@
   .es-cd{padding:10px 0;border-bottom:1px solid var(--line)}
   .es-cd:last-child{border-bottom:0}
   .es-cdh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:1.4rem;font-weight:600}
+  .es-pre{display:flex;gap:4px;flex:none}
+  .es-cdh .es-pre button{text-decoration:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-weight:600;color:var(--ink)}
+  .es-cdh .es-pre button.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
   .es-cdh button{border:0;background:none;font:inherit;font-size:1.2rem;color:#0f6e74;text-decoration:underline;cursor:pointer;padding:0}
   .es-slots{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
   .es-s{border:1.5px solid #bfe0cc;background:#effaf3;color:#2f7a4d;border-radius:10px;padding:6px 9px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;line-height:1.15;text-align:left}
@@ -258,6 +261,19 @@
       <div class='es-acc'><button class='es-btn' data-manual-go>Guardar reserva</button><button class='pn-link' data-manual>Cerrar</button></div><p class='es-err vivo'></p></div>`;
   }
 
+  // Atajos por día: Todo / Mañana (antes de las 13:00) / Tarde / No
+  const basesDia = d => E.horarios.filter(x => d === 0 || x >= '09:00');
+  const PRESETS = { todo: d => basesDia(d), manana: d => basesDia(d).filter(x => x < '13:00'), tarde: d => basesDia(d).filter(x => x >= '13:00'), no: () => [] };
+  const igual = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+  function preBtns(key, actuales, attr, dia) {
+    return `<div class='es-pre'>${[['todo', 'Todo'], ['manana', 'Mañana'], ['tarde', 'Tarde'], ['no', 'No']].map(([k, t]) => `<button ${attr}='${key}' data-p='${k}' class='${igual(actuales, PRESETS[k](dia)) ? 'on' : ''}'>${t}</button>`).join('')}</div>`;
+  }
+  // Guardado al instante: se cambia en pantalla y se manda en orden por detrás
+  let cola = Promise.resolve();
+  function enviar(body) {
+    cola = cola.then(() => post(Object.assign({ ligero: 1 }, body))).catch(x => { msg = 'No se guardó: ' + x.message; accion({ accion: 'escuela' }); });
+  }
+
   function calendario(admin) {
     const activos = E.instructores.filter(i => i.activo).map(i => i.nombre);
     const inst = admin ? (activos.includes(calIns) ? calIns : (calIns = activos[0] || '')) : E.yo;
@@ -265,14 +281,15 @@
     let h = '';
     if (admin) h += `<div class='es-chips'>${activos.map(n => `<button class='es-chip${inst === n ? ' on' : ''}' data-ci='${esc(n)}'>${esc(n)}</button>`).join('')}</div>`;
     if (!inst) return h + `<div class='pn-card'><p class='pn-empty'>Agrega instructores en Ajustes.</p></div>`;
-    h += `<div class='es-2c'><div class='pn-card'><h3>${admin ? 'Calendario de ' + esc(inst) : 'Mi calendario'}</h3><p class='pn-sub'>Toca una hora para marcar si ${admin ? esc(inst) + ' puede' : 'puedes'} o no. Las clases reservadas salen en azul.</p>
+    h += `<div class='es-2c'><div class='pn-card'><h3>${admin ? 'Calendario de ' + esc(inst) : 'Mi calendario'}</h3><p class='pn-sub'>Elige rápido Todo, Mañana, Tarde o No, o toca una hora para cambiarla sola. Se guarda al instante. Las clases reservadas salen en azul.</p>
       <div class='es-ley'><span><i style='background:#effaf3;border:1.5px solid #bfe0cc'></i>Disponible</span><span><i style='background:#fff;border:1.5px solid #ddd'></i>No disponible</span><span><i style='background:#0f6e74'></i>Clase reservada</span><span><i style='background:#F3F1EC;border:1.5px solid #e3e0da'></i>Academia Anual u otra cosa</span></div>
       <div class='es-wk'><button data-wk='-7'${calDesde <= E.hoy ? ' disabled style="opacity:.3"' : ''}>‹ Antes</button><b style='font-size:1.35rem'>${fcorta(calDesde)} – ${fcorta(sumar(calDesde, 6))}</b><button data-wk='7'>Después ›</button></div><div class='es-cal'>`;
     for (let k = 0; k < 7; k++) {
       const f = sumar(calDesde, k), diaEx = E.excepciones.find(e => e.instructor === inst && e.fecha === f && e.hora === '');
       const libres = E.horarios.filter(x => dispo(inst, f, x)).length;
-      h += `<div class='es-cd'><div class='es-cdh'><span>${esc(fcorta(f))}</span>${libres ? `<button data-dia='${f}' data-libre='0'>No puedo este día</button>` : `<button data-dia='${f}' data-libre='${diaEx ? 'x' : '1'}'>${diaEx ? 'Volver a mi semana tipo' : 'Puedo todo el día'}</button>`}</div><div class='es-slots'>`;
-      E.horarios.forEach(x => {
+      const tieneEx = E.excepciones.some(e => e.instructor === inst && e.fecha === f);
+      h += `<div class='es-cd'><div class='es-cdh'><span>${esc(fcorta(f))}${tieneEx ? ` <button data-pf='${f}' data-p='semana'>volver a semana tipo</button>` : ''}</span>${preBtns(f, E.horarios.filter(x => dispo(inst, f, x)), 'data-pf', dsem(f))}</div><div class='es-slots'>`;
+      E.horarios.filter(x => dsem(f) === 0 || x >= '09:00' || dispo(inst, f, x) || reservaEn(inst, f, x)).forEach(x => {
         const r = reservaEn(inst, f, x), ok = dispo(inst, f, x);
         if (r) h += r.hora === x ? `<span class='es-s res'>${x}<small>${esc(r.nombre.split(' ')[0])} · ${r.personas}p</small></span>` : `<span class='es-s res' style='opacity:.55'>${x}<small>sigue clase ${esc(r.hora)}</small></span>`;
         else if (otraCosa(inst, f, x)) h += `<span class='es-s pas' style='background:#F3F1EC;border-color:#e3e0da;color:#6b6a67'>${x}<small>${esc(otraCosa(inst, f, x).replace('Academia Anual · ', 'Anual '))}</small></span>`;
@@ -285,7 +302,7 @@
     h += `<div class='pn-card'><h3>Semana tipo${admin ? ' de ' + esc(inst) : ''}</h3><p class='pn-sub'>Las horas que ${admin ? 'puede' : 'puedes'} trabajar cada semana. Lo de arriba cambia solo un día puntual.</p>`;
     [1, 2, 3, 4, 5, 6, 0].forEach(d => {
       const s = E.semana.find(s => s.instructor === inst && s.dia === d), horas = s ? s.horas : [];
-      h += `<div class='es-cd'><div class='es-cdh'><span>${DIAS[d]}</span><button data-semtodo='${d}' data-v='${horas.length ? 0 : 1}'>${horas.length ? 'Nada' : 'Todo'}</button></div><div class='es-slots'>${E.horarios.map(x => `<button class='es-s${horas.includes(x) ? '' : ' no'}' data-sd='${d}' data-sh='${x}'>${x}</button>`).join('')}</div></div>`;
+      h += `<div class='es-cd'><div class='es-cdh'><span>${DIAS[d]}</span>${preBtns(d, horas, 'data-pd', d)}</div><div class='es-slots'>${E.horarios.filter(x => d === 0 || x >= '09:00' || horas.includes(x)).map(x => `<button class='es-s${horas.includes(x) ? '' : ' no'}' data-sd='${d}' data-sh='${x}'>${x}</button>`).join('')}</div></div>`;
     });
     return h + `</div></div>`;
   }
@@ -456,15 +473,27 @@
       const f = b.dataset.sf, hh = b.dataset.sh, ahora = b.dataset.ok === '1', quiero = !ahora;
       const sinHora = Object.assign({}, E, { excepciones: E.excepciones.filter(e => !(e.instructor === inst && e.fecha === f && e.hora === hh)) });
       const base = (() => { const old = E; E = sinHora; const v = dispo(inst, f, hh); E = old; return v; })();
-      b.classList.toggle('no', !quiero); b.dataset.ok = quiero ? 1 : 0;
-      accion({ accion: 'disponible', instructor: inst, fecha: f, hora: hh, libre: base === quiero ? null : quiero });
+      const libre = base === quiero ? null : quiero;
+      E.excepciones = sinHora.excepciones.concat(libre === null ? [] : [{ instructor: inst, fecha: f, hora: hh, libre }]);
+      pintar(); enviar({ accion: 'disponible', instructor: inst, fecha: f, hora: hh, libre });
+    });
+    $$('[data-pf]').forEach(b => b.onclick = () => {
+      const f = b.dataset.pf, p = b.dataset.p, volver = p === 'semana', horas = volver ? [] : PRESETS[p](dsem(f));
+      E.excepciones = E.excepciones.filter(e => !(e.instructor === inst && e.fecha === f));
+      if (!volver) E.excepciones.push({ instructor: inst, fecha: f, hora: '', libre: false }, ...horas.map(x => ({ instructor: inst, fecha: f, hora: x, libre: true })));
+      pintar(); enviar({ accion: 'dia-horas', instructor: inst, fecha: f, horas, volver });
+    });
+    $$('[data-pd]').forEach(b => b.onclick = () => {
+      const d = +b.dataset.pd, horas = PRESETS[b.dataset.p](d);
+      const s = E.semana.find(s => s.instructor === inst && s.dia === d); if (s) s.horas = horas; else E.semana.push({ instructor: inst, dia: d, horas });
+      pintar(); enviar({ accion: 'semana', instructor: inst, dia: d, horas });
     });
     $$('[data-dia]').forEach(b => b.onclick = () => { const l = b.dataset.libre; accion({ accion: 'disponible', instructor: inst, fecha: b.dataset.dia, hora: '', libre: l === 'x' ? null : l === '1' }, b); });
     $$('[data-sd]').forEach(b => b.onclick = () => {
       const d = +b.dataset.sd, s = E.semana.find(s => s.instructor === inst && s.dia === d), horas = s ? s.horas.slice() : [], x = b.dataset.sh;
       const nuevas = horas.includes(x) ? horas.filter(y => y !== x) : horas.concat(x);
-      b.classList.toggle('no');
-      accion({ accion: 'semana', instructor: inst, dia: d, horas: nuevas });
+      if (s) s.horas = nuevas; else E.semana.push({ instructor: inst, dia: d, horas: nuevas });
+      pintar(); enviar({ accion: 'semana', instructor: inst, dia: d, horas: nuevas });
     });
     $$('[data-semtodo]').forEach(b => b.onclick = () => accion({ accion: 'semana', instructor: inst, dia: +b.dataset.semtodo, horas: b.dataset.v === '1' ? E.horarios.filter(x => +b.dataset.semtodo === 0 || x >= '09:00') : [] }, b));
     // ajustes
