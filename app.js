@@ -52,7 +52,21 @@
   // ---------- Notificaciones (OneSignal) ----------
   let OS = null, permiso = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
   const pushPosible = () => !!C.appId && 'serviceWorker' in navigator && 'PushManager' in window && (!ios || standalone);
-  if (C.appId) {
+  // El Panel no recibe notificaciones: solo la app Storm (Mi clase). En iPhone cada ícono instalado tiene su propia
+  // suscripción, así que si alguien tiene Storm y Panel Storm con el mismo correo, cada aviso le llegaba dos veces.
+  // En el Panel del iPhone desconectamos esa suscripción; en Android/computador es la misma de Storm y no se toca.
+  const panel = C.clave === 'storm-panel';
+  if (C.appId && panel && ios && standalone) {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async OneSignal => {
+      try {
+        await OneSignal.init({ appId: C.appId, safari_web_id: C.safariId, serviceWorkerPath: 'OneSignalSDKWorker.js', serviceWorkerParam: { scope: '/' }, notifyButton: { enable: false }, autoResubscribe: false });
+        if (OneSignal.User.PushSubscription.optedIn) await OneSignal.User.PushSubscription.optOut();
+        if (OneSignal.User.externalId) await OneSignal.logout();
+      } catch (x) { console.warn('OneSignal', x); }
+    });
+  }
+  if (C.appId && !panel) {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async OneSignal => {
       try {
@@ -71,7 +85,7 @@
     if (email === ultimo) return;
     ultimo = email;
     try {
-      if (email) { await OS.login(email); OS.User.addTag('tipo', C.clave === 'storm-panel' ? 'equipo' : 'familia'); }
+      if (email) { await OS.login(email); OS.User.addTag('tipo', 'familia'); }
       else if (OS.User && OS.User.externalId) await OS.logout();
     } catch (x) { console.warn('OneSignal login', x); }
   }
