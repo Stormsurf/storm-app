@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Academia de Adultos · Storm (vista previa)</title>
+<meta name="theme-color" content="#EFECE8">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1">
+<style>
+.ad{--ac:#4F7F86;--ac-dk:#335a60;--ac-soft:#E3EDEE;--ink:#2C2C2B;--line:rgba(44,44,43,.09);--warn:#B5543C;--warn-soft:#F6E3DF;--ok:#3E9B76;--ok-soft:#E7F4EE;max-width:680px;margin:0 auto;padding:0 16px 40px;color:var(--ink)}
+.ad-demo{margin:6px auto 0;max-width:680px;text-align:center;font-size:1.25rem;background:#FBF3DC;color:#5a4507;border-radius:999px;padding:6px 14px}
+.ad-sw{display:flex;gap:6px;margin-top:14px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:999px}
+.ad-sw button{flex:1;border:0;border-radius:999px;background:none;font:inherit;font-size:1.3rem;font-weight:600;padding:10px 6px;cursor:pointer;color:var(--ink);opacity:.6}
+.ad-sw button.on{background:var(--ink);color:#fff;opacity:1}
+.ad-hero{text-align:center;margin-top:18px}
+.ad-hero small{display:block;font-size:1.2rem;letter-spacing:.12em;text-transform:uppercase;opacity:.55;font-weight:600}
+.ad-hero h1{margin:4px 0 0;font-weight:500;font-size:2.8rem;line-height:1.15}
+.ad-hero p{margin:6px auto 0;max-width:40ch;font-size:1.45rem;opacity:.72}
+.ad-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:14px}
+.ad-h2{margin:26px 0 0;font-weight:500;font-size:2rem;display:flex;align-items:center;gap:10px}
+.ad-h2:before{content:'';width:10px;height:10px;border-radius:50%;background:var(--ac);flex:none}
+.ad-hoy{background:var(--ink);color:#fff;border:0;text-align:center}
+.ad-hoy small{display:block;opacity:.65;font-size:1.25rem;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.ad-hoy h3{margin:6px 0 2px;font-size:2.4rem;font-weight:500}
+.ad-hoy p{margin:0;opacity:.75;font-size:1.4rem}
+.ad-big{display:block;width:100%;margin-top:16px;border:0;border-radius:999px;background:#fff;color:var(--ink);font:inherit;font-weight:700;font-size:1.7rem;padding:16px;cursor:pointer}
+.ad-big.done{background:var(--ok);color:#fff;cursor:default}
+.ad-wa{display:inline-flex;align-items:center;gap:8px;margin-top:12px;color:#fff;font-size:1.35rem;opacity:.85}
+.ad-plan{display:flex;align-items:center;gap:18px}
+.ad-ring{flex:none;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;text-align:center;line-height:1.05}
+.ad-ring b{display:block;font-size:2.8rem;font-weight:600}
+.ad-ring small{font-size:1.1rem;opacity:.7}
+.ad-plan h3{margin:0;font-size:1.9rem;font-weight:500}
+.ad-plan p{margin:4px 0 0;font-size:1.4rem;opacity:.72}
+.ad-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.ad-row:last-child{border-bottom:0}
+.ad-row b{font-weight:600;font-size:1.5rem}
+.ad-row small{display:block;opacity:.62;font-size:1.25rem;margin-top:1px}
+.ad-tag{display:inline-block;font-size:1.15rem;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.t-ok{background:var(--ok-soft);color:#24684d}.t-no{background:#F1EFEC;color:#77756f}.t-warn{background:var(--warn-soft);color:var(--warn)}.t-ac{background:var(--ac-soft);color:var(--ac-dk)}.t-chg{background:#FBF3DC;color:#6b520a}
+.ad-pay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.ad-opt{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;text-align:left;font:inherit;cursor:pointer;color:var(--ink)}
+.ad-opt b{display:block;font-size:2rem;font-weight:600}
+.ad-opt small{opacity:.65;font-size:1.25rem}
+.ad-opt.best{border-color:var(--ac);background:var(--ac-soft)}
+.ad-note{font-size:1.3rem;opacity:.65;margin-top:12px;line-height:1.5;text-align:center}
+.ad-sel{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;margin-top:12px;scrollbar-width:none}
+.ad-sel button{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:8px 12px;font:inherit;cursor:pointer;text-align:center;line-height:1.15;color:var(--ink)}
+.ad-sel button b{display:block;font-size:1.8rem;font-weight:600}
+.ad-sel button small{font-size:1.1rem;text-transform:uppercase;letter-spacing:.05em;opacity:.65}
+.ad-sel button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ad-sel button.hoy:not(.on){border-color:var(--ac)}
+.ad-list .ad-row{cursor:pointer;user-select:none}
+.ad-chk{flex:none;width:34px;height:34px;border-radius:10px;border:2px solid rgba(44,44,43,.22);display:grid;place-items:center;font-size:1.8rem;font-weight:700;color:#fff}
+.ad-chk.on{background:var(--ok);border-color:var(--ok)}
+.ad-who{flex:1;min-width:0}
+.ad-cnt{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:1.4rem}
+.ad-add{display:flex;gap:8px;margin-top:12px}
+.ad-add input{flex:1;min-width:0;border:1.5px solid rgba(44,44,43,.18);border-radius:12px;padding:11px 12px;font:inherit;font-size:1.5rem}
+.ad-go{border:0;border-radius:999px;background:var(--ac);color:#fff;font:inherit;font-weight:600;font-size:1.4rem;padding:11px 18px;cursor:pointer;white-space:nowrap}
+.ad-ghost{border:1.5px solid var(--ac);background:#fff;color:var(--ac-dk);border-radius:999px;font:inherit;font-weight:600;font-size:1.3rem;padding:7px 14px;cursor:pointer}
+.ad-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.ad-k{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}
+.ad-k small{display:block;font-size:1.2rem;opacity:.62}
+.ad-k b{display:block;font-size:2.2rem;font-weight:600;margin-top:2px}
+.ad-k.hi{background:var(--ink);color:#fff;border-color:var(--ink);grid-column:1/-1}
+.ad-k.hi b{font-size:3rem}
+.ad-calc .ad-row b{font-weight:500;font-size:1.45rem}
+.ad-calc .ad-row span{font-weight:600;font-size:1.5rem;white-space:nowrap}
+.ad-calc .tot b,.ad-calc .tot span{font-weight:700}
+.ad-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:1.4rem;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header class="ap-top"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></header>
+<p class="ad-demo">Vista previa con datos de ejemplo · puedes tocar todo, nada se guarda de verdad</p>
+<main class="ad">
+  <div class="ad-sw" id="sw">
+    <button data-v="alumno" class="on">Alumno</button>
+    <button data-v="lista">Emerson pasa lista</button>
+    <button data-v="cuentas">Cuentas (Isidora)</button>
+  </div>
+  <div id="app"></div>
+  <p class="ad-note" style="margin-top:22px"><button class="ad-ghost" id="reset">Volver a empezar la prueba</button></p>
+</main>
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const PRECIO_CLASE = 15000, PRECIO_PACK = 100000, PACK = 8, COMISION = 0.0344;
+  const HOY = '2026-11-14'; // en la prueba hacemos como si hoy fuera sábado 14 de noviembre
+  const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+  const dd = iso => { const d = new Date(iso + 'T12:00'); return { dia: DIAS[d.getDay()], n: d.getDate(), mes: MESES[d.getMonth()] }; };
+  const larga = iso => { const x = dd(iso); return x.dia.charAt(0).toUpperCase() + x.dia.slice(1) + ' ' + x.n + ' de ' + x.mes; };
+
+  const INICIAL = () => ({
+    clases: [
+      { f:'2026-11-02', h:'9:00 a 11:00' },
+      { f:'2026-11-07', h:'9:00 a 11:00' },
+      { f:'2026-11-09', h:'10:00 a 12:00', cambio:'Cambió de horario por el pronóstico' },
+      { f:'2026-11-14', h:'9:00 a 11:00' },
+      { f:'2026-11-16', h:'9:00 a 11:00' },
+      { f:'2026-11-21', h:'9:00 a 11:00' },
+      { f:'2026-11-23', h:'9:00 a 11:00' },
+      { f:'2026-11-28', h:'9:00 a 11:00' },
+      { f:'2026-11-30', h:'9:00 a 11:00' }
+    ],
+    alumnos: [
+      { id:'cr', nombre:'Camila Rojas', pagos:[{ tipo:'pack', monto:PRECIO_PACK, fecha:'2026-11-01', medio:'Mercado Pago' }] },
+      { id:'ap', nombre:'Andrés Pérez', pagos:[{ tipo:'pack', monto:PRECIO_PACK, fecha:'2026-11-02', medio:'Mercado Pago' }] },
+      { id:'jm', nombre:'Josefina Mena', pagos:[{ tipo:'suelta', monto:PRECIO_CLASE, fecha:'2026-11-07', medio:'Transferencia' }] },
+      { id:'tv', nombre:'Tomás Vidal', pagos:[] },
+      { id:'pg', nombre:'Pedro González', pagos:[], agregado:true }
+    ],
+    // asistencia: clave fecha -> { idAlumno: 'emerson' | 'alumno' }
+    asis: {
+      '2026-11-02': { cr:'emerson', ap:'emerson', tv:'emerson' },
+      '2026-11-07': { cr:'emerson', ap:'emerson', jm:'emerson', tv:'emerson' },
+      '2026-11-09': { cr:'emerson', ap:'alumno', pg:'emerson' }
+    },
+    yo: 'cr'
+  });
+  let S = JSON.parse(localStorage.getItem('ad-prueba') || 'null') || INICIAL();
+  const save = () => localStorage.setItem('ad-prueba', JSON.stringify(S));
+  let vista = 'alumno', claseSel = HOY;
+
+  const toast = t => { const e = document.createElement('div'); e.className = 'ad-toast'; e.textContent = t; document.body.appendChild(e); setTimeout(() => e.remove(), 2200); };
+
+  // Cuenta de cada alumno: clases pagadas, clases que fue, cuántas le quedan o cuánto debe.
+  function cuenta(a){
+    const pagadas = a.pagos.reduce((s,p) => s + (p.tipo === 'pack' ? PACK : 1), 0);
+    const pagado = a.pagos.reduce((s,p) => s + p.monto, 0);
+    const fue = S.clases.filter(c => S.asis[c.f] && S.asis[c.f][a.id]).map(c => c.f);
+    const quedan = pagadas - fue.length;
+    return { pagadas, pagado, fue, quedan, debe: quedan < 0 ? -quedan * PRECIO_CLASE : 0, tienePack: a.pagos.some(p => p.tipo === 'pack') };
+  }
+  const estado = a => {
+    const c = cuenta(a);
+    if (c.debe) return `<span class="ad-tag t-warn">Debe ${fmt(c.debe)}</span>`;
+    if (!c.pagadas) return `<span class="ad-tag t-no">Sin pago</span>`;
+    if (!c.quedan) return `<span class="ad-tag t-no">Usó todas sus clases</span>`;
+    return `<span class="ad-tag t-ok">Le ${c.quedan === 1 ? 'queda 1 clase' : 'quedan ' + c.quedan + ' clases'}</span>`;
+  };
+
+  // ---------- Vista del alumno ----------
+  function vAlumno(){
+    const a = S.alumnos.find(x => x.id === S.yo), c = cuenta(a);
+    const hoy = S.clases.find(x => x.f === HOY);
+    const marcada = hoy && S.asis[HOY] && S.asis[HOY][a.id];
+    const prox = S.clases.find(x => x.f > HOY);
+    let h = `<div class="ad-hero"><small>Academia de Adultos</small><h1>Hola, ${a.nombre.split(' ')[0]}</h1><p>Lunes y sábados de 9:00 a 11:00.</p></div>`;
+    if (hoy) h += `<div class="ad-card ad-hoy"><small>Hoy hay clase</small><h3>${larga(hoy.f)}</h3><p>${hoy.h}${hoy.cambio ? ' · ' + hoy.cambio : ''}</p>
+      <button class="ad-big${marcada ? ' done' : ''}" id="fui">${marcada ? '✓ Quedó anotado que viniste' : 'Vine a la clase'}</button>
+      <a class="ad-wa" href="#" onclick="return false">Si la clase cambia por el pronóstico, Emerson avisa por WhatsApp</a></div>`;
+    const ringBg = c.debe ? 'var(--warn-soft)' : 'var(--ac-soft)';
+    h += `<h2 class="ad-h2">Mis clases</h2><div class="ad-card"><div class="ad-plan">
+      <div class="ad-ring" style="background:${ringBg}"><div><b>${c.debe ? '!' : Math.max(c.quedan,0)}</b><small>${c.debe ? 'por pagar' : 'te quedan'}</small></div></div>
+      <div><h3>${c.tienePack ? 'Plan 8 clases' : 'Clase suelta'}</h3><p>Fuiste a ${c.fue.length} de ${c.pagadas} ${c.pagadas === 1 ? 'clase pagada' : 'clases pagadas'}.${c.debe ? ' Tienes ' + fmt(c.debe) + ' por pagar.' : ''}</p></div></div>`;
+    h += `<div style="margin-top:14px;border-top:1px solid var(--line)">` + S.clases.filter(x => x.f <= HOY).slice().reverse().map(x => {
+      const m = S.asis[x.f] && S.asis[x.f][a.id];
+      return `<div class="ad-row"><div><b>${larga(x.f)}</b><small>${x.h}${x.cambio ? ' · ' + x.cambio : ''}</small></div>${m ? '<span class="ad-tag t-ok">Fuiste</span>' : (x.f === HOY ? '<span class="ad-tag t-ac">Hoy</span>' : '<span class="ad-tag t-no">No fuiste</span>')}</div>`;
+    }).join('') + `</div></div>`;
+    if (prox) h += `<p class="ad-note">Próxima clase: <b>${larga(prox.f)}</b>, ${prox.h}.</p>`;
+    h += `<h2 class="ad-h2">Pagar</h2><div class="ad-pay">
+      <button class="ad-opt best" data-pay="pack"><small>8 clases al mes</small><b>${fmt(PRECIO_PACK)}</b><small>Sale ${fmt(PRECIO_PACK/PACK)} la clase</small></button>
+      <button class="ad-opt" data-pay="suelta"><small>Clase suelta</small><b>${fmt(PRECIO_CLASE)}</b><small>Una clase</small></button></div>
+      <p class="ad-note">Pagas con Mercado Pago y queda anotado solo.</p>`;
+    return h;
+  }
+
+  // ---------- Emerson pasa lista ----------
+  function vLista(){
+    const pas = S.clases.filter(x => x.f <= HOY);
+    if (!pas.find(x => x.f === claseSel)) claseSel = pas[pas.length-1].f;
+    const cl = S.clases.find(x => x.f === claseSel), as = S.asis[claseSel] || {};
+    let h = `<div class="ad-hero"><small>Panel · Academia de Adultos</small><h1>Pasar lista</h1><p>Toca a cada persona que vino. Si alguien no está en la lista, agrégalo abajo.</p></div>`;
+    h += `<div class="ad-sel">` + pas.slice().reverse().map(x => { const d = dd(x.f); return `<button data-cl="${x.f}" class="${x.f === claseSel ? 'on' : ''}${x.f === HOY ? ' hoy' : ''}"><small>${d.dia}</small><b>${d.n}</b></button>`; }).join('') + `</div>`;
+    const n = Object.keys(as).length;
+    h += `<div class="ad-card"><div class="ad-cnt"><b>${larga(cl.f)}${cl.f === HOY ? ' · hoy' : ''}</b><span class="ad-tag t-ac">${n} ${n === 1 ? 'vino' : 'vinieron'}</span></div>`;
+    h += `<p style="margin:6px 0 0;font-size:1.3rem;opacity:.65">${cl.h}${cl.cambio ? ' · ' + cl.cambio : ''} <button class="ad-ghost" id="cambio" style="margin-left:6px;padding:4px 10px;font-size:1.15rem">Anotar cambio</button></p>`;
+    h += `<div class="ad-list" style="margin-top:10px;border-top:1px solid var(--line)">` + S.alumnos.map(a => {
+      const m = as[a.id];
+      const sub = m === 'alumno' ? 'Lo marcó desde su celular' : a.agregado ? 'Agregado por Emerson (no estaba inscrito)' : '';
+      return `<div class="ad-row" data-al="${a.id}"><div class="ad-chk${m ? ' on' : ''}">${m ? '✓' : ''}</div><div class="ad-who"><b>${a.nombre}</b>${sub ? `<small>${sub}</small>` : ''}</div>${estado(a)}</div>`;
+    }).join('') + `</div>`;
+    h += `<div class="ad-add"><input id="nuevo" placeholder="Nombre de alguien que vino"><button class="ad-go" id="agregar">Agregar</button></div></div>`;
+    h += `<p class="ad-note">"Debe" aparece cuando alguien fue a más clases de las que pagó. Así sabes a quién cobrarle antes de que entre al agua.</p>`;
+    return h;
+  }
+
+  // ---------- Cuentas del mes (solo Isidora) ----------
+  function vCuentas(){
+    const lista = S.alumnos.map(a => ({ a, c: cuenta(a) }));
+    const entro = lista.reduce((s,x) => s + x.c.pagado, 0);
+    const mp = S.alumnos.reduce((s,a) => s + a.pagos.filter(p => p.medio === 'Mercado Pago').reduce((t,p) => t + p.monto, 0), 0);
+    const com = mp * COMISION, neto = entro - com, emerson = neto / 2;
+    const debe = lista.reduce((s,x) => s + x.c.debe, 0);
+    const hechas = S.clases.filter(c => c.f <= HOY);
+    const asist = hechas.reduce((s,c) => s + Object.keys(S.asis[c.f] || {}).length, 0);
+    let h = `<div class="ad-hero"><small>Panel · Finanzas · Adultos</small><h1>Noviembre</h1><p>Se calcula solo con los pagos y la lista que pasa Emerson.</p></div>`;
+    h += `<div class="ad-sum"><div class="ad-k hi"><small>Le toca a Emerson este mes</small><b>${fmt(emerson)}</b></div>
+      <div class="ad-k"><small>Entró</small><b>${fmt(entro)}</b></div>
+      <div class="ad-k"><small>Queda para Storm</small><b>${fmt(neto - emerson)}</b></div>
+      <div class="ad-k"><small>Clases hechas</small><b>${hechas.length}</b></div>
+      <div class="ad-k"><small>Asistencias</small><b>${asist}</b></div></div>`;
+    h += `<div class="ad-card ad-calc"><div class="ad-row"><b>Pagos del mes</b><span>${fmt(entro)}</span></div>
+      <div class="ad-row"><b>Comisión Mercado Pago (3,44%)</b><span>− ${fmt(com)}</span></div>
+      <div class="ad-row"><b>Neto</b><span>${fmt(neto)}</span></div>
+      <div class="ad-row tot"><b>50% Emerson</b><span>${fmt(emerson)}</span></div>
+      <div class="ad-row"><b>50% Storm</b><span>${fmt(neto - emerson)}</span></div></div>`;
+    if (debe) h += `<div class="ad-card" style="background:var(--warn-soft);border-color:transparent"><b>Por cobrar: ${fmt(debe)}</b><p style="margin:4px 0 0;font-size:1.35rem">Cuando lo paguen, entra a la cuenta y a Emerson le toca su mitad.</p></div>`;
+    h += `<h2 class="ad-h2">Alumnos</h2><div class="ad-card">` + lista.map(({a,c}) => `<div class="ad-row"><div><b>${a.nombre}</b><small>Fue a ${c.fue.length} · pagó ${c.pagado ? fmt(c.pagado) : 'nada aún'}</small></div><div style="display:flex;gap:6px;align-items:center">${estado(a)}${c.debe || !c.pagadas ? `<button class="ad-ghost" data-cobro="${a.id}" style="padding:5px 10px;font-size:1.15rem">Pagó</button>` : ''}</div></div>`).join('') + `</div>`;
+    h += `<p class="ad-note">"Pagó" sirve para transferencias o efectivo. Lo de Mercado Pago se anota solo.</p>`;
+    return h;
+  }
+
+  function render(){
+    document.querySelectorAll('#sw button').forEach(b => b.classList.toggle('on', b.dataset.v === vista));
+    $('#app').innerHTML = vista === 'alumno' ? vAlumno() : vista === 'lista' ? vLista() : vCuentas();
+  }
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button,[data-al]'); if (!t) return;
+    if (t.dataset.v){ vista = t.dataset.v; render(); window.scrollTo(0,0); return; }
+    if (t.id === 'reset'){ S = INICIAL(); save(); render(); toast('Prueba reiniciada'); return; }
+    if (t.id === 'fui'){ const a = S.asis[HOY] = S.asis[HOY] || {}; if (!a[S.yo]){ a[S.yo] = 'alumno'; save(); render(); toast('¡Listo! Quedó anotado'); } return; }
+    if (t.dataset.pay){ toast('Aquí se abre Mercado Pago (en la prueba no cobra)'); return; }
+    if (t.dataset.cl){ claseSel = t.dataset.cl; render(); return; }
+    if (t.dataset.al){ const a = S.asis[claseSel] = S.asis[claseSel] || {}; if (a[t.dataset.al]) delete a[t.dataset.al]; else a[t.dataset.al] = 'emerson'; save(); render(); return; }
+    if (t.id === 'agregar'){ const v = $('#nuevo').value.trim(); if (!v) return; const id = 'n' + Date.now(); S.alumnos.push({ id, nombre: v, pagos: [], agregado: true }); (S.asis[claseSel] = S.asis[claseSel] || {})[id] = 'emerson'; save(); render(); toast(v + ' quedó en la lista'); return; }
+    if (t.id === 'cambio'){ const cl = S.clases.find(x => x.f === claseSel); cl.cambio = cl.cambio ? '' : 'Cambió por el pronóstico'; save(); render(); return; }
+    if (t.dataset.cobro){ const a = S.alumnos.find(x => x.id === t.dataset.cobro), c = cuenta(a); const monto = c.debe || PRECIO_CLASE; a.pagos.push({ tipo:'suelta', monto, fecha:HOY, medio:'Transferencia' }); for (let i = 1; i < monto / PRECIO_CLASE; i++) a.pagos.push({ tipo:'suelta', monto:0, fecha:HOY, medio:'Transferencia' }); save(); render(); toast('Pago anotado'); return; }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
