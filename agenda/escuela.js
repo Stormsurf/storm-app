@@ -14,7 +14,7 @@
   const flarga = f => { const x = new Date(utc(f)); return DIAS[x.getUTCDay()] + ' ' + x.getUTCDate() + ' de ' + MESES[x.getUTCMonth()]; };
   const aMin = h => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
   const deMin = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-  const fin = h => deMin(aMin(h) + (E ? E.duracion : 90));
+  const fin = (h, dur) => deMin(aMin(h) + (dur || (E ? E.duracion : 90)));
   const wa = t => { let n = String(t || '').replace(/\D/g, ''); if (n.length === 9 && n[0] === '9') n = '56' + n; if (n.length === 8) n = '569' + n; return n.length >= 10 ? n : ''; };
 
   const css = `
@@ -188,7 +188,7 @@
 
   function tarjeta(r, admin) {
     const est = r.estado === 'pendiente' ? `<span class='es-est'>${r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago (link enviado)' : 'Pagando en este momento'}</span>` : r.estado === 'revisar' ? `<span class='es-est'>Revisar: ${esc(r.nota)}</span>` : '';
-    let h = `<div class='es-r'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora)}</small></div>
+    let h = `<div class='es-r'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora, r.duracion)}</small></div>
       <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 7 a 11' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
       ${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}${est}
       <span class='es-est' style='${(r.fichas || []).length >= r.personas ? 'background:#e5f2ea;color:#2f7a4d' : ''}'>Fichas ${(r.fichas || []).length}/${r.personas}</span></div>
@@ -222,6 +222,7 @@
       <div class='es-f' style='margin-top:10px'>
         <label>Día<input type='date' name='fecha' min='${E.hoy}' value='${E.hoy}'></label>
         <label>Hora<select name='hora'>${horasMano().map(x => `<option value='${x}'${x === E.horarios[0] ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label>Duración<select name='duracion'><option value='60'>1 hora</option><option value='90' selected>1 hora y media</option><option value='120'>2 horas</option></select></label>
         <label>Personas<input type='number' name='personas' min='1' value='2' inputmode='numeric'></label>
         <label>Menores de 8<input type='number' name='menores' min='0' value='0' inputmode='numeric'></label>
         <label class='w'>Nombre del cliente<input name='nombre' list='es-clientes' autocomplete='off' placeholder='Escribe y elige si ya reservó antes'></label><datalist id='es-clientes'>${(E.clientes || []).map(c => `<option value='${esc(c.nombre)}'>${esc([c.telefono, c.clases + (c.clases === 1 ? ' clase' : ' clases')].filter(Boolean).join(' · '))}</option>`).join('')}</datalist>
@@ -304,7 +305,7 @@
       });
       E.reservas.filter(r => r.fecha === f && r.instructores.includes(n)).forEach(r => {
         const a = aMin(r.hora);
-        col += `<button class='es-db${r.estado === 'pendiente' ? ' pend' : ''}' data-dr='${esc(r.ref)}' style='top:${top(a)}px;height:${alto(E.duracion) - 2}px'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' <7' : ''}</small><small>${esc(r.hora)} - ${esc(fin(r.hora))}${r.estado === 'pendiente' ? ' · esperando pago' : ''}</small></button>`;
+        col += `<button class='es-db${r.estado === 'pendiente' ? ' pend' : ''}' data-dr='${esc(r.ref)}' style='top:${top(a)}px;height:${alto(r.duracion || E.duracion) - 2}px'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' <7' : ''}</small><small>${esc(r.hora)} - ${esc(fin(r.hora, r.duracion))}${r.estado === 'pendiente' ? ' · esperando pago' : ''}</small></button>`;
       });
       if (f === E.hoy) { const ahora = new Date(), m = ahora.getHours() * 60 + ahora.getMinutes(); if (m > D_INI && m < D_FIN) col += `<div class='es-ahora' style='top:${top(m)}px'></div>`; }
       h += col + `</div>`;

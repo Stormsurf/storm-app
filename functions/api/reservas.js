@@ -83,6 +83,8 @@ const sumarDias = (f, n) => new Date(diaUTC(f) + n * 86400000).toISOString().sli
 /** minutos "de reloj de Chile" desde 1970: sirven para comparar fechas y horas locales */
 const minLocal = (f, h) => diaUTC(f) / 60000 + aMin(h);
 const fechaLarga = f => { const d = new Date(diaUTC(f)); return DIAS[d.getUTCDay()] + ' ' + d.getUTCDate() + ' de ' + MESES[d.getUTCMonth()]; };
+/** Duración de una reserva: la propia (anotadas a mano, ej. 1 hora) o la general */
+const durDe = (a, r) => Number(r && r.duracion) || a.duracion;
 const bloquesDe = (hora, duracion) => { const ini = Math.floor(aMin(hora) / BLOQUE) * BLOQUE, n = Math.ceil(duracion / BLOQUE); return Array.from({ length: n }, (_, k) => deMin(ini + k * BLOQUE)); };
 
 // ---------- lectura ----------
@@ -194,8 +196,8 @@ async function estadoAgenda(db, a, desde, hasta) {
     if (k in excep) return excep[k];
     return ((semana[inst] || {})[diaSemana(fecha)] || []).includes(horaBase(a, fecha, hora));
   };
-  const enOtraCosa = (inst, fecha, hora) => cruce(ocu, inst, fecha, hora, a.duracion);
-  const sinChoque = (inst, fecha, hora) => !enOtraCosa(inst, fecha, hora) && bloquesDe(hora, a.duracion).every(b => !ocupado.has(inst + '|' + fecha + '|' + b));
+  const enOtraCosa = (inst, fecha, hora, dur) => cruce(ocu, inst, fecha, hora, dur || a.duracion);
+  const sinChoque = (inst, fecha, hora, dur) => !enOtraCosa(inst, fecha, hora, dur) && bloquesDe(hora, dur || a.duracion).every(b => !ocupado.has(inst + '|' + fecha + '|' + b));
   const libre = (inst, fecha, hora) => disponible(inst, fecha, hora) && sinChoque(inst, fecha, hora);
   return { ins, semana, excep, ocupado, disponible, libre, sinChoque, bloques: blo.results };
 }
@@ -251,7 +253,7 @@ const shuffle = arr => { const x = arr.slice(); for (let i = x.length - 1; i > 0
 /** Instructores libres a esa hora: primero los que ya tienen una clase justo antes o justo después (clases seguidas, sin esperar en el agua);
  *  entre iguales, al azar. */
 /** aMano: Isidora anota a cualquier hora; sirve cualquier instructor sin otra clase, primero los que marcaron disponible. */
-function elegir(ag, a, fecha, hora, aMano) {
+function elegir(ag, a, fecha, hora, aMano, dur) {
   const antes = deMin(aMin(hora) - BLOQUE), despues = deMin(Math.floor(aMin(hora) / BLOQUE) * BLOQUE + Math.ceil(a.duracion / BLOQUE) * BLOQUE);
   const tiene = (n, m) => ag.ocupado.has(n + '|' + fecha + '|' + deMin(m));
   const pegado = n => {
@@ -264,7 +266,7 @@ function elegir(ag, a, fecha, hora, aMano) {
   };
   // clases que ya tiene ese día: si nadie tiene una pegada, va al que tiene menos (así trabajan todos)
   const nDia = n => new Set(ag.bloques.filter(b => b.instructor === n && b.fecha === fecha).map(b => b.ref)).size;
-  const sirve = aMano ? ag.sinChoque : ag.libre, marco = n => ag.disponible(n, fecha, hora) ? 1 : 0;
+  const sirve = aMano ? (n, f, h) => ag.sinChoque(n, f, h, dur) : ag.libre, marco = n => ag.disponible(n, fecha, hora) ? 1 : 0;
   return shuffle(ag.ins.filter(i => i.activo && sirve(i.nombre, fecha, hora)).map(i => i.nombre)).sort((x, y) => (aMano ? marco(y) - marco(x) : 0) || pegado(y) - pegado(x) || nDia(x) - nDia(y));
 }
 /** Tarifas propias por instructor (ej. Diego cobra más). Vacío = tabla general. */
@@ -296,10 +298,10 @@ function pagosDe(r) {
 async function guardarReserva(db, a, r, hastaMs) {
   r.pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.ninos || 0, r.instructores, r.pagoManual == null ? null : r.pagoManual);
   r.pago_instructor = sumaPagos(r.pagos);
-  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, ninos, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota, clave, pagos)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, r.ninos || 0, JSON.stringify(r.instructores),
-      r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '', r.clave || (r.clave = nuevaClave()), JSON.stringify(r.pagos))];
-  r.instructores.forEach(i => bloquesDe(r.hora, a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, hastaMs))));
+  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, ninos, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota, clave, pagos, duracion)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, r.ninos || 0, JSON.stringify(r.instructores),
+      r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '', r.clave || (r.clave = nuevaClave()), JSON.stringify(r.pagos), Number(r.duracion) || 0)];
+  r.instructores.forEach(i => bloquesDe(r.hora, durDe(a, r)).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, hastaMs))));
   await db.batch(st);
 }
 const limpiarRetenciones = db => db.prepare('DELETE FROM bloques WHERE hasta > 0 AND hasta < ?').bind(Date.now()).run();
@@ -383,7 +385,7 @@ async function confirmar(env, r, monto, ctx) {
   const ch = await db.prepare("UPDATE reservas SET estado = 'pagada' WHERE ref = ? AND estado IN ('pendiente', 'vencida')").bind(r.ref).run();
   if (!ch.meta || !ch.meta.changes) return (await db.prepare('SELECT estado FROM reservas WHERE ref = ?').bind(r.ref).first() || {}).estado;
   // Deja fijos los bloques; si se habían liberado (pagó muy tarde), los vuelve a tomar.
-  const ins = parseLista(r.instructores), bl = bloquesDe(r.hora, a.duracion);
+  const ins = parseLista(r.instructores), bl = bloquesDe(r.hora, durDe(a, r));
   const tiene = await db.prepare('SELECT COUNT(*) AS n FROM bloques WHERE ref = ?').bind(r.ref).first();
   if ((tiene && tiene.n) === ins.length * bl.length) await db.prepare('UPDATE bloques SET hasta = 0 WHERE ref = ?').bind(r.ref).run();
   else {
@@ -432,7 +434,7 @@ const botonFicha = r => '<span style="display:block;margin:0 0 18px;padding:16px
 const filaC = (k, v) => '<p style="margin:0 0 8px;font-size:16px;line-height:1.45"><span style="color:#8a8986">' + esc(k) + '</span><br><b>' + esc(v) + '</b></p>';
 /** Correo de confirmación para el cliente: todo lo que necesita saber para llegar a su clase. */
 function correoReservada(r, a, ins) {
-  const F = 'font-family:Helvetica,Arial,sans-serif;', fin = deMin(aMin(r.hora) + a.duracion);
+  const F = 'font-family:Helvetica,Arial,sans-serif;', fin = deMin(aMin(r.hora) + durDe(a, r));
   const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Clase de surf Storm') + '&dates=' + r.fecha.replace(/-/g, '') + 'T' + r.hora.replace(':', '') + '00/' + r.fecha.replace(/-/g, '') + 'T' + fin.replace(':', '') + '00&ctz=America/Santiago&location=' + encodeURIComponent(MAPA) + '&details=' + encodeURIComponent('Llega 10 minutos antes. Ficha: ' + linkFicha(r));
   const boton = (href, txt, fondo, color) => '<a href="' + href + '" style="display:block;text-align:center;text-decoration:none;background:' + fondo + ';color:' + color + ';font-weight:700;font-size:16px;padding:14px 18px;border-radius:999px;margin:10px 0 0">' + txt + '</a>';
   const seccion = (titulo, cuerpo) => '<tr><td style="padding:22px 26px 0"><p style="margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8a8986;font-weight:700">' + titulo + '</p>' + cuerpo + '</td></tr>';
@@ -521,7 +523,7 @@ async function quien(env, d) {
   throw err('Tu correo no está en la Escuela. Pídele a Isidora que lo agregue en Agenda Storm > Ajustes.');
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
-const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, instructores: parseLista(r.instructores),
+const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, instructores: parseLista(r.instructores),
   nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? r.link_pago : '' } : {}) });
 
 async function panel(env, q) {
@@ -619,7 +621,7 @@ async function editar(env, q, d) {
   if (ins.some(i => !lista.includes(i))) throw err('Ese instructor no está en la Escuela.');
   const fijo = r.estado === 'pagada' || r.estado === 'revisar' ? 0 : Date.now() + a.retencionMin * 60000;
   const st = [db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref)];
-  ins.forEach(i => bloquesDe(hora, a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, fecha, b, r.ref, fijo))));
+  ins.forEach(i => bloquesDe(hora, durDe(a, r)).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, fecha, b, r.ref, fijo))));
   const estadoNuevo = r.estado === 'revisar' && /instructor/.test(r.nota) ? 'pagada' : r.estado;
   let viejo = null; try { viejo = JSON.parse(r.pagos || 'null'); } catch (_) {}
   const pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.ninos || 0, ins, viejo && viejo._manual ? r.pago_instructor : null);
@@ -672,14 +674,15 @@ async function manual(env, q, d, ctx) {
   const medio = conLink ? 'Mercado Pago' : ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : 'Transferencia';
   if (conLink && !(total > 0)) throw err('Escribe el total a cobrar.');
   if (conLink && !env.MP_TOKEN) throw err('Falta conectar Mercado Pago (MP_TOKEN).');
+  const duracion = [60, 90, 120].includes(Number(d.duracion)) && Number(d.duracion) !== a.duracion ? Number(d.duracion) : 0;
   const ag = await estadoAgenda(db, a, fecha, fecha);
   // Los que eligió Isidora + (si faltan) los que elige la app entre los libres
-  const ins = elegidos.concat(elegir(ag, a, fecha, hora, true).filter(i => !elegidos.includes(i))).slice(0, nIns);
+  const ins = elegidos.concat(elegir(ag, a, fecha, hora, true, duracion || a.duracion).filter(i => !elegidos.includes(i))).slice(0, nIns);
   if (ins.length < nIns) throw err('Solo hay ' + ins.length + ' instructor' + (ins.length === 1 ? '' : 'es') + ' libre' + (ins.length === 1 ? '' : 's') + ' a esa hora. Elige otra hora o menos instructores.');
   if (!ins.length) throw err('No hay instructores libres a esa hora. Elige uno a mano.');
   const t = ahoraChile();
   const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conLink ? 'pendiente' : 'pagada', fecha, hora, personas, menores, ninos, instructores: ins, nombre,
-    telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pagoManual, medio, nota: 'Agregada a mano por ' + q.email };
+    telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pagoManual, medio, duracion, nota: 'Agregada a mano por ' + q.email };
   // Con link: el horario se guarda hasta que paguen (máximo las horas de "horasLink", y nunca después de que empiece la clase).
   const desfase = minLocal(t.fecha, t.hora) - Math.floor(Date.now() / 60000);
   const inicioMs = (minLocal(fecha, hora) - desfase) * 60000;
@@ -754,7 +757,7 @@ async function reservaConClave(env, d) {
 async function actividad(env, r) {
   const a = await ajustes(env.DB), ins = parseLista(r.instructores);
   const lista = (await env.DB.prepare('SELECT nombre, rut FROM instructores').all()).results;
-  return { fecha: r.fecha, fechaLarga: fechaLarga(r.fecha), inicio: r.hora, termino: deMin(aMin(r.hora) + a.duracion), lugar: a.lugar,
+  return { fecha: r.fecha, fechaLarga: fechaLarga(r.fecha), inicio: r.hora, termino: deMin(aMin(r.hora) + durDe(a, r)), lugar: a.lugar,
     guia: ins.join(' y '), rutGuia: ins.map(n => (lista.find(i => i.nombre === n) || {}).rut || '').filter(Boolean).join(' / ') };
 }
 async function fichaVer(env, d) {
