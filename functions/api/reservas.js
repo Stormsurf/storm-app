@@ -687,6 +687,37 @@ async function editar(env, q, d, ctx) {
   }
   return panel(env, q);
 }
+/** Editar los datos de una clase ya anotada: cliente, personas, total, medio, pago instructor y duración (día/hora/instructor van por "editar"). */
+async function datos(env, q, d) {
+  const db = env.DB, a = await ajustes(db);
+  const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
+  if (!r) throw err('No encontramos la reserva.');
+  const nombre = d.nombre != null ? nombrePropio(d.nombre) : r.nombre; if (nombre.length < 2) throw err('Escribe el nombre del cliente.');
+  const personas = d.personas != null ? Math.floor(Number(d.personas)) : r.personas; if (!(personas >= 1)) throw err('¿Cuántas personas son?');
+  const menores = d.menores != null ? Math.max(0, Math.min(personas, Math.floor(Number(d.menores) || 0))) : Math.min(personas, r.menores || 0);
+  const num = v => Math.round(Number(String(v).replace(/\D/g, '')) || 0);
+  const total = d.total != null && d.total !== '' ? num(d.total) : r.total;
+  const medio = ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'].includes(d.medio) ? d.medio : r.medio;
+  const dur = d.duracion != null && [60, 90, 120].includes(Number(d.duracion)) ? (Number(d.duracion) === a.duracion ? 0 : Number(d.duracion)) : (Number(r.duracion) || 0);
+  const ins = parseLista(r.instructores);
+  let viejo = null; try { viejo = JSON.parse(r.pagos || 'null'); } catch (_) {}
+  // pago: si lo escribió ahora, ese; si lo había escrito antes, se mantiene; si no, la tabla
+  const pagoManual = d.pagoInstructor !== undefined ? (d.pagoInstructor === '' ? null : num(d.pagoInstructor)) : (viejo && viejo._manual ? r.pago_instructor : null);
+  const pagos = repartirPago(a, await tarifas(db), personas, menores, r.ninos || 0, ins, pagoManual);
+  const st = [];
+  if (dur !== (Number(r.duracion) || 0)) {
+    const fijo = r.estado === 'pagada' || r.estado === 'revisar' ? 0 : Date.now() + a.retencionMin * 60000;
+    st.push(db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref));
+    ins.forEach(i => bloquesDe(r.hora, dur || a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, fijo))));
+  }
+  st.push(db.prepare('UPDATE reservas SET nombre = ?, telefono = ?, correo = ?, comentario = ?, personas = ?, menores = ?, total = ?, medio = ?, duracion = ?, pagos = ?, pago_instructor = ? WHERE ref = ?')
+    .bind(nombre, d.telefono != null ? String(d.telefono).trim() : r.telefono, d.correo != null ? norm(d.correo) : r.correo, d.comentario != null ? String(d.comentario).trim().slice(0, 500) : r.comentario,
+      personas, menores, total, medio, dur, JSON.stringify(pagos), sumaPagos(pagos), r.ref));
+  try { await db.batch(st); }
+  catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Con esa duración choca con otra clase del instructor.'); throw x; }
+  await anotar(db, q, 'datos ' + r.ref);
+  return panel(env, q);
+}
 async function cancelar(env, q, d, ctx) {
   const db = env.DB, ref = String(d.ref || '');
   const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(ref).first();
@@ -898,6 +929,7 @@ export async function onRequest(context) {
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'editar') return json(await editar(env, q, d, context));
     if (acc === 'cancelar') return json(await cancelar(env, q, d, context));
+    if (acc === 'datos') return json(await datos(env, q, d));
     if (acc === 'manual') return json(await manual(env, q, d, context));
     if (acc === 'instructor') return json(await guardarInstructor(env, q, d));
     if (acc === 'ajustes') return json(await guardarAjustes(env, q, d));

@@ -198,7 +198,7 @@
       <div class='es-acc'>${r.estado === 'pendiente' ? '' : (r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${r.estado !== 'pendiente' && (r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
     // clases pasadas: solo se pueden cancelar (por ejemplo, pruebas o errores), así no cuentan en las ventas ni en los pagos
     if (admin && (r.fecha >= E.hoy || r.estado !== 'cancelada')) {
-      if (abierta !== r.ref) h += `<div class='es-acc'>${r.fecha >= E.hoy ? `<button class='es-btn sec' data-abre='${r.ref}' data-modo='ins'>Cambiar instructor</button><button class='es-btn sec' data-abre='${r.ref}' data-modo='mover'>Mover</button>` : ''}<button class='es-btn peligro' data-abre='${r.ref}' data-modo='cancelar'>Cancelar</button></div>`;
+      if (abierta !== r.ref) h += `<div class='es-acc'><button class='es-btn sec' data-abre='${r.ref}' data-modo='datos'>Editar</button>${r.fecha >= E.hoy ? `<button class='es-btn sec' data-abre='${r.ref}' data-modo='ins'>Cambiar instructor</button><button class='es-btn sec' data-abre='${r.ref}' data-modo='mover'>Mover</button>` : ''}<button class='es-btn peligro' data-abre='${r.ref}' data-modo='cancelar'>Cancelar</button></div>`;
       else if (modo === 'ins') {
         const n = r.instructores.length;
         h += `<div class='es-box'><p>Elige ${n === 1 ? 'el instructor' : 'los ' + n + ' instructores'} para esta clase. Puedes sumar o quitar instructores si el caso lo necesita.</p><div class='es-chips' style='margin-top:0'>${E.instructores.filter(i => i.activo).map(i => {
@@ -209,6 +209,21 @@
         h += `<div class='es-box'><div class='es-f'><label>Día<input type='date' id='es-mf' value='${r.fecha}' min='${E.hoy}'></label><label>Hora<select id='es-mh'>${horasMano().map(x => `<option value='${x}'${x === r.hora ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
           <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Se mantiene el mismo instructor. Avísale al cliente por WhatsApp.</p>
           <div class='es-acc'><button class='es-btn' data-go='mover'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
+      } else if (modo === 'datos') {
+        const dur = r.duracion || E.duracion, med = ['Transferencia', 'Efectivo', 'Por pagar', 'Mercado Pago'];
+        h += `<div class='es-box es-datos'><div class='es-f'>
+          <label class='w'>Nombre del cliente<input name='nombre' value='${esc(r.nombre)}'></label>
+          <label>Teléfono<input name='telefono' type='tel' value='${esc(r.telefono || '')}'></label>
+          <label>Correo<input name='correo' type='email' value='${esc(r.correo || '')}'></label>
+          <label>Personas<input name='personas' type='number' min='1' value='${r.personas}' inputmode='numeric'></label>
+          <label>Menores de 8<input name='menores' type='number' min='0' value='${r.menores || 0}' inputmode='numeric'></label>
+          <label>Duración<select name='duracion'>${[[60, '1 hora'], [90, '1 hora y media'], [120, '2 horas']].map(([v, t]) => `<option value='${v}'${v === dur ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label>Medio de pago<select name='medio'>${med.map(m => `<option${m === r.medio ? ' selected' : ''}>${m}</option>`).join('')}</select></label>
+          <label>Total cobrado<input name='total' inputmode='numeric' value='${r.total || 0}'></label>
+          <label>Pago instructores (total)<input name='pagoInstructor' inputmode='numeric' value='${r.pagoInstructor || 0}' data-orig='${r.pagoInstructor || 0}'></label>
+          <label class='w'>Comentario<input name='comentario' value='${esc(r.comentario || '')}'></label></div>
+          <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Si cambias las personas y no tocas el pago, se calcula solo con la tabla. Para cambiar día, hora o instructor usa Mover o Cambiar instructor.</p>
+          <div class='es-acc'><button class='es-btn' data-go='datos'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
       } else if (modo === 'cancelar') {
         h += `<div class='es-box'><p>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.medio === 'Mercado Pago' ? ' Si hay que devolver el dinero, hazlo desde Mercado Pago.' : ''}</p>
           <div class='es-acc'><button class='es-btn peligro' data-go='cancelar'>Sí, cancelar</button><button class='pn-link' data-cerrar>No</button></div><p class='es-err vivo'></p></div>`;
@@ -407,6 +422,11 @@
       const r = E.reservas.find(x => x.ref === abierta);
       if (go.dataset.go === 'ins') accion({ accion: 'editar', ref: abierta, instructores: sel }, go).then(ok => { if (ok) { msg = 'Listo: ' + r.nombre + ' ahora tiene clase con ' + sel.join(' y ') + '.'; pintar(); } });
       if (go.dataset.go === 'mover') { const f = $('#es-mf').value, hh = $('#es-mh').value; accion({ accion: 'editar', ref: abierta, fecha: f, hora: hh }, go).then(ok => { if (ok) { msg = 'Listo: clase de ' + r.nombre + ' movida al ' + flarga(f) + ' a las ' + hh + '. Avísale por WhatsApp.'; pintar(); } }); }
+      if (go.dataset.go === 'datos') {
+        const b = go.closest('.es-datos'), v = { accion: 'datos', ref: abierta };
+        b.querySelectorAll('[name]').forEach(i => { if (i.name === 'pagoInstructor') { if (i.value.trim() !== i.dataset.orig) v.pagoInstructor = i.value.trim(); } else v[i.name] = i.value.trim(); });
+        accion(v, go).then(ok => { if (ok) { msg = 'Listo: clase de ' + v.nombre + ' actualizada.'; pintar(); } });
+      }
       if (go.dataset.go === 'cancelar') accion({ accion: 'cancelar', ref: abierta }, go).then(ok => { if (ok) { msg = 'Clase de ' + r.nombre + ' cancelada.'; pintar(); } });
     };
     $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
