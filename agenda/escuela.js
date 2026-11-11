@@ -49,6 +49,16 @@
   .es-db.pend{background:#E3F1F1;color:#0f6e74;border:1.5px dashed #0f6e74}
   .es-db.otra{background:#F3F1EC;color:#6b6a67;border:1.5px dashed #c9c5bd;cursor:default;z-index:1}
   .es-ahora{position:absolute;left:0;right:0;border-top:2px solid #e0484e;z-index:3}
+  /* computador: más ancho y en columnas */
+  @media (min-width:1000px){
+    main .pn{max-width:1200px}
+    .pn .pn-stats{grid-template-columns:2fr 1fr 1fr}
+    .pn .pn-stat--main{grid-column:auto}
+    .es-dl{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;align-items:start}
+    .es-2c{display:grid;grid-template-columns:1.3fr 1fr;gap:0 12px;align-items:start}
+    .es-cols{columns:2;column-gap:12px}
+    .es-cols>.pn-card{break-inside:avoid;display:inline-block;width:100%}
+  }
   .es-chip.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
   .es-chip small{opacity:.65;margin-left:4px}
   .es-dia{margin:18px 0 6px;font-size:1.3rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#0f6e74}
@@ -142,7 +152,7 @@
     if (sub === 'dia') h += diaVista(admin);
     else if (sub === 'calendario') h += calendario(admin);
     else if (sub === 'pagos') h += pagosVista(admin);
-    else if (sub === 'ajustes' && admin) h += ajustes();
+    else if (sub === 'ajustes' && admin) h += `<div class='es-cols'>` + ajustes() + `</div>`;
     else h += reservas(admin);
     pane.innerHTML = h;
     pane.querySelectorAll('[data-sub]').forEach(b => { b.classList.toggle('on', b.dataset.sub === sub); b.onclick = () => { sub = b.dataset.sub; msg = ''; pintar(); }; });
@@ -168,8 +178,9 @@
       h += `<button class='pn-vfin' style='border-color:#0f6e74;background:#E3F1F1;color:#0f6e74' data-manual>+ Agregar reserva a mano (WhatsApp, empresa, grupo grande)</button>`;
       if (manualOn) h += manualForm();
     }
-    let dia = '';
-    h += lista.length ? lista.map(r => { const t = r.fecha !== dia ? `<p class='es-dia'>${r.fecha === E.hoy ? 'Hoy · ' : r.fecha === sumar(E.hoy, 1) ? 'Mañana · ' : ''}${esc(flarga(r.fecha))}</p>` : ''; dia = r.fecha; return t + tarjeta(r, admin); }).join('')
+    // agrupadas por día (en el computador, cada día en dos columnas)
+    const porDia = []; lista.forEach(r => { const u = porDia[porDia.length - 1]; if (u && u.f === r.fecha) u.l.push(r); else porDia.push({ f: r.fecha, l: [r] }); });
+    h += lista.length ? porDia.map(g => `<p class='es-dia'>${g.f === E.hoy ? 'Hoy · ' : g.f === sumar(E.hoy, 1) ? 'Mañana · ' : ''}${esc(flarga(g.f))}</p><div class='es-dl'>${g.l.map(r => tarjeta(r, admin)).join('')}</div>`).join('')
       : `<div class='pn-card'><p class='pn-empty'>${verPasadas ? 'No hay clases anteriores.' : 'Todavía no hay clases reservadas.'}</p></div>`;
     h += `<p class='pn-note'><button class='pn-link' data-pasadas>${verPasadas ? 'Ver próximas clases' : 'Ver clases anteriores'}</button></p>`;
     return h;
@@ -236,7 +247,7 @@
     let h = '';
     if (admin) h += `<div class='es-chips'>${activos.map(n => `<button class='es-chip${inst === n ? ' on' : ''}' data-ci='${esc(n)}'>${esc(n)}</button>`).join('')}</div>`;
     if (!inst) return h + `<div class='pn-card'><p class='pn-empty'>Agrega instructores en Ajustes.</p></div>`;
-    h += `<div class='pn-card'><h3>${admin ? 'Calendario de ' + esc(inst) : 'Mi calendario'}</h3><p class='pn-sub'>Toca una hora para marcar si ${admin ? esc(inst) + ' puede' : 'puedes'} o no. Las clases reservadas salen en azul.</p>
+    h += `<div class='es-2c'><div class='pn-card'><h3>${admin ? 'Calendario de ' + esc(inst) : 'Mi calendario'}</h3><p class='pn-sub'>Toca una hora para marcar si ${admin ? esc(inst) + ' puede' : 'puedes'} o no. Las clases reservadas salen en azul.</p>
       <div class='es-ley'><span><i style='background:#effaf3;border:1.5px solid #bfe0cc'></i>Disponible</span><span><i style='background:#fff;border:1.5px solid #ddd'></i>No disponible</span><span><i style='background:#0f6e74'></i>Clase reservada</span><span><i style='background:#F3F1EC;border:1.5px solid #e3e0da'></i>Academia Anual u otra cosa</span></div>
       <div class='es-wk'><button data-wk='-7'${calDesde <= E.hoy ? ' disabled style="opacity:.3"' : ''}>‹ Antes</button><b style='font-size:1.35rem'>${fcorta(calDesde)} – ${fcorta(sumar(calDesde, 6))}</b><button data-wk='7'>Después ›</button></div><div class='es-cal'>`;
     for (let k = 0; k < 7; k++) {
@@ -258,11 +269,11 @@
       const s = E.semana.find(s => s.instructor === inst && s.dia === d), horas = s ? s.horas : [];
       h += `<div class='es-cd'><div class='es-cdh'><span>${DIAS[d]}</span><button data-semtodo='${d}' data-v='${horas.length ? 0 : 1}'>${horas.length ? 'Nada' : 'Todo'}</button></div><div class='es-slots'>${E.horarios.map(x => `<button class='es-s${horas.includes(x) ? '' : ' no'}' data-sd='${d}' data-sh='${x}'>${x}</button>`).join('')}</div></div>`;
     });
-    return h + `</div>`;
+    return h + `</div></div>`;
   }
 
   // ---------- vista del día: una columna por instructor (como AgendaPro) ----------
-  const D_INI = 7 * 60, D_FIN = 20 * 60, D_ROW = 26; // cada 30 min = 26 px
+  const D_INI = 7 * 60, D_FIN = 20 * 60, D_ROW = window.innerWidth >= 1000 ? 34 : 26; // cada 30 min (más alto en el computador)
   function diaVista(admin) {
     if (!diaVer) diaVer = E.hoy;
     const f = diaVer, activos = E.instructores.filter(i => i.activo).map(i => i.nombre).filter(n => admin || n === E.yo);
@@ -336,7 +347,7 @@
     let h = `<div class='pn-card'><h3>Precios y pago a instructores</h3><p class='pn-sub'>Lo que paga el cliente y lo que se le paga al instructor por clase.</p>
       <table class='es-tab'><tr><th>Personas</th><th>Precio</th><th>Pago instructor</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
       <tr><td colspan='2'>Grupo grande o empresa (por instructor)</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
-      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: de a 2 por instructor (si sobra uno, va con el grupo; 3 niños solos = 1 instructor); el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
+      <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Menores de 8: de a 2 por instructor; si queda una sola persona suelta (niño o adulto), va con un par de niños; el resto hasta 5 por instructor: el pago se calcula por instructor según cuántos le tocan.</p>
       <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Horarios y reglas</h3>
       <div class='es-f' style='margin-top:10px'><label class='w'>Horas de inicio de clase (separadas por coma)<input id='es-hor' value='${esc(a.horarios.join(', '))}'></label>
