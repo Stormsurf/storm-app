@@ -37,7 +37,7 @@ main .pn{max-width:1440px}
 .sp-area[hidden]{display:none}
 .sp-panel{max-width:900px}
 .sp-panel .pn-sw{display:none}
-.sp-mas{position:fixed;inset:0;z-index:40;background:rgba(30,30,28,.45);display:flex;align-items:flex-end}
+.sp-mas{--line:rgba(44,44,43,.12);--ink:#2C2C2B;color:var(--ink);position:fixed;inset:0;z-index:40;background:rgba(30,30,28,.45);display:flex;align-items:flex-end}
 .sp-mas>div{background:#fff;width:100%;border-radius:20px 20px 0 0;padding:10px 14px calc(18px + env(safe-area-inset-bottom))}
 .sp-mas button{display:flex;align-items:center;gap:14px;width:100%;border:0;background:none;font:inherit;font-size:1.6rem;padding:14px 8px;color:var(--ink);border-bottom:1px solid var(--line);cursor:pointer;text-align:left}
 .sp-mas button:last-child{border-bottom:0}
@@ -86,6 +86,7 @@ main .pn{max-width:1440px}
 .sp-panel .pn-fsub button.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
 .sp-top{flex-wrap:wrap}
 .sp-bus{position:relative;flex:1 1 100%;order:2}
+.sp-top>div:first-child{flex:1;min-width:0}
 .sp-bus>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8a8986;display:flex}.sp-bus>span svg{width:20px;height:20px}
 .sp-bus input{width:100%;box-sizing:border-box;border:1px solid var(--line);background:#fff;border-radius:999px;padding:11px 14px 11px 42px;font:inherit;font-size:1.45rem;color:var(--ink)}
 .sp-bus input:focus{outline:none;border-color:#0f6e74}
@@ -117,6 +118,52 @@ main .pn{max-width:1440px}
 .sp-panel .pn-fbar{height:14px;margin-top:7px}.sp-panel .pn-fbar i.in{background:#2f9a6a}.sp-panel .pn-fbar i.out{background:#e0a03a}
 .sp-panel .pn-farea{padding:14px 0}.sp-panel .pn-fah{font-size:1.55rem}
 .sp-panel .pn-farea small{opacity:.75}
+.sp-panel .pn-fsub,.sp-panel .pn-fadd{display:none!important}
+.sp-yo-cel{width:40px;height:40px;border-radius:50%;border:0;background:#0f6e74;color:#fff;font:inherit;font-weight:700;font-size:1.5rem;cursor:pointer;flex:none}
+.sp-plus{flex:none;align-self:center;width:58px;height:58px;margin:-22px 4px 0;border-radius:50%;border:0;background:#0f6e74;color:#fff;display:grid;place-items:center;box-shadow:0 8px 22px rgba(15,110,116,.4);cursor:pointer}
+.sp-plus svg{width:28px;height:28px;stroke-width:2.4}
+.sp-mas-pc{display:none}
+.sp-seg{display:flex;gap:4px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:999px;margin:0 0 14px;overflow-x:auto;scrollbar-width:none}
+.sp-seg[hidden]{display:none}
+.sp-seg button{flex:1 0 auto;border:0;background:none;border-radius:999px;padding:10px 14px;font:inherit;font-size:1.4rem;font-weight:600;color:var(--ink);cursor:pointer}
+.sp-seg button.on{background:#0f6e74;color:#fff}
+.sp-pe{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:8px;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.sp-pe i{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#E3F1F1;color:#0f6e74}.sp-pe i svg{width:22px;height:22px}
+.sp-pe.warn i{background:#fbeee2;color:#b5662b}
+.sp-pe b{display:block;font-size:1.5rem;font-weight:600}.sp-pe small{display:block;font-size:1.2rem;color:#8a8986;margin-top:1px}
+.sp-pe em{margin-left:auto;color:#c9c6c0;display:flex}.sp-pe em svg{width:20px;height:20px}
+.sp-todo{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px}
+.sp-todo i{width:52px;height:52px;border-radius:50%;background:#2f9a6a;color:#fff;display:grid;place-items:center;margin-bottom:6px}.sp-todo i svg{width:28px;height:28px;stroke-width:2.6}
+.sp-todo b{font-size:1.8rem}.sp-todo span{font-size:1.35rem;color:#8a8986}
+/* anotar */
+.sp-an>div{position:relative;background:#fff;padding:20px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.sp-an button{display:inline-flex;width:auto;border-bottom:0;padding:0;font-size:inherit}
+.an-h{margin:0 0 10px;font-size:2rem;font-weight:600}
+.an-monto{display:flex;align-items:center;gap:6px;border-bottom:2px solid #0f6e74;padding:4px 2px;margin-bottom:6px}
+.an-monto span{font-size:3.2rem;font-weight:600;color:#8a8986}
+.an-monto input{flex:1;min-width:0;border:0;outline:0;font:inherit;font-size:3.6rem;font-weight:700;color:var(--ink);background:none;padding:0}
+.an-q{margin:16px 0 8px;font-size:1.25rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a8986}
+.an-chips{display:flex;flex-wrap:wrap;gap:8px}
+.sp-an .an-chips button{border:1.5px solid var(--line)!important;background:#fff;border-radius:999px;padding:9px 14px!important;font-size:1.4rem!important;font-weight:600;color:var(--ink)}
+.sp-an .an-chips button.on{background:#0f6e74;border-color:#0f6e74!important;color:#fff}
+.an-det{width:100%;box-sizing:border-box;margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;font-size:1.45rem}
+.an-areas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sp-an .an-areas button{display:flex;flex-direction:column;align-items:center;gap:5px;border:1.5px solid var(--line)!important;background:#fff;border-radius:14px;padding:10px 4px!important;font-size:1.15rem!important;font-weight:600;color:var(--ink)}
+.sp-an .an-areas button svg{width:24px;height:24px;color:#0f6e74}
+.sp-an .an-areas button.on{background:#E3F1F1;border-color:#0f6e74!important;color:#0f6e74}
+.sp-an .an-go{display:block;width:100%;margin-top:18px;border-radius:999px;background:#0f6e74;color:#fff;font-weight:700;font-size:1.6rem!important;padding:15px!important;text-align:center}
+.sp-an .an-go[disabled]{opacity:.6}
+.an-err{margin:8px 0 0;color:#a6402c;font-size:1.3rem;text-align:center;min-height:1em}
+.an-otros{display:flex;justify-content:center;gap:18px;margin-top:6px}
+.sp-an .an-otros button{background:none;color:#0f6e74;text-decoration:underline;font-size:1.3rem!important}
+@media (min-width:1000px){
+  .sp-an{align-items:center;justify-content:center}.sp-an>div{max-width:520px;border-radius:22px}
+  .sp-plus,.sp-yo-cel{display:none}
+  .sp-mas-pc{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 14px;border:0;border-radius:999px;background:#0f6e74;color:#fff;font:inherit;font-weight:700;font-size:1.5rem;padding:12px;cursor:pointer}
+  .sp-mas-pc svg{width:20px;height:20px;stroke-width:2.4}
+  .sp-seg{display:inline-flex;max-width:100%}
+  .sp-seg button{flex:none}
+}
 @media (min-width:640px){.sp-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (min-width:1000px){
   .sp-app{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;align-items:start;margin-top:8px}
@@ -165,10 +212,21 @@ main .pn{max-width:1440px}
     pago: sv("<rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18'/>"),
     ficha: sv("<rect x='5' y='3.5' width='14' height='17' rx='2.5'/><path d='M9 9h6M9 13h6M9 17h3'/>"),
     tel: sv("<path d='M5 3.5h3.2l1.6 4-2 1.3a11 11 0 0 0 5.4 5.4l1.3-2 4 1.6V17a3 3 0 0 1-3 3A14.5 14.5 0 0 1 2 6.5a3 3 0 0 1 3-3Z'/>"),
+    mas2: sv("<path d='M12 5v14M5 12h14'/>"),
+    tabla: sv("<path d='M12 2.5c3.5 3 4.5 9 3 14.5-.6 2.2-1.6 3.8-3 4.5-1.4-.7-2.4-2.3-3-4.5-1.5-5.5-.5-11.5 3-14.5Z'/><path d='M12 7v10'/>"),
+    tienda: sv("<path d='M5 8h14l-1 12H6L5 8Z'/><path d='M9 8V6a3 3 0 0 1 6 0v2'/>"),
+    casa: sv("<path d='M3.5 11 12 4l8.5 7'/><path d='M5.5 9.5V20h13V9.5'/><path d='M10 20v-5h4v5'/>"),
+    flecha: sv("<path d='m9 6 6 6-6 6'/>"),
+    ok: sv("<path d='m5 12.5 4.5 4.5L19 7.5'/>"),
     lupa: sv("<circle cx='11' cy='11' r='6.5'/><path d='m20 20-4-4'/>"),
     grupo: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M17 11v6M14 14h6'/>")
   };
-  const TIT = { hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academia Anual', verano: 'Academia de Verano', adultos: 'Academia de Adultos', finanzas: 'Finanzas' };
+  const TIT = { hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academias', verano: 'Academias', adultos: 'Academias', finanzas: 'Plata', sueldos: 'Plata' };
+  const GRUPO = { anual: 'academias', verano: 'academias', adultos: 'academias', finanzas: 'plata', sueldos: 'plata' };
+  const SEG = { academias: [['anual', 'Anual'], ['verano', 'Verano'], ['adultos', 'Adultos']], plata: [['finanzas', 'Este mes'], ['sueldos', 'Sueldos'], ['particulares:pagos', 'Pagos particulares']] };
+  let ultimo = (() => { try{ return JSON.parse(sessionStorage.getItem('storm-ultimo') || 'null') || {}; }catch(_){ return {}; } })();
+  if(!ultimo.academias) ultimo.academias = [0, 1].includes(new Date().getMonth()) ? 'verano' : 'anual';
+  if(!ultimo.plata) ultimo.plata = 'finanzas';
 
   async function post(body){
     const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
@@ -216,25 +274,26 @@ main .pn{max-width:1440px}
   // ¿quién es? (lo dicen los datos de la Agenda o del Panel)
   const esAdmin = () => { const E = StormEscuela.datos(); if(E) return E.rol === 'admin'; const d = StormPanel.datos(); return d ? d.rol !== 'instructor' : true; };
 
-  function items(){
-    const adm = esAdmin();
-    return [
-      ['hoy', 'Hoy', 1], ['particulares', adm ? 'Particulares' : 'Mis particulares', 1], ['anual', 'Anual', 1], ['verano', 'Verano', 1],
-      ['adultos', 'Adultos', 0], adm ? ['finanzas', 'Finanzas', 0] : null
-    ].filter(Boolean);
-  }
   function nav(){
-    const it = items();
+    const adm = esAdmin(), ac = '<div class="sp-sep">';
+    const b = (k, t, ico, extra) => `<button class='sp-ni' data-area='${k}'${extra || ''}>${ico}<span>${t}</span></button>`;
     return `<nav class='sp-nav'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div>
-      ${it.map(([k, t, cel], n) => `${n === 1 ? `<div class='sp-sep'>Clases</div>` : n === 2 ? `<div class='sp-sep'>Academias</div>` : n === 5 ? `<div class='sp-sep'>Administración</div>` : ''}<button class='sp-ni' data-area='${k}'${cel ? '' : ' data-solo-pc'}>${I[k]}<span>${t}</span></button>`).join('')}
-      <button class='sp-ni' data-mas data-solo-cel>${I.mas}<span>Más</span></button>
+      ${adm ? `<button class='sp-mas-pc' data-anotar>${I.mas2}<span>Anotar</span></button>` : ''}
+      ${b('hoy', 'Hoy', I.hoy)}
+      ${b('particulares', adm ? 'Clases' : 'Mis clases', I.particulares)}
+      ${adm ? `<button class='sp-plus' data-anotar aria-label='Anotar'>${I.mas2}</button>` : ''}
+      ${adm ? b('plata', 'Plata', I.finanzas, ' data-solo-cel') : ''}
+      ${b('academias', 'Academias', I.anual, ' data-solo-cel')}
+      ${ac}Academias</div>${b('anual', 'Academia Anual', I.anual, ' data-solo-pc')}${b('verano', 'Academia de Verano', I.verano, ' data-solo-pc')}${b('adultos', 'Academia de Adultos', I.adultos, ' data-solo-pc')}
+      ${adm ? `${ac}Plata</div>${b('finanzas', 'Este mes', I.finanzas, ' data-solo-pc')}${b('sueldos', 'Sueldos', I.pago, ' data-solo-pc')}` : ''}
       <div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
   }
 
   function abrir(){
     if(!auth) return login();
     root.innerHTML = `<div class='sp-app'>${nav()}<div class='sp-main'>
-      <div class='sp-top'><div><h1></h1><p></p></div><div class='sp-bus'><span>${I.lupa}</span><input id='sp-q' type='search' placeholder='Buscar alumno o cliente' autocomplete='off'><div class='sp-res' hidden></div></div></div>
+      <div class='sp-top'><div><h1></h1><p></p></div><button class='sp-yo-cel' data-cuenta aria-label='Mi cuenta'>${esc((auth.email || '?')[0].toUpperCase())}</button><div class='sp-bus'><span>${I.lupa}</span><input id='sp-q' type='search' placeholder='Buscar alumno o cliente' autocomplete='off'><div class='sp-res' hidden></div></div></div>
+      <div class='sp-seg' hidden></div>
       <div class='sp-area' data-a='hoy'></div>
       <div class='sp-area' data-a='particulares' hidden><div class='pn-escuela'></div></div>
       <div class='sp-area sp-panel' data-a='panel' hidden><div class='sp-pn'></div></div>
@@ -257,27 +316,92 @@ main .pn{max-width:1440px}
   function bindNav(){
     root.querySelectorAll('.sp-nav [data-area]').forEach(b => b.onclick = () => ir(b.dataset.area));
     root.querySelectorAll('[data-salir]').forEach(b => b.onclick = () => salir());
-    const m = root.querySelector('[data-mas]'); if(m) m.onclick = mas;
+    root.querySelectorAll('[data-anotar]').forEach(b => b.onclick = () => anotar());
+    const c = root.querySelector('[data-cuenta]'); if(c) c.onclick = cuenta;
   }
-  function marcar(){ root.querySelectorAll('.sp-nav [data-area]').forEach(b => b.classList.toggle('on', b.dataset.area === area)); }
-  function mas(){
-    const extra = items().filter(x => !x[2]);
+  function marcar(){ root.querySelectorAll('.sp-nav [data-area]').forEach(b => b.classList.toggle('on', b.dataset.area === area || b.dataset.area === GRUPO[area])); }
+  function cuenta(){
     const w = document.createElement('div'); w.className = 'sp-mas';
-    w.innerHTML = `<div>${extra.map(([k, t]) => `<button data-ir='${k}'>${I[k]}<span>${TIT[k]}</span></button>`).join('')}<button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
+    w.innerHTML = `<div><button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
     document.body.appendChild(w);
-    w.onclick = e => { const b = e.target.closest('button'); if(e.target === w || b) w.remove(); if(b && b.dataset.ir) ir(b.dataset.ir); if(b && b.dataset.fuera !== undefined) salir(); };
+    w.onclick = e => { const b = e.target.closest('button'); if(e.target === w || b) w.remove(); if(b && b.dataset.fuera !== undefined) salir(); };
   }
   function ir(a){
-    if(!TIT[a]) a = 'hoy';
+    if(a === 'academias' || a === 'plata'){ a = ultimo[a]; }
+    if(!TIT[a] || (!esAdmin() && GRUPO[a] === 'plata')) a = 'hoy';
     area = a; try{ sessionStorage.setItem('storm-area', a); }catch(_){}
+    const g = GRUPO[a]; if(g){ ultimo[g] = a; try{ sessionStorage.setItem('storm-ultimo', JSON.stringify(ultimo)); }catch(_){} }
     bindNav(); marcar();
-    const panel = ['anual', 'verano', 'finanzas'].includes(a);
+    const panel = ['anual', 'verano', 'finanzas', 'sueldos'].includes(a);
     root.querySelectorAll('.sp-area').forEach(x => x.hidden = !(x.dataset.a === a || (panel && x.dataset.a === 'panel')));
-    if(panel) StormPanel.ir(a);
+    if(a === 'finanzas' || a === 'sueldos'){ StormPanel.fsub(a === 'sueldos' ? 'gastos' : 'finanzas'); StormPanel.ir('finanzas'); }
+    else if(panel) StormPanel.ir(a);
     root.querySelector('.sp-top h1').textContent = TIT[a];
     root.querySelector('.sp-top p').textContent = a === 'hoy' ? hoyLargo() : '';
+    const seg = root.querySelector('.sp-seg');
+    seg.hidden = !g;
+    if(g){
+      seg.innerHTML = SEG[g].map(([k, t]) => `<button class='${k === a ? 'on' : ''}' data-seg='${k}'>${t}</button>`).join('');
+      seg.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { const [x, sub] = b.dataset.seg.split(':'); ir(x); if(sub) StormEscuela.ir(sub); });
+    }
     if(a === 'hoy') pintarHoy();
     window.scrollTo(0, 0);
+  }
+
+  // ---------- Anotar en 3 toques: monto, en qué, área ----------
+  const AREAS = [['Verano', 'Verano', 'verano'], ['Anual', 'Anual', 'anual'], ['Adultos', 'Adultos', 'adultos'], ['Escuela', 'Particulares', 'particulares'], ['Rentas', 'Rentas', 'tabla'], ['Surfshop', 'Surf Shop', 'tienda'], ['Casa', 'Casa Storm', 'casa']];
+  const ATAJOS = { gasto: { Verano: ['Comida', 'Premios', 'Sala de yoga', 'Materiales', 'Bencina'], Casa: ['Mantención oficina', 'Crecimiento', 'Marketing', 'Luz', 'Internet'], _: ['Bencina', 'Comida', 'Parafina', 'Materiales', 'Hielo', 'Reparación'] },
+                   ingreso: { Rentas: ['Arriendo tabla', 'Arriendo traje'], Surfshop: ['Venta tienda'], Escuela: ['Clase particular'], _: ['Clase particular', 'Arriendo tabla', 'Venta tienda', 'Auspicio'] } };
+  const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
+  let AN = null;
+  function anotar(){
+    const m = new Date().getMonth();
+    AN = { tipo: 'gasto', monto: '', detalle: '', area: (() => { try{ return localStorage.getItem('storm-ultima-area') || ''; }catch(_){ return ''; } })() || ([10, 11, 0, 1].includes(m) ? 'Verano' : 'Anual'), corr: m === 1 ? 'febrero' : 'enero' };
+    const w = document.createElement('div'); w.className = 'sp-mas sp-an'; document.body.appendChild(w);
+    pintarAnotar(w);
+    setTimeout(() => { const i = w.querySelector('#an-monto'); if(i) i.focus(); }, 60);
+  }
+  function pintarAnotar(w){
+    const at = (ATAJOS[AN.tipo][AN.area] || ATAJOS[AN.tipo]._);
+    const fmt = v => v ? Number(v).toLocaleString('es-CL') : '';
+    w.innerHTML = `<div><button class='sp-fx' aria-label='Cerrar'>✕</button>
+      <h2 class='an-h'>${AN.tipo === 'gasto' ? 'Anotar gasto' : 'Anotar ingreso'}</h2>
+      <label class='an-monto'><span>$</span><input id='an-monto' inputmode='numeric' placeholder='0' value='${fmt(AN.monto)}' autocomplete='off'></label>
+      <p class='an-q'>¿En qué?</p>
+      <div class='an-chips'>${at.map(x => `<button class='${AN.detalle === x ? 'on' : ''}' data-det='${esc(x)}'>${esc(x)}</button>`).join('')}</div>
+      <input id='an-det' class='an-det' placeholder='O escribe aquí' value='${at.includes(AN.detalle) ? '' : esc(AN.detalle)}'>
+      <p class='an-q'>¿De qué área?</p>
+      <div class='an-areas'>${AREAS.map(([k, t, ic]) => `<button class='${AN.area === k ? 'on' : ''}' data-ar='${k}'>${I[ic] || ''}<span>${t}</span></button>`).join('')}</div>
+      ${AN.area === 'Verano' ? `<p class='an-q'>¿A qué mes del Verano?</p><div class='an-chips'>${['enero', 'febrero', 'ambos'].map(c => `<button class='${AN.corr === c ? 'on' : ''}' data-corr='${c}'>${c === 'ambos' ? 'Enero y febrero' : c[0].toUpperCase() + c.slice(1)}</button>`).join('')}</div>` : ''}
+      <button class='an-go' data-go>Guardar ${AN.tipo}</button><p class='an-err'></p>
+      <div class='an-otros'><button data-tipo='${AN.tipo === 'gasto' ? 'ingreso' : 'gasto'}'>${AN.tipo === 'gasto' ? 'Es un ingreso' : 'Es un gasto'}</button><button data-clase>Agendar clase particular</button></div></div>`;
+    const leerCampos = () => { AN.monto = String(w.querySelector('#an-monto').value).replace(/\D/g, ''); const d = w.querySelector('#an-det').value.trim(); if(d) AN.detalle = d; };
+    const mi = w.querySelector('#an-monto'); mi.oninput = () => { const v = mi.value.replace(/\D/g, ''); mi.value = fmt(v); AN.monto = v; };
+    w.onclick = async e => {
+      if(e.target === w || e.target.closest('.sp-fx')) return w.remove();
+      const t = e.target.closest('button'); if(!t) return;
+      if(t.dataset.clase !== undefined){ w.remove(); ir('particulares'); return StormEscuela.nueva(); }
+      if(t.dataset.tipo){ leerCampos(); AN.tipo = t.dataset.tipo; AN.detalle = ''; return pintarAnotar(w); }
+      if(t.dataset.det){ leerCampos(); AN.detalle = AN.detalle === t.dataset.det ? '' : t.dataset.det; return pintarAnotar(w); }
+      if(t.dataset.ar){ leerCampos(); AN.area = t.dataset.ar; return pintarAnotar(w); }
+      if(t.dataset.corr){ leerCampos(); AN.corr = t.dataset.corr; return pintarAnotar(w); }
+      if(t.dataset.go !== undefined){
+        leerCampos(); const er = w.querySelector('.an-err');
+        if(!+AN.monto){ er.textContent = 'Falta el monto.'; return w.querySelector('#an-monto').focus(); }
+        if(!AN.detalle){ er.textContent = 'Elige o escribe en qué fue.'; return w.querySelector('#an-det').focus(); }
+        t.disabled = true; t.textContent = 'Guardando…';
+        try{
+          await StormPanel.anotar({ tipo: AN.tipo, area: AN.area, detalle: AN.detalle, monto: +AN.monto, corresponde: AN.area === 'Verano' ? (AN.corr === 'ambos' ? 'verano ' + anioVer : AN.corr + ' ' + anioVer) : '' });
+          try{ localStorage.setItem('storm-ultima-area', AN.area); }catch(_){}
+          w.remove(); aviso(`Anotado: $${Number(AN.monto).toLocaleString('es-CL')} · ${AN.detalle}`);
+          if(area === 'hoy') pintarHoy();
+        }catch(x){ t.disabled = false; t.textContent = 'Guardar ' + AN.tipo; er.textContent = 'No se guardó: ' + x.message; }
+      }
+    };
+  }
+  function aviso(t){
+    const a = document.createElement('div'); a.className = 'es-toast'; a.innerHTML = `<span class='es-ti'>✓</span>${esc(t)}`;
+    document.body.appendChild(a); setTimeout(() => a.remove(), 5200);
   }
   const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'], MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const hoyLargo = () => { const d = new Date(); return DIAS[d.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()]; };
@@ -302,6 +426,7 @@ main .pn{max-width:1440px}
       ${adm ? tile(espera.length ? 'warn' : 'ok', I.pago, espera.length, 'particulares sin pagar', '', 'particulares:reservas') : ''}
       ${tile(sinFicha.length ? 'warn' : 'ok', I.ficha, sinFicha.length, 'clases sin fichas', 'particulares', 'particulares:reservas')}
       ${adm && avisos ? tile('warn', I.grupo, avisos, 'avisos de la Anual', 'alumnos sin grupo o pagos', 'anual:avisos') : ''}
+      ${(() => { const d0 = new Date(), fm = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate() - d0.getDate() < 3; return adm && (fm || [5, 6, 0].includes(d0.getDay())) ? tile('', I.pago, '$', fm ? 'revisar sueldos del mes' : 'revisar sueldos de la semana', 'instructores', fm ? 'sueldos' : 'particulares:pagos') : ''; })()}
     </div>`;
     // línea de tiempo del día
     const lineas = [];
@@ -323,6 +448,7 @@ main .pn{max-width:1440px}
       ir(a);
       if(a === 'particulares' && s) StormEscuela.ir(s);
       if(a === 'anual' && s) setTimeout(() => StormPanel.tab(s), 50);
+      if(a === 'particulares' && !s) StormEscuela.ir('dia');
     });
   }
   // ---------- buscador: una persona, todas las áreas ----------

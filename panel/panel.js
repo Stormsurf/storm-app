@@ -764,6 +764,9 @@
       montar(el, a){ app = el; auth = a; load(); },
       ir(x){ acad = x; try{ sessionStorage.setItem(KEY + '-acad', x); }catch(_){} if(app && app.querySelector('.pn-sw')) mostrarAcad(); },
       tab(t){ tab = t; const b = app && app.querySelector(`.pn-tab[data-tab='${t}']`); if(b) b.click(); },
+      fsub(x){ fSub = x; if(app && app.querySelector('.pn-finz')) mostrarFsub(); },
+      async anotar(b){ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes}, b)); fMes = FIN.mes; if(app && app.querySelector("[data-pane='finanzas']")) pintarFinanzas(); return FIN; },
+      fin: () => FIN,
       datos: () => cacheLeer('anual'),
       verano: () => VER || cacheLeer('verano')
     };
