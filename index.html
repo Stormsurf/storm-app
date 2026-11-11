@@ -273,6 +273,46 @@ body:has(.mc-hero--login) .ap-top{display:none}
 .mc-inf summary{list-style:none;cursor:pointer}.mc-inf summary::-webkit-details-marker{display:none}
 .mc-inf summary b{display:block;font-size:1.6rem}.mc-inf summary small{display:block;font-size:1.25rem;opacity:.6;margin-top:2px}
 .mc-inf p{margin:12px 0 0;font-size:1.45rem;line-height:1.6;white-space:pre-line}
+/* Academia de Adultos */
+.mc-sw button.on[data-vista=adultos]{background:#2C2C2B;color:#fff}
+.ad{--ac:#4F7F86;--ac-dk:#335a60;--ac-soft:#E3EDEE;--warn:#B5543C;--warn-soft:#F6E3DF;--ok:#3E9B76;--ok-soft:#E7F4EE}
+.ad-hoy{background:var(--ink);color:#fff;border:0;text-align:center}
+.ad-hoy small{display:block;opacity:.65;font-size:1.25rem;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.ad-hoy h3{margin:6px 0 2px;font-size:2.4rem;font-weight:500}
+.ad-hoy p{margin:0;opacity:.75;font-size:1.4rem}
+.ad-big{display:block;width:100%;margin-top:16px;border:0;border-radius:999px;background:#fff;color:var(--ink);font:inherit;font-weight:700;font-size:1.7rem;padding:16px;cursor:pointer}
+.ad-big.done{background:var(--ok);color:#fff;cursor:default}
+.ad-hoy .ad-wa{display:block;margin-top:12px;color:#fff;font-size:1.3rem;opacity:.8}
+.ad-plan{display:flex;align-items:center;gap:18px}
+.ad-ring{flex:none;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;text-align:center;line-height:1.05;background:var(--ac-soft)}
+.ad-ring.warn{background:var(--warn-soft)}
+.ad-ring b{display:block;font-size:2.8rem;font-weight:600}
+.ad-ring small{font-size:1.1rem;opacity:.7}
+.ad-plan h3{margin:0;font-size:1.9rem;font-weight:500}
+.ad-plan p{margin:4px 0 0;font-size:1.4rem;opacity:.72}
+.ad-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.ad-row:last-child{border-bottom:0}
+.ad-row b{font-weight:600;font-size:1.5rem}
+.ad-row small{display:block;opacity:.62;font-size:1.25rem;margin-top:1px}
+.ad-tag{display:inline-block;font-size:1.15rem;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.t-ok{background:var(--ok-soft);color:#24684d}.t-no{background:#F1EFEC;color:#77756f}.t-ac{background:var(--ac-soft);color:var(--ac-dk)}.t-chg{background:#FBF3DC;color:#6b520a}
+.ad-mini{border:1.5px solid var(--ac);background:#fff;color:var(--ac-dk);border-radius:999px;font:inherit;font-weight:600;font-size:1.3rem;padding:7px 16px;cursor:pointer;white-space:nowrap}
+.ad-mini.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.ad-pay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.ad-opt{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;text-align:left;font:inherit;cursor:pointer;color:var(--ink)}
+.ad-opt b{display:block;font-size:2rem;font-weight:600}
+.ad-opt small{opacity:.65;font-size:1.25rem}
+.ad-opt.best{border-color:var(--ac);background:var(--ac-soft)}
+.ad-opt[disabled]{opacity:.6}
+.ad-debe{background:var(--warn-soft);border-color:transparent;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ad-debe b{font-size:1.6rem}.ad-debe p{margin:2px 0 0;font-size:1.3rem;opacity:.75}
+.ad-aviso{background:#FBF3DC;border-color:transparent;color:#4d3b06}
+.ad-aviso b{display:block;font-size:1.5rem}.ad-aviso p{margin:4px 0 0;font-size:1.4rem}
+.ad-res{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.ad-res a{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;text-decoration:none;color:var(--ink)}
+.ad-res a i{font-style:normal;font-size:2.2rem}
+.ad-res a h3{margin:6px 0 2px;font-size:1.5rem;font-weight:600;line-height:1.25}
+.ad-res a p{margin:0;font-size:1.25rem;opacity:.65;line-height:1.35}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap mc'>
@@ -330,6 +370,15 @@ body:has(.mc-hero--login) .ap-top{display:none}
     return d;
   }
   const call = body => post(Object.assign({}, auth, body));
+  // Uso de la app: avisa al programa cuándo entra la familia y qué recurso abre (solo correo, fecha y qué abrió).
+  function uso(que, detalle){
+    if(!auth || !API) return;
+    if(que === 'entro'){ const k = 'storm-uso-' + new Date().toISOString().slice(0,10); try{ if(localStorage.getItem(k)) return; localStorage.setItem(k, '1'); }catch(_){} }
+    const ap = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const av = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    try{ fetch(API, {method:'POST', keepalive:true, headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({}, auth, {accion:'uso', que, detalle: detalle || '', app: ap, avisos: av}))}).catch(()=>{}); }catch(_){}
+  }
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a.mc-res'); if(!a) return; const r = RECURSOS.find(x => x.url === new URL(a.href, location.href).pathname); if(r) uso('recurso', r.titulo); });
 
   // ---------- Entrar con código ----------
   function login(email, err, paso){
@@ -345,7 +394,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
            <button class='mc-go' id='mc-ok'>Recibir código</button>`}
       ${err ? `<div class='mc-msg mc-msg--err' style='text-align:left'>${esc(err)}</div>` : ''}
     </div>
-    <p class='mc-note'>¿Aún no inscribes a tus hijos? <a href='${esc(PAY)}'>Academia Anual</a> · <a href='${esc(PAY.replace(/mensualidad-academia-anual.*$/, 'academia-de-verano-2027'))}'>Academia de Verano</a></p>`;
+    <p class='mc-note'>¿Aún no inscribes a tus hijos? <a href='${esc(PAY)}'>Academia Anual</a> · <a href='${esc(PAY.replace(/mensualidad-academia-anual.*$/, 'academia-de-verano-2027'))}'>Academia de Verano</a> · <a href='/adultos/'>Academia de Adultos</a></p>`;
     const ok = document.getElementById('mc-ok');
     const input = document.getElementById(paso==='codigo' ? 'mc-code' : 'mc-email');
     input.focus();
@@ -539,12 +588,14 @@ body:has(.mc-hero--login) .ap-top{display:none}
   }
   // ---------- Academia Anual / Academia de Verano ----------
   const VISTA = KEY + '-vista';
-  let D = {anual:null, verano:null}, vista = '';
+  let D = {anual:null, verano:null, adultos:null}, vista = '';
   const hayAnual = () => !!(D.anual && D.anual.alumnos && D.anual.alumnos.length);
   const hayVerano = () => !!(D.verano && D.verano.hijos && D.verano.hijos.length);
+  const hayAdultos = () => !!(D.adultos && D.adultos.alumno);
   function selector(){
-    if(!(hayAnual() && hayVerano())) return '';
-    return `<div class='mc-sw'><button data-vista='anual'${vista==='anual'?" class='on'":''}>Academia Anual</button><button data-vista='verano'${vista==='verano'?" class='on'":''}>Academia de Verano</button></div>`;
+    const vs = [hayAnual() && ['anual','Academia Anual'], hayVerano() && ['verano','Academia de Verano'], hayAdultos() && ['adultos','Adultos']].filter(Boolean);
+    if(vs.length < 2) return '';
+    return `<div class='mc-sw'>` + vs.map(v => `<button data-vista='${v[0]}'${vista===v[0]?" class='on'":''}>${v[1]}</button>`).join('') + `</div>`;
   }
   function hero(){
     const box = document.querySelector('.mc-hero'), img = box && box.querySelector('img'); if(!img) return;
@@ -552,16 +603,16 @@ body:has(.mc-hero--login) .ap-top{display:none}
     box.classList.toggle('mc-hero--login', !auth);
     box.classList.toggle('mc-hero--in', !!auth && !!vista);
     const al = document.getElementById('mc-alogo');
-    if(al){ al.hidden = !auth || !vista; if(auth && vista){ al.src = v ? LOGO_VERANO : LOGO_ANUAL; al.alt = v ? 'Academia de Verano Storm' : 'Academia Anual Storm'; } }
+    if(al){ al.hidden = !auth || !vista || vista === 'adultos'; if(auth && vista && vista !== 'adultos'){ al.src = v ? LOGO_VERANO : LOGO_ANUAL; al.alt = v ? 'Academia de Verano Storm' : 'Academia Anual Storm'; } }
     const lead = box.querySelector('.mc-lead');
-    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = !auth ? '<p>Todo lo de tus hijos en Storm: Academia Anual y Academia de Verano.</p>' : v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
+    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = !auth ? '<p>Todo lo de tus hijos en Storm: Academia Anual y Academia de Verano.</p>' : vista === 'adultos' ? '<p>Academia de Adultos: tus clases, cuántas te quedan y tus pagos.</p>' : v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
   }
   function bindSw(){
     app.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { vista = b.dataset.vista; try{ localStorage.setItem(VISTA, vista); }catch(_){} mostrar(); window.scrollTo({top:0, behavior:'smooth'}); });
   }
   function mostrar(){
     hero();
-    if(vista === 'verano') renderVerano(D.verano); else render(D.anual);
+    if(vista === 'adultos') renderAdultos(D.adultos); else if(vista === 'verano') renderVerano(D.verano); else render(D.anual);
   }
   // Informes de fin de mes (los escribe Storm; vienen con los datos de la Academia Anual).
   function informesCard(acad){
@@ -850,23 +901,77 @@ body:has(.mc-hero--login) .ap-top{display:none}
       }catch(x){ msg = `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`; load(); }
     });
   }
+  // ---------- Academia de Adultos ----------
+  const AD_RECURSOS = [
+    { url:'/familias/seguridad-en-el-mar.html', icono:'🛟', titulo:'Seguridad en el mar', texto:'Las 4 señales del agua, corrientes y qué hacer si te caes.' },
+    { url:'/familias/cuida-tu-equipo.html', icono:'🏄', titulo:'Cuida tu equipo', texto:'Traje, tabla, leash y cera: cómo cuidarlos para que duren.' },
+    { url:'/familias/habla-como-surfista.html', icono:'🌊', titulo:'Habla como surfista', texto:'Frontside o backside, el lineup y el diccionario del surf.' },
+    { url:'/familias/respira-como-surfista.html', icono:'🌬️', titulo:'Respira como surfista', texto:'Respiración y calma para entrenar fuera del agua.' },
+    { url:'/familias/surf-desde-cero.html', icono:'🏄', titulo:'Surf desde cero', texto:'Las partes de tu tabla y si eres regular o goofy.' }
+  ];
+  const adFecha = iso => { const d = new Date(iso + 'T12:00'); return d.getDate() + ' de ' + MESES[d.getMonth()]; };
+  function renderAdultos(d){
+    const c = d.cuenta || {}, P = d.planes || {}, t = new Date();
+    let h = `<div class='mc-hi'><div><small>${DSEM[t.getDay()]} ${t.getDate()} de ${MESES[t.getMonth()]}</small><h2>Hola, ${esc(String(d.alumno.nombre).split(' ')[0])}</h2></div><button class='mc-link' id='mc-out'>Salir</button></div>` + selector() + msg + `<div class='ad'>`;
+    if(d.aviso && d.aviso.texto) h += `<div class='mc-card ad-aviso'><b>🔔 Aviso de la Academia</b><p>${esc(d.aviso.texto)}</p></div>`;
+    const hoy = d.hoy;
+    if(hoy && hoy.cancelada) h += `<div class='mc-card ad-hoy'><small>Hoy no hay clase</small><h3>${esc(hoy.texto)}</h3><p>${esc(hoy.cambio)}</p></div>`;
+    else if(hoy) h += `<div class='mc-card ad-hoy'><small>Hoy hay clase</small><h3>${esc(hoy.texto)}</h3><p>${esc(hoy.horario)}${hoy.cambio ? ' · ' + esc(hoy.cambio) : ''}</p>
+      <button class='ad-big${hoy.fui ? ' done' : ''}' data-adfui='${hoy.fecha}'>${hoy.fui ? '✓ Quedó anotado que viniste' : 'Vine a la clase'}</button>
+      <span class='ad-wa'>Si la clase cambia por el pronóstico, te avisamos aquí y por WhatsApp.</span></div>`;
+    const debe = c.debe > 0;
+    const plan = c.plan === '4 clases' ? 'Plan 4 clases' : c.plan === '8 clases' ? 'Plan 8 clases' : c.plan ? 'Clase suelta' : 'Sin plan';
+    h += `<h2 class='mc-h2'>Mis clases</h2><div class='mc-card'><div class='ad-plan'><div class='ad-ring${debe ? ' warn' : ''}'><div><b>${debe ? '!' : (c.quedan || 0)}</b><small>${debe ? 'por pagar' : 'te quedan'}</small></div></div>
+      <div><h3>${plan}</h3><p>${c.pagadas ? `Fuiste a ${c.fue.length} de ${c.pagadas} ${c.pagadas === 1 ? 'clase pagada' : 'clases pagadas'}.` : `Fuiste a ${(c.fue||[]).length} ${(c.fue||[]).length === 1 ? 'clase' : 'clases'}.`}${c.vence && c.quedan ? ' Úsalas hasta el ' + adFecha(c.vence) + '.' : ''}${debe ? ' Tienes ' + clp(c.debe) + ' por pagar.' : ''}</p></div></div>`;
+    const pas = (d.pasadas || []).filter(x => !hoy || x.fecha !== hoy.fecha);
+    if(pas.length) h += `<div style='margin-top:14px;border-top:1px solid var(--line)'>` + pas.map(x => `<div class='ad-row'><div><b>${esc(x.texto)}</b><small>${x.cancelada ? esc(x.cambio) : esc(x.horario) + (x.cambio ? ' · ' + esc(x.cambio) : '')}</small></div>${x.cancelada ? "<span class='ad-tag t-chg'>Cancelada</span>" : x.fui ? "<span class='ad-tag t-ok'>Fuiste</span>" : x.puede ? `<button class='ad-mini' data-adfui='${x.fecha}'>Sí fui</button>` : "<span class='ad-tag t-no'>No fuiste</span>"}</div>`).join('') + `</div><p class='mc-note' style='margin-top:8px'>¿Fuiste y no lo marcaste? Toca "Sí fui".</p>`;
+    h += `</div>`;
+    if((d.proximas || []).length){
+      h += `<h2 class='mc-h2' id='mc-s-cal'>Próximas clases</h2><div class='mc-card' style='padding-top:8px;padding-bottom:8px'>` + d.proximas.map(x => `<div class='ad-row'><div><b>${esc(x.texto)}</b><small>${esc(x.horario)}${x.cambio ? ' · ' + esc(x.cambio) : ''}</small></div><button class='ad-mini${x.voy ? ' on' : ''}' data-advoy='${x.fecha}' data-si='${x.voy ? 0 : 1}'>${x.voy ? '✓ Voy' : 'Voy'}</button></div>`).join('') + `</div><p class='mc-note'>Marca "Voy" para que el instructor sepa cuántos llegan. El día antes en la tarde te llega un recordatorio.</p>`;
+    }
+    h += `<h2 class='mc-h2'>Recursos Storm</h2><div class='ad-res'>` + AD_RECURSOS.map(r => `<a href='${r.url}'><i>${r.icono}</i><h3>${esc(r.titulo)}</h3><p>${esc(r.texto)}</p></a>`).join('') + `</div>`;
+    h += `<h2 class='mc-h2' id='mc-s-pago'>Pagar</h2>`;
+    if(debe) h += `<div class='mc-card ad-debe'><div><b>Debes ${clp(c.debe)}</b><p>${c.debeClases === 1 ? '1 clase' : c.debeClases + ' clases'} sin pagar (${clp(d.clase)} c/u). Si pagas un plan, se descuentan de ahí.</p></div><button class='mc-go mc-go--sm' data-adpay='Deuda'>Pagar lo que debo</button></div>`;
+    const p4 = P['4 clases'] || {}, p8 = P['8 clases'] || {}, ps = P['Suelta'] || {};
+    h += `<div class='ad-pay'><button class='ad-opt best' data-adpay='4 clases'><small>4 clases · ${p4.semanas} semanas</small><b>${clp(p4.monto)}</b><small>Sale ${clp(p4.monto/p4.clases)} la clase</small></button>
+      <button class='ad-opt' data-adpay='8 clases'><small>8 clases · ${p8.semanas} semanas</small><b>${clp(p8.monto)}</b><small>Sale ${clp(p8.monto/p8.clases)} la clase</small></button>
+      <button class='ad-opt' data-adpay='Suelta' style='grid-column:1/-1'><small>Clase suelta</small><b>${clp(ps.monto)}</b><small>Con un plan te ahorras hasta ${clp(ps.monto - p8.monto/p8.clases)} por clase</small></button></div>
+      <p class='mc-note'>Pagas con Mercado Pago y queda anotado solo.</p>`;
+    h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
+    app.innerHTML = h;
+    bindSw();
+    document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null, adultos:null}; vista = ''; hero(); login(); };
+    const accion = async (b, body, okTxt) => {
+      app.querySelectorAll('[data-adfui],[data-advoy],[data-adpay]').forEach(x => x.disabled = true); const t0 = b.textContent; b.textContent = okTxt;
+      try{ const r = await call(body); if(r.url){ location.href = r.url; return; } D.adultos = r; guardarDatos(D); msg = ''; renderAdultos(r); }
+      catch(x){ msg = `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`; b.textContent = t0; renderAdultos(D.adultos); }
+    };
+    app.querySelectorAll('[data-adfui]').forEach(b => b.onclick = () => { if(!b.classList.contains('done')) accion(b, {accion:'adultos-fui', fecha:b.dataset.adfui}, 'Anotando…'); });
+    app.querySelectorAll('[data-advoy]').forEach(b => b.onclick = () => accion(b, {accion:'adultos-voy', fecha:b.dataset.advoy, si: b.dataset.si === '1'}, '…'));
+    app.querySelectorAll('[data-adpay]').forEach(b => b.onclick = () => accion(b, {accion:'adultos-pagar', plan:b.dataset.adpay}, 'Abriendo Mercado Pago…'));
+  }
   async function load(){
     if(!auth) return login();
     const viejo = q.get('pago') ? null : leerDatos();
     const elegirVista = () => {
       let pref = ''; try{ pref = localStorage.getItem(VISTA) || ''; }catch(_){}
       const m = new Date().getMonth();
-      vista = !hayVerano() ? 'anual' : !hayAnual() ? 'verano' : (vista || pref || (m < 2 ? 'verano' : 'anual'));
-      if(q.get('pago')) vista = hayAnual() ? 'anual' : vista;
+      const vs = [hayAnual() && 'anual', hayVerano() && 'verano', hayAdultos() && 'adultos'].filter(Boolean);
+      if(!vs.length) vista = 'anual';
+      else if(vs.length === 1) vista = vs[0];
+      else vista = vs.includes(vista) ? vista : vs.includes(pref) ? pref : vs.includes('verano') && m < 2 ? 'verano' : vs[0];
+      if(q.get('pago')) vista = q.get('acad') === 'adultos' && hayAdultos() ? 'adultos' : hayAnual() ? 'anual' : vista;
     };
     if(viejo){ D = viejo; elegirVista(); mostrar(); }
     else app.innerHTML = `<div class='mc-skel'></div><div class='mc-skel'></div>`;
     try{
       const ver = API_VERANO ? post(Object.assign({accion:'mi-verano'}, auth), API_VERANO).catch(() => null) : Promise.resolve(null);
       const anu = call({accion:'mis-clases'}).catch(x => { if(/sesión|expir/i.test(x.message)) throw x; return null; });
-      const [a, v] = await Promise.all([anu, ver]);
-      if(!a && !(v && v.hijos && v.hijos.length)){ if(viejo) return; throw new Error('No pudimos cargar tus clases. Intenta de nuevo en un rato.'); }
-      const nuevo = {anual: a || {alumnos:[]}, verano: v};
+      const adu = call({accion:'adultos-mi'}).catch(() => null);
+      const [a, v, ad] = await Promise.all([anu, ver, adu]);
+      if(!a && !(v && v.hijos && v.hijos.length) && !(ad && ad.alumno)){ if(viejo) return; throw new Error('No pudimos cargar tus clases. Intenta de nuevo en un rato.'); }
+      uso('entro');
+      const nuevo = {anual: a || {alumnos:[]}, verano: v, adultos: ad && ad.alumno ? ad : null};
       guardarDatos(nuevo);
       if(viejo && JSON.stringify(viejo) === JSON.stringify(nuevo)) return;
       D = nuevo;

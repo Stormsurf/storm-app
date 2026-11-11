@@ -73,6 +73,12 @@
 .pn-tu{display:inline-block;background:var(--aa);color:#fff;border-radius:999px;padding:1px 8px;font-size:1.1rem;font-weight:700;margin-left:6px;vertical-align:1px}
 .pn-verano .pn-tu{background:#FADF70;color:#3B2610}
 .pn-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pn-uso{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pn-uso div{background:#f4f1ec;border-radius:14px;padding:12px 14px}
+.pn-uso small{display:block;font-size:1.2rem;opacity:.65;line-height:1.3}
+.pn-uso b{display:block;font-size:2.2rem;font-weight:600;line-height:1.15;margin-top:2px}
+.pn-uso b span{font-size:1.4rem;font-weight:500;opacity:.55}
+.pn-uso__h{font-size:1.3rem;font-weight:600;margin:16px 0 2px;opacity:.8}
 .pn-chip{font-size:1.35rem;padding:5px 11px;border-radius:999px;background:#f4f1ec}
 .pn-chip--in{background:var(--ok-soft);color:var(--ok)}
 .pn-cancel{opacity:.55}
@@ -159,6 +165,8 @@
 .pn-sw button.on{background:var(--aa);color:#fff}
 .pn-sw button[data-acad='verano'].on{background:#FADF70;color:#3B2610}
 .pn-sw button[data-acad='finanzas'].on{background:var(--ink);color:#fff}
+.pn-sw button[data-acad='adultos'].on{background:#4F7F86;color:#fff}
+.pn-adultos[hidden]{display:none}
 .pn-finz[hidden],.pn-fpane[hidden]{display:none}
 .pn-fsub{display:flex;gap:6px;margin-top:14px}
 .pn-fsub button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-size:1.35rem;font-weight:600;cursor:pointer;color:var(--ink)}
@@ -470,6 +478,18 @@
       <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
         ${d.sinGrupo.length ? `<div class='pn-chips' style='margin-top:10px'>${d.sinGrupo.map(n=>`<span class='pn-chip'>${esc(n)}</span>`).join('')}</div><p class='pn-sub' style='margin-top:10px'>Anótalos en la pestaña Alumnos de la planilla (columna amarilla).</p>` : `<p class='pn-empty'>Todos tienen grupo. 👌</p>`}
       </div>
+      ${d.uso ? (() => { const u = d.uso, de = n => `<span>de ${u.familias}</span>`;
+        return `<div class='pn-card'><h3>Uso de la app</h3>
+        <p class='pn-sub'>Familias de la Academia Anual de este mes con correo (${u.familias}). Se cuenta desde el ${esc(dm(u.desde).replace('pagó el ',''))}.</p>
+        <div class='pn-uso'><div><small>Entraron esta semana</small><b>${u.semana} ${de()}</b></div><div><small>Entraron este mes</small><b>${u.mes} ${de()}</b></div>
+          <div><small>Con la app instalada</small><b>${u.app} ${de()}</b></div><div><small>Con avisos activados</small><b>${u.avisos} ${de()}</b></div></div>
+        <p class='pn-uso__h'>Recursos más vistos (últimos 30 días)</p>
+        ${u.recursos.length ? u.recursos.map(r => `<div class='pn-row'><div><b>${esc(r.titulo)}</b></div><span class='pn-amt'>${r.familias} ${r.familias === 1 ? 'familia' : 'familias'}</span></div>`).join('') : `<p class='pn-empty'>Todavía nadie abre un recurso.</p>`}
+        <p class='pn-uso__h'>No han entrado nunca${u.nunca.length ? ` (${u.nunca.length})` : ''}</p>
+        ${u.nunca.length ? u.nunca.map(f => `<div class='pn-row pn-row--wrap'><div><b>${esc(f.apoderado || f.correo)}</b><small>${esc(f.alumnos.join(', '))}</small></div><div class='pn-acts'>${wa(f.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(f.telefono)}?text=${encodeURIComponent('Hola '+String(f.apoderado||'').split(' ')[0]+'! Te comparto Mi clase de Storm, donde ves las clases de '+f.alumnos.join(' y ')+', los avisos y recursos para la familia: https://app.stormsurf.cl · Entras con el correo que usaste al pagar y te llega un código.')}'>WhatsApp</a>` : ''}</div></div>`).join('') : `<p class='pn-empty'>Todas las familias ya entraron. 👌</p>`}
+        ${u.sinCorreo ? `<p class='pn-sub' style='margin-top:10px'>${u.sinCorreo} ${u.sinCorreo === 1 ? 'alumno no tiene' : 'alumnos no tienen'} correo en la planilla, así que no se pueden contar.</p>` : ''}
+        ${u.otras ? `<p class='pn-sub' style='margin-top:6px'>Además, ${u.otras} ${u.otras === 1 ? 'familia' : 'familias'} de otras academias (Verano) entraron esta semana.</p>` : ''}
+      </div>`; })() : ''}
       <div class='pn-card'><h3>Encuesta a las familias${d.encuesta?`<span class='pn-count'>${d.encuesta.respuestas}</span>`:''}</h3>
         ${d.encuesta ? `<p class='pn-sub'>${esc(cap(d.encuesta.mes))}: promedio <b>${String(d.encuesta.promedio).replace('.',',')}</b> de 5 <span class='pn-stars'>${'★'.repeat(Math.round(d.encuesta.promedio))}</span></p>
           ${d.encuesta.comentarios.map(c => `<div class='pn-row'><div><b>${esc(c.alumno)} <span class='pn-stars'>${'★'.repeat(c.nota)}</span></b><small>“${esc(c.comentario)}”</small></div></div>`).join('')}`
@@ -848,20 +868,23 @@
   function ponerSelector(){
     if(!API_VERANO) return;
     const head = app.querySelector('.pn-head'); if(!head || app.querySelector('.pn-sw')) return;
-    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button><button data-acad='verano'>Verano</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}</div>`);
+    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button><button data-acad='verano'>Verano</button><button data-acad='adultos'>Adultos</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}</div>`);
+    if(!app.querySelector('.pn-adultos')) app.insertAdjacentHTML('beforeend', `<div class='pn-adultos' hidden></div>`);
     app.querySelectorAll('[data-acad]').forEach(b => b.onclick = () => { acad = b.dataset.acad; try{ sessionStorage.setItem(KEY + '-acad', acad); }catch(_){} mostrarAcad(); });
     mostrarAcad();
   }
   let fSub = (() => { try{ return sessionStorage.getItem(KEY + '-fsub'); }catch(_){ return null; } })() || 'finanzas';
   function mostrarAcad(){
     if(acad === 'finanzas' && !app.querySelector('.pn-finz')) acad = 'anual';
-    const ver = acad === 'verano', fin = acad === 'finanzas';
+    const ver = acad === 'verano', fin = acad === 'finanzas', adu = acad === 'adultos';
     app.querySelectorAll('[data-acad]').forEach(b => b.classList.toggle('on', b.dataset.acad === acad));
-    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano,.pn-finz')) el.style.display = (ver || fin) ? 'none' : ''; });
+    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano,.pn-finz,.pn-adultos')) el.style.display = (ver || fin || adu) ? 'none' : ''; });
+    const pa = app.querySelector('.pn-adultos'); if(pa) pa.hidden = !adu;
     const pv = app.querySelector('.pn-verano'); pv.hidden = !ver;
     const pf = app.querySelector('.pn-finz'); if(pf) pf.hidden = !fin;
-    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : fin ? 'Finanzas Storm' : h1.dataset.t; }
+    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : fin ? 'Finanzas Storm' : adu ? 'Academia de Adultos' : h1.dataset.t; }
     if(ver) loadVerano();
+    if(adu) loadAdultos();
     if(fin) mostrarFsub();
   }
   function mostrarFsub(){
@@ -959,18 +982,104 @@
     };
   }
 
+  // ---------- Academia de Adultos (pasar lista, quiénes van, cambiar clase; cuentas solo admin) ----------
+  let ADU = null, adSel = '', adForm = false, adTipo = 'hora', adPagoDe = '';
+  const adDia = f => { const d = new Date(f + 'T12:00'); return { d: ['dom','lun','mar','mié','jue','vie','sáb'][d.getDay()], n: d.getDate() }; };
+  async function loadAdultos(){
+    const pane = app.querySelector('.pn-adultos'); if(!pane) return;
+    if(!ADU){ ADU = cacheLeer('adultos'); if(ADU) pintarAdultos(); else pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`; }
+    else pintarAdultos();
+    try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); ADU = d; cacheGuardar('adultos', d); if(!escribiendo(pane)) pintarAdultos(); }
+    catch(x){ if(!ADU) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
+  }
+  async function adEnviar(body, btn){
+    if(btn){ btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = '…'; }
+    try{ const d = await post(Object.assign({}, auth, body)); ADU = d; cacheGuardar('adultos', d); pintarAdultos(); return true; }
+    catch(x){ alert(x.message); if(btn){ btn.disabled = false; btn.textContent = btn.dataset.t; } return false; }
+  }
+  function pintarAdultos(){
+    const pane = app.querySelector('.pn-adultos'); if(!pane || !ADU) return;
+    const d = ADU, hoy = d.hoy, cls = d.clases || [];
+    if(!cls.some(c => c.fecha === adSel)) adSel = (cls.find(c => c.fecha === hoy) || cls.filter(c => c.fecha <= hoy).slice(-1)[0] || cls[0] || {}).fecha || '';
+    const c = cls.find(x => x.fecha === adSel), AL = d.alumnos || [];
+    const estado = a => a.debe ? `<span class='pn-tag' style='background:#F6E3DF;color:#B5543C'>Debe ${clp(a.debe)}</span>` : !a.pagadas ? `<span class='pn-tag' style='background:#F1EFEC;color:#77756f'>Sin pago</span>` : !a.quedan ? `<span class='pn-tag' style='background:#F1EFEC;color:#77756f'>Usó todas</span>` : `<span class='pn-tag' style='background:#E7F4EE;color:#24684d'>Le ${a.quedan === 1 ? 'queda 1' : 'quedan ' + a.quedan}</span>`;
+    let h = `<p class='pn-note' style='text-align:left;margin-top:14px'>Toca a cada persona que vino. Si alguien no está en la lista, agrégalo abajo. Aquí también cambias o cancelas una clase.</p>`;
+    h += `<div style='display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px'>` + cls.slice().reverse().map(x => { const k = adDia(x.fecha);
+      return `<button data-adcl='${x.fecha}' style='flex:none;border:1.5px solid ${x.fecha === adSel ? '#2C2C2B' : x.fecha === hoy ? '#4F7F86' : 'rgba(44,44,43,.12)'};background:${x.fecha === adSel ? '#2C2C2B' : '#fff'};color:${x.fecha === adSel ? '#fff' : '#2C2C2B'};border-radius:14px;padding:8px 12px;font:inherit;cursor:pointer;line-height:1.15;text-align:center;${x.cancelada ? 'text-decoration:line-through;opacity:.55' : ''}'><small style='display:block;font-size:1.1rem;text-transform:uppercase;opacity:.7'>${k.d}</small><b style='font-size:1.8rem'>${k.n}</b></button>`; }).join('') + `</div>`;
+    if(!c){ pane.innerHTML = h + `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas.</p></div>`; return; }
+    const vino = {}; (c.vino || []).forEach(v => vino[v.clave] = v.marco);
+    const voy = new Set(c.voy || []);
+    const fut = c.fecha > hoy;
+    h += `<div class='pn-card'><div style='display:flex;justify-content:space-between;align-items:center;gap:10px'><b style='font-size:1.6rem'>${esc(c.texto)}${c.fecha === hoy ? ' · hoy' : ''}</b><span class='pn-tag'>${fut ? voy.size + (voy.size === 1 ? ' va' : ' van') : Object.keys(vino).length + (Object.keys(vino).length === 1 ? ' vino' : ' vinieron')}</span></div>
+      <p style='margin:4px 0 0;font-size:1.35rem;opacity:.7'>${esc(c.horario)}${c.cambio ? ' · ' + esc(c.cambio) : ''}</p>`;
+    if(!c.cancelada || fut){
+      if(!adForm) h += `<p style='margin:10px 0 0'><button class='pn-link' data-adabrir>Cambiar o cancelar esta clase</button></p>`;
+      else {
+        const b = (t, l) => `<button data-adtipo='${t}' style='flex:1;border:1.5px solid ${adTipo === t ? '#4F7F86' : 'rgba(44,44,43,.12)'};background:#fff;border-radius:12px;padding:10px;font:inherit;font-weight:600;cursor:pointer'>${l}</button>`;
+        h += `<div style='margin-top:12px;padding:14px;background:#E3EDEE;border-radius:14px'><div style='display:flex;gap:8px'>${b('hora','Otra hora')}${b('dia','Otro día')}${b('cancelar','Cancelar')}</div>
+          ${adTipo !== 'cancelar' ? `<label style='display:block;margin-top:12px;font-size:1.3rem'>Hora de inicio<input id='ad-h' type='time' value='${esc(String(c.hora).padStart(5,'0'))}' class='pn-in' style='display:block;width:100%;margin-top:4px'></label>` : ''}
+          ${adTipo === 'dia' ? `<label style='display:block;margin-top:12px;font-size:1.3rem'>Nuevo día<input id='ad-d' type='date' value='${c.fecha}' min='${hoy}' class='pn-in' style='display:block;width:100%;margin-top:4px'></label>` : ''}
+          <label style='display:block;margin-top:12px;font-size:1.3rem'>Motivo<input id='ad-m' type='text' value='por el pronóstico' class='pn-in' style='display:block;width:100%;margin-top:4px'></label>
+          <label style='display:flex;gap:8px;align-items:center;margin-top:12px;font-size:1.3rem'><input id='ad-a' type='checkbox' checked> Avisar a los alumnos al celular</label>
+          <div style='display:flex;gap:8px;margin-top:14px'><button class='pn-nvgo' data-adguardar style='border:0;border-radius:999px;background:#4F7F86;color:#fff;font:inherit;font-weight:600;padding:10px 18px;cursor:pointer'>Guardar cambio</button><button class='pn-link' data-adcerrar>No cambiar</button></div></div>`;
+      }
+    }
+    if(c.cancelada) h += `<p class='pn-note'>Esta clase está cancelada.</p></div>`;
+    else if(fut){
+      const van = AL.filter(a => voy.has(a.clave));
+      h += `<p style='margin:14px 0 4px;font-weight:600'>${van.length ? van.length + (van.length === 1 ? ' dijo que va' : ' dijeron que van') : 'Nadie ha marcado "Voy" todavía'}</p>` + van.map(a => `<div class='pn-row' style='display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)'><b>${esc(a.nombre)}</b>${estado(a)}</div>`).join('') + `<p class='pn-note'>La lista se pasa el mismo día de la clase.</p></div>`;
+    } else {
+      h += `<div style='margin-top:10px;border-top:1px solid var(--line)'>` + AL.map(a => { const m = vino[a.clave];
+        const sub = m && /^alumno/i.test(m) ? 'Lo marcó desde su celular' : a.agregado && !m ? 'Agregado en el Panel' : !m && voy.has(a.clave) ? 'Dijo que venía' : '';
+        return `<div data-adal='${esc(a.clave)}' data-on='${m ? 1 : 0}' style='display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer'><span style='flex:none;width:32px;height:32px;border-radius:9px;border:2px solid ${m ? '#3E9B76' : 'rgba(44,44,43,.22)'};background:${m ? '#3E9B76' : '#fff'};color:#fff;display:grid;place-items:center;font-weight:700'>${m ? '✓' : ''}</span><div style='flex:1;min-width:0'><b style='font-size:1.5rem'>${esc(a.nombre)}</b>${sub ? `<small style='display:block;font-size:1.2rem;opacity:.62'>${sub}</small>` : ''}</div>${estado(a)}</div>`; }).join('') +
+        `</div><div style='display:flex;gap:8px;margin-top:12px'><input id='ad-nuevo' class='pn-in' placeholder='Nombre de alguien que vino' style='flex:1;min-width:0'><button data-adagregar style='border:0;border-radius:999px;background:#4F7F86;color:#fff;font:inherit;font-weight:600;padding:10px 16px;cursor:pointer'>Agregar</button></div></div>
+        <p class='pn-note'>"Debe" aparece cuando alguien fue a más clases de las que pagó.</p>`;
+    }
+    if(d.cuentas){
+      const k = d.cuentas;
+      h += `<h2 style='margin:26px 0 0;font-weight:500;font-size:2rem'>Cuentas de ${esc(k.mes.split(' ')[0])}</h2>
+        <div class='pn-card' style='background:#2C2C2B;color:#fff'><small style='opacity:.7'>Le toca al instructor este mes (50%)</small><div style='font-size:3rem;font-weight:600'>${clp(k.instructor)}</div></div>
+        <div class='pn-card'>${[['Entró', clp(k.ingresos)], ['Comisión Mercado Pago', '− ' + clp(k.comision)], ['Neto', clp(k.ingresos - k.comision)], ['50% instructor', clp(k.instructor)], ['50% Storm', clp(k.storm)], ['Clases hechas', k.clasesHechas], ['Asistencias', k.asistencias]].map(r => `<div style='display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:1.45rem'><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div>
+        <div class='pn-card'>` + (k.alumnos || []).map(a => `<div style='padding:10px 0;border-bottom:1px solid var(--line)'><div style='display:flex;justify-content:space-between;align-items:center;gap:8px'><div><b style='font-size:1.5rem'>${esc(a.nombre)}</b><small style='display:block;font-size:1.2rem;opacity:.62'>Fue a ${a.fue} este mes · pagó ${a.pagado ? clp(a.pagado) : 'nada aún'}</small></div><div style='display:flex;gap:6px;align-items:center'>${a.debe ? `<span class='pn-tag' style='background:#F6E3DF;color:#B5543C'>Debe ${clp(a.debe)}</span>` : ''}<button class='pn-link' data-adpagode='${esc(a.clave)}'>Anotar pago</button></div></div>
+          ${adPagoDe === a.clave ? `<div style='margin-top:8px;padding:12px;background:#F6F4F1;border-radius:12px'><select id='ad-pl' class='pn-in'>${a.debeClases ? `<option value='Deuda'>Lo que debe (${a.debeClases} ${a.debeClases === 1 ? 'clase' : 'clases'}, ${clp(a.debe)})</option>` : ''}<option value='4 clases'>4 clases · ${clp(d.planes['4 clases'].monto)}</option><option value='8 clases'>8 clases · ${clp(d.planes['8 clases'].monto)}</option><option value='Suelta'>Clase suelta · ${clp(d.clase)}</option></select>
+            <select id='ad-me' class='pn-in' style='margin-left:6px'><option>Transferencia</option><option>Efectivo</option></select> <button data-adpagar='${esc(a.clave)}' data-n='${a.debeClases}' style='border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;padding:8px 14px;cursor:pointer;margin-top:8px'>Guardar pago</button></div>` : ''}</div>`).join('') + `</div>
+        <p class='pn-note'>Lo de Mercado Pago se anota solo. "Anotar pago" es para transferencias o efectivo.</p>`;
+    }
+    pane.innerHTML = h;
+    pane.querySelectorAll('[data-adcl]').forEach(b => b.onclick = () => { adSel = b.dataset.adcl; adForm = false; pintarAdultos(); });
+    const ab = pane.querySelector('[data-adabrir]'); if(ab) ab.onclick = () => { adForm = true; adTipo = 'hora'; pintarAdultos(); };
+    const ac = pane.querySelector('[data-adcerrar]'); if(ac) ac.onclick = () => { adForm = false; pintarAdultos(); };
+    pane.querySelectorAll('[data-adtipo]').forEach(b => b.onclick = () => { adTipo = b.dataset.adtipo; pintarAdultos(); });
+    const ag = pane.querySelector('[data-adguardar]'); if(ag) ag.onclick = async () => {
+      const body = {accion:'adultos-cambio', fecha:c.fecha, tipo:adTipo, motivo:pane.querySelector('#ad-m').value.trim(), avisar:pane.querySelector('#ad-a').checked};
+      if(adTipo !== 'cancelar') body.hora = pane.querySelector('#ad-h').value;
+      if(adTipo === 'dia') body.nueva = pane.querySelector('#ad-d').value;
+      if(adTipo === 'cancelar' && !confirm('¿Cancelar la clase del ' + c.texto.toLowerCase() + '?')) return;
+      if(await adEnviar(body, ag)){ adForm = false; if(body.nueva) adSel = body.nueva; pintarAdultos(); }
+    };
+    pane.querySelectorAll('[data-adal]').forEach(r => r.onclick = () => { r.style.opacity = .5; adEnviar({accion:'adultos-lista', fecha:c.fecha, alumno:r.dataset.adal, vino: r.dataset.on !== '1'}); });
+    const an = pane.querySelector('[data-adagregar]'); if(an) an.onclick = () => { const n = pane.querySelector('#ad-nuevo').value.trim(); if(n) adEnviar({accion:'adultos-agregar', fecha:c.fecha, nombre:n}, an); };
+    pane.querySelectorAll('[data-adpagode]').forEach(b => b.onclick = () => { adPagoDe = adPagoDe === b.dataset.adpagode ? '' : b.dataset.adpagode; pintarAdultos(); });
+    pane.querySelectorAll('[data-adpagar]').forEach(b => b.onclick = async () => {
+      let plan = pane.querySelector('#ad-pl').value, clases = 1; if(plan === 'Deuda'){ plan = 'Suelta'; clases = +b.dataset.n || 1; }
+      if(await adEnviar({accion:'adultos-pago-manual', alumno:b.dataset.adpagar, plan, clases, medio:pane.querySelector('#ad-me').value}, b)){ adPagoDe = ''; pintarAdultos(); }
+    });
+  }
   async function load(){
     if(!auth) return login();
-    const viejo = cacheLeer('anual');
+    let viejo = cacheLeer('anual');
     let tocado = false;
     const tocar = () => { tocado = true; };
-    if(viejo){ render(viejo); app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); }
+    // Si lo guardado ya no se puede mostrar (datos viejos o de otro programa), se borra y se espera lo nuevo.
+    if(viejo){ try{ render(viejo); } catch(e){ console.warn('Panel: datos guardados no sirven', e); viejo = null; try{ localStorage.removeItem(KEY+'-datos'); }catch(_){} } }
+    if(viejo){ app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); }
     else app.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div><div class='pn-skel'></div>`;
     try{
       const d = await post(Object.assign({}, auth, {accion:'panel'}));
-      cacheGuardar('anual', d);
+      if(!d.actual && d.rol !== 'instructor') throw new Error('El programa de la planilla Anual no respondió como Panel. Revisa que esté pegado el programa de la Academia Anual.');
       if(viejo && JSON.stringify(viejo) === JSON.stringify(d)) return;
-      if(!viejo || !tocado) return render(d);
+      if(!viejo || !tocado){ render(d); cacheGuardar('anual', d); return; }
+      cacheGuardar('anual', d);
       // Ya estás usando el Panel: no te cambiamos la pantalla, te dejamos el botón para actualizar.
       if(!app.querySelector('.pn-nuevo')) app.insertAdjacentHTML('afterbegin', `<button class='pn-nuevo' style='display:block;width:100%;margin:0 0 10px;padding:10px;border:0;border-radius:12px;background:#0f6e74;color:#fff;font:inherit;cursor:pointer'>Hay datos nuevos · Toca para actualizar</button>`);
       app.querySelector('.pn-nuevo').onclick = () => render(d);
