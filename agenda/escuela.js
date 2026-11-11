@@ -148,6 +148,26 @@
   .es-tg:after{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
   .es-sw input:checked+.es-tg{background:#0f6e74}.es-sw input:checked+.es-tg:after{left:19px}
   .es-ajt{margin-bottom:12px}
+  .es-toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;background:#1f2b2b;color:#fff;border-radius:14px;padding:12px 16px;font-size:1.4rem;max-width:min(92vw,520px);box-shadow:0 10px 30px rgba(0,0,0,.18);animation:esT 5s forwards}
+  .es-toast.mal{background:#8a2f22}
+  .es-ti{flex:none;width:24px;height:24px;border-radius:50%;background:#2f9a6a;display:grid;place-items:center;font-weight:800;font-size:1.3rem}.es-toast.mal .es-ti{background:#fff;color:#8a2f22}
+  @keyframes esT{0%{opacity:0;transform:translate(-50%,12px)}6%{opacity:1;transform:translate(-50%,0)}85%{opacity:1}100%{opacity:0;visibility:hidden}}
+  .es-r{border-left:5px solid #2f9a6a}.es-r--pend{border-left-color:#e0a03a}.es-r--mal{border-left-color:#c0503a}.es-r--gris{border-left-color:#c9c6c0}
+  .es-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;align-items:center}
+  .es-tags .es-ins{margin:0}
+  .es-st{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px 3px 4px;font-size:1.15rem;font-weight:700;background:#e5f2ea;color:#2f7a4d}
+  .es-st i{width:18px;height:18px;border-radius:50%;background:#2f9a6a;color:#fff;display:grid;place-items:center;font-style:normal;font-size:1.05rem}.es-st i svg{width:12px;height:12px}
+  .es-st.pend i{background:#e0a03a}.es-st.mal i{background:#c0503a}.es-st.gris i{background:#a9a6a0}
+  .es-st.pend{background:#fbeee2;color:#b5662b}.es-st.mal{background:#f8e3df;color:#a6402c}.es-st.gris{background:#eeece8;color:#8a8986}
+  .es-ct{display:flex;gap:8px;flex:none}
+  .es-ctb{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#E3F1F1;color:#0f6e74;text-decoration:none}
+  .es-ctb.wa{background:#25D366;color:#fff}.es-ctb svg{width:22px;height:22px}
+  .es-res{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin:0 0 12px}
+  .es-rt{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;font:inherit;color:var(--ink);cursor:pointer}
+  .es-rt i{grid-row:span 3;width:40px;height:40px;border-radius:12px;background:#E3F1F1;color:#0f6e74;display:grid;place-items:center}.es-rt i svg{width:22px;height:22px}
+  .es-rt.pend i{background:#fbeee2;color:#b5662b}
+  .es-rt b{font-size:2.2rem;line-height:1}.es-rt span{font-size:1.2rem;color:#55544f}.es-rt small{font-size:1.1rem;color:#8a8986}
+  @media (max-width:999px){.es-rt{grid-template-columns:1fr;padding:10px 12px}.es-rt i{grid-row:auto;width:34px;height:34px;margin-bottom:6px}.es-rt b{font-size:2rem}.es-rt small{display:none}}
   .es-ajw{max-width:760px}
   .es-intro{margin:0 0 12px;font-size:1.35rem;color:#6b6a67}
   .es-nota{margin:8px 0 0;font-size:1.2rem;color:#8a8986}
@@ -203,12 +223,20 @@
     pagos: sv("<rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18M7 15h3'/>"),
     ajustes: sv("<circle cx='12' cy='12' r='3'/><path d='M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8'/>")
   };
+  const ICO_S = {
+    reloj: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round'><circle cx='12' cy='12' r='8.5'/><path d='M12 7.5V12l3 2'/></svg>`,
+    ficha: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='3.5' width='14' height='17' rx='2.5'/><path d='M9 9h6M9 13h6M9 17h3'/></svg>`,
+    wa: `<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 2.2a9.7 9.7 0 0 0-8.4 14.6L2.2 21.8l5.1-1.3A9.7 9.7 0 1 0 12 2.2Zm0 17.7c-1.5 0-2.9-.4-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 19.9Zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.8 1c-.1.2-.3.2-.5.1a6.6 6.6 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1l-.4-.2Z'/></svg>`,
+    tel: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 3.5h3.2l1.6 4-2 1.3a11 11 0 0 0 5.4 5.4l1.3-2 4 1.6V17a3 3 0 0 1-3 3A14.5 14.5 0 0 1 2 6.5a3 3 0 0 1 3-3Z'/></svg>`,
+    pago: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18'/></svg>`,
+    cal: `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><rect x='3.5' y='5' width='17' height='15' rx='3'/><path d='M3.5 10h17M8 3v4M16 3v4'/></svg>`
+  };
   // ---------- pintar ----------
   function pintar() {
     if (!pane || !E) return;
     const admin = E.rol === 'admin';
     let h = `<style>${css}</style>`, cuerpo = '';
-    if (msg) cuerpo += `<div class='pn-ok'>${esc(msg)}</div>`;
+    const toast = msg; msg = '';
     if (linkNuevo) { const L = linkNuevo;
       cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
@@ -223,6 +251,7 @@
     else if (sub === 'ajustes' && admin) h += ajustes();
     else h += reservas(admin);
     h += `</div></div>`;
+    if (toast) h += `<div class='es-toast${/^No /.test(toast) ? ' mal' : ''}' role='status'><span class='es-ti'>${/^No /.test(toast) ? '!' : '✓'}</span>${esc(toast)}</div>`;
     if (manualOn && admin) h += `<div class='es-modal' data-fondo><div class='es-sheet'>${manualForm()}</div></div>`;
     pane.innerHTML = h;
     pane.querySelectorAll('[data-sub]').forEach(b => { b.classList.toggle('on', b.dataset.sub === sub); b.onclick = () => { sub = b.dataset.sub; msg = ''; pintar(); }; });
@@ -254,13 +283,20 @@
     return h;
   }
 
+  function estadoDe(r) {
+    if (r.estado === 'cancelada') return { c: 'gris', i: '×', t: 'Cancelada' };
+    if (r.estado === 'pendiente') return { c: 'pend', i: ICO_S.reloj, t: r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago' : 'Pagando ahora' };
+    if (r.estado === 'revisar') return { c: 'mal', i: '!', t: 'Revisar: ' + (r.nota || '') };
+    if (r.medio === 'Por pagar') return { c: 'pend', i: ICO_S.reloj, t: 'Por cobrar' };
+    return { c: 'ok', i: '✓', t: 'Confirmada' };
+  }
+  const contacto = r => wa(r.telefono) ? `<div class='es-ct'><a class='es-ctb wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}' title='WhatsApp' aria-label='WhatsApp'>${ICO_S.wa}</a><a class='es-ctb' href='tel:+${wa(r.telefono)}' title='Llamar' aria-label='Llamar'>${ICO_S.tel}</a></div>` : '';
   function tarjeta(r, admin) {
-    const est = r.estado === 'pendiente' ? `<span class='es-est'>${r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago (link enviado)' : 'Pagando en este momento'}</span>` : r.estado === 'revisar' ? `<span class='es-est'>Revisar: ${esc(r.nota)}</span>` : '';
-    let h = `<div class='es-r'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora, r.duracion)}</small></div>
+    const E0 = estadoDe(r), est = `<span class='es-st ${E0.c}'><i>${E0.i}</i>${esc(E0.t)}</span>`;
+    let h = `<div class='es-r es-r--${E0.c}'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora, r.duracion)}</small></div>
       <div class='es-who'><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 7 a 11' : ''}${admin ? ' · ' + clp(r.total) + ' ' + esc(r.medio) : ''}</small>
-      ${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}${est}
-      <span class='es-est' style='${(r.fichas || []).length >= r.personas ? 'background:#e5f2ea;color:#2f7a4d' : ''}'>Fichas ${(r.fichas || []).length}/${r.personas}</span></div>
-      ${wa(r.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}'>WhatsApp</a>` : ''}</div>
+      <div class='es-tags'>${est}<span class='es-st ${(r.fichas || []).length >= r.personas ? 'ok' : 'pend'}'><i>${ICO_S.ficha}</i>Fichas ${(r.fichas || []).length}/${r.personas}</span>${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}</div></div>
+      ${contacto(r)}</div>
       ${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}
       ${admin && r.linkPago ? `<div class='es-acc'><button class='es-btn' data-lf='${esc(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Copiar link de pago</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(msgLink({ nombre: r.nombre, fecha: r.fecha, hora: r.hora, personas: r.personas, total: r.total, url: r.linkPago }))}'>Reenviar por WhatsApp</a>` : ''}</div>` : ''}
       <div class='es-acc'>${r.estado === 'pendiente' ? '' : (r.fichas || []).length ? `<a class='es-btn sec' style='text-decoration:none' href='/agenda/fichas.html?ref=${encodeURIComponent(r.ref)}' target='_blank'>Ver fichas</a>` : ''}${r.estado !== 'pendiente' && (r.fichas || []).length < r.personas && r.linkFicha ? `<button class='es-btn sec' data-lf='${esc(r.linkFicha)}'>Copiar link de la ficha</button>${wa(r.telefono) ? `<a class='es-btn sec' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent('Hola ' + r.nombre.split(' ')[0] + ', antes de la clase de surf necesitamos la ficha de cada participante (2 minutos): ' + r.linkFicha)}'>Pedir ficha por WhatsApp</a>` : ''}` : ''}</div>`;
@@ -377,7 +413,14 @@
     if (!diaVer) diaVer = E.hoy;
     const f = diaVer, activos = E.instructores.filter(i => i.activo).map(i => i.nombre).filter(n => admin || n === E.yo);
     const top = m => (m - D_INI) / 30 * D_ROW, alto = min => min / 30 * D_ROW;
-    let h = `<div class='es-wk' style='margin:6px 0 10px'><button data-dv='-1'>‹</button><b style='font-size:1.45rem'>${f === E.hoy ? 'Hoy · ' : f === sumar(E.hoy, 1) ? 'Mañana · ' : ''}${esc(flarga(f))}</b><button data-dv='1'>›</button></div>`;
+    const mias = E.reservas.filter(r => r.estado !== 'cancelada' && (admin || r.instructores.includes(E.yo)));
+    const hoyN = mias.filter(r => r.fecha === E.hoy), prox = hoyN.filter(r => r.hora >= new Date().toTimeString().slice(0, 5))[0];
+    const espera = mias.filter(r => r.fecha >= E.hoy && estadoDe(r).c === 'pend'), sinFicha = mias.filter(r => r.fecha >= E.hoy && r.fecha <= sumar(E.hoy, 7) && r.estado !== 'pendiente' && (r.fichas || []).length < r.personas);
+    let h = `<div class='es-res'>
+      <button class='es-rt' data-dv='hoy'><i>${ICO_S.cal}</i><b>${hoyN.length}</b><span>${hoyN.length === 1 ? 'clase hoy' : 'clases hoy'}</span>${prox ? `<small>Próxima ${esc(prox.hora)} · ${esc(prox.nombre.split(' ')[0])}</small>` : ''}</button>
+      ${admin ? `<button class='es-rt${espera.length ? ' pend' : ''}' data-irv='reservas'><i>${ICO_S.pago}</i><b>${espera.length}</b><span>esperando pago</span></button>` : ''}
+      <button class='es-rt${sinFicha.length ? ' pend' : ''}' data-irv='reservas'><i>${ICO_S.ficha}</i><b>${sinFicha.length}</b><span>${sinFicha.length === 1 ? 'clase sin fichas' : 'clases sin fichas'}</span><small>próximos 7 días</small></button></div>`;
+    h += `<div class='es-wk' style='margin:6px 0 10px'><button data-dv='-1'>‹</button><b style='font-size:1.45rem'>${f === E.hoy ? 'Hoy · ' : f === sumar(E.hoy, 1) ? 'Mañana · ' : ''}${esc(flarga(f))}</b><button data-dv='1'>›</button></div>`;
     if (f !== E.hoy) h += `<p style='text-align:center;margin:-4px 0 10px'><button class='pn-link' data-dv='hoy'>Volver a hoy</button></p>`;
     h += `<div class='es-dia-wrap'><div class='es-dia' style='grid-template-columns:44px repeat(${activos.length}, minmax(80px, 1fr))'>`;
     // cabecera
@@ -585,6 +628,7 @@
     $$('[data-semtodo]').forEach(b => b.onclick = () => accion({ accion: 'semana', instructor: inst, dia: +b.dataset.semtodo, horas: b.dataset.v === '1' ? E.horarios.filter(x => +b.dataset.semtodo === 0 || x >= '09:00') : [] }, b));
     // ajustes
     $$('[data-ia]').forEach(c => c.onchange = () => { c.parentElement.lastChild.textContent = c.checked ? 'Activo' : 'Inactivo'; });
+    $$('[data-irv]').forEach(b => b.onclick = () => { sub = b.dataset.irv; verPasadas = false; filtroIns = ''; pintar(); window.scrollTo({ top: 0 }); });
     $$('[data-ajt]').forEach(b => b.onclick = () => { ajTab = b.dataset.ajt; msg = ''; pintar(); });
     $$('[data-sync]').forEach(b => b.onclick = () => accion({ accion: 'sincronizar' }, b).then(ok => { if (ok) { msg = 'Academia Anual actualizada.'; pintar(); } }));
     $$('[data-fdel]').forEach(b => b.onclick = () => accion({ accion: 'fijo', borrar: b.dataset.fdel }, b));
