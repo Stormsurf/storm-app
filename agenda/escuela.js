@@ -49,9 +49,45 @@
   .es-db.pend{background:#E3F1F1;color:#0f6e74;border:1.5px dashed #0f6e74}
   .es-db.otra{background:#F3F1EC;color:#6b6a67;border:1.5px dashed #c9c5bd;cursor:default;z-index:1}
   .es-ahora{position:absolute;left:0;right:0;border-top:2px solid #e0484e;z-index:3}
+  /* cascarón: barra abajo en el celular, menú a la izquierda en el computador */
+  .ap-top,.pn-head{display:none}
+  .es-nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:space-around;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px rgba(0,0,0,.04)}
+  .es-brand,.es-nav .es-nueva,.es-yo{display:none}
+  .es-ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;font:inherit;font-size:1.1rem;font-weight:600;color:#8a8986;padding:6px 2px;cursor:pointer;border-radius:12px;min-width:0}
+  .es-ni span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .es-ni svg{width:23px;height:23px}
+  .es-ni.on{color:#0f6e74}
+  .es-main{padding-bottom:96px}
+  .es-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 14px}
+  .es-top h2{margin:0;font-size:2.3rem;font-weight:600;line-height:1.15}
+  .es-topb{display:flex;align-items:center;gap:12px;flex:none}
+  .es-nueva{border:0;background:#0f6e74;color:#fff;border-radius:999px;padding:10px 16px;font:inherit;font-size:1.35rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .es-salir-m{border:0;background:none;color:#8a8986;font:inherit;font-size:1.25rem;text-decoration:underline;cursor:pointer;padding:0}
+  .es-modal{position:fixed;inset:0;z-index:50;background:rgba(30,30,28,.45);display:flex;align-items:flex-end;justify-content:center}
+  .es-sheet{background:#EFECE8;width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:6px 10px 16px}
+  .es-sheet .pn-card{margin-top:6px}
+  .es-mh{display:flex;align-items:center;justify-content:space-between;gap:10px}.es-mh h3{margin:0}
+  .es-x{border:0;background:#F3F1EC;border-radius:999px;width:36px;height:36px;font-size:1.6rem;color:#555;cursor:pointer;flex:none}
+  @media (min-width:1000px){
+    main .pn{max-width:1440px}
+    .es-app{display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;align-items:start;margin-top:8px}
+    .es-nav{position:sticky;top:16px;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:2px;border:1px solid var(--line);border-radius:18px;padding:18px 12px;box-shadow:none}
+    .es-brand{display:flex;align-items:center;gap:10px;padding:2px 8px 16px;font-weight:600;font-size:1.6rem;color:#8a8986}
+    .es-brand img{width:84px;height:auto}
+    .es-nav .es-nueva{display:block;margin:0 0 12px;width:100%}
+    .es-ni{flex:none;flex-direction:row;gap:12px;font-size:1.45rem;padding:11px 12px;color:var(--ink)}
+    .es-ni:hover{background:#F3F1EC}
+    .es-ni.on{background:#E3F1F1;color:#0f6e74}
+    .es-yo{display:block;margin-top:18px;padding:14px 8px 0;border-top:1px solid var(--line);font-size:1.15rem;color:#8a8986;word-break:break-all}
+    .es-yo button{display:block;margin-top:6px;border:0;background:none;padding:0;font:inherit;color:#0f6e74;text-decoration:underline;cursor:pointer}
+    .es-main{padding-bottom:24px}
+    .es-top{margin-top:0}
+    .es-topb{display:none}
+    .es-modal{align-items:center}
+    .es-sheet{border-radius:20px}
+  }
   /* computador: más ancho y en columnas */
   @media (min-width:1000px){
-    main .pn{max-width:1200px}
     .pn .pn-stats{grid-template-columns:2fr 1fr 1fr}
     .pn .pn-stat--main{grid-column:auto}
     .es-dl{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;align-items:start}
@@ -143,21 +179,35 @@
   // A mano se puede anotar a cualquier hora (cada 30 min, 7:00 a 19:30), no solo los bloques de la web
   const horasMano = () => { const l = new Set(E.horarios); for (let m = 7 * 60; m <= 19 * 60 + 30; m += 30) l.add(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0')); return [...l].sort(); };
   const msgLink = L => 'Hola ' + L.nombre.split(' ')[0] + '! Te dejo el link para pagar tu clase de surf con Storm: ' + flarga(L.fecha).toLowerCase() + ' a las ' + L.hora + ', ' + L.personas + (L.personas === 1 ? ' persona' : ' personas') + ', ' + clp(L.total) + '. Al pagar te llega el comprobante y la ficha para llenar.\n' + L.url;
+  const sv = d => `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>${d}</svg>`;
+  const ICO = {
+    dia: sv("<rect x='3.5' y='5' width='17' height='15' rx='3'/><path d='M3.5 10h17M8 3v4M16 3v4'/>"),
+    reservas: sv("<path d='M9 6h11M9 12h11M9 18h11'/><circle cx='4.5' cy='6' r='1'/><circle cx='4.5' cy='12' r='1'/><circle cx='4.5' cy='18' r='1'/>"),
+    calendario: sv("<circle cx='12' cy='12' r='8.5'/><path d='M12 7.5V12l3 2'/>"),
+    pagos: sv("<rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18M7 15h3'/>"),
+    ajustes: sv("<circle cx='12' cy='12' r='3'/><path d='M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8'/>")
+  };
   // ---------- pintar ----------
   function pintar() {
     if (!pane || !E) return;
     const admin = E.rol === 'admin';
-    let h = `<style>${css}</style>`;
-    if (msg) h += `<div class='pn-ok'>${esc(msg)}</div>`;
+    let h = `<style>${css}</style>`, cuerpo = '';
+    if (msg) cuerpo += `<div class='pn-ok'>${esc(msg)}</div>`;
     if (linkNuevo) { const L = linkNuevo;
-      h += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
+      cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
-    h += `<div class='es-sub'><button data-sub='dia'>Día</button><button data-sub='reservas'>Reservas</button><button data-sub='calendario'>${admin ? 'Calendario instructores' : 'Mi calendario'}</button><button data-sub='pagos'>${admin ? 'Pagos' : 'Mis pagos'}</button>${admin ? `<button data-sub='ajustes'>Ajustes</button>` : ''}</div>`;
+    const IT = admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
+    const TIT = { dia: 'Agenda del día', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };
+    h += `<div class='es-app'><nav class='es-nav'><div class='es-brand'><img src='/img/storm-logo.png' alt='Storm'><span>Agenda</span></div>${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}${IT.map(([k, t]) => `<button class='es-ni' data-sub='${k}'>${ICO[k]}<span>${t}</span></button>`).join('')}<div class='es-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>
+      <div class='es-main'><div class='es-top'><h2>${TIT[sub] || ''}</h2><div class='es-topb'>${admin ? `<button class='es-nueva' data-nueva>+ Nueva</button>` : ''}<button class='es-salir-m' data-salir>Salir</button></div></div>` + cuerpo;
+    cuerpo = '';
     if (sub === 'dia') h += diaVista(admin);
     else if (sub === 'calendario') h += calendario(admin);
     else if (sub === 'pagos') h += pagosVista(admin);
     else if (sub === 'ajustes' && admin) h += `<div class='es-cols'>` + ajustes() + `</div>`;
     else h += reservas(admin);
+    h += `</div></div>`;
+    if (manualOn && admin) h += `<div class='es-modal' data-fondo><div class='es-sheet'>${manualForm()}</div></div>`;
     pane.innerHTML = h;
     pane.querySelectorAll('[data-sub]').forEach(b => { b.classList.toggle('on', b.dataset.sub === sub); b.onclick = () => { sub = b.dataset.sub; msg = ''; pintar(); }; });
     bind(admin);
@@ -179,8 +229,6 @@
     if (admin) {
       const fut = E.reservas.filter(r => r.fecha >= E.hoy);
       h += `<div class='es-chips'><button class='es-chip${filtroIns ? '' : ' on'}' data-fi=''>Todos<small>${fut.length}</small></button>${E.instructores.filter(i => i.activo).map(i => `<button class='es-chip${filtroIns === i.nombre ? ' on' : ''}' data-fi='${esc(i.nombre)}'>${esc(i.nombre)}<small>${fut.filter(r => r.instructores.includes(i.nombre)).length}</small></button>`).join('')}</div>`;
-      h += `<button class='pn-vfin' style='border-color:#0f6e74;background:#E3F1F1;color:#0f6e74' data-manual>+ Agregar reserva a mano (WhatsApp, empresa, grupo grande)</button>`;
-      if (manualOn) h += manualForm();
     }
     // agrupadas por día (en el computador, cada día en dos columnas)
     const porDia = []; lista.forEach(r => { const u = porDia[porDia.length - 1]; if (u && u.f === r.fecha) u.l.push(r); else porDia.push({ f: r.fecha, l: [r] }); });
@@ -238,7 +286,7 @@
 
   function manualForm() {
     const a = E.ajustes || {};
-    return `<div class='pn-card'><h3>Agregar reserva a mano</h3><p class='pn-sub'>Para clases que llegan por WhatsApp, empresas o familias grandes. Puedes elegir cualquier hora.</p>
+    return `<div class='pn-card'><div class='es-mh'><h3>Nueva clase</h3><button class='es-x' data-manual aria-label='Cerrar'>✕</button></div><p class='pn-sub'>Para clases que llegan por WhatsApp, empresas o familias grandes. Puedes elegir cualquier hora.</p>
       <div class='es-f' style='margin-top:10px'>
         <label>Día<input type='date' name='fecha' min='${E.hoy}' value='${E.hoy}'></label>
         <label>Hora<select name='hora'>${horasMano().map(x => `<option value='${x}'${x === E.horarios[0] ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
@@ -428,6 +476,9 @@
     $$('[data-lf]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.lf); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', b.dataset.lf); } });
     $$('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(E.link); b.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', E.link); } });
     $$('[data-manual]').forEach(b => b.onclick = () => { manualOn = !manualOn; pintar(); });
+    $$('[data-nueva]').forEach(b => b.onclick = () => { manualOn = true; msg = ''; pintar(); });
+    const fondo = $('[data-fondo]'); if (fondo) fondo.onclick = e => { if (e.target === fondo) { manualOn = false; pintar(); } };
+    $$('[data-salir]').forEach(b => b.onclick = () => { const o = document.getElementById('pn-out'); if (o) o.click(); });
     $$('[data-abre]').forEach(b => b.onclick = () => { abierta = b.dataset.abre; modo = b.dataset.modo; msg = ''; sel = (E.reservas.find(r => r.ref === abierta) || {}).instructores.slice(); pintar(); });
     $$('[data-cerrar]').forEach(b => b.onclick = () => { abierta = ''; modo = ''; pintar(); });
     $$('[data-sel]').forEach(b => b.onclick = () => {
@@ -452,8 +503,8 @@
     if (nomIn) nomIn.onchange = () => { const c = (E.clientes || []).find(x => x.nombre.toLowerCase() === nomIn.value.trim().toLowerCase()); if (!c) return; const f = nomIn.closest('.pn-card'); const t = f.querySelector('[name=telefono]'), m = f.querySelector('[name=correo]'); if (t && !t.value) t.value = c.telefono; if (m && !m.value) m.value = c.correo; };
     $$('[data-dv]').forEach(b => b.onclick = () => { diaVer = b.dataset.dv === 'hoy' ? E.hoy : sumar(diaVer, +b.dataset.dv); pintar(); });
     $$('[data-dr]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.dr); sub = 'reservas'; verPasadas = r && r.fecha < E.hoy; filtroIns = ''; pintar(); const el = pane.querySelector(`[data-abre='${CSS.escape(b.dataset.dr)}']`); if (el) el.closest('.es-r').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
-    $$('[data-dn]').forEach(b => b.onclick = () => { if (b.classList.contains('no') && !confirm(b.dataset.dn + ' no marcó disponible a esa hora. ¿Anotar igual?')) return; manualPre = { fecha: diaVer, hora: b.dataset.dh, ins: b.dataset.dn }; sub = 'reservas'; manualOn = true; pintar(); });
-    if (manualPre) { const c = pane.querySelector('.pn-card:has([data-manual-go])'); if (c) { c.querySelector('[name=fecha]').value = manualPre.fecha; c.querySelector('[name=hora]').value = manualPre.hora; const ch = c.querySelector(`[data-mi="${CSS.escape(manualPre.ins)}"]`); if (ch) ch.classList.add('on'); c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } manualPre = null; }
+    $$('[data-dn]').forEach(b => b.onclick = () => { if (b.classList.contains('no') && !confirm(b.dataset.dn + ' no marcó disponible a esa hora. ¿Anotar igual?')) return; manualPre = { fecha: diaVer, hora: b.dataset.dh, ins: b.dataset.dn }; manualOn = true; pintar(); });
+    if (manualPre) { const c = pane.querySelector('.pn-card:has([data-manual-go])'); if (c) { c.querySelector('[name=fecha]').value = manualPre.fecha; c.querySelector('[name=hora]').value = manualPre.hora; const ch = c.querySelector(`[data-mi="${CSS.escape(manualPre.ins)}"]`); if (ch) ch.classList.add('on'); } manualPre = null; }
     $$('[data-psw]').forEach(b => b.onclick = () => { psLunes = sumar(PS.lunes, +b.dataset.psw); psAbierto = ''; cargarPagos(); });
     $$('[data-psa]').forEach(b => b.onclick = () => { psAbierto = psAbierto === b.dataset.psa ? '' : b.dataset.psa; pintar(); });
     $$('[data-psr]').forEach(b => b.onclick = () => { PS = null; cargarPagos(); });
@@ -463,7 +514,7 @@
       const c = mg.closest('.pn-card'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
       const elegidos = [...c.querySelectorAll('[data-mi].on')].map(b => b.dataset.mi);
       const body = Object.assign({ accion: 'manual' }, v, { instructores: elegidos });
-      accion(body, mg).then(ok => { if (ok) { manualOn = false; msg = E.nuevoLink ? '' : 'Reserva de ' + v.nombre + ' guardada.'; linkNuevo = E.nuevoLink || null; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+      accion(body, mg).then(ok => { if (ok) { manualOn = false; msg = E.nuevoLink ? '' : 'Reserva de ' + v.nombre + ' guardada.'; linkNuevo = E.nuevoLink || null; sub = 'reservas'; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
     };
     // calendario
     $$('[data-ci]').forEach(b => b.onclick = () => { calIns = b.dataset.ci; pintar(); });
