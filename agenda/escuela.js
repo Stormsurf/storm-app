@@ -399,7 +399,7 @@
       <div class='es-acc'><button class='es-btn' data-fadd>Agregar</button></div><p class='es-err vivo'></p></div>`;
     h += `<div class='pn-card'><h3>Administradores</h3><p class='pn-sub'>Ven todo, cambian instructores, precios y ajustes.</p>
       <div class='es-f' style='margin-top:10px'><label class='w'>Correos (separados por coma)<input id='es-adm' value='${esc((a.admins || []).join(', '))}'></label></div>
-      <div class='es-acc'><button class='es-btn' data-aj='admins'>Guardar</button></div><p class='es-err vivo'></p></div>`;
+      <div class='es-acc'><button class='es-btn' data-aj='admins'>Guardar</button><button class='es-btn sec' data-pp>Probar notificación (me llega a mí)</button></div><p class='es-err vivo'></p><p class='pn-sub' data-ppr></p></div>`;
     return h;
   }
 
@@ -471,6 +471,10 @@
     $$('[data-sync]').forEach(b => b.onclick = () => accion({ accion: 'sincronizar' }, b).then(ok => { if (ok) { msg = 'Academia Anual actualizada.'; pintar(); } }));
     $$('[data-fdel]').forEach(b => b.onclick = () => accion({ accion: 'fijo', borrar: b.dataset.fdel }, b));
     $$('[data-fadd]').forEach(b => b.onclick = () => accion({ accion: 'fijo', instructor: $('#es-fi').value, dia: $('#es-fd').value, desde: $('#es-fdes').value, hasta: $('#es-fhas').value, motivo: $('#es-fmot').value }, b).then(ok => { if (ok) { msg = 'Guardado.'; pintar(); } }));
+    const pp = $('[data-pp]');
+    if (pp) pp.onclick = async () => { const o = $('[data-ppr]'); pp.disabled = true; o.textContent = 'Enviando…';
+      try { const r = await post({ accion: 'probar-push' }); o.textContent = r.enviado ? '¡Enviada! Debería llegarte en unos segundos donde tengas Panel Storm o Agenda Storm con notificaciones.' : 'No llegó: este correo (' + auth.email + ') no tiene la app con notificaciones activadas. Abre Panel Storm en el celular, entra con ese correo y acepta las notificaciones. (' + r.detalle + ')'; }
+      catch (x) { o.textContent = x.message; } pp.disabled = false; };
     $$('[data-aj]').forEach(b => b.onclick = async () => {
       const t = b.dataset.aj;
       if (t === 'precios') {

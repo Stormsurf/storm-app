@@ -422,8 +422,10 @@ async function enviarPush(env, correos, titulo, texto) {
   if (!env.ONESIGNAL_KEY || !a.length) return false;
   const r = await fetch('https://api.onesignal.com/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: (/^os_v2_/.test(env.ONESIGNAL_KEY) ? 'Key ' : 'Basic ') + env.ONESIGNAL_KEY }, // llaves nuevas (os_v2_) o antiguas
     body: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: 'push', include_aliases: { external_id: a }, headings: { en: titulo, es: titulo }, contents: { en: texto, es: texto }, url: PANEL }) });
-  if (!r.ok) console.error('push', r.status, await r.text());
-  return r.ok;
+  const t = await r.text(); if (!r.ok) console.error('push', r.status, t);
+  let j = {}; try { j = JSON.parse(t); } catch (_) {}
+  // true = llegó a alguien; si no, el detalle de OneSignal (ej. ese correo no tiene la app con notificaciones)
+  return r.ok && !j.errors ? true : (j.errors ? JSON.stringify(j.errors) : 'HTTP ' + r.status);
 }
 const correosDe = async (db, nombres) => (await db.prepare('SELECT nombre, correo FROM instructores').all()).results.filter(i => nombres.includes(i.nombre) && i.correo).map(i => i.correo);
 const diaCorto = f => { const t = fechaLarga(f); return t.charAt(0).toUpperCase() + t.slice(1); };
@@ -929,6 +931,7 @@ export async function onRequest(context) {
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (q.rol !== 'admin') throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
+    if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }
     if (acc === 'editar') return json(await editar(env, q, d, context));
     if (acc === 'cancelar') return json(await cancelar(env, q, d, context));
     if (acc === 'datos') return json(await datos(env, q, d));
