@@ -276,10 +276,10 @@ async function tarifas(db) {
   return t;
 }
 /** Cuánto gana cada instructor en esta clase. Cada uno toma un grupo (pareja de niños o el resto); los extras se pagan como grupo.
- *  Si Isidora escribió el pago a mano, se reparte igual entre todos. */
+ *  Si Isidora escribió el pago a mano, es el pago de CADA instructor. */
 function repartirPago(a, tar, personas, menores, ninos, ins, pagoManual) {
   const out = {};
-  if (pagoManual != null) { const base = Math.floor(pagoManual / Math.max(1, ins.length)); ins.forEach((n, k) => out[n] = base + (k === 0 ? pagoManual - base * ins.length : 0)); out._manual = 1; return out; }
+  if (pagoManual != null) { ins.forEach(n => out[n] = pagoManual); out._manual = 1; return out; } // escrito a mano: es lo que gana CADA instructor
   const c = cotizar(a, personas, menores, ninos);
   ins.forEach((n, k) => {
     const g = c.grupos[k], clave = g && g.personas <= 5 ? g.personas : 'grupo', t = tar[n] || {};
@@ -287,6 +287,8 @@ function repartirPago(a, tar, personas, menores, ninos, ins, pagoManual) {
   });
   return out;
 }
+/** Pago por instructor escrito a mano antes (o null si se calculó con la tabla) */
+const manualDe = p => { if (!p || !p._manual) return null; const v = Object.keys(p).filter(k => k !== '_manual').map(k => Number(p[k]) || 0); return v.length ? v[0] : null; };
 const sumaPagos = p => Object.keys(p).filter(k => k !== '_manual').reduce((t, k) => t + (Number(p[k]) || 0), 0);
 /** Pagos por instructor de una reserva guardada (las antiguas sin detalle se reparten igual). */
 function pagosDe(r) {
@@ -670,7 +672,7 @@ async function editar(env, q, d, ctx) {
   ins.forEach(i => bloquesDe(hora, durDe(a, r)).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, fecha, b, r.ref, fijo))));
   const estadoNuevo = r.estado === 'revisar' && /instructor/.test(r.nota) ? 'pagada' : r.estado;
   let viejo = null; try { viejo = JSON.parse(r.pagos || 'null'); } catch (_) {}
-  const pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.ninos || 0, ins, viejo && viejo._manual ? r.pago_instructor : null);
+  const pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.ninos || 0, ins, manualDe(viejo));
   st.push(db.prepare('UPDATE reservas SET fecha = ?, hora = ?, instructores = ?, estado = ?, pagos = ?, pago_instructor = ?, recordatorio = CASE WHEN fecha = ? THEN recordatorio ELSE 0 END WHERE ref = ?').bind(fecha, hora, JSON.stringify(ins), estadoNuevo, JSON.stringify(pagos), sumaPagos(pagos), fecha, r.ref));
   try { await db.batch(st); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Ese instructor ya tiene otra clase a esa hora.'); throw x; }
@@ -702,7 +704,7 @@ async function datos(env, q, d) {
   const ins = parseLista(r.instructores);
   let viejo = null; try { viejo = JSON.parse(r.pagos || 'null'); } catch (_) {}
   // pago: si lo escribió ahora, ese; si lo había escrito antes, se mantiene; si no, la tabla
-  const pagoManual = d.pagoInstructor !== undefined ? (d.pagoInstructor === '' ? null : num(d.pagoInstructor)) : (viejo && viejo._manual ? r.pago_instructor : null);
+  const pagoManual = d.pagoInstructor !== undefined ? (d.pagoInstructor === '' ? null : num(d.pagoInstructor)) : (manualDe(viejo));
   const pagos = repartirPago(a, await tarifas(db), personas, menores, r.ninos || 0, ins, pagoManual);
   const st = [];
   if (dur !== (Number(r.duracion) || 0)) {

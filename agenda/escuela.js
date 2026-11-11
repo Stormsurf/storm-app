@@ -220,7 +220,7 @@
           <label>Duración<select name='duracion'>${[[60, '1 hora'], [90, '1 hora y media'], [120, '2 horas']].map(([v, t]) => `<option value='${v}'${v === dur ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
           <label>Medio de pago<select name='medio'>${med.map(m => `<option${m === r.medio ? ' selected' : ''}>${m}</option>`).join('')}</select></label>
           <label>Total cobrado<input name='total' inputmode='numeric' value='${r.total || 0}'></label>
-          <label>Pago instructores (total)<input name='pagoInstructor' inputmode='numeric' value='${r.pagoInstructor || 0}' data-orig='${r.pagoInstructor || 0}'></label>
+          ${(() => { const v = Object.values(r.pagos || {}), uno = v.length && v.every(x => x === v[0]) ? v[0] : ''; return `<label>Pago por instructor<input name='pagoInstructor' inputmode='numeric' value='${uno}' data-orig='${uno}' placeholder='según la tabla'></label>`; })()}
           <label class='w'>Comentario<input name='comentario' value='${esc(r.comentario || '')}'></label></div>
           <p style='margin:8px 0 0;font-size:1.2rem;opacity:.7'>Si cambias las personas y no tocas el pago, se calcula solo con la tabla. Para cambiar día, hora o instructor usa Mover o Cambiar instructor.</p>
           <div class='es-acc'><button class='es-btn' data-go='datos'>Guardar</button><button class='pn-link' data-cerrar>Cancelar</button></div><p class='es-err vivo'></p></div>`;
@@ -245,7 +245,7 @@
         <label>Teléfono<input name='telefono' type='tel'></label>
         <label>Correo (opcional)<input name='correo' type='email'></label>
         <label>Total cobrado<input name='total' inputmode='numeric' placeholder='según la tabla'></label>
-        <label>Pago instructores<input name='pagoInstructor' inputmode='numeric' placeholder='según la tabla'></label>
+        <label>Pago por instructor<input name='pagoInstructor' inputmode='numeric' placeholder='según la tabla'></label>
         <label>Pago<select name='medio'><option value='Link de pago'>Mandar link de pago</option><option>Transferencia</option><option>Efectivo</option><option>Por pagar</option><option value='Mercado Pago'>Ya pagó por Mercado Pago</option></select></label>
         <label>N° de instructores<input type='number' name='nInstructores' min='1' value='1' inputmode='numeric'></label>
         <div style='grid-column:1/-1'><b style='font-size:1.3rem'>Instructores</b> <span style='font-size:1.2rem;opacity:.7'>(elige uno o varios; si no eliges, o faltan, la app elige al azar entre los libres)</span>
