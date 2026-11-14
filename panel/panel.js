@@ -14,6 +14,7 @@
   // Datos de la última visita: se muestran al tiro mientras llega lo nuevo de la planilla.
   const cacheLeer = k => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); return c && auth && c.email === auth.email ? c[k] || null : null; }catch(_){ return null; } };
   const cacheGuardar = (k, v) => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); const n = c && auth && c.email === auth.email ? c : {email: auth.email}; n[k] = v; localStorage.setItem(KEY+'-datos', JSON.stringify(n)); }catch(_){} };
+  const guardarAnual = d => { cacheGuardar('anual', d); try{ localStorage.setItem(KEY+'-anual-ms', String(Date.now())); }catch(_){} };
   const escribiendo = el => { const a = document.activeElement; return !!(a && el && el.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
   const wa = t => { let n = String(t || '').replace(/\D/g, ''); if(n.length === 9 && n[0] === '9') n = '56' + n; if(n.length === 8) n = '569' + n; return n.length >= 10 ? n : ''; };
   const dm = f => { const m = String(f||'').match(/(\d{4})-(\d{2})-(\d{2})/) || String(f||'').match(/(\d{2})-(\d{2})-(\d{4})/); if(!m) return f; return m[1].length===4 ? 'pagó el ' + (+m[3]) + '/' + (+m[2]) : 'pagó el ' + (+m[1]) + '/' + (+m[2]); };
@@ -880,12 +881,23 @@
     if(viejo){ try{ render(viejo); } catch(e){ console.warn('Panel: datos guardados no sirven', e); viejo = null; try{ localStorage.removeItem(KEY+'-datos'); }catch(_){} } }
     if(viejo){ app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); }
     else app.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div><div class='pn-skel'></div>`;
+    // Copia rápida en Cloudflare (la planilla la actualiza cada minuto): se muestra mientras Google responde.
+    let listo = false;
+    fetch('/api/espejo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({accion:'panel'}, auth))})
+      .then(r => r.json()).then(e => {
+        if(listo || tocado || !e || !e.ok || !e.datos) return;
+        let ms = 0; try{ ms = +localStorage.getItem(KEY+'-anual-ms') || 0; }catch(_){}
+        if(viejo && e.ms <= ms) return;
+        if(viejo && JSON.stringify(viejo) === JSON.stringify(e.datos)) return;
+        try{ const habia = !!viejo; render(e.datos); viejo = e.datos; if(!habia){ app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); } }catch(x){ console.warn('Panel: copia rápida no sirve', x); }
+      }).catch(() => {});
     try{
       const d = await post(Object.assign({}, auth, {accion:'panel'}));
+      listo = true;
       if(!d.actual && d.rol !== 'instructor') throw new Error('El programa de la planilla Anual no respondió como Panel. Revisa que esté pegado el programa de la Academia Anual.');
       if(viejo && JSON.stringify(viejo) === JSON.stringify(d)) return;
-      if(!viejo || !tocado){ render(d); cacheGuardar('anual', d); return; }
-      cacheGuardar('anual', d);
+      if(!viejo || !tocado){ render(d); guardarAnual(d); return; }
+      guardarAnual(d);
       // Ya estás usando el Panel: no te cambiamos la pantalla, te dejamos el botón para actualizar.
       if(!app.querySelector('.pn-nuevo')) app.insertAdjacentHTML('afterbegin', `<button class='pn-nuevo' style='display:block;width:100%;margin:0 0 10px;padding:10px;border:0;border-radius:12px;background:#0f6e74;color:#fff;font:inherit;cursor:pointer'>Hay datos nuevos · Toca para actualizar</button>`);
       app.querySelector('.pn-nuevo').onclick = () => render(d);
@@ -904,7 +916,7 @@
       const d = await post(Object.assign({}, auth, {accion:'panel'}));
       if(!d.actual && d.rol !== 'instructor') return;
       const viejo = cacheLeer('anual'); if(viejo && JSON.stringify(viejo) === JSON.stringify(d)) return;
-      cacheGuardar('anual', d);
+      guardarAnual(d);
       if(!escribiendo(app) && acad === 'anual') return render(d);
       if(!app.querySelector('.pn-nuevo')) app.insertAdjacentHTML('afterbegin', `<button class='pn-nuevo' style='display:block;width:100%;margin:0 0 10px;padding:10px;border:0;border-radius:12px;background:#0f6e74;color:#fff;font:inherit;cursor:pointer'>Hay datos nuevos · Toca para actualizar</button>`);
       app.querySelector('.pn-nuevo').onclick = () => render(d);
