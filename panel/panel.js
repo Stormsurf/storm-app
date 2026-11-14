@@ -539,7 +539,7 @@
 
   // ---------- Ventas de la máquina Tuu (recepción) ----------
   // Se leen solas desde Cloudflare (/api/reservas). Las que llegan sin producto quedan "Por revisar": un toque y quedan ordenadas.
-  const TUU = {}, TUU_CAT = {producto:'Producto', renta:'Renta', clase:'Clase'};
+  const TUU = {}, TUU_CAT = {producto:'Producto', renta:'Renta', clase:'Clase ya anotada'};
   const mesIso = m => { const p = String(m || '').split(' '), i = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].indexOf(p[0]); return i < 0 ? '' : p[1] + '-' + String(i + 1).padStart(2, '0'); };
   async function postTuu(body){
     const r = await fetch('/api/reservas', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, auth, body))});
@@ -561,15 +561,15 @@
     const hora = d.actualizado ? new Date(d.actualizado).toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', hourCycle:'h23'}) : '';
     return `<div class='pn-card'><h3>Ventas Tuu<span class='pn-count'>${d.ventas} venta${d.ventas===1?'':'s'} · ${clp(d.total)}</span></h3>
       <div class='pn-gmov'>
-        ${fila('Productos (Surf Shop)', d.productos)}${fila('Rentas', d.rentas)}${fila('Clases vendidas en Tuu (Escuela)', d.clases)}${fila('Sin nombre, por revisar', d.sinNombre)}
-        ${d.agenda ? `<div><span>Clases de la Agenda pagadas con POS <small>(ya están en Escuela, no se suman de nuevo)</small></span><b>${clp(d.agenda)}</b></div>` : ''}
+        ${fila('Productos (Surf Shop)', d.productos)}${fila('Rentas', d.rentas)}${fila('Sin nombre, por revisar', d.sinNombre)}
+        ${d.agenda ? `<div><span>Clases cobradas en Tuu <small>(ya están anotadas, no se suman de nuevo; solo se descuenta su comisión)</small></span><b>${clp(d.agenda)}</b></div>` : ''}
         ${fila('Comisión Tuu (tarjetas)', d.comision, true)}
         <div><span>Efectivo ${clp(d.efectivo)} · Tarjeta ${clp(d.tarjeta)}</span></div>
       </div>
       ${d.porRevisar.length ? `<h3 style='margin-top:14px'>Por revisar<span class='pn-count'>${d.porRevisar.length}</span></h3><p class='pn-sub'>Se vendieron sin elegir producto. Toca qué era cada una.</p>
         ${d.porRevisar.map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-acts'>${Object.keys(TUU_CAT).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}` : ''}
-      ${d.detalle.length ? `<details style='margin-top:10px'><summary class='pn-sub' style='cursor:pointer'>Ver todas las ventas (${d.detalle.length})</summary>${d.detalle.slice().reverse().map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)} · ${esc(v.categoria === 'agenda' ? 'Clase de la Agenda (no se suma 2 veces)' : v.categoria === 'revisar' ? 'Por revisar' : v.categoria === 'mixta' ? 'Productos y rentas' : (TUU_CAT[v.categoria]||v.categoria))}${v.aMano ? ' · a mano' : ''}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}${v.clase ? ' · ' + esc(v.clase) : ''}${v.productos ? ' · ' + esc(v.productos) : ''}</small></div><div class='pn-acts'>${v.aMano ? `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat=''>Deshacer</button>` : v.categoria === 'agenda' ? '' : Object.keys(TUU_CAT).filter(c => c !== v.categoria).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}</details>` : ''}
-      <p class='pn-sub' style='margin-top:8px'>Se lee sola de la máquina Tuu${hora?' (al día a las '+esc(hora)+')':''}. Nombre con "Renta" o "Arriendo" va a Rentas; con "Clase" o "Grupal" a Escuela; lo demás a Surf Shop. <button class='pn-link' data-tuuya style='border:0;background:none;padding:0;font:inherit;cursor:pointer'>Actualizar ahora</button></p>
+      ${d.detalle.length ? `<details style='margin-top:10px'><summary class='pn-sub' style='cursor:pointer'>Ver todas las ventas (${d.detalle.length})</summary>${d.detalle.slice().reverse().map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)} · ${esc(v.categoria === 'agenda' ? 'Clase ya anotada (no se suma)' : v.categoria === 'revisar' ? 'Por revisar' : v.categoria === 'mixta' ? 'Productos y rentas' : (TUU_CAT[v.categoria]||v.categoria))}${v.aMano ? ' · a mano' : ''}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}${v.clase ? ' · ' + esc(v.clase) : ''}${v.productos ? ' · ' + esc(v.productos) : ''}</small></div><div class='pn-acts'>${v.aMano ? `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat=''>Deshacer</button>` : Object.keys(TUU_CAT).filter(c => c !== v.categoria && !(c === 'clase' && v.categoria === 'agenda')).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}</details>` : ''}
+      <p class='pn-sub' style='margin-top:8px'>Se lee sola de la máquina Tuu${hora?' (al día a las '+esc(hora)+')':''}. Nombre con "Renta" o "Arriendo" va a Rentas; otros productos a Surf Shop. Las clases y las ventas solo con monto se toman como clases ya anotadas: no se suman de nuevo. Si alguna era un producto o una renta, cámbiala en Ver todas las ventas. <button class='pn-link' data-tuuya style='border:0;background:none;padding:0;font:inherit;cursor:pointer'>Actualizar ahora</button></p>
       ${d.error ? `<p class='pn-sub'>Ojo: la última lectura de Tuu falló (${esc(d.error)}). Se muestra lo último que llegó.</p>` : ''}</div>`;
   }
   function enlazarTuu(el, mes){

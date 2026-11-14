@@ -1020,6 +1020,8 @@ async function tuuResumen(env, mes, forzar) {
     r.ventas++; r.total += v.monto; if (tuuEfectivo(v.tipo)) r.efectivo += v.monto; else r.tarjeta += v.monto;
     let items = []; try { items = JSON.parse(v.items || '[]'); } catch (_) {}
     const base = { id: v.id, fecha: v.fecha, hora: v.hora, monto: v.monto, comision: v.comision, pago: tuuEfectivo(v.tipo) ? 'Efectivo' : 'Tarjeta', productos: items.map(i => (i.cantidad > 1 ? i.cantidad + ' × ' : '') + i.nombre).join(', ') };
+    // Isidora (14-11): las clases siempre quedan anotadas en otro lado (Agenda, planilla). Las que pasan por Tuu no suman de nuevo: solo su comisión.
+    if (v.categoria === 'clase') { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', aMano: true })); return; }
     if (TUU_CATS.includes(v.categoria)) { suma(v.categoria, v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: v.categoria, aMano: true })); return; }
     const conNombre = items.filter(i => i.nombre && i.precio);
     const cats = [...new Set(conNombre.map(i => tuuCatItem(i.nombre)))];
@@ -1028,7 +1030,8 @@ async function tuuResumen(env, mes, forzar) {
       const a = calzaAgenda(v);
       if (a) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: a.hora + ' · ' + a.nombre })); return; }
     }
-    if (!conNombre.length) { suma('revisar', v.monto, v.comision); r.porRevisar.push(base); r.detalle.push(Object.assign(base, { categoria: 'revisar' })); return; }
+    // Sin producto o solo "clase": es una clase que ya está anotada (Agenda o planilla). No se suma de nuevo; solo su comisión.
+    if (!conNombre.length || (cats.length === 1 && cats[0] === 'clase')) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda' })); return; }
     // Una venta puede traer productos y rentas juntos: se reparte según el precio de cada uno.
     const bruto = conNombre.reduce((t, i) => t + i.precio * i.cantidad, 0) || 1;
     let restoM = v.monto, restoC = v.comision;
