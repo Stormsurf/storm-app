@@ -90,7 +90,7 @@
       <div class='pn-bar'><span style='width:${pct}%'></span></div>
       ${c.alumnos.length ? Object.keys(grupos).sort(primeroMio()).map(g => `<div class='pn-grp'>${grpHead(g, grupos[g].length, ACARGO)}<div class='pn-chips'>${grupos[g].map(a => `<span class='pn-chip${a.movido?' pn-chip--in':''}'>${a.movido?'↪ ':''}${esc(a.nombre)}</span>`).join('')}</div></div>`).join('')
         : `<p class='pn-empty'>Todavía no hay alumnos en esta clase.</p>`}
-      ${c.salen.length ? `<p class='pn-sub' style='margin-top:10px'>Se cambiaron a otro día: ${c.salen.map(esc).join(', ')}</p>` : ''}
+      ${c.salen.length ? `<p class='pn-sub' style='margin-top:10px'>Se cambiaron a otro día: ${c.salen.map(x => esc(typeof x === 'string' ? x : (x && x.nombre) || '')).join(', ')}</p>` : ''}
     </div>`;
   }
 

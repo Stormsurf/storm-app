@@ -100,6 +100,28 @@ main .pn{max-width:1440px}
 .sp-wa{flex:none;width:38px;height:38px;border-radius:50%;background:#25D366;color:#fff;display:grid;place-items:center}.sp-wa svg{width:20px;height:20px}
 .sp-tap,.sp-panel .pn-alb{cursor:pointer}.sp-panel .pn-alb:hover{text-decoration:underline}
 @media (max-width:999px){.sp-nav--recep{display:none}}
+.sp-panel .pn-card{box-shadow:none;border:1px solid #e3e0da;border-radius:18px;padding:18px}
+.sp-panel .pn-card h3{font-size:1.7rem;font-weight:600}
+.sp-panel .pn-cancel{box-shadow:none;opacity:.6}
+.sp-panel .pn-stat{border:1px solid #e3e0da}.sp-panel .pn-stat--main{border:0}
+.sp-panel .pn-stat--warn{box-shadow:none;border-color:#f0d3a8}
+.sp-av2{width:44px;height:44px;font-size:1.45rem}
+.sp-panel .pn-al.sp-alr{flex-wrap:wrap;justify-content:flex-start;gap:14px;padding:12px 0;cursor:pointer}
+.sp-panel .pn-al .sp-aln{flex:1;min-width:0}.sp-panel .pn-al .sp-aln b{font-size:1.6rem;font-weight:500}.sp-panel .pn-al .sp-aln small{font-size:1.35rem!important}
+.sp-panel .pn-al .sp-alacc{display:none}
+.sp-panel .pn-al>:not(.sp-av):not(.sp-aln):not(.sp-chev):not(.sp-alacc){flex-basis:100%}
+.sp-chev{color:#a5a39f;font-size:2.2rem;line-height:1}
+.sp-panel .pn-al:hover .sp-aln b{text-decoration:none}.sp-panel .pn-alb:hover{text-decoration:none}
+.sp-panel [data-pane='pagos'] .pn-row{align-items:center;gap:14px;padding:12px 0}
+.sp-panel [data-pane='pagos'] .pn-row>div:not(.pn-acts){flex:1;min-width:0}
+.sp-panel .pn-row b{font-weight:500;font-size:1.55rem}
+.sp-panel .pn-amt{font-weight:700;font-size:1.6rem}
+.sp-panel .pn-tabs{margin-top:18px}
+.sp-panel .pn-tab{padding:9px 15px;font-size:1.4rem}
+.sp-panel .pn-nt{border-radius:999px;padding:12px 18px;font-size:1.45rem}
+.sp-panel .pn-ntgo{background:#0f6e74;border-radius:999px;padding:12px 20px;font-size:1.5rem}
+.sp-panel .pn-gbox input,.sp-panel textarea,.sp-panel .pn-card input:not([type=checkbox]){min-height:48px;border-radius:12px;border:1px solid #d9d6d0;font-size:1.5rem;box-sizing:border-box}
+.sp-panel textarea{min-height:90px}
 .sp-nada{margin:10px;color:#8a8986;font-size:1.35rem}
 @media (min-width:1000px){.sp-bus{flex:0 1 360px;order:0}}
 .sp-fi>div{position:relative;max-height:88vh;overflow:auto;background:#EFECE8;padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
@@ -191,7 +213,7 @@ main .pn{max-width:1440px}
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='st'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
 </section>
-<script src="/panel/panel.js?v=2"></script>
+<script src="/panel/panel.js?v=3"></script>
 <script>
 (()=>{
   const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
@@ -307,8 +329,9 @@ main .pn{max-width:1440px}
     const pn = root.querySelector('.sp-pn'); StormPanel.montar(pn, auth);
     pn.addEventListener('click', e => {
       if(!['anual'].includes(area)) return;
-      const c = e.target.closest('.pn-chip[data-nombre], .pn-alb'); if(!c) return;
-      const n = c.dataset.nombre || c.textContent.trim(); ficha({ n, tipo: 'Anual', sub: '', go: 'anual:alumnos' });
+      let c = e.target.closest('.pn-chip[data-nombre], .pn-alb');
+      if(!c){ const r = e.target.closest('.pn-al[data-alumno]'); if(!r || e.target.closest('button, input, textarea, select, a, label, .pn-nvbox, .pn-ntbox')) return; c = r; }
+      const n = c.dataset.nombre || c.dataset.alumno || c.textContent.trim(); ficha({ n, tipo: 'Anual', sub: '', go: 'anual:alumnos' });
     });
     let rz = 0; new MutationObserver(() => { if(rz) return; rz = requestAnimationFrame(() => { rz = 0; realzar(pn); }); }).observe(pn, { childList: true, subtree: true });
     ir(area);
@@ -538,6 +561,18 @@ main .pn{max-width:1440px}
       const ini = t.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
       let k = 0; for(const ch of t) k = (k * 31 + ch.charCodeAt(0)) % 997;
       c.insertAdjacentHTML('afterbegin', `<span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(ini)}</span>`);
+    });
+    const av = t => { const ini = t.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase(); let k = 0; for(const ch of t) k = (k * 31 + ch.charCodeAt(0)) % 997; return `<span class='sp-av sp-av2' style='background:${COL[k % COL.length]}'>${esc(ini)}</span>`; };
+    el.querySelectorAll('.pn-sub').forEach(x => { if(/^Anota cómo va cada alumno/.test(x.textContent)) x.textContent = 'Toca un alumno para ver su ficha, cambiar su nivel o anotar notas. Las notas son solo para el equipo.'; });
+    el.querySelectorAll('.pn-al[data-alumno]:not([data-av])').forEach(r => {
+      r.dataset.av = 1; r.classList.add('sp-alr');
+      const kids = [...r.children]; if(kids[1] && kids[1].querySelector('button')) kids[1].classList.add('sp-alacc');
+      if(kids[0]) { kids[0].classList.add('sp-aln'); kids[0].insertAdjacentHTML('afterend', `<span class='sp-chev'>›</span>`); }
+      r.insertAdjacentHTML('afterbegin', av(r.dataset.alumno));
+    });
+    el.querySelectorAll("[data-pane='pagos'] .pn-row:not([data-av])").forEach(r => {
+      r.dataset.av = 1; const b = r.querySelector('b'); if(!b) return;
+      r.insertAdjacentHTML('afterbegin', av(b.textContent.split(',')[0].trim()));
     });
     el.querySelectorAll('.pn-wa:not([data-ic])').forEach(a => { a.dataset.ic = 1; a.title = a.title || 'WhatsApp'; a.setAttribute('aria-label', 'WhatsApp'); a.innerHTML = WA; });
   }
