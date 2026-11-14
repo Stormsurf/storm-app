@@ -1,0 +1,18 @@
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/panel/*
+  Cache-Control: no-cache
+/storm/*
+  Cache-Control: no-cache
+/adultos/*
+  Cache-Control: no-cache
+/verano/*
+  Cache-Control: no-cache
+/agenda/*
+  Cache-Control: no-cache
+/app.js
+  Cache-Control: no-cache
+/app.css
+  Cache-Control: no-cache
