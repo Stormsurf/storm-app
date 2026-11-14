@@ -395,7 +395,10 @@
   function reservas(admin) {
     const m = E.mes || {};
     let h = '';
-    if (admin && (E.faltaConfigurar || []).length) h += `<div class='es-aviso'><b>Falta terminar de conectar:</b> ${E.faltaConfigurar.map(esc).join(', ')}. Mientras falte MP_TOKEN, la página para reservar no cobra.</div>`;
+    if (admin && E.rol === 'admin' && (E.faltaConfigurar || []).length) {
+      const QUE = { MP_TOKEN: 'la página para reservar todavía no cobra con Mercado Pago', CLAVE_CORREO: 'no salen los correos de reserva', TAREA_CLAVE: 'no corre la revisión automática de pagos', ONESIGNAL_KEY: 'no salen los avisos al celular del equipo por clases nuevas (los correos sí salen)' };
+      h += `<div class='es-aviso'><b>Falta terminar de conectar:</b> ${E.faltaConfigurar.map(k => esc(QUE[k] || k)).join('; ')}.</div>`;
+    }
     const mesTxt = MESES[Number((m.mes || E.hoy).slice(5, 7)) - 1];
     h += E.rol === 'recepcion' ? '' : admin
       ? `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Clases particulares en ${mesTxt}</small><b>${m.clases || 0}</b><em>${clp(m.total)} vendido</em></div>
