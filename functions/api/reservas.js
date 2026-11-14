@@ -934,6 +934,7 @@ async function fichasLeer(env, q, d) {
 // (ya está contada en la Agenda, no se suma de nuevo; solo se descuenta su comisión). Si no calza, queda "Por revisar" en Finanzas.
 const TUU_API = 'https://integrations.payment.haulmer.com/Report/get-report';
 const TUU_CADA_MIN = 15;
+const TUU_DESDE = '2026-11-15'; // Isidora (14-11): Tuu cuenta desde el 15 de noviembre; lo anterior ya está en la planilla 2026.
 const TUU_CATS = ['producto', 'renta', 'clase'];
 async function tuuTablas(db) {
   await db.batch([
@@ -968,7 +969,7 @@ async function tuuSincronizar(env, mes, forzar) {
   if (!env.TUU_KEY) return { ok: false, error: 'Falta la clave de Tuu' };
   const db = env.DB; await tuuTablas(db);
   const hoy = ahoraChile().fecha;
-  if (mes > hoy.slice(0, 7)) return { ok: true };
+  if (mes > hoy.slice(0, 7) || mes < TUU_DESDE.slice(0, 7)) return { ok: true };
   const antes = await db.prepare('SELECT ms FROM tuu_sync WHERE mes = ?').bind(mes).first();
   // Meses ya cerrados (más de 3 días después) no se vuelven a pedir si ya se trajeron una vez después de cerrar.
   const fin = mes + '-' + String(new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).getUTCDate()).padStart(2, '0');
@@ -1002,11 +1003,11 @@ async function tuuResumen(env, mes, forzar) {
   const sync = await tuuSincronizar(env, mes, forzar);
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
-    db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? ORDER BY fecha, hora").bind(mes).all(),
+    db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
     db.prepare("SELECT ref, fecha, hora, total, nombre FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND medio = 'POS'").bind(mes).all(),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
   ]);
-  const r = { ok: true, mes, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
+  const r = { ok: true, mes, desde: TUU_DESDE, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
     comProductos: 0, comRentas: 0, comClases: 0, comSinNombre: 0, comAgenda: 0, efectivo: 0, tarjeta: 0, porRevisar: [], detalle: [],
     actualizado: est ? est.ms : 0, error: sync.ok ? '' : (est && est.error) || sync.error || '' };
   const usadas = new Set();
