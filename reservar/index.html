@@ -173,7 +173,7 @@
       <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
         <div class='rs-inc'><span>1 hora y media</span><span>Tabla y traje incluidos</span><span>Todos los niveles</span><span>Instructor certificado</span></div></div>
       <div class='rs-card'><div class='rs-step'><i>1</i><h2>¿Qué clase buscas?</h2></div>
-        <div class='rs-niv'><button data-niv='' class='${inter?'':'on'}'><b>Clase de surf</b><small>Desde cero o si estás empezando</small></button><button data-niv='intermedio' class='${inter?'on':''}'><b>Intermedio</b><small>Ya te paras y tomas olas. Con Diego o Francisco</small></button></div>
+        <div class='rs-niv'><button data-niv='' class='${inter?'':'on'}'><b>Nivel Principiante</b><small>Desde cero o si estás empezando</small></button><button data-niv='intermedio' class='${inter?'on':''}'><b>Nivel Intermedio</b><small>Ya tomas olas solo</small></button></div>
         <div class='rs-step'><h2>¿Cuántas personas son?</h2></div>
         <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(p===n ? totalDe(n, S.menores, S.ninos) : precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
         <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
