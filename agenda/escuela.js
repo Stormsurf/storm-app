@@ -39,7 +39,6 @@
   .es-dcol{position:relative;background:#fff;border-radius:10px}
   .es-dhoras{background:transparent}
   .es-dhoras span{position:absolute;right:4px;transform:translateY(-50%);font-size:1.1rem;color:#8a8986;font-weight:500;letter-spacing:0;text-transform:none}
-  .es-dhoras span:first-child{transform:none}
   .es-dc{position:absolute;left:0;right:0;border:0;border-top:1px solid #f0eee9;background:transparent;padding:0;cursor:pointer}
   .es-dc.no{background:#ECEAE6;cursor:default}
   .es-dc:not(.no):hover{background:#E3F1F1}
@@ -362,20 +361,21 @@
   // ---------- pintar ----------
   function pintar() {
     if (!pane || !E) return;
-    const admin = E.rol === 'admin';
+    const recep = E.rol === 'recepcion', admin = E.rol === 'admin' || recep;
+    if (recep && !['dia', 'reservas'].includes(sub)) sub = 'dia';
     let h = `<style>${css}</style>`, cuerpo = '';
     const toast = msg; msg = '';
     if (linkNuevo) { const L = linkNuevo;
       cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
-    const IT = admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
+    const IT = recep ? [['dia', 'Agenda'], ['reservas', 'Clases']] : admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
     const TIT = { dia: 'Agenda del día', clientes: 'Clientes', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };
-    if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip' data-sub='${k}'>${t}</button>`).join('')}${admin && ['dia', 'reservas'].includes(sub) ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
+    if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip${admin && !recep && k === 'ajustes' && sub === 'calendario' ? ' on' : ''}' data-sub='${k}'>${t}</button>`).join('')}${admin && ['dia', 'reservas'].includes(sub) ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
     else h += `<div class='es-app'><nav class='es-nav'><div class='es-brand'><img src='/img/storm-logo.png' alt='Storm'><span>Agenda</span></div>${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}${IT.map(([k, t]) => `<button class='es-ni' data-sub='${k}'>${ICO[k]}<span>${t}</span></button>`).join('')}<div class='es-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>
       <div class='es-main'><div class='es-top'><h2>${TIT[sub] || ''}</h2><div class='es-topb'>${admin ? `<button class='es-nueva' data-nueva>+ Nueva</button>` : ''}<button class='es-salir-m' data-salir>Salir</button></div></div>` + cuerpo;
     cuerpo = '';
     if (sub === 'dia') h += diaVista(admin);
-    else if (sub === 'calendario') h += calendario(admin);
+    else if (sub === 'calendario') h += (admin ? `<button class='es-volver' data-sub='ajustes'>${ICO_S.atras.replace('<svg', "<svg width='20' height='20'")}Ajustes</button><h2 class='es-ajh'>Disponibilidad de instructores</h2>` : '') + calendario(admin);
     else if (sub === 'pagos') h += pagosVista(admin);
     else if (sub === 'ajustes' && admin) h += ajustes();
     else if (sub === 'clientes' && admin) h += clientesVista();
@@ -388,7 +388,7 @@
     else if (vista && vista.t === 'cliente' && admin) h += paginaCliente(vista.nombre);
     document.documentElement.style.overflow = (manualOn && admin) || vista ? 'hidden' : '';
     pane.innerHTML = h;
-    pane.querySelectorAll('[data-sub]').forEach(b => { b.classList.toggle('on', b.dataset.sub === sub); b.onclick = () => { sub = b.dataset.sub; msg = ''; pintar(); }; });
+    pane.querySelectorAll('[data-sub]').forEach(b => { b.classList.toggle('on', b.dataset.sub === sub || (b.dataset.sub === 'ajustes' && sub === 'calendario' && admin)); b.onclick = () => { sub = b.dataset.sub; if (sub === 'ajustes') ajTab = ''; msg = ''; pintar(); }; });
     bind(admin);
   }
 
@@ -397,7 +397,7 @@
     let h = '';
     if (admin && (E.faltaConfigurar || []).length) h += `<div class='es-aviso'><b>Falta terminar de conectar:</b> ${E.faltaConfigurar.map(esc).join(', ')}. Mientras falte MP_TOKEN, la página para reservar no cobra.</div>`;
     const mesTxt = MESES[Number((m.mes || E.hoy).slice(5, 7)) - 1];
-    h += admin
+    h += E.rol === 'recepcion' ? '' : admin
       ? `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Clases particulares en ${mesTxt}</small><b>${m.clases || 0}</b><em>${clp(m.total)} vendido</em></div>
          <div class='pn-stat'><small>Para instructores</small><b>${clp(m.pagoInstructores)}</b><em>${Object.entries(m.pagoPor || {}).map(([k, v]) => esc(k) + ' ' + clp(v)).join(' · ') || 'este mes'}</em></div>
          <div class='pn-stat'><small>Queda para Storm</small><b>${clp((m.total || 0) - (m.pagoInstructores || 0))}</b><em>antes de comisión</em></div></div>
@@ -649,7 +649,7 @@
   }
 
   // ---------- vista del día: una columna por instructor (como AgendaPro) ----------
-  const D_INI = 7 * 60, D_FIN = 20 * 60, D_ROW = window.innerWidth >= 1000 ? 34 : 26; // cada 30 min (más alto en el computador)
+  const D_INI = 8 * 60 + 30, D_FIN = 20 * 60, D_ROW = window.innerWidth >= 1000 ? 34 : 26; // cada 30 min (más alto en el computador)
   function diaVista(admin) {
     if (!diaVer) diaVer = E.hoy;
     const f = diaVer, activos = E.instructores.filter(i => i.activo).map(i => i.nombre).filter(n => admin || n === E.yo);
@@ -671,7 +671,7 @@
       return `<div class='es-dh'><span class='es-av'>${esc(n.slice(0, 2).toUpperCase())}</span><b>${esc(n)}</b><small>${nRes ? nRes + ' clase' + (nRes === 1 ? '' : 's') : ''}${nRes && libre ? ' · ' : ''}${libre ? '<i style="color:#2f7a4d;font-style:normal">disponible</i>' : nRes ? '' : 'no disponible'}</small></div>`; }).join('');
     // columna de horas
     let horas = `<div class='es-dcol es-dhoras' style='height:${top(D_FIN)}px'>`;
-    for (let m = D_INI; m < D_FIN; m += 60) horas += `<span style='top:${top(m)}px'>${deMin(m)}</span>`;
+    for (let m = Math.ceil(D_INI / 60) * 60; m < D_FIN; m += 60) horas += `<span style='top:${top(m)}px'>${deMin(m)}</span>`;
     h += horas + `</div>`;
     activos.forEach(n => {
       // tramos disponibles = bloques de la web que marcó como disponible
@@ -725,12 +725,13 @@
 
   function ajustes() {
     const a = E.ajustes;
-    const TABS = [['instructores', 'Instructores'], ['precios', 'Precios'], ['reglas', 'Reglas para reservar'], ['bloqueos', 'Horas bloqueadas'], ['admins', 'Administradores y avisos']];
+    const TABS = [['instructores', 'Instructores'], ['precios', 'Precios'], ['reglas', 'Reglas para reservar'], ['bloqueos', 'Horas bloqueadas'], ['admins', 'Accesos y avisos']];
     if (!ajTab) {
       const it = (k, ic, c, t, d) => fila(ic, t, d, { tag: 'button', at: `data-ajt='${k}'`, ic: c });
       return `<div class='es-ajw'>` + grupo('Equipo', [
           it('instructores', ICO_S.gente, 'pend', 'Instructores', 'Quiénes dan clases, correos y pagos'),
-          it('admins', ICO_S.llave, 'lila', 'Administradores y avisos', 'Quién ve todo y notificaciones')])
+          fila(ICO_S.cal, 'Disponibilidad', 'Qué horas puede trabajar cada instructor', { tag: 'button', at: "data-sub='calendario'", ic: 'ok' }),
+          it('admins', ICO_S.llave, 'lila', 'Accesos y avisos', 'Administradores, recepción y notificaciones')])
         + grupo('Clases', [
           it('precios', '$', 'ok', 'Precios', 'Lo que paga el cliente y recibe el instructor'),
           it('reglas', ICO_S.regla, '', 'Horarios y reglas para reservar', 'Horas de clase y hasta cuándo se reserva'),
@@ -795,6 +796,8 @@
     if (ajTab === 'admins') {
       h += `<div class='pn-card'><h3>Administradores</h3><p class='pn-sub'>Ven todo: valores, pagos y estos ajustes. Los instructores no.</p>
         <div class='es-f'><label class='w'>Correos (separados por coma)<input id='es-adm' value='${esc((a.admins || []).join(', '))}'></label></div>
+        <h3 style='margin-top:20px'>Recepción</h3><p class='pn-sub'>Solo ven la agenda y las clases particulares: pueden anotar, editar, marcar pagos y fichas. No ven ajustes, pagos a instructores, academias ni plata.</p>
+        <div class='es-f'><label class='w'>Correos (separados por coma)<input id='es-rec' placeholder='recepcion@gmail.com' value='${esc((a.recepcion || []).join(', '))}'></label></div>
         <div class='es-acc'><button class='es-btn' data-aj='admins'>Guardar</button></div><p class='es-err vivo'></p></div>
         <div class='pn-card'><h3>Notificaciones</h3><p class='pn-sub'>Llegan al celular cuando alguien reserva y el día antes a las 19:00. Prueba que te lleguen a ti:</p>
         <div class='es-acc'><button class='es-btn sec' data-pp>Mandarme una notificación de prueba</button></div><p class='pn-sub' data-ppr></p></div>`;
@@ -917,7 +920,7 @@
         if (await accion({ accion: 'ajustes', precios, pagos }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
       }
       if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, maxSeguidas: $('#es-seg').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-mismo').checked ? $('#es-tarde').value : '23:59', cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
-      if (t === 'admins' && await accion({ accion: 'ajustes', admins: $('#es-adm').value.split(/[,\s]+/).filter(Boolean) }, b)) { msg = 'Administradores guardados.'; pintar(); }
+      if (t === 'admins' && await accion({ accion: 'ajustes', admins: $('#es-adm').value.split(/[,\s]+/).filter(Boolean), recepcion: $('#es-rec').value.split(/[,\s]+/).filter(Boolean) }, b)) { msg = 'Accesos guardados.'; pintar(); }
       if (t === 'instructores') {
         b.disabled = true; b.textContent = 'Guardando…';
         try {

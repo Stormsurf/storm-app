@@ -570,6 +570,7 @@ async function quien(env, d) {
   if (!(edad < SESION_DIAS * 86400 && edad > -600) || await firmar(env.CLAVE_WEB, d.email, d.ts) !== String(d.firma).toLowerCase()) throw err('Tu sesión expiró. Vuelve a entrar.');
   const email = norm(d.email), a = await ajustes(env.DB);
   if ((a.admins || []).map(norm).includes(email)) return { email, rol: 'admin', yo: '' };
+  if ((a.recepcion || []).map(norm).includes(email)) return { email, rol: 'recepcion', yo: '' };
   const ins = await instructores(env.DB), yo = ins.find(i => norm(i.correo) === email);
   if (yo) return { email, rol: 'instructor', yo: yo.nombre };
   throw err('Tu correo no está en la Escuela. Pídele a Isidora que lo agregue en Agenda Storm > Ajustes.');
@@ -579,7 +580,7 @@ const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha,
   nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? r.link_pago : '' } : {}) });
 
 async function panel(env, q) {
-  const db = env.DB, a = await ajustes(db), hoy = ahoraChile().fecha, admin = q.rol === 'admin';
+  const db = env.DB, a = await ajustes(db), hoy = ahoraChile().fecha, admin = q.rol === 'admin', todo = admin || q.rol === 'recepcion';
   await limpiarRetenciones(db);
   const desde = sumarDias(hoy, -45), hasta = sumarDias(hoy, a.diasAdelante);
   const ins = await instructores(db);
@@ -594,16 +595,16 @@ async function panel(env, q) {
   const fichasPor = {}; fic.results.forEach(f => (fichasPor[f.ref] = fichasPor[f.ref] || []).push(f.nombre));
   const guardadas = new Set((await db.prepare('SELECT DISTINCT ref FROM bloques WHERE hasta > 0').all()).results.map(x => x.ref));
   let reservas = res.results.filter(r => r.estado !== 'pendiente' || guardadas.has(r.ref));
-  if (!admin) reservas = reservas.filter(r => parseLista(r.instructores).includes(q.yo));
+  if (!todo) reservas = reservas.filter(r => parseLista(r.instructores).includes(q.yo));
   const out = { ok: true, rol: q.rol, yo: q.yo, hoy, duracion: a.duracion, horarios: a.horarios,
     instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono, rut: i.rut, tarifas: (() => { try { return JSON.parse(i.tarifas || 'null'); } catch (_) { return null; } })() } : {}) })),
-    semana: sem.results.map(s => ({ instructor: s.instructor, dia: s.dia, horas: parseLista(s.horas) })).filter(s => admin || s.instructor === q.yo),
-    ocupaciones: ocu.filter(o => admin || o.instructor === '*' || o.instructor === q.yo).map(o => ({ id: o.id, origen: o.origen, instructor: o.instructor, fecha: o.fecha, dia: o.dia, desde: o.desde, hasta: o.hasta, motivo: o.motivo })),
+    semana: sem.results.map(s => ({ instructor: s.instructor, dia: s.dia, horas: parseLista(s.horas) })).filter(s => todo || s.instructor === q.yo),
+    ocupaciones: ocu.filter(o => todo || o.instructor === '*' || o.instructor === q.yo).map(o => ({ id: o.id, origen: o.origen, instructor: o.instructor, fecha: o.fecha, dia: o.dia, desde: o.desde, hasta: o.hasta, motivo: o.motivo })),
     anualSync: sync ? JSON.parse(sync.valor) : null,
-    excepciones: exc.results.filter(e => admin || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
-    reservas: reservas.map(r => Object.assign(filaPanel(r, admin), { fichas: fichasPor[r.ref] || [], linkFicha: linkFicha(r) })), link: PAGINA };
+    excepciones: exc.results.filter(e => todo || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
+    reservas: reservas.map(r => Object.assign(filaPanel(r, todo), { fichas: fichasPor[r.ref] || [], linkFicha: linkFicha(r) })), link: PAGINA };
   if (admin) {
-    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins };
+    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins, recepcion: a.recepcion || [] };
     const mes = hoy.slice(0, 7);
     const m = await db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS total, COALESCE(SUM(pago_instructor),0) AS pago FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).first();
     const porIns = await db.prepare("SELECT instructores, pago_instructor, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all();
@@ -618,7 +619,8 @@ async function panel(env, q) {
     porIns.results.forEach(r => { const p = pagosDe(r); if (q.yo in p) { clases++; pago += p[q.yo]; } });
     out.mes = { mes, clases, pagoYo: pago };
   }
-  if (admin) { // clientes que ya reservaron, para no escribirlos de nuevo en la reserva a mano
+  if (!admin && todo) out.ajustes = { precios: a.precios, maxWeb: a.maxWeb, horarios: a.horarios };
+  if (todo) { // clientes que ya reservaron, para no escribirlos de nuevo en la reserva a mano
     const cl = await env.DB.prepare("SELECT nombre, telefono, correo, MAX(creada_ms) AS ult, COUNT(*) AS n FROM reservas WHERE estado IN ('pagada', 'pendiente', 'revisar') GROUP BY lower(nombre) ORDER BY ult DESC LIMIT 1000").all();
     out.clientes = cl.results.map(c => ({ nombre: c.nombre, telefono: c.telefono || '', correo: c.correo || '', clases: c.n }));
   }
@@ -839,6 +841,7 @@ async function guardarAjustes(env, q, d) {
   ['horaTarde', 'cierreNoche'].forEach(k => { if (d[k]) { const h = normHora(d[k]); if (h) st.push([k, h]); } });
   if (d.lugar) st.push(['lugar', String(d.lugar).trim()]);
   if (d.admins) { const l = d.admins.map(norm).filter(x => /@/.test(x)); if (!l.includes(q.email)) l.push(q.email); st.push(['admins', l]); }
+  if (d.recepcion) st.push(['recepcion', d.recepcion.map(norm).filter(x => /@/.test(x))]);
   if (st.length) await db.batch(st.map(([k, v]) => db.prepare('INSERT OR REPLACE INTO ajustes (clave, valor) VALUES (?, ?)').bind(k, JSON.stringify(v))));
   await anotar(db, q, 'ajustes ' + st.map(x => x[0]).join(','));
   return panel(env, q);
@@ -903,7 +906,7 @@ async function fichaGuardar(env, d, request) {
 async function fichasLeer(env, q, d) {
   const r = await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
   if (!r) throw err('No encontramos la reserva.');
-  if (q.rol !== 'admin' && !parseLista(r.instructores).includes(q.yo)) throw err('Esta clase no es tuya.');
+  if (q.rol !== 'admin' && q.rol !== 'recepcion' && !parseLista(r.instructores).includes(q.yo)) throw err('Esta clase no es tuya.');
   const fs = await fichasDe(env.DB, r.ref);
   return { ok: true, ref: r.ref, personas: r.personas, cliente: r.nombre, actividad: await actividad(env, r), link: linkFicha(r),
     fichas: fs.map(f => Object.assign(JSON.parse(f.datos), { n: f.n, firma: f.firma, creada: f.creada })) };
@@ -945,7 +948,7 @@ export async function onRequest(context) {
     if (acc === 'disponible') return json(await disponible(env, q, d));
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
-    if (q.rol !== 'admin') throw err('Solo un administrador puede hacer esto.');
+    if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }
     if (acc === 'editar') return json(await editar(env, q, d, context));
