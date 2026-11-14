@@ -320,7 +320,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
       <img class='mc-storm' src='/img/storm-logo.png' alt='Storm Surf Academy' width='400' height='216'>
       <img class='mc-alogo' id='mc-alogo' alt='' hidden>
       <h1>Mi clase</h1>
-      <div class='mc-lead'><p>Revisa las clases de tus hijos, sus días y lo que tienes pagado.</p></div>
+      <div class='mc-lead'><p>Tus clases en Storm: Academia Anual, Academia de Verano y Academia de Adultos.</p></div>
     </div>
     <div id='mc-app'><div class='mc-skel'></div></div>
   </div>
@@ -389,12 +389,12 @@ body:has(.mc-hero--login) .ap-top{display:none}
            <input class='mc-in mc-in--code' id='mc-code' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='······'>
            <button class='mc-go' id='mc-ok'>Entrar</button>
            <p class='mc-note' style='margin-top:12px'><button class='mc-link' id='mc-back'>Usar otro correo o pedir otro código</button></p>`
-        : `<p>Entra con el correo que usaste al pagar la Academia. Te mandamos un código, sin contraseñas.</p>
+        : `<p>Entra con el correo que usaste al pagar. Te mandamos un código, sin contraseñas.</p>
            <input class='mc-in' id='mc-email' type='email' autocomplete='email' placeholder='tu@correo.cl' value='${esc(email||'')}'>
            <button class='mc-go' id='mc-ok'>Recibir código</button>`}
       ${err ? `<div class='mc-msg mc-msg--err' style='text-align:left'>${esc(err)}</div>` : ''}
     </div>
-    <p class='mc-note'>¿Aún no inscribes a tus hijos? <a href='${esc(PAY)}'>Academia Anual</a> · <a href='${esc(PAY.replace(/mensualidad-academia-anual.*$/, 'academia-de-verano-2027'))}'>Academia de Verano</a> · <a href='/adultos/'>Academia de Adultos</a></p>`;
+    <p class='mc-note'>¿Todavía no tienes inscripción? <a href='${esc(PAY)}'>Academia Anual</a> · <a href='${esc(PAY.replace(/mensualidad-academia-anual.*$/, 'academia-de-verano-2027'))}'>Academia de Verano</a> · <a href='/adultos/'>Academia de Adultos</a></p>`;
     const ok = document.getElementById('mc-ok');
     const input = document.getElementById(paso==='codigo' ? 'mc-code' : 'mc-email');
     input.focus();
@@ -605,7 +605,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     const al = document.getElementById('mc-alogo');
     if(al){ al.hidden = !auth || !vista || vista === 'adultos'; if(auth && vista && vista !== 'adultos'){ al.src = v ? LOGO_VERANO : LOGO_ANUAL; al.alt = v ? 'Academia de Verano Storm' : 'Academia Anual Storm'; } }
     const lead = box.querySelector('.mc-lead');
-    if(lead){ lead.dataset.anual = lead.dataset.anual || lead.innerHTML; lead.innerHTML = !auth ? '<p>Todo lo de tus hijos en Storm: Academia Anual y Academia de Verano.</p>' : vista === 'adultos' ? '<p>Academia de Adultos: tus clases, cuántas te quedan y tus pagos.</p>' : v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : lead.dataset.anual; }
+    if(lead){ lead.innerHTML = !auth ? '<p>Tus clases en Storm: Academia Anual, Academia de Verano y Academia de Adultos.</p>' : vista === 'adultos' ? '<p>Academia de Adultos: tus clases, cuántas te quedan y tus pagos.</p>' : v ? '<p>Revisa en qué grupo está tu hijo, qué hace cada día y qué traer.</p>' : '<p>Revisa las clases de tus hijos, sus días y lo que tienes pagado.</p>'; }
   }
   function bindSw(){
     app.querySelectorAll('[data-vista]').forEach(b => b.onclick = () => { vista = b.dataset.vista; try{ localStorage.setItem(VISTA, vista); }catch(_){} mostrar(); window.scrollTo({top:0, behavior:'smooth'}); });
@@ -985,6 +985,17 @@ body:has(.mc-hero--login) .ap-top{display:none}
     }
   }
   Promise.resolve(revisar).then(load);
+})();
+// Versión nueva: si subimos cambios, la app se recarga sola al volver a abrirla (sin perder lo que se está escribiendo).
+(() => {
+  let etag = null;
+  const ver = async () => { try{ const r = await fetch(location.pathname, {method:'HEAD', cache:'no-store'}); return r.headers.get('etag') || r.headers.get('last-modified'); }catch(_){ return null; } };
+  ver().then(e => etag = e);
+  document.addEventListener('visibilitychange', async () => {
+    if(document.visibilityState !== 'visible' || !etag) return;
+    const e = await ver(); const a = document.activeElement;
+    if(e && e !== etag && !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value)) location.reload();
+  });
 })();
 </script>
 
