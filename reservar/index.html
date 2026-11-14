@@ -93,6 +93,10 @@
 .rs-done p{margin:8px 0 0;font-size:1.5rem;color:var(--mute);line-height:1.5}
 .rs-done .big{color:var(--ink);font-size:1.8rem;font-weight:600;margin-top:14px}
 .rs-btn2{display:inline-block;margin-top:14px;border:1.5px solid var(--ink);border-radius:999px;padding:11px 20px;font:inherit;font-weight:600;font-size:1.4rem;color:var(--ink);text-decoration:none;background:#fff;cursor:pointer}
+.rs-niv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 18px}
+.rs-niv button{border:1.5px solid #e3e0da;background:#fff;border-radius:16px;padding:12px 14px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.rs-niv button b{display:block;font-size:1.55rem}.rs-niv button small{display:block;font-size:1.25rem;color:var(--mute);line-height:1.35;margin-top:2px}
+.rs-niv button.on{border-color:var(--ink);background:var(--ink);color:#fff}.rs-niv button.on small{color:rgba(255,255,255,.75)}
 .rs-wa{display:block;text-align:center;margin:18px 0 0;font-size:1.4rem;color:var(--mute)}
 </style>
 </head>
@@ -112,9 +116,9 @@
   const fin = h => { const [a,b] = h.split(':').map(Number), t = a*60 + b + (D ? D.duracion : 90); return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0'); };
   async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.'); } if(!d.ok) throw new Error(d.error || 'Algo falló.'); return d; }
   const root = $('#rs');
-  const S = { personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '' };
+  const S = { nivel: '', personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '' };
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
-  const precioDe = p => D && D.precios ? Number(D.precios[p]) : 0;
+  const precioDe = p => !D || !D.precios ? 0 : S.nivel === 'intermedio' && p === 1 && D.intermedio ? Number(D.intermedio) : Number(D.precios[p]);
   const necesita = () => grupos(S.personas, S.menores, S.ninos).length;
   // Igual que el servidor: los menores de 8 van de a 2 por instructor; si queda una sola persona suelta (niño o adulto), va con el último par
   const grupos = (p, k, c) => { c = c || 0; const g = []; const pr = Math.floor(k / 2); for(let i = 0; i < pr; i++) g.push({n: 2, k: 2, ninos: true}); let r = p - pr * 2, suelto = k - pr * 2; if(pr && r === 1){ g[g.length - 1].n += 1; g[g.length - 1].k += suelto; r = 0; } if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), k: i === 0 ? suelto : 0, ninos: false}); } return g; };
@@ -125,7 +129,7 @@
 
   async function cargar(){
     const id = ++pidiendo; cargando = true; errCarga = ''; pintar();
-    try{ const d = await post({accion:'disponibilidad', personas: S.personas || 1, menores: S.menores, ninos: S.ninos}); if(id !== pidiendo) return; D = d; }
+    try{ const d = await post({accion:'disponibilidad', nivel: S.nivel, personas: S.personas || 1, menores: S.menores, ninos: S.ninos}); if(id !== pidiendo) return; D = d; }
     catch(x){ if(id !== pidiendo) return; errCarga = x.message; }
     cargando = false;
     if(D && S.fecha && !(D.dias[S.fecha] || []).includes(S.hora)) S.hora = '';
@@ -162,12 +166,15 @@
     const p = S.personas, G = grupos(p, S.menores, S.ninos), precio = totalDe(p, S.menores, S.ninos), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
     const paso = (txt, sub, val, attr, max) => `<div class='rs-kids'><p>${txt}<small>${sub}</small></p>
       <div class='rs-num'><button ${attr}='-1' aria-label='Menos'${val<=0?' disabled':''}>−</button><b>${val}</b><button ${attr}='1' aria-label='Más'${val>=max?' disabled':''}>+</button></div></div>`;
-    const kids = p ? paso('¿Cuántos son menores de 8 años?', 'Según cuántos niños vengan, vemos cuántos instructores necesitan para que estén bien acompañados.', S.menores, 'data-k', p) + `<p class='rs-nota5'>* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).</p>` : '';
+    const inter = S.nivel === 'intermedio';
+    const kids = p && !inter ? paso('¿Cuántos son menores de 8 años?', 'Según cuántos niños vengan, vemos cuántos instructores necesitan para que estén bien acompañados.', S.menores, 'data-k', p) + `<p class='rs-nota5'>* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).</p>` : '';
     const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
     root.innerHTML = `
       <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
         <div class='rs-inc'><span>1 hora y media</span><span>Tabla y traje incluidos</span><span>Todos los niveles</span><span>Instructor certificado</span></div></div>
-      <div class='rs-card'><div class='rs-step'><i>1</i><h2>¿Cuántas personas son?</h2></div>
+      <div class='rs-card'><div class='rs-step'><i>1</i><h2>¿Qué clase buscas?</h2></div>
+        <div class='rs-niv'><button data-niv='' class='${inter?'':'on'}'><b>Clase de surf</b><small>Desde cero o si estás empezando</small></button><button data-niv='intermedio' class='${inter?'on':''}'><b>Intermedio</b><small>Ya te paras y tomas olas. Con Diego o Francisco</small></button></div>
+        <div class='rs-step'><h2>¿Cuántas personas son?</h2></div>
         <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(p===n ? totalDe(n, S.menores, S.ninos) : precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
         <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
         ${kids}
@@ -196,13 +203,14 @@
           </details>
           <label class='rs-chk'><input type='checkbox' name='acepta'> Acepto los términos y condiciones y la Declaración de Conocimiento y Aceptación de Riesgos.</label>
         </div>
-        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 8' : ''}${S.ninos ? ' · ' + S.ninos + ' de 7 a 11' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
+        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${inter ? 'Clase intermedia · ' : ''}${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 8' : ''}${S.ninos ? ' · ' + S.ninos + ' de 7 a 11' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
         <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
         <p class='rs-err' id='rs-err' hidden></p>
         <p class='rs-mp'>🔒 Pago seguro con Mercado Pago</p>
       </div>
       <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tengo una pregunta sobre las clases de surf')}'>¿Dudas? Escríbenos por WhatsApp</a>`;
     root.querySelectorAll('.rs-f [name]').forEach(i => { if(i.name in guardado){ if(i.type === 'checkbox') i.checked = guardado[i.name]; else i.value = guardado[i.name]; } });
+    root.querySelectorAll('[data-niv]').forEach(b => b.onclick = () => { if(S.nivel === b.dataset.niv) return; S.nivel = b.dataset.niv; S.menores = 0; S.ninos = 0; S.hora = ''; cargar(); });
     root.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const antes = necesita(); S.personas = +b.dataset.p; S.menores = Math.min(S.menores, S.personas); S.ninos = Math.min(S.ninos, S.personas - S.menores); if(!D || necesita() !== antes) cargar(); else pintar(); });
     root.querySelectorAll('[data-kn]').forEach(b => b.onclick = () => { const antes = necesita(); S.ninos = Math.max(0, Math.min(S.personas - S.menores, S.ninos + +b.dataset.kn)); if(necesita() !== antes) cargar(); else pintar(); });
     root.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const antes = necesita(); S.menores = Math.max(0, Math.min(S.personas, S.menores + +b.dataset.k)); if(necesita() !== antes) cargar(); else pintar(); });
@@ -221,10 +229,10 @@
       if(!f.acepta) return msg('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.');
       go.disabled = true; go.textContent = 'Conectando con Mercado Pago…'; e.hidden = true;
       try{
-        const r = await post(Object.assign({accion:'reservar', personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora}, f));
+        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora}, f));
         try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
         location.href = r.url;
-      }catch(x){ go.disabled = false; go.textContent = 'Pagar ' + clp(precioDe(S.personas)); msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
+      }catch(x){ go.disabled = false; go.textContent = 'Pagar ' + clp(totalDe(S.personas, S.menores, S.ninos)); msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
     };
   }
 

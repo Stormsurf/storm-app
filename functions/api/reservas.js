@@ -42,6 +42,7 @@ const AJUSTES_BASE = {
   verano: { meses: [1, 2], dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', instructores: 1, cambios: { '09:00': '09:30', '10:30': '11:00' } },
   horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
+  intermedio: { precio: 45000, instructores: ['Diego', 'Francisco'] }, // clase para alumnos intermedios: precio si es individual (desde 2, tabla normal), solo con estos instructores
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
 };
 const INSTRUCTORES_BASE = ['Diego', 'Iñaki', 'Francisco', 'Emerson'];
@@ -117,12 +118,13 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
  *  - (ninos: reservado por si se vuelve a separar por edades; hoy siempre 0)
  *  - desde 12 años cuenta como adulto; máximo 5 por instructor.
  *  Ej.: 4 niños = 2+2; 3 niños = 3; 5 niños = 2+3; 3 niños + 1 adulto = 2+2; 3 niños + 2 adultos = 2+3; 4 niños + 1 adulto = 2+3; 4 adultos + 1 niño = 5. */
-const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return t.length ? ' (' + t.join(', ') + ')' : ''; };
+const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
 const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago'];
-function cotizar(a, personas, menores, ninos) {
+function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
+  const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; }
   if (!(personas >= 1)) throw err('Elige cuántas personas son.');
   if (menores < 0 || ninos < 0 || menores + ninos > personas) throw err('Revisa cuántos son niños.');
   const grupos = [];
@@ -137,11 +139,15 @@ function cotizar(a, personas, menores, ninos) {
   }
   let precio = 0, pago = 0;
   grupos.forEach(g => {
-    g.precio = Number(a.precios[g.personas]) || 0;
+    g.precio = inter && g.personas === 1 ? Number((a.intermedio || {}).precio) || 0 : Number(a.precios[g.personas]) || 0; // intermedio: $45.000 individual; desde 2 personas, precio normal
     g.pago = Number(g.personas <= 5 ? a.pagos[g.personas] : a.pagos.grupo) || Number(a.pagos.grupo) || 0;
     precio += g.precio; pago += g.pago;
   });
-  return { personas, menores, ninos, instructores: grupos.length, grupos, precio, pagoInstructor: pago };
+  return { personas, menores, ninos, nivel: inter ? 'intermedio' : '', instructores: grupos.length, grupos, precio, pagoInstructor: pago };
+}
+/** Instructores que pueden dar ese tipo de clase (null = todos). */
+function soloNivel(a, nivel) {
+  return nivel === 'intermedio' ? ((a.intermedio || {}).instructores || []) : null;
 }
 
 /** Academia Anual (todos los instructores) y horas fijas de cada uno (talleres, etc.). */
@@ -234,16 +240,16 @@ async function disponibilidad(db, d) {
   const a = await ajustes(db);
   const hoy = ahoraChile();
   const personas = Math.max(1, Math.min(a.maxWeb, Math.floor(Number(d.personas) || 1)));
-  const c = cotizar(a, personas, Math.min(personas, Math.floor(Number(d.menores) || 0)), Math.floor(Number(d.ninos) || 0));
+  const c = cotizar(a, personas, Math.min(personas, Math.floor(Number(d.menores) || 0)), Math.floor(Number(d.ninos) || 0), d.nivel), solo = soloNivel(a, c.nivel);
   const hasta = sumarDias(hoy.fecha, a.diasAdelante);
   const ag = await estadoAgenda(db, a, hoy.fecha, hasta);
-  const activos = ag.ins.filter(i => i.activo);
+  const activos = ag.ins.filter(i => i.activo && (!solo || solo.includes(i.nombre)));
   const dias = {};
   for (let f = hoy.fecha; f <= hasta; f = sumarDias(f, 1)) {
     const horas = horasDia(a, f).filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
     if (horas.length) dias[f] = horas;
   }
-  return { ok: true, precios: a.precios, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
+  return { ok: true, precios: a.precios, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
 }
 
 // ---------- reservar y pagar ----------
@@ -302,9 +308,9 @@ function pagosDe(r) {
 async function guardarReserva(db, a, r, hastaMs) {
   r.pagos = repartirPago(a, await tarifas(db), r.personas, r.menores, r.ninos || 0, r.instructores, r.pagoManual == null ? null : r.pagoManual);
   r.pago_instructor = sumaPagos(r.pagos);
-  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, ninos, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota, clave, pagos, duracion)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, r.ninos || 0, JSON.stringify(r.instructores),
-      r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '', r.clave || (r.clave = nuevaClave()), JSON.stringify(r.pagos), Number(r.duracion) || 0)];
+  const st = [db.prepare(`INSERT INTO reservas (ref, creada, creada_ms, estado, fecha, hora, personas, menores, ninos, instructores, nombre, telefono, correo, comentario, total, pago_instructor, medio, orden_mp, nota, clave, pagos, duracion, nivel)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, r.ninos || 0, JSON.stringify(r.instructores),
+      r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '', r.clave || (r.clave = nuevaClave()), JSON.stringify(r.pagos), Number(r.duracion) || 0, r.nivel || '')];
   r.instructores.forEach(i => bloquesDe(r.hora, durDe(a, r)).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, hastaMs))));
   await db.batch(st);
 }
@@ -316,7 +322,7 @@ async function reservar(env, d) {
   if (!esFecha(fecha) || !hora || !horasDia(a, fecha).includes(hora)) throw err('Elige un día y un horario.');
   const personas = Math.floor(Number(d.personas));
   if (!(personas >= 1 && personas <= a.maxWeb)) throw err('Para más de ' + a.maxWeb + ' personas escríbenos por WhatsApp.');
-  const c = cotizar(a, personas, d.menores, d.ninos);
+  const c = cotizar(a, personas, d.menores, d.ninos, d.nivel), solo = soloNivel(a, c.nivel);
   const nombre = nombrePropio(d.nombre), telefono = String(d.telefono || '').trim(), correo = norm(d.correo), comentario = String(d.comentario || '').trim().slice(0, 500);
   if (nombre.length < 2) throw err('Escribe tu nombre.');
   if (telefono.replace(/\D/g, '').length < 8) throw err('Revisa tu teléfono.');
@@ -327,12 +333,12 @@ async function reservar(env, d) {
   await limpiarRetenciones(db);
   const ref = nuevaRef(), t = ahoraChile();
   const base = { ref, creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pendiente', fecha, hora, personas, menores: c.menores, ninos: c.ninos, nombre, telefono, correo, comentario,
-    total: c.precio, pago_instructor: c.pagoInstructor, medio: 'Mercado Pago' };
+    total: c.precio, pago_instructor: c.pagoInstructor, medio: 'Mercado Pago', nivel: c.nivel };
   // Instructor al azar entre los libres; si dos personas reservan a la vez, el segundo intenta con otro.
   let elegido = null;
   for (let intento = 0; intento < 3 && !elegido; intento++) {
     const ag = await estadoAgenda(db, a, fecha, fecha);
-    const libres = topeVerano(a, ag, fecha, hora, elegir(ag, a, fecha, hora));
+    const libres = topeVerano(a, ag, fecha, hora, elegir(ag, a, fecha, hora).filter(n => !solo || solo.includes(n)));
     if (libres.length < c.instructores) break;
     const r = Object.assign({}, base, { instructores: libres.slice(0, c.instructores) });
     try { await guardarReserva(db, a, r, Date.now() + a.retencionMin * 60000); elegido = r; }
@@ -576,7 +582,7 @@ async function quien(env, d) {
   throw err('Tu correo no está en la Escuela. Pídele a Isidora que lo agregue en Agenda Storm > Ajustes.');
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
-const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, fichasPapel: !!r.fichas_papel, instructores: parseLista(r.instructores),
+const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, nivel: r.nivel || '', fichasPapel: !!r.fichas_papel, instructores: parseLista(r.instructores),
   nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? r.link_pago : '' } : {}) });
 
 async function panel(env, q) {

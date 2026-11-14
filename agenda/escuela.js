@@ -442,7 +442,7 @@
   }
   const contacto = r => wa(r.telefono) ? `<div class='es-ct'><a class='es-ctb wa' target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}' title='WhatsApp' aria-label='WhatsApp'>${ICO_S.wa}</a><a class='es-ctb' href='tel:+${wa(r.telefono)}' title='Llamar' aria-label='Llamar'>${ICO_S.tel}</a></div>` : '';
   const fichasTag = r => `<span class='es-st ${r.fichasPapel || (r.fichas || []).length >= r.personas ? 'ok' : 'pend'}'><i>${ICO_S.ficha}</i>${r.fichasPapel ? 'Fichas en papel' : 'Fichas ' + (r.fichas || []).length + '/' + r.personas}</span>`;
-  const gentes = r => `${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 8 a 11' : ''}`;
+  const gentes = r => `${r.personas} persona${r.personas === 1 ? '' : 's'}${r.menores ? ' · ' + r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8' : ''}${r.ninos ? ' · ' + r.ninos + ' de 8 a 11' : ''}${r.nivel === 'intermedio' ? ' · Intermedio' : ''}`;
   // tarjeta de la lista: se toca y abre la clase
   function tarjeta(r, admin) {
     const E0 = estadoDe(r), est = `<span class='es-st ${E0.c}'><i>${E0.i}</i>${esc(E0.t)}</span>`;
@@ -690,7 +690,7 @@
       });
       E.reservas.filter(r => r.fecha === f && r.instructores.includes(n)).forEach(r => {
         const a = aMin(r.hora);
-        col += `<button class='es-db${r.estado === 'pendiente' ? ' pend' : ''}' data-dr='${esc(r.ref)}' style='top:${top(a)}px;height:${alto(r.duracion || E.duracion) - 2}px'>${r.medio ? `<i class='es-dbp${estadoDe(r).c === 'ok' ? '' : ' no'}'>$</i>` : ''}<em class='es-dbh'>${esc(r.hora)}<span class='es-dbf'>–${esc(fin(r.hora, r.duracion))}</span></em><b>${esc(r.nombre)}</b><small>${r.personas} pers.${r.menores ? ' · ' + r.menores + ' niños' : ''}${r.estado === 'pendiente' ? ' · esperando pago' : ''}</small></button>`;
+        col += `<button class='es-db${r.estado === 'pendiente' ? ' pend' : ''}' data-dr='${esc(r.ref)}' style='top:${top(a)}px;height:${alto(r.duracion || E.duracion) - 2}px'>${r.medio ? `<i class='es-dbp${estadoDe(r).c === 'ok' ? '' : ' no'}'>$</i>` : ''}<em class='es-dbh'>${esc(r.hora)}<span class='es-dbf'>–${esc(fin(r.hora, r.duracion))}</span></em><b>${esc(r.nombre)}</b><small>${r.personas} pers.${r.nivel === 'intermedio' ? ' · Interm.' : ''}${r.menores ? ' · ' + r.menores + ' niños' : ''}${r.estado === 'pendiente' ? ' · esperando pago' : ''}</small></button>`;
       });
       if (f === E.hoy) { const ahora = new Date(), m = ahora.getHours() * 60 + ahora.getMinutes(); if (m > D_INI && m < D_FIN) col += `<div class='es-ahora' style='top:${top(m)}px'></div>`; }
       h += col + `</div>`;
