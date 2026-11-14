@@ -13,7 +13,11 @@
   const borrar = () => { try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+'-datos'); }catch(_){} };
   // Datos de la última visita: se muestran al tiro mientras llega lo nuevo de la planilla.
   const cacheLeer = k => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); return c && auth && c.email === auth.email ? c[k] || null : null; }catch(_){ return null; } };
-  const cacheGuardar = (k, v) => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); const n = c && auth && c.email === auth.email ? c : {email: auth.email}; n[k] = v; localStorage.setItem(KEY+'-datos', JSON.stringify(n)); }catch(_){} };
+  const cacheGuardar = (k, v) => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); const n = c && auth && c.email === auth.email ? c : {email: auth.email}; n[k] = v; n[k+'_ms'] = Date.now(); localStorage.setItem(KEY+'-datos', JSON.stringify(n)); }catch(_){} };
+  const cacheMs = k => { try{ const c = JSON.parse(localStorage.getItem(KEY+'-datos') || 'null'); return c && auth && c.email === auth.email ? +c[k+'_ms'] || 0 : 0; }catch(_){ return 0; } };
+  // Copia rápida en Cloudflare: si llega antes que Google y es más nueva que lo guardado, se muestra al tiro.
+  const espejo = accion => fetch('/api/espejo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({accion}, auth))}).then(r => r.json()).then(e => e && e.ok && e.datos ? e : null).catch(() => null);
+  function rapidaPrimero(accion, clave, listo, pintar){ espejo(accion).then(e => { if(!e || listo() || e.ms <= cacheMs(clave)) return; try{ pintar(e.datos); }catch(x){ console.warn('copia rápida', accion, x); } }); }
   const guardarAnual = d => { cacheGuardar('anual', d); try{ localStorage.setItem(KEY+'-anual-ms', String(Date.now())); }catch(_){} };
   const escribiendo = el => { const a = document.activeElement; return !!(a && el && el.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)); };
   const wa = t => { let n = String(t || '').replace(/\D/g, ''); if(n.length === 9 && n[0] === '9') n = '56' + n; if(n.length === 8) n = '569' + n; return n.length >= 10 ? n : ''; };
@@ -30,6 +34,79 @@
     if(!d.ok) throw new Error(d.error || 'Error');
     return d;
   }
+
+  // ---------- Guardar al instante: la pantalla se actualiza altiro y la planilla se escribe por detrás ----------
+  // Lo pendiente queda guardado en el teléfono: si se corta internet o se cierra la app, se manda al volver.
+  // Cada envío lleva un "idem" para que la planilla no lo anote dos veces si se reintenta.
+  const COLA = KEY + '-cola', alListo = {};
+  const colaLeer = () => { try{ const c = JSON.parse(localStorage.getItem(COLA) || '[]'); return Array.isArray(c) ? c : []; }catch(_){ return []; } };
+  const colaGuardar = c => { try{ localStorage.setItem(COLA, JSON.stringify(c)); }catch(_){} };
+  let enviando = false, despertar = null, pill = null, pillT = 0;
+  function estado(t, mal){
+    clearTimeout(pillT);
+    if(!t){ if(pill){ pill.classList.remove('on'); } return; }
+    const pon = () => {
+      if(!pill){ pill = document.createElement('div'); pill.className = 'pn-pill'; pill.setAttribute('role', 'status'); document.body.appendChild(pill); }
+      pill.className = 'pn-pill on' + (mal ? ' mal' : ''); pill.innerHTML = (mal ? '' : `<i class='pn-spin'></i>`) + esc(t);
+    };
+    if(mal) pon(); else pillT = setTimeout(pon, 900); // si guarda rápido, no se muestra nada
+  }
+  function toastError(t, reintentar){
+    const a = document.createElement('div'); a.className = 'pn-toast';
+    a.innerHTML = `<span>${esc(t)}</span>${reintentar ? `<button>Reintentar</button>` : ''}<button class='pn-toast__x' aria-label='Cerrar'>✕</button>`;
+    document.body.appendChild(a);
+    a.onclick = e => { const b = e.target.closest('button'); if(!b) return; a.remove(); if(!b.classList.contains('pn-toast__x') && reintentar) reintentar(); };
+    setTimeout(() => a.remove(), 15000);
+  }
+  // Esqueleto con forma de tarjeta (título + líneas) mientras llega lo primero.
+  const SK = (n = 2) => Array.from({length: n}, (_, i) => `<div class='pn-skc'><i style='width:${[46,38,52][i%3]}%'></i><i></i><i style='width:${[82,70,76][i%3]}%'></i></div>`).join('');
+  const sinRed = () => navigator.onLine === false;
+  // Si no se pudo cargar: con datos en pantalla, se dejan y sale un aviso; sin datos, tarjeta clara con Reintentar.
+  function falloCarga(pane, que, reintentar, x){
+    const hay = pane && pane.children.length && !pane.querySelector('.pn-skc, .pn-skel, .pn-err');
+    if(hay) return toastError(sinRed() ? 'Sin internet. Te muestro lo último guardado.' : `No se pudo actualizar ${que}. Te muestro lo último guardado.`, reintentar);
+    if(!pane) return;
+    const sesion = x && /sesión|expir/i.test(x.message || '');
+    pane.innerHTML = `<div class='pn-card pn-err'><b>${sinRed() ? 'Sin internet' : 'No se pudo cargar ' + esc(que)}</b>
+      <p>${sinRed() ? 'Revisa la conexión. Apenas vuelva, toca Reintentar.' : sesion ? 'Por seguridad, vuelve a entrar.' : 'La planilla de Google no respondió a tiempo. Suele pasar a veces; vuelve a intentar.'}</p>
+      ${sesion ? '' : `<button class='pn-go' data-retry>Reintentar</button>`}${x && x.message && !sinRed() && !sesion ? `<small>${esc(x.message)}</small>` : ''}</div>`;
+    const b = pane.querySelector('[data-retry]'); if(b) b.onclick = () => { pane.innerHTML = SK(2); reintentar(); };
+  }
+  addEventListener('offline', () => estado('Sin internet · lo que anotes se guarda al volver', true));
+  addEventListener('online', () => { if(!colaLeer().length) estado(''); else procesar(); });
+  function enFondo(body, que, ok, mal){
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const c = colaLeer(); c.push({ id, que, body: Object.assign({}, body, { idem: id }) }); colaGuardar(c);
+    alListo[id] = { ok, mal };
+    procesar(); return id;
+  }
+  const pausa = ms => new Promise(r => { const t = setTimeout(r, ms); despertar = () => { clearTimeout(t); r(); }; });
+  async function procesar(){
+    if(enviando || !auth) return; enviando = true;
+    let fallos = 0;
+    try{
+      for(;;){
+        const c = colaLeer(), it = c[0]; if(!it) break;
+        if(it.body.email !== auth.email){ colaGuardar(c.slice(1)); continue; } // de otra persona que usó este teléfono
+        estado(navigator.onLine === false ? 'Sin internet · se guarda al volver' : 'Guardando…', navigator.onLine === false);
+        let d = null;
+        try{ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({}, it.body, { ts: auth.ts, firma: auth.firma }))}); d = await r.json(); }
+        catch(_){ fallos++; estado(navigator.onLine === false ? 'Sin internet · se guarda al volver' : 'Reintentando…', navigator.onLine === false); await pausa(Math.min(30000, 1500 * Math.pow(2, fallos))); continue; }
+        fallos = 0;
+        colaGuardar(colaLeer().filter(x => x.id !== it.id));
+        const cb = alListo[it.id] || {}; delete alListo[it.id];
+        if(d && d.ok){ try{ cb.ok && cb.ok(d); }catch(x){ console.warn(x); } }
+        else {
+          const err = (d && d.error) || 'Error';
+          try{ cb.mal && cb.mal(err); }catch(_){}
+          toastError(`No se pudo guardar ${it.que || ''}: ${err}`, /sesión/i.test(err) ? null : () => enFondo(it.body, it.que, cb.ok, cb.mal));
+        }
+      }
+    } finally { enviando = false; estado(''); }
+  }
+  addEventListener('online', () => despertar && despertar());
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible'){ if(despertar) despertar(); procesar(); } });
+  addEventListener('beforeunload', e => { if(colaLeer().length){ e.preventDefault(); e.returnValue = ''; } });
 
   function login(email, err, paso){
     app.innerHTML = `<div class='pn-login'>
@@ -161,13 +238,15 @@
       m[nombre] = true; agregando = false; redo();
     };
     const sv = document.getElementById('pn-save');
-    if(sv) sv.onclick = async () => {
-      sv.disabled = true; sv.textContent = 'Guardando…';
-      try{
-        const d = await post(Object.assign({}, auth, {accion:'asistencia', fecha:c.fecha, lista:c.alumnos.map(a=>a.nombre), presentes:c.alumnos.filter(a=>m[a.nombre]).map(a=>a.nombre), extras:c.alumnos.filter(a=>a.extra).map(a=>a.nombre)}));
-        LISTA = d.lista; if(d.extrasPend){ EXTRAS_PEND = d.extrasPend; const xp = document.getElementById('pn-xp'); if(xp){ xp.innerHTML = extrasCard(); bindExtras(); } } delete marcas[c.fecha]; redo();
-        document.getElementById('pn-lista-msg').innerHTML = `<div class='pn-ok'>Asistencia guardada ✓</div>`;
-      }catch(x){ sv.disabled = false; sv.textContent = 'No se pudo, reintenta'; }
+    if(sv) sv.onclick = () => {
+      const body = Object.assign({}, auth, {accion:'asistencia', fecha:c.fecha, lista:c.alumnos.map(a=>a.nombre), presentes:c.alumnos.filter(a=>m[a.nombre]).map(a=>a.nombre), extras:c.alumnos.filter(a=>a.extra).map(a=>a.nombre)});
+      // Al tiro en pantalla; la planilla se escribe por detrás.
+      c.alumnos.forEach(a => { a.vino = !!m[a.nombre]; }); c.tomada = true; delete marcas[c.fecha]; redo();
+      const msg = document.getElementById('pn-lista-msg'); if(msg) msg.innerHTML = `<div class='pn-ok'>Asistencia guardada ✓</div>`;
+      enFondo(body, 'la asistencia', d => {
+        LISTA = d.lista || LISTA; if(d.extrasPend){ EXTRAS_PEND = d.extrasPend; const xp = document.getElementById('pn-xp'); if(xp){ xp.innerHTML = extrasCard(); bindExtras(); } }
+        const p = app.querySelector('[data-pane=lista]'); if(p && !escribiendo(p)){ const ms = document.getElementById('pn-lista-msg'), t = ms && ms.innerHTML; p.innerHTML = listaPane(); bindLista(); const m2 = document.getElementById('pn-lista-msg'); if(m2 && t) m2.innerHTML = t; }
+      });
     };
   }
   function copiar(){ app.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
@@ -205,14 +284,21 @@
       if(!gSel.length){ res.innerHTML = `<div class='pn-msg'>Elige el grupo.</div>`; return; }
       if(t.length < 3){ res.innerHTML = `<div class='pn-msg'>Escribe el mensaje.</div>`; return; }
       if(!go.dataset.ok){ go.dataset.ok = 1; go.textContent = '¿Enviar a ' + gSel.join(', ') + '?'; return; }
-      go.disabled = true; go.textContent = 'Enviando…';
-      try{
-        const r = await post(Object.assign({}, auth, {accion:'mensaje', grupos:gSel, dias:diasSel, mensaje:t, correo: pane.querySelector('[data-msg-c]').checked}));
-        borrador = ''; gSel = []; diasSel = 0;
-        d.mensajes = r.mensajes; d.grupos = r.grupos;
-        pane.innerHTML = mensajesPane(d); bindMensajes(d);
-        pane.querySelector('[data-msg-r]').innerHTML = `<div class='pn-ok'>Enviado a ${r.familias} familia${r.familias===1?'':'s'}${r.correos?' (también por correo)':''}.</div>`;
-      }catch(x){ go.disabled = false; delete go.dataset.ok; go.textContent = 'Enviar mensaje'; res.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
+      const body = Object.assign({}, auth, {accion:'mensaje', grupos:gSel, dias:diasSel, mensaje:t, correo: pane.querySelector('[data-msg-c]').checked});
+      const grupos = gSel.join(', ');
+      borrador = ''; gSel = []; diasSel = 0;
+      d.mensajes = [{fecha:'Ahora', de:'Tú', grupo:grupos, familias:'…', mensaje:t, enviando:true}].concat(d.mensajes || []);
+      pane.innerHTML = mensajesPane(d); bindMensajes(d);
+      pane.querySelector('[data-msg-r]').innerHTML = `<div class='pn-ok'>Enviando a ${esc(grupos)}…</div>`;
+      enFondo(body, 'el mensaje', r => {
+        if(r.mensajes) d.mensajes = r.mensajes; if(r.grupos) d.grupos = r.grupos;
+        const p = app.querySelector('[data-pane=mensajes]'); if(!p) return;
+        const ta2 = p.querySelector('[data-msg-t]'), txt = ta2 ? ta2.value : '';
+        p.innerHTML = mensajesPane(d); bindMensajes(d);
+        const ta3 = p.querySelector('[data-msg-t]'); if(ta3 && txt) ta3.value = txt;
+        if(r.repetido) return;
+        p.querySelector('[data-msg-r]').innerHTML = `<div class='pn-ok'>Enviado a ${r.familias} familia${r.familias===1?'':'s'}${r.correos?' (también por correo)':''} ✓</div>`;
+      }, () => { d.mensajes = (d.mensajes || []).filter(x => !x.enviando); const p = app.querySelector('[data-pane=mensajes]'); if(p){ borrador = t; p.innerHTML = mensajesPane(d); bindMensajes(d); } });
     };
   }
 
@@ -227,7 +313,7 @@
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-        app.querySelectorAll('.pn-pane').forEach(p => p.hidden = p.dataset.pane !== t);
+        app.querySelectorAll('.pn-pane').forEach(p => { const v = p.dataset.pane === t; if(v && p.hidden){ p.classList.remove('pn-in-anim'); void p.offsetWidth; p.classList.add('pn-in-anim'); } p.hidden = !v; });
         if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); }
          };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
@@ -239,7 +325,7 @@
     if(d.rol === 'instructor'){
       app.innerHTML = `<div class='pn-head'><div><h1>Clases Storm</h1><p>${esc(d.hoy)}</p></div><button class='pn-link' id='pn-out'>Salir</button></div>` + tabs(d) +
         `<div class='pn-pane' data-pane='clases'>` + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas.</p></div>`) +
-        `<p class='pn-note'>↪ = alumno que se cambió a esta clase.</p></div><div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
+        `<p class='pn-note'>↪ = alumno que se cambió a esta clase.</p></div><div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'>${SK(1)}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden>${SK(1)}</div>`;
       document.getElementById('pn-out').onclick = () => { borrar(); auth = null; login(); };
       tabsOn();
       return;
@@ -256,7 +342,7 @@
 
     h += `<div class='pn-pane' data-pane='clases'>` + (d.uso && d.rol !== 'instructor' ? `<button class='pn-uso-link' data-ir='avisos'><span>📱 Mi clase: <b>${d.uso.semana} de ${d.uso.familias}</b> familias entraron esta semana</span><span>Ver ›</span></button>` : '') + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas en el Calendario.</p></div>`) + `</div>`;
 
-    h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
+    h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'>${SK(1)}</div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden>${SK(1)}</div>`;
     h += `<div class='pn-pane' data-pane='pagos'>
       <div class='pn-card' id='pn-xp'>${extrasCard()}</div>
       <div class='pn-card'><h3>Faltan por pagar ${esc(M)}</h3>
@@ -273,7 +359,7 @@
       <p class='pn-note'>A los pagos con Mercado Pago se les descuenta una comisión de cerca de 3,4%; a las transferencias no. ${esc(cap(d.pasado.mes))}: ${clp(d.pasado.recaudado)} con ${d.pasado.alumnos} alumnos.</p>
     </div>`;
 
-    h += `<div class='pn-finz' hidden><div class='pn-fsub'><button data-fsub='finanzas'>General</button><button data-fsub='anio'>Mi año</button><button data-fsub='gastos'>Sueldos Academia Anual</button></div><div class='pn-fpane' data-pane='finanzas'><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='anio' hidden><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='gastos' hidden><div class='pn-skel'></div></div></div>`;
+    h += `<div class='pn-finz' hidden><div class='pn-fsub'><button data-fsub='finanzas'>General</button><button data-fsub='anio'>Mi año</button><button data-fsub='gastos'>Sueldos Academia Anual</button></div><div class='pn-fpane' data-pane='finanzas'>${SK(1)}</div><div class='pn-fpane' data-pane='anio' hidden>${SK(1)}</div><div class='pn-fpane' data-pane='gastos' hidden>${SK(1)}</div></div>`;
     h += `<div class='pn-pane' data-pane='avisos'>
       ${d.uso ? (() => { const u = d.uso, de = n => `<span>de ${u.familias}</span>`;
         return `<div class='pn-card' id='pn-uso'><h3>Uso de la app</h3>
@@ -321,9 +407,11 @@
   async function cargarGastos(mes){
     const pane = app.querySelector("[data-pane='gastos']"); if(!pane) return;
     if(!GAS && !mes){ GAS = cacheLeer('gastos'); if(GAS){ gMes = GAS.mes; pintarGastos(); } }
-    if(!GAS || (mes && mes !== GAS.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
-    try{ const d = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); const igual = GAS && JSON.stringify(GAS) === JSON.stringify(d); GAS = d; gMes = GAS.mes; cacheGuardar('gastos', d); if(!igual && !escribiendo(pane)) pintarGastos(); }
-    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar los gastos. ${esc(x.message)}</p></div>`; }
+    if(!GAS || (mes && mes !== GAS.mes)) pane.innerHTML = `${SK(1)}${SK(1)}`;
+    let listo = false;
+    if(!mes) rapidaPrimero('gastos', 'gastos', () => listo, d => { if(escribiendo(pane)) return; GAS = d; gMes = d.mes; pintarGastos(); });
+    try{ const d = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); listo = true; const igual = GAS && JSON.stringify(GAS) === JSON.stringify(d); GAS = d; gMes = GAS.mes; cacheGuardar('gastos', d); if(!igual && !escribiendo(pane)) pintarGastos(); }
+    catch(x){ falloCarga(pane, 'los sueldos', () => cargarGastos(mes), x); }
   }
   async function gasto(body, btn){
     if(btn){ btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = 'Anotando…'; }
@@ -402,9 +490,27 @@
   async function cargarFinanzas(mes){
     const pane = app.querySelector("[data-pane='finanzas']"); if(!pane) return;
     if(!FIN && !mes){ FIN = cacheLeer('finanzas'); if(FIN){ fMes = FIN.mes; pintarFinanzas(); } }
-    if(!FIN || (mes && mes !== FIN.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
-    try{ const d = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); const igual = FIN && JSON.stringify(FIN) === JSON.stringify(d); FIN = d; fMes = FIN.mes; cacheGuardar('finanzas', d); if(!igual && !escribiendo(pane)) pintarFinanzas(); }
-    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar las finanzas. ${esc(x.message)}</p></div>`; }
+    if(!FIN || (mes && mes !== FIN.mes)) pane.innerHTML = `${SK(1)}${SK(1)}`;
+    let listo = false;
+    if(!mes) rapidaPrimero('finanzas', 'finanzas', () => listo, d => { if(escribiendo(pane)) return; FIN = d; fMes = d.mes; pintarFinanzas(); });
+    try{ const d = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); listo = true; const igual = FIN && JSON.stringify(FIN) === JSON.stringify(d); FIN = d; fMes = FIN.mes; cacheGuardar('finanzas', d); if(!igual && !escribiendo(pane)) pintarFinanzas(); }
+    catch(x){ falloCarga(pane, 'las finanzas', () => cargarFinanzas(mes), x); }
+  }
+  // Anota un gasto o ingreso al tiro: se suma en pantalla y la planilla se escribe por detrás.
+  function anotarFondo(b){
+    const body = Object.assign({}, auth, {accion:'movimiento', mes: fMes}, b), antes = FIN ? JSON.stringify(FIN) : null;
+    if(FIN){
+      const ing = b.tipo === 'ingreso', monto = +b.monto || 0;
+      const mov = {fecha: new Date().toISOString().slice(0, 10), tipo: ing ? 'Ingreso' : 'Gasto', area: b.area, detalle: b.detalle, monto, mes: FIN.mes, corr: b.corresponde || '', enviando: true};
+      if(Array.isArray(FIN.movs)) FIN.movs = [mov].concat(FIN.movs);
+      if(!b.corresponde){ // sumar al tiro en los totales del mes (si corresponde a otro mes, lo calcula la planilla)
+        if(ing) FIN.ingresos = (FIN.ingresos || 0) + monto; else FIN.gastos = (FIN.gastos || 0) + monto;
+        FIN.balance = (FIN.ingresos || 0) - (FIN.gastos || 0);
+        const ar = (FIN.areas || []).find(x => x.area === b.area); if(ar){ if(ing) ar.ingresos += monto; else ar.gastos += monto; }
+      }
+      if(app && app.querySelector("[data-pane='finanzas']")) try{ pintarFinanzas(); }catch(_){}
+    }
+    return new Promise((res, rej) => enFondo(body, 'el ' + (b.tipo === 'ingreso' ? 'ingreso' : 'gasto'), d => { FIN = d; fMes = d.mes; cacheGuardar('finanzas', d); if(app && app.querySelector("[data-pane='finanzas']") && !escribiendo(app.querySelector("[data-pane='finanzas']"))) pintarFinanzas(); res(d); }, e => { if(antes && FIN && FIN.movs && FIN.movs.some(x => x.enviando)) FIN = JSON.parse(antes); if(app && app.querySelector("[data-pane='finanzas']")) try{ pintarFinanzas(); }catch(_){} rej(new Error(e)); }));
   }
   function pintarFinanzas(){
     const pane = app.querySelector("[data-pane='finanzas']"); if(!pane || !FIN) return;
@@ -443,7 +549,7 @@
       <div><span>Renta</span><b class='pn-fin'>+${clp(f.ventas.renta)}</b></div>
       </div><p class='pn-sub' style='margin-top:8px'>Se lee sola de la pestaña Ventas Diarias 2026. Clases va en Escuela; tienda y renta en Surfshop. <a class='pn-link' href='${esc(f.ventas.planilla)}' target='_blank' rel='noopener'>Abrir planilla</a></p></div>` : ''}
     <div class='pn-card'><h3>Anotado en ${esc(mesCorto(f.mes))}<span class='pn-count'>${f.movs.length}</span></h3>
-      ${f.movs.length ? `<div class='pn-gmov'>${f.movs.map(m => `<div><span>${esc(m.detalle)} · ${esc(AREA_TXT[m.area]||m.area)}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b><button data-fdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Aún no anotas nada este mes.</p>`}
+      ${f.movs.length ? `<div class='pn-gmov'>${f.movs.map(m => `<div><span>${esc(m.detalle)} · ${esc(AREA_TXT[m.area]||m.area)}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b>${m.enviando ? `<i class='pn-spin' title='Guardando'></i>` : `<button data-fdel='${m.fila}' aria-label='Borrar'>×</button>`}</div>`).join('')}</div>` : `<p class='pn-empty'>Aún no anotas nada este mes.</p>`}
     </div>
     <div class='pn-card pn-ffij'><h3>Gastos fijos del mes<span class='pn-count'>${f.fijos.filter(x=>x.pagado).length} de ${f.fijos.length} pagados</span></h3>
       ${f.fijos.map(x => `<button class='pn-fij${x.pagado?' on':''}' data-fij='${esc(x.detalle)}'><i>${x.pagado?'✓':''}</i><span><b>${esc(x.detalle)}</b><small>${x.pagado?'Pagado el '+esc(corta(x.pagado)):'Por pagar'}</small></span><em>${clp(x.monto)}</em></button>`).join('')}
@@ -459,14 +565,14 @@
       const b = e.currentTarget, monto = +String(pane.querySelector('#pn-fmonto').value).replace(/\D/g, ''), detalle = pane.querySelector('#pn-fdet').value.trim();
       if(!monto) return pane.querySelector('#pn-fmonto').focus();
       if(!detalle) return pane.querySelector('#pn-fdet').focus();
-      b.disabled = true; b.textContent = 'Anotando…';
-      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, tipo: fTipo, area: fArea, detalle, monto, corresponde: fArea==='Verano' ? (fCorr==='ambos' ? 'verano '+anioVer : fCorr+' '+anioVer) : ''})); pintarFinanzas();
-        const m = pane.querySelector('#pn-fmsg'); if(m) m.textContent = 'Anotado ✓'; }
-      catch(x){ b.disabled = false; b.textContent = 'Anotar ' + fTipo; alert(x.message); }
+      anotarFondo({tipo: fTipo, area: fArea, detalle, monto, corresponde: fArea==='Verano' ? (fCorr==='ambos' ? 'verano '+anioVer : fCorr+' '+anioVer) : ''});
+      pane.querySelector('#pn-fmonto').value = ''; pane.querySelector('#pn-fdet').value = '';
+      const m = pane.querySelector('#pn-fmsg'); if(m) m.textContent = 'Anotado ✓';
     };
-    pane.querySelectorAll('[data-fij]').forEach(b => b.onclick = async () => {
-      b.disabled = true; b.classList.toggle('on');
-      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, fijo: b.dataset.fij})); pintarFinanzas(); }catch(x){ b.disabled = false; b.classList.toggle('on'); alert(x.message); }
+    pane.querySelectorAll('[data-fij]').forEach(b => b.onclick = () => {
+      const x = (FIN.fijos || []).find(y => y.detalle === b.dataset.fij); if(!x) return;
+      x.pagado = x.pagado ? '' : new Date().toISOString().slice(0, 10); pintarFinanzas(); // al tiro
+      enFondo(Object.assign({}, auth, {accion:'movimiento', mes: fMes, fijo: b.dataset.fij}), 'el gasto fijo', d => { FIN = d; cacheGuardar('finanzas', d); pintarFinanzas(); }, () => { x.pagado = x.pagado ? '' : 'antes'; pintarFinanzas(); });
     });
     pane.querySelectorAll('[data-fdel]').forEach(b => b.onclick = async () => {
       if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
@@ -479,9 +585,11 @@
   async function cargarAnio(extra){
     const pane = app.querySelector("[data-pane='anio']"); if(!pane) return;
     if(!ANIO && !extra){ ANIO = cacheLeer('anio'); if(ANIO) pintarAnio(); }
-    if(!ANIO) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
-    try{ const d = await post(Object.assign({}, auth, {accion:'anio'}, extra || {})); const igual = ANIO && JSON.stringify(ANIO) === JSON.stringify(d); ANIO = d; cacheGuardar('anio', d); if(!igual && (extra || !escribiendo(pane))) pintarAnio(); }
-    catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudo cargar. ${esc(x.message)}</p></div>`; }
+    if(!ANIO) pane.innerHTML = `${SK(1)}${SK(1)}`;
+    let listo = false;
+    if(!extra) rapidaPrimero('anio', 'anio', () => listo, d => { if(escribiendo(pane)) return; ANIO = d; pintarAnio(); });
+    try{ const d = await post(Object.assign({}, auth, {accion:'anio'}, extra || {})); listo = true; const igual = ANIO && JSON.stringify(ANIO) === JSON.stringify(d); ANIO = d; cacheGuardar('anio', d); if(!igual && (extra || !escribiendo(pane))) pintarAnio(); }
+    catch(x){ falloCarga(pane, 'Mi año', () => cargarAnio(extra), x); }
   }
   function pintarAnio(){
     const pane = app.querySelector("[data-pane='anio']"); if(!pane || !ANIO) return;
@@ -583,6 +691,13 @@
   const notasDe = nombre => NOTAS ? NOTAS.notas.filter(n => nk(n.alumno) === nk(nombre)) : [];
   async function cargarNotas(forzar){
     if(NOTAS && !forzar) return NOTAS;
+    if(!NOTAS && !forzar){
+      // La copia rápida responde en menos de medio segundo; Google se consulta igual por detrás.
+      const fresco = post(Object.assign({}, auth, {accion:'notas'})).then(r => { NOTAS = r; return r; }).catch(() => null);
+      const e = await Promise.race([espejo('notas'), fresco]);
+      if(e && e.datos){ NOTAS = e.datos; return NOTAS; }
+      if(await fresco) return NOTAS;
+    }
     try{ const r = await post(Object.assign({}, auth, {accion:'notas'})); NOTAS = r; }
     catch(x){ NOTAS = NOTAS || {alumnos:[], notas:[], error: x.message}; }
     return NOTAS;
@@ -698,7 +813,7 @@
     const pf = app.querySelector('.pn-finz'); if(!pf) return;
     try{ sessionStorage.setItem(KEY + '-fsub', fSub); }catch(_){}
     pf.querySelectorAll('[data-fsub]').forEach(b => { b.classList.toggle('on', b.dataset.fsub === fSub); b.onclick = () => { fSub = b.dataset.fsub; mostrarFsub(); }; });
-    pf.querySelectorAll('.pn-fpane').forEach(p => p.hidden = p.dataset.pane !== fSub);
+    pf.querySelectorAll('.pn-fpane').forEach(p => { const v = p.dataset.pane === fSub; if(v && p.hidden){ p.classList.remove('pn-in-anim'); void p.offsetWidth; p.classList.add('pn-in-anim'); } p.hidden = !v; });
     if(fSub === 'gastos') cargarGastos(); else if(fSub === 'anio') cargarAnio(); else cargarFinanzas();
   }
   const NIV = ['Kids','Iniciante','Progress','Intermedio','Avanzado','Federados'];
@@ -794,9 +909,11 @@
   const adDia = f => { const d = new Date(f + 'T12:00'); return { d: ['dom','lun','mar','mié','jue','vie','sáb'][d.getDay()], n: d.getDate() }; };
   async function loadAdultos(){
     const pane = app.querySelector('.pn-adultos'); if(!pane) return;
-    if(!ADU){ ADU = cacheLeer('adultos'); if(ADU) pintarAdultos(); else pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`; }
+    if(!ADU){ ADU = cacheLeer('adultos'); if(ADU) pintarAdultos(); else pane.innerHTML = `${SK(1)}${SK(1)}`; }
     else pintarAdultos();
-    try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); ADU = d; cacheGuardar('adultos', d); if(!escribiendo(pane)) pintarAdultos(); }
+    let listo = false;
+    rapidaPrimero('adultos-panel', 'adultos', () => listo, d => { if(escribiendo(pane)) return; ADU = d; pintarAdultos(); });
+    try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); listo = true; ADU = d; cacheGuardar('adultos', d); if(!escribiendo(pane)) pintarAdultos(); }
     catch(x){ if(!ADU) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
   }
   async function adEnviar(body, btn){
@@ -880,7 +997,7 @@
     // Si lo guardado ya no se puede mostrar (datos viejos o de otro programa), se borra y se espera lo nuevo.
     if(viejo){ try{ render(viejo); } catch(e){ console.warn('Panel: datos guardados no sirven', e); viejo = null; try{ localStorage.removeItem(KEY+'-datos'); }catch(_){} } }
     if(viejo){ app.addEventListener('click', tocar, {once:true}); app.addEventListener('input', tocar, {once:true}); }
-    else app.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div><div class='pn-skel'></div>`;
+    else app.innerHTML = `${SK(1)}${SK(1)}${SK(1)}`;
     // Copia rápida en Cloudflare (la planilla la actualiza cada minuto): se muestra mientras Google responde.
     let listo = false;
     fetch('/api/espejo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({accion:'panel'}, auth))})
@@ -904,7 +1021,7 @@
     }
     catch(x){
       if(/sesión|expir|acceso/i.test(x.message)){ const e = auth.email; borrar(); auth = null; return login(e, /acceso/.test(x.message) ? x.message : 'Por seguridad, vuelve a entrar.'); }
-      if(!viejo) app.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
+      if(!viejo) falloCarga(app, 'el Panel', load, x); else toastError(sinRed() ? 'Sin internet. Te muestro lo último guardado.' : 'No se pudo actualizar el Panel. Te muestro lo último guardado.', load);
     }
   }
   // Al volver a la app (por ejemplo tocando una notificación) se revisa si hay datos nuevos.
@@ -937,7 +1054,8 @@
         const row = [...app.querySelectorAll('[data-alumno]')].find(x => x.dataset.alumno === nombre); if(row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       },
       fsub(x){ fSub = x; if(app && app.querySelector('.pn-finz')) mostrarFsub(); },
-      async anotar(b){ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes}, b)); fMes = FIN.mes; if(app && app.querySelector("[data-pane='finanzas']")) pintarFinanzas(); return FIN; },
+      anotar: b => anotarFondo(b), // vuelve al tiro; la promesa se cumple cuando la planilla lo guardó
+      pendientes: () => colaLeer().length,
       fin: () => FIN,
       datos: () => cacheLeer('anual'),
       verano: () => VER || cacheLeer('verano')

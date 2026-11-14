@@ -7,7 +7,7 @@
  * a Google por detrás y se actualiza si hay algo más nuevo.
  *
  * Recibir copia (desde Apps Script): { tipo:'subir', clave:'anual', ts, firma, datos }  firma = HMAC(CLAVE_WEB, 'espejo|' + ts)
- * Leer (desde la app):              { accion:'panel', email, ts, firma }                 misma sesión del Panel
+ * Leer (desde la app):              { accion:'panel'|'finanzas'|'gastos'|'anio'|'notas'|'adultos-panel', email, ts, firma }  misma sesión del Panel
  */
 const SESION_DIAS = 365;
 const ADMINS = ['isidoravergara@gmail.com', 'contacto@stormsurf.cl'];
@@ -41,14 +41,20 @@ export async function onRequestPost({ request, env }) {
     const edad = Date.now() / 1000 - Number(d.ts);
     if (!d.email || !(edad < SESION_DIAS * 86400 && edad > -600) || await hmac(env.CLAVE_WEB, norm(d.email) + '|' + d.ts) !== String(d.firma || '').toLowerCase())
       return json({ ok: false, error: 'Tu sesión expiró. Vuelve a entrar.' });
-    if (d.accion !== 'panel') return json({ ok: false, error: 'Acción desconocida' });
+    if (!['panel', 'finanzas', 'gastos', 'anio', 'notas', 'adultos-panel'].includes(d.accion)) return json({ ok: false, error: 'Acción desconocida' });
     await tabla(db);
     const fila = await db.prepare('SELECT datos, ms FROM espejo WHERE clave = ?').bind('anual').first();
     if (!fila) return json({ ok: false, error: 'Sin copia todavía' });
     const A = JSON.parse(fila.datos), email = norm(d.email);
     const rol = ADMINS.includes(email) ? 'admin' : (A.roles || {})[email] || '';
-    if (!rol || !A.panel || !A.panel[rol]) return json({ ok: false, error: 'Sin acceso' });
-    return json({ ok: true, ms: fila.ms, datos: Object.assign({}, A.panel[rol], { miGrupo: (A.miGrupo || {})[email] || [] }) });
+    if (!rol) return json({ ok: false, error: 'Sin acceso' });
+    let datos = null;
+    if (d.accion === 'panel') datos = A.panel && A.panel[rol] ? Object.assign({}, A.panel[rol], { miGrupo: (A.miGrupo || {})[email] || [] }) : null;
+    else if (d.accion === 'notas') datos = (A.todos || {}).notas || null;
+    else if (d.accion === 'adultos-panel') datos = (A.adultos || {})[rol] || null;
+    else if (rol === 'admin') datos = (A.admin || {})[d.accion] || null; // finanzas, gastos, anio: solo administradores
+    if (!datos) return json({ ok: false, error: 'Sin copia' });
+    return json({ ok: true, ms: fila.ms, datos });
   } catch (x) {
     return json({ ok: false, error: x.message }, 500);
   }
