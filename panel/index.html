@@ -78,6 +78,8 @@
 .pn-uso small{display:block;font-size:1.2rem;opacity:.65;line-height:1.3}
 .pn-uso b{display:block;font-size:2.2rem;font-weight:600;line-height:1.15;margin-top:2px}
 .pn-uso b span{font-size:1.4rem;font-weight:500;opacity:.55}
+.pn-uso-link{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;margin:0 0 12px;padding:12px 16px;border:0;border-radius:14px;background:#e6f3fa;color:inherit;font:inherit;font-size:1.4rem;text-align:left;cursor:pointer}
+.pn-uso-link span:last-child{font-weight:600;white-space:nowrap}
 .pn-uso__h{font-size:1.3rem;font-weight:600;margin:16px 0 2px;opacity:.8}
 .pn-chip{font-size:1.35rem;padding:5px 11px;border-radius:999px;background:#f4f1ec}
 .pn-chip--in{background:var(--ok-soft);color:var(--ok)}
@@ -432,6 +434,7 @@
         if(t === 'alumnos'){ cargarNotas().then(pintarAlumnos); if(ES_ADMIN) cargarInformes().then(pintarAlumnos); }
          };
       app.querySelectorAll('.pn-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
+      app.querySelectorAll('.pn-uso-link').forEach(b => b.onclick = () => { show('avisos'); const c = document.getElementById('pn-uso'); if(c) c.scrollIntoView({behavior:'smooth', block:'start'}); });
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
       bindLista(); copiar(); bindMensajes(d);
@@ -454,7 +457,7 @@
       </div>
       ${tabs(d)}`;
 
-    h += `<div class='pn-pane' data-pane='clases'>` + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas en el Calendario.</p></div>`) + `</div>`;
+    h += `<div class='pn-pane' data-pane='clases'>` + (d.uso && d.rol !== 'instructor' ? `<button class='pn-uso-link' data-ir='avisos'><span>📱 Mi clase: <b>${d.uso.semana} de ${d.uso.familias}</b> familias entraron esta semana</span><span>Ver ›</span></button>` : '') + (d.clases.length ? d.clases.map(claseCard).join('') : `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas en el Calendario.</p></div>`) + `</div>`;
 
     h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
     h += `<div class='pn-pane' data-pane='pagos'>
@@ -474,12 +477,8 @@
 
     h += `<div class='pn-finz' hidden><div class='pn-fsub'><button data-fsub='finanzas'>General</button><button data-fsub='anio'>Mi año</button><button data-fsub='gastos'>Sueldos Academia Anual</button></div><div class='pn-fpane' data-pane='finanzas'><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='anio' hidden><div class='pn-skel'></div></div><div class='pn-fpane' data-pane='gastos' hidden><div class='pn-skel'></div></div></div>`;
     h += `<div class='pn-pane' data-pane='avisos'>
-      ${d.revisar.length ? `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${d.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla: ${d.revisar.map(esc).join(', ')}</p></div>` : ''}
-      <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
-        ${d.sinGrupo.length ? `<div class='pn-chips' style='margin-top:10px'>${d.sinGrupo.map(n=>`<span class='pn-chip'>${esc(n)}</span>`).join('')}</div><p class='pn-sub' style='margin-top:10px'>Anótalos en la pestaña Alumnos de la planilla (columna amarilla).</p>` : `<p class='pn-empty'>Todos tienen grupo. 👌</p>`}
-      </div>
       ${d.uso ? (() => { const u = d.uso, de = n => `<span>de ${u.familias}</span>`;
-        return `<div class='pn-card'><h3>Uso de la app</h3>
+        return `<div class='pn-card' id='pn-uso'><h3>Uso de la app</h3>
         <p class='pn-sub'>Familias de la Academia Anual de este mes con correo (${u.familias}). Se cuenta desde el ${esc(dm(u.desde).replace('pagó el ',''))}.</p>
         <div class='pn-uso'><div><small>Entraron esta semana</small><b>${u.semana} ${de()}</b></div><div><small>Entraron este mes</small><b>${u.mes} ${de()}</b></div>
           <div><small>Con la app instalada</small><b>${u.app} ${de()}</b></div><div><small>Con avisos activados</small><b>${u.avisos} ${de()}</b></div></div>
@@ -490,6 +489,10 @@
         ${u.sinCorreo ? `<p class='pn-sub' style='margin-top:10px'>${u.sinCorreo} ${u.sinCorreo === 1 ? 'alumno no tiene' : 'alumnos no tienen'} correo en la planilla, así que no se pueden contar.</p>` : ''}
         ${u.otras ? `<p class='pn-sub' style='margin-top:6px'>Además, ${u.otras} ${u.otras === 1 ? 'familia' : 'familias'} de otras academias (Verano) entraron esta semana.</p>` : ''}
       </div>`; })() : ''}
+      ${d.revisar.length ? `<div class='pn-card'><h3>Pagos para revisar<span class='pn-count'>${d.revisar.length}</span></h3><p class='pn-sub'>Revísalos en la pestaña Pagos de la planilla: ${d.revisar.map(esc).join(', ')}</p></div>` : ''}
+      <div class='pn-card'><h3>Alumnos sin grupo${d.sinGrupo.length?`<span class='pn-count'>${d.sinGrupo.length}</span>`:''}</h3>
+        ${d.sinGrupo.length ? `<div class='pn-chips' style='margin-top:10px'>${d.sinGrupo.map(n=>`<span class='pn-chip'>${esc(n)}</span>`).join('')}</div><p class='pn-sub' style='margin-top:10px'>Anótalos en la pestaña Alumnos de la planilla (columna amarilla).</p>` : `<p class='pn-empty'>Todos tienen grupo. 👌</p>`}
+      </div>
       <div class='pn-card'><h3>Encuesta a las familias${d.encuesta?`<span class='pn-count'>${d.encuesta.respuestas}</span>`:''}</h3>
         ${d.encuesta ? `<p class='pn-sub'>${esc(cap(d.encuesta.mes))}: promedio <b>${String(d.encuesta.promedio).replace('.',',')}</b> de 5 <span class='pn-stars'>${'★'.repeat(Math.round(d.encuesta.promedio))}</span></p>
           ${d.encuesta.comentarios.map(c => `<div class='pn-row'><div><b>${esc(c.alumno)} <span class='pn-stars'>${'★'.repeat(c.nota)}</span></b><small>“${esc(c.comentario)}”</small></div></div>`).join('')}`
