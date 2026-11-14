@@ -319,8 +319,9 @@
   const mesCorto = m => cap(String(m).split(' ')[0]);
   async function cargarGastos(mes){
     const pane = app.querySelector("[data-pane='gastos']"); if(!pane) return;
+    if(!GAS && !mes){ GAS = cacheLeer('gastos'); if(GAS){ gMes = GAS.mes; pintarGastos(); } }
     if(!GAS || (mes && mes !== GAS.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
-    try{ GAS = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); gMes = GAS.mes; pintarGastos(); }
+    try{ const d = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); const igual = GAS && JSON.stringify(GAS) === JSON.stringify(d); GAS = d; gMes = GAS.mes; cacheGuardar('gastos', d); if(!igual && !escribiendo(pane)) pintarGastos(); }
     catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar los gastos. ${esc(x.message)}</p></div>`; }
   }
   async function gasto(body, btn){
@@ -399,8 +400,9 @@
   let FIN = null, fMes = '', fTipo = 'gasto', fArea = [10,11,0,1].includes(new Date().getMonth()) ? 'Verano' : 'Anual';
   async function cargarFinanzas(mes){
     const pane = app.querySelector("[data-pane='finanzas']"); if(!pane) return;
+    if(!FIN && !mes){ FIN = cacheLeer('finanzas'); if(FIN){ fMes = FIN.mes; pintarFinanzas(); } }
     if(!FIN || (mes && mes !== FIN.mes)) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
-    try{ FIN = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); fMes = FIN.mes; pintarFinanzas(); }
+    try{ const d = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); const igual = FIN && JSON.stringify(FIN) === JSON.stringify(d); FIN = d; fMes = FIN.mes; cacheGuardar('finanzas', d); if(!igual && !escribiendo(pane)) pintarFinanzas(); }
     catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudieron cargar las finanzas. ${esc(x.message)}</p></div>`; }
   }
   function pintarFinanzas(){
@@ -475,8 +477,9 @@
   let ANIO = null;
   async function cargarAnio(extra){
     const pane = app.querySelector("[data-pane='anio']"); if(!pane) return;
+    if(!ANIO && !extra){ ANIO = cacheLeer('anio'); if(ANIO) pintarAnio(); }
     if(!ANIO) pane.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`;
-    try{ ANIO = await post(Object.assign({}, auth, {accion:'anio'}, extra || {})); pintarAnio(); }
+    try{ const d = await post(Object.assign({}, auth, {accion:'anio'}, extra || {})); const igual = ANIO && JSON.stringify(ANIO) === JSON.stringify(d); ANIO = d; cacheGuardar('anio', d); if(!igual && (extra || !escribiendo(pane))) pintarAnio(); }
     catch(x){ pane.innerHTML = `<div class='pn-card'><p class='pn-empty'>No se pudo cargar. ${esc(x.message)}</p></div>`; }
   }
   function pintarAnio(){
@@ -892,6 +895,21 @@
       if(!viejo) app.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
     }
   }
+  // Al volver a la app (por ejemplo tocando una notificación) se revisa si hay datos nuevos.
+  let ultimaVuelta = Date.now();
+  document.addEventListener('visibilitychange', async () => {
+    if(document.visibilityState !== 'visible' || !auth || !app || Date.now() - ultimaVuelta < 30000) return;
+    ultimaVuelta = Date.now();
+    try{
+      const d = await post(Object.assign({}, auth, {accion:'panel'}));
+      if(!d.actual && d.rol !== 'instructor') return;
+      const viejo = cacheLeer('anual'); if(viejo && JSON.stringify(viejo) === JSON.stringify(d)) return;
+      cacheGuardar('anual', d);
+      if(!escribiendo(app) && acad === 'anual') return render(d);
+      if(!app.querySelector('.pn-nuevo')) app.insertAdjacentHTML('afterbegin', `<button class='pn-nuevo' style='display:block;width:100%;margin:0 0 10px;padding:10px;border:0;border-radius:12px;background:#0f6e74;color:#fff;font:inherit;cursor:pointer'>Hay datos nuevos · Toca para actualizar</button>`);
+      app.querySelector('.pn-nuevo').onclick = () => render(d);
+    }catch(_){}
+  });
   // Dentro de la plataforma Storm (/storm/) el menú de afuera decide qué se ve.
   if(window.STORM_SHELL){
     window.StormPanel = {

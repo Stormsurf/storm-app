@@ -966,26 +966,40 @@ body:has(.mc-hero--login) .ap-top{display:none}
     };
     if(viejo){ D = viejo; elegirVista(); mostrar(); }
     else app.innerHTML = `<div class='mc-skel'></div><div class='mc-skel'></div>`;
+    ultimaCarga = Date.now();
+    // Cada academia se muestra apenas llega (no se espera a la más lenta).
+    const hay = d => !!(d && ((d.anual && d.anual.alumnos && d.anual.alumnos.length) || (d.verano && d.verano.hijos && d.verano.hijos.length) || d.adultos));
+    const actual = viejo ? Object.assign({}, viejo) : {anual:{alumnos:[]}, verano:null, adultos:null};
+    const llego = {};
+    const pintar = () => {
+      if(!hay(actual)) return;
+      if(D && JSON.stringify(D) === JSON.stringify(actual)) return;
+      const a = document.activeElement; if(D && a && app.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value) return;
+      D = JSON.parse(JSON.stringify(actual)); elegirVista(); mostrar();
+    };
     try{
-      const ver = API_VERANO ? post(Object.assign({accion:'mi-verano'}, auth), API_VERANO).catch(() => null) : Promise.resolve(null);
-      const anu = call({accion:'mis-clases'}).catch(x => { if(/sesión|expir/i.test(x.message)) throw x; return null; });
-      const adu = call({accion:'adultos-mi'}).catch(() => null);
+      const ver = (API_VERANO ? post(Object.assign({accion:'mi-verano'}, auth), API_VERANO).catch(() => null) : Promise.resolve(null))
+        .then(v => { llego.v = 1; if(v) actual.verano = v; pintar(); return v; });
+      const anu = call({accion:'mis-clases'}).catch(x => { if(/sesión|expir/i.test(x.message)) throw x; return null; })
+        .then(a => { llego.a = 1; if(a) actual.anual = a; pintar(); return a; });
+      const adu = call({accion:'adultos-mi'}).catch(() => null)
+        .then(ad => { llego.ad = 1; if(ad) actual.adultos = ad.alumno ? ad : null; pintar(); return ad; });
       const [a, v, ad] = await Promise.all([anu, ver, adu]);
       if(!a && !(v && v.hijos && v.hijos.length) && !(ad && ad.alumno)){ if(viejo) return; throw new Error('No pudimos cargar tus clases. Intenta de nuevo en un rato.'); }
       uso('entro');
       const nuevo = {anual: a || {alumnos:[]}, verano: v, adultos: ad && ad.alumno ? ad : null};
       guardarDatos(nuevo);
-      if(viejo && JSON.stringify(viejo) === JSON.stringify(nuevo)) return;
-      D = nuevo;
-      elegirVista();
-      mostrar();
+      Object.assign(actual, nuevo); pintar();
     }
     catch(x){
       if(/sesión|expir/i.test(x.message)){ borrar(); const e = auth.email; auth = null; return login(e, 'Por seguridad, vuelve a entrar.'); }
-      if(viejo) return;
+      if(viejo || hay(D)) return;
       app.innerHTML = msg + `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`;
     }
   }
+  // Al volver a la app (por ejemplo tocando una notificación) se traen los datos nuevos.
+  let ultimaCarga = 0;
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && auth && Date.now() - ultimaCarga > 15000) load(); });
   Promise.resolve(revisar).then(load);
 })();
 // Versión nueva: si subimos cambios, la app se recarga sola al volver a abrirla (sin perder lo que se está escribiendo).
