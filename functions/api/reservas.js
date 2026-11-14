@@ -943,6 +943,10 @@ async function tuuTablas(db) {
   ]);
 }
 const tuuCatItem = n => /\b(renta|rentas|arriendo|arriendos|arrienda|alquiler)\b/i.test(n) ? 'renta' : /\b(clase|clases|grupal|curso|lecci[oó]n)\b/i.test(n) ? 'clase' : 'producto';
+// Venta por monto libre: Tuu manda un producto genérico "Nombre ítem 1" (con un carácter invisible). Se trata como sin nombre.
+const tuuNombre = n => { const t = String(n || '').replace(/[\u0000-\u001f\u007f]/g, '').trim(); return /^(nombre\s+)?[ií]tem\s*\d*$/i.test(t) ? '' : t; };
+// Id de la venta: algunas llegan con saleId "N/A"; ahí se arma uno con la máquina, la hora y el monto.
+const tuuId = v => { const ok = x => x != null && String(x).trim() && !/^n\/?a$/i.test(String(x).trim()); return ok(v.saleId) ? String(v.saleId) : ok(v.sequenceNumber) ? 'seq-' + v.sequenceNumber : 'x-' + (v.posSerialNumber || '') + '-' + (v.paymentDataTime || '') + '-' + (v.amount || 0); };
 const tuuEfectivo = t => /cash|efectivo/i.test(String(t || ''));
 async function tuuPedir(env, desde, hasta) {
   const out = [];
@@ -976,12 +980,12 @@ async function tuuSincronizar(env, mes, forzar) {
     if (hasta >= mes + '-16') tramos.push([mes + '-16', hasta]);
     const ventas = [];
     for (const [a, b] of tramos) ventas.push(...await tuuPedir(env, a, b));
-    const st = ventas.filter(v => v && v.saleId != null).map(v => {
+    const st = ventas.filter(v => v && v.paymentDataTime).map(v => {
       const t = String(v.paymentDataTime || ''), x = v.extraData || {};
-      const items = (Array.isArray(x.items) ? x.items : []).map(i => ({ nombre: String(i.name || '').trim(), cantidad: Number(i.quantity) || 1, precio: Math.round(Number(i.price) || 0) }));
+      const items = (Array.isArray(x.items) ? x.items : []).map(i => ({ nombre: tuuNombre(i.name), cantidad: Number(i.quantity) || 1, precio: Math.round(Number(i.price) || 0) }));
       const com = tuuEfectivo(v.typeTransaction) ? 0 : Math.round(Number(x.amountCommission) || 0);
       return db.prepare('INSERT INTO tuu_ventas (id, fecha, hora, monto, comision, tipo, items, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET fecha = excluded.fecha, hora = excluded.hora, monto = excluded.monto, comision = excluded.comision, tipo = excluded.tipo, items = excluded.items, estado = excluded.estado')
-        .bind(String(v.saleId), t.slice(0, 10), t.slice(11, 16), Math.round(Number(v.amount) || 0), com, String(v.typeTransaction || ''), JSON.stringify(items), String(v.status || ''));
+        .bind(tuuId(v), t.slice(0, 10), t.slice(11, 16), Math.round(Number(v.amount) || 0), com, String(v.typeTransaction || ''), JSON.stringify(items), String(v.status || ''));
     });
     for (let i = 0; i < st.length; i += 50) await db.batch(st.slice(i, i + 50));
     await db.prepare("INSERT OR REPLACE INTO tuu_sync (mes, ms, error) VALUES (?, ?, '')").bind(mes, Date.now()).run();
