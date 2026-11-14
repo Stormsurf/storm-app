@@ -149,6 +149,7 @@ main .pn{max-width:1440px}
 .sp-mas-pc{display:none}
 .sp-seg{display:flex;gap:4px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:999px;margin:0 0 14px;overflow-x:auto;scrollbar-width:none}
 .sp-seg[hidden]{display:none}
+@media (min-width:1000px){.sp-seg[data-g=academias]{display:none}} /* en PC el menú de la izquierda ya muestra Anual, Verano y Adultos */
 .sp-seg button{flex:1 0 auto;border:0;background:none;border-radius:999px;padding:10px 14px;font:inherit;font-size:1.4rem;font-weight:600;color:var(--ink);cursor:pointer}
 .sp-seg button.on{background:#0f6e74;color:#fff}
 .sp-pe{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:8px;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
@@ -372,7 +373,7 @@ main .pn{max-width:1440px}
     root.querySelector('.sp-top h1').textContent = TIT[a];
     root.querySelector('.sp-top p').textContent = a === 'hoy' ? hoyLargo() : '';
     const seg = root.querySelector('.sp-seg');
-    seg.hidden = !g;
+    seg.hidden = !g; seg.dataset.g = g || '';
     if(g){
       seg.innerHTML = SEG[g].map(([k, t]) => `<button class='${k === a ? 'on' : ''}' data-seg='${k}'>${t}</button>`).join('');
       seg.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { const [x, sub] = b.dataset.seg.split(':'); ir(x); if(sub) StormEscuela.ir(sub); });
