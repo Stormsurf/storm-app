@@ -492,6 +492,21 @@
       ${d.arriendos ? `<p class='pn-vh'>Arriendos</p><div class='pn-gmov'>${fila('Arriendos de equipo', d.arriendos, '+')}</div>` : ''}
       <p class='pn-vh'>Gastos anotados</p><div class='pn-gmov'>${(d.gastos || []).length ? d.gastos.map(g => `<div><span>${esc(g.detalle || 'Gasto')}${g.fecha ? `<small>${esc(fechaCorta(g.fecha))}</small>` : ''}</span><b>−${clp(g.monto)}</b></div>`).join('') : `<p class='pn-empty'>Sin gastos anotados.</p>`}</div>
       ${v.sueldos ? `<p class='pn-vh'>Sueldos de ustedes</p><div class='pn-gmov'>${fila('Sueldos', v.sueldos, '−')}</div>` : ''}</div>`; };
+  // Página aparte con el detalle del Verano (crecerá: sueldos, comida, etc.)
+  let VERANO_FIN = null;
+  function abrirVeranoDetalle(){
+    const v = VERANO_FIN; if(!v) return;
+    const pg = document.createElement('div'); pg.className = 'pn-pg';
+    pg.innerHTML = `<div class='pn-pgh'><button class='pn-pgb' aria-label='Volver'>‹ Finanzas</button></div><div class='pn-pgc'><h2>Academia de Verano ${esc(String(v.anio || ''))}</h2>
+      <div class='pn-vtot${v.deja<0?' neg':''}'><small>Deja el Verano</small><b>${v.deja<0?'−':''}${clp(Math.abs(v.deja))}</b></div>
+      ${v.meses.map(veranoDetalle).join('')}</div>`;
+    const cerrar = () => { pg.remove(); document.documentElement.style.overflow = ''; if(history.state && history.state.pnVer) history.back(); };
+    pg.querySelector('.pn-pgb').onclick = cerrar;
+    window.addEventListener('popstate', function f(){ window.removeEventListener('popstate', f); pg.remove(); document.documentElement.style.overflow = ''; });
+    try{ history.pushState({pnVer:1}, ''); }catch(_){}
+    document.documentElement.style.overflow = 'hidden'; document.body.appendChild(pg); pg.scrollTop = 0;
+  }
+  document.addEventListener('click', e => { if(e.target.closest('[data-verdet]')) abrirVeranoDetalle(); });
   const AREA_TXT = {Verano:'Academia de Verano', Anual:'Academia Anual', Adultos:'Academia Adultos', Surfshop:'Surf Shop', Casa:'Casa Storm'};
   const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
   let fCorr = 'enero';
@@ -540,11 +555,10 @@
       <div class='pn-stat'><small>Gastos ${esc(mesCorto(f.mes))}</small><b>${clp(f.gastos)}</b></div>
       <div class='pn-stat pn-stat--main${f.balance<0?' pn-fneg':''}'><small>Balance del mes</small><b>${f.balance<0?'−':''}${clp(Math.abs(f.balance))}</b><em>ingresos − gastos</em></div>
     </div>
-    ${f.verano && (f.verano.meses[0].ingresos || f.verano.meses[1].ingresos || f.verano.meses[0].gastosAnotados || f.verano.meses[1].gastosAnotados) ? `<details class='pn-card pn-vdet'><summary><h3>Academia de Verano ${f.verano.anio}<span class='pn-count'>deja ${f.verano.deja<0?'−':''}${clp(Math.abs(f.verano.deja))}</span></h3>
+    ${f.verano && (f.verano.meses[0].ingresos || f.verano.meses[1].ingresos || f.verano.meses[0].gastosAnotados || f.verano.meses[1].gastosAnotados) ? `<div class='pn-card pn-vdet' role='button' tabindex='0' data-verdet>${(VERANO_FIN = f.verano, '')}<h3>Academia de Verano ${f.verano.anio}<span class='pn-count'>deja ${f.verano.deja<0?'−':''}${clp(Math.abs(f.verano.deja))}</span></h3>
       ${f.verano.meses.map(v => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(v.mes))}</b><span class='${v.deja<0?'neg':''}'>${v.deja<0?'−':''}${clp(Math.abs(v.deja))}</span></div>
         <small>${v.ninos} niños · inscripciones ${clp(v.ingresos)} · gastos anotados ${clp(v.gastosAnotados)} · comisión ${clp(v.comision)} · sueldos ustedes ${clp(v.sueldos)}${v.ninos?' · deja '+clp(v.porNino)+' por niño':''}</small></div>`).join('')}
-      <p class='pn-sub' style='margin-top:8px'>Cuenta todos los gastos del Verano, aunque los pagues antes (ej. la sala de yoga en diciembre).</p><span class='pn-vver'>Ver detalle</span></summary>
-      ${f.verano.meses.map(veranoDetalle).join('')}</details>` : ''}
+      <p class='pn-sub' style='margin-top:8px'>Cuenta todos los gastos del Verano, aunque los pagues antes (ej. la sala de yoga en diciembre).</p><span class='pn-vver'>Ver detalle</span></div>` : ''}
     <div class='pn-card'><h3>Por área</h3>
       ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(AREA_TXT[a.area]||a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
         <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>
