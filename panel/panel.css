@@ -203,3 +203,12 @@
 .pn-fij em{font-style:normal;font-weight:600;font-size:1.4rem}
 .pn-fij.on b,.pn-fij.on em{opacity:.55}
 .pn-vfin{display:block;width:100%;margin-top:12px;border:1.5px dashed #c9a93a;background:#FFF9E0;color:#3B2610;border-radius:14px;padding:12px;font:inherit;font-weight:600;font-size:1.4rem;cursor:pointer}
+
+/* Lista: alumnos extra */
+.pn-extra{font-style:normal;display:inline-block;font-size:1.05rem;font-weight:600;padding:2px 8px;border-radius:999px;background:#FBF3DC;color:#7a5a05;vertical-align:2px;margin-left:4px}
+.pn-addx__open{display:block;width:100%;margin-top:12px;padding:12px;border:1.5px dashed rgba(44,44,43,.25);border-radius:12px;background:transparent;font:inherit;font-size:1.4rem;cursor:pointer;color:var(--ink)}
+.pn-addx{margin-top:12px;padding:12px;border-radius:12px;background:#f4f1ec}
+.pn-addx label{display:block;font-weight:600;font-size:1.35rem;margin-bottom:6px}
+.pn-addx input{width:100%;box-sizing:border-box;padding:12px;border:1px solid rgba(44,44,43,.2);border-radius:10px;font:inherit;font-size:1.6rem;background:#fff}
+.pn-addx__b{display:flex;gap:12px;align-items:center;margin-top:10px}
+.pn-addx__b .pn-go{margin:0}

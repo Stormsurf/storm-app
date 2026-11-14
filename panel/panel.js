@@ -106,7 +106,7 @@
   const grpHead = (g, n, cargo, mios) => `<small>${esc(g)} · ${n}${mio(g, mios) ? `<span class='pn-tu'>Tu grupo</span>` : ''}</small>${cargo && cargo[g] ? `<span class='pn-cargo'>A cargo: ${esc(cargo[g])}</span>` : ''}`;
 
   // ---------- Lista: asistencia ----------
-  let LISTA = [], diaSel = 0, marcas = {};
+  let LISTA = [], LISTA_TODOS = [], EXTRAS_PEND = [], diaSel = 0, marcas = {}, agregando = false;
   function listaPane(){
     if(!LISTA.length) return `<div class='pn-card'><p class='pn-empty'>No hay clases de los últimos días para pasar lista.</p></div>`;
     if(diaSel >= LISTA.length) diaSel = 0;
@@ -119,12 +119,29 @@
         <h3>${esc(c.texto)}<span class='pn-count'>${van} de ${c.alumnos.length}</span></h3>
         <p class='pn-sub'>${esc(c.clase)} · ${esc(c.horario)} · Toca a los que vinieron.</p>
         ${c.alumnos.length ? c.alumnos.map((a,i) => `<div class='pn-kid'>
-          <button class='pn-tick ${m[a.nombre]===true?'si':m[a.nombre]===false?'no':''}' data-kid='${i}'><span>${m[a.nombre]===true?'✓':m[a.nombre]===false?'–':''}</span><div><b>${esc(a.nombre)}</b><small>${esc(a.grupo||'Sin grupo')}</small></div></button></div>`).join('')
+          <button class='pn-tick ${m[a.nombre]===true?'si':m[a.nombre]===false?'no':''}' data-kid='${i}'><span>${m[a.nombre]===true?'✓':m[a.nombre]===false?'–':''}</span><div><b>${esc(a.nombre)}${a.extra?` <em class='pn-extra'>Extra</em>`:''}</b><small>${esc(a.grupo||'Sin grupo')}${a.extra ? (a.cobrado ? ' · ya cobrada' : ' · se suma a su próximo pago') : ''}</small></div></button></div>`).join('')
           : `<p class='pn-empty'>No había alumnos en esta clase.</p>`}
+        ${agregando ? `<div class='pn-addx'><label for='pn-x-in'>¿Quién vino de extra?</label><input id='pn-x-in' list='pn-x-dl' placeholder='Nombre del alumno' autocomplete='off'><datalist id='pn-x-dl'>${LISTA_TODOS.filter(t => !c.alumnos.some(a => a.nombre === t.nombre)).map(t => `<option value='${esc(t.nombre)}'>${esc(t.grupo)}</option>`).join('')}</datalist>
+          <div class='pn-addx__b'><button class='pn-go' id='pn-x-ok'>Agregar</button><button class='pn-link' id='pn-x-no'>Cancelar</button></div></div>`
+          : `<button class='pn-addx__open' id='pn-x-open'>+ Agregar alumno que vino otro día</button>`}
         ${c.alumnos.length ? `<button class='pn-go pn-save' id='pn-save'>${c.tomada ? 'Actualizar asistencia' : 'Guardar asistencia'}</button>` : ''}
         <div id='pn-lista-msg'></div>
       </div>
-      <p class='pn-note'>Las familias ven la asistencia en Mi clase.</p>`;
+      <p class='pn-note'>Las familias ven la asistencia en Mi clase. Si un alumno viene un día que no es el suyo, agrégalo como extra: esa clase se suma sola a su próximo pago.</p>`;
+  }
+  function extrasCard(){
+    return `<h3>Clases extra por cobrar${EXTRAS_PEND.length ? `<span class='pn-count'>${EXTRAS_PEND.length}</span>` : ''}</h3>
+      ${EXTRAS_PEND.length ? EXTRAS_PEND.map((e,i) => `<div class='pn-row pn-row--wrap'><div><b>${esc(e.alumno)}</b><small>${esc(e.clase)} · ${esc(e.texto)} · ${clp(e.monto)}</small></div><div class='pn-acts'><button class='pn-paid' data-xc='${i}'>Ya lo cobré</button></div></div>`).join('')
+        + `<p class='pn-sub' style='margin-top:10px'>Se suman solas al próximo pago con Mercado Pago. Si la familia paga por transferencia, cóbralas junto con la mensualidad y aprieta "Ya lo cobré".</p>`
+        : `<p class='pn-empty'>No hay clases extra pendientes. Se anotan al pasar lista.</p>`}`;
+  }
+  function bindExtras(){
+    const box = document.getElementById('pn-xp'); if(!box) return;
+    box.querySelectorAll('[data-xc]').forEach(b => b.onclick = async () => {
+      const e = EXTRAS_PEND[+b.dataset.xc]; b.disabled = true; b.textContent = 'Un momento…';
+      try{ const d = await post(Object.assign({}, auth, {accion:'extra-cobrado', fecha:e.fecha, alumno:e.alumno})); EXTRAS_PEND = d.extrasPend || []; box.innerHTML = extrasCard(); bindExtras(); }
+      catch(x){ b.disabled = false; b.textContent = 'No se pudo, reintenta'; }
+    });
   }
   function bindLista(){
     const pane = app.querySelector('[data-pane=lista]'); if(!pane) return;
@@ -133,12 +150,21 @@
     const c = LISTA[diaSel]; if(!c) return;
     const m = marcas[c.fecha];
     pane.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => { const n = c.alumnos[+b.dataset.kid].nombre; m[n] = m[n] === true ? false : true; redo(); });
+    const xo = document.getElementById('pn-x-open'); if(xo) xo.onclick = () => { agregando = true; redo(); const i = document.getElementById('pn-x-in'); if(i) i.focus(); };
+    const xn = document.getElementById('pn-x-no'); if(xn) xn.onclick = () => { agregando = false; redo(); };
+    const xk = document.getElementById('pn-x-ok'); if(xk) xk.onclick = () => {
+      const v = document.getElementById('pn-x-in').value.trim().replace(/\s+/g, ' '); if(!v) return;
+      const t = LISTA_TODOS.find(x => x.nombre.toLowerCase() === v.toLowerCase());
+      const nombre = t ? t.nombre : v.replace(/(^|\s)\S/g, x => x.toUpperCase());
+      if(!c.alumnos.some(a => a.nombre.toLowerCase() === nombre.toLowerCase())) c.alumnos.push({nombre, grupo: t ? t.grupo : '', vino: true, extra: true});
+      m[nombre] = true; agregando = false; redo();
+    };
     const sv = document.getElementById('pn-save');
     if(sv) sv.onclick = async () => {
       sv.disabled = true; sv.textContent = 'Guardando…';
       try{
-        const d = await post(Object.assign({}, auth, {accion:'asistencia', fecha:c.fecha, lista:c.alumnos.map(a=>a.nombre), presentes:c.alumnos.filter(a=>m[a.nombre]).map(a=>a.nombre)}));
-        LISTA = d.lista; delete marcas[c.fecha]; redo();
+        const d = await post(Object.assign({}, auth, {accion:'asistencia', fecha:c.fecha, lista:c.alumnos.map(a=>a.nombre), presentes:c.alumnos.filter(a=>m[a.nombre]).map(a=>a.nombre), extras:c.alumnos.filter(a=>a.extra).map(a=>a.nombre)}));
+        LISTA = d.lista; if(d.extrasPend){ EXTRAS_PEND = d.extrasPend; const xp = document.getElementById('pn-xp'); if(xp){ xp.innerHTML = extrasCard(); bindExtras(); } } delete marcas[c.fecha]; redo();
         document.getElementById('pn-lista-msg').innerHTML = `<div class='pn-ok'>Asistencia guardada ✓</div>`;
       }catch(x){ sv.disabled = false; sv.textContent = 'No se pudo, reintenta'; }
     };
@@ -195,8 +221,8 @@
     CL = []; ES_ADMIN = d.rol !== 'instructor';
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
-    LISTA = d.lista || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
+    LISTA = d.lista || []; LISTA_TODOS = d.listaTodos || []; EXTRAS_PEND = d.extrasPend || [];
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='lista'>Lista</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
@@ -207,7 +233,7 @@
       app.querySelectorAll('.pn-uso-link').forEach(b => b.onclick = () => { show('avisos'); const c = document.getElementById('pn-uso'); if(c) c.scrollIntoView({behavior:'smooth', block:'start'}); });
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
-      bindLista(); copiar(); bindMensajes(d);
+      bindLista(); bindExtras(); copiar(); bindMensajes(d);
     };
     if(d.rol === 'instructor'){
       app.innerHTML = `<div class='pn-head'><div><h1>Clases Storm</h1><p>${esc(d.hoy)}</p></div><button class='pn-link' id='pn-out'>Salir</button></div>` + tabs(d) +
@@ -231,6 +257,7 @@
 
     h += `<div class='pn-pane' data-pane='lista'>${listaPane()}</div><div class='pn-pane' data-pane='alumnos'><div class='pn-skel'></div></div><div class='pn-pane' data-pane='mensajes'>${mensajesPane(d)}</div><div class='pn-verano' hidden><div class='pn-skel'></div></div>`;
     h += `<div class='pn-pane' data-pane='pagos'>
+      <div class='pn-card' id='pn-xp'>${extrasCard()}</div>
       <div class='pn-card'><h3>Faltan por pagar ${esc(M)}</h3>
         ${A.faltan.length ? A.faltan.map((f,fi) => `<div class='pn-row pn-row--wrap'><div><b>${f.alumnos.map(esc).join(', ')}</b><small>${esc(f.apoderado||'')}${f.monto?' · '+clp(f.monto):''}${f.recordado?"<span class='pn-tag'>recordatorio enviado</span>":''}</small></div>
           <div class='pn-acts'>${wa(f.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(f.telefono)}?text=${encodeURIComponent('Hola '+String(f.apoderado||'').split(' ')[0]+'! Te escribimos de Storm por la mensualidad de '+M+' de '+f.alumnos.join(' y ')+'.')}'>WhatsApp</a>` : (f.correo ? `<a class='pn-link' href='mailto:${esc(f.correo)}'>Correo</a>` : '')}

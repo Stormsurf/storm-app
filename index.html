@@ -458,7 +458,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const nMes = t => { const [m,y] = String(t).toLowerCase().split(' '); const i = MESES.indexOf(m); return i < 0 ? -1 : (+y)*12 + i; };
   const PLANES_OK = ['Básico','Medio','Plus','Full','Skate'];
   const sinTilde = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-  function renovacion(lista){
+  function renovacion(lista, pend){
     const conMes = lista.filter(a => nMes(a.mes) >= 0);
     if(!conMes.length) return null;
     const ultimo = Math.max(...conMes.map(a => nMes(a.mes)));
@@ -475,6 +475,8 @@ body:has(.mc-hero--login) .ap-top{display:none}
       const dia = (plan === 'Básico' || plan === 'Medio') ? (dl.includes('domingo') ? 'Domingo' : dl.includes('jueves') ? 'Jueves' : '') : '';
       const al = {nombre: a.alumno, plan, dia, yoga: partes.some(x => sinTilde(x) === 'yoga')};
       if(a.beca && a.beca.plan === plan) al.beca = a.beca.valor;
+      const ex = (pend || []).filter(e => e.alumno.toLowerCase() === String(a.alumno).toLowerCase());
+      if(ex.length) al.extras = ex.map(e => ({fecha: e.fecha, clase: e.clase, monto: e.monto}));
       alumnos.push(al);
     });
     return alumnos.length ? {mes: MESES[sig % 12] + ' ' + Math.floor(sig/12), correo: auth.email, alumnos} : null;
@@ -844,11 +846,11 @@ body:has(.mc-hero--login) .ap-top{display:none}
     if(activos.length){
       h += `<h2 class='mc-h2'>Tus surfistas</h2>` + activos.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('');
     }
-    const ren = renovacion(d.alumnos);
+    const ren = renovacion(d.alumnos, d.extrasPend);
     h += `<div id='mc-s-pago'></div>`;
     if(ren){
       h += `<div class='mc-card mc-cta mc-ren'><p><b>Renovar ${esc(cap(ren.mes.split(' ')[0]))}</b>Mismo plan y días, con todas las clases del mes.</p>
-        <ul>${ren.alumnos.map(a=>`<li><b>${esc(a.nombre)}</b> · Plan ${esc(a.plan)}${a.dia?' · '+esc(a.dia):''}${a.yoga?' + Yoga':''}${a.beca?' · $'+Number(a.beca).toLocaleString('es-CL'):''}</li>`).join('')}</ul>
+        <ul>${ren.alumnos.map(a=>`<li><b>${esc(a.nombre)}</b> · Plan ${esc(a.plan)}${a.dia?' · '+esc(a.dia):''}${a.yoga?' + Yoga':''}${a.beca?' · $'+Number(a.beca).toLocaleString('es-CL'):''}${(a.extras||[]).length?`<br><small>+ ${a.extras.length === 1 ? 'clase extra del' : a.extras.length + ' clases extra:'} ${a.extras.map(e => e.fecha.slice(8).replace(/^0/,'') + '/' + e.fecha.slice(5,7).replace(/^0/,'')).join(', ')} · $${a.extras.reduce((t,e)=>t+e.monto,0).toLocaleString('es-CL')}</small>`:''}</li>`).join('')}</ul>
         <a class='mc-go mc-go--sm' href='${esc(PAY + (PAY.indexOf('?')<0?'?':'&') + 'renovar=' + encodeURIComponent(JSON.stringify(ren)))}'>Pagar en un toque</a>
         <a class='mc-link mc-ren__otro' href='${esc(PAY)}'>Elegir otro plan</a></div>`;
     } else if(d.alumnos.length && d.alumnos.every(a => a.beca && a.beca.valor === 0)){
