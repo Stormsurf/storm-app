@@ -483,6 +483,15 @@
 
   // ---------- Finanzas Storm (solo administradores) ----------
   const AREAS = ['Verano','Anual','Adultos','Escuela','Rentas','Surfshop','Casa'];
+  // Detalle de un mes del Verano (al tocar la tarjeta en Finanzas)
+  const veranoDetalle = v => { const d = v.detalle || {}, fila = (t, m, signo) => `<div><span>${t}</span><b${signo === '+' ? " class='pn-fin'" : ''}>${signo || ''}${clp(m)}</b></div>`;
+    const medios = (d.porMedio || []).filter(x => x.monto);
+    return `<div class='pn-vmes'><h4>${esc(cap(v.mes))}</h4>
+      <p class='pn-vh'>Cómo pagaron</p><div class='pn-gmov'>${medios.length ? medios.map(x => `<div><span>${esc(x.medio)}${x.comision ? `<small>comisión ${clp(x.comision)}</small>` : ''}</span><b class='pn-fin'>+${clp(x.monto)}</b></div>`).join('') : `<p class='pn-empty'>Todavía no hay pagos.</p>`}</div>
+      ${d.comisionMP || d.comisionShopify ? `<p class='pn-vh'>Comisión</p><div class='pn-gmov'>${d.comisionMP ? fila('Mercado Pago (2,29% + IVA)', d.comisionMP, '−') : ''}${d.comisionShopify ? fila('Shopify (2%)', d.comisionShopify, '−') : ''}</div>` : ''}
+      ${d.arriendos ? `<p class='pn-vh'>Arriendos</p><div class='pn-gmov'>${fila('Arriendos de equipo', d.arriendos, '+')}</div>` : ''}
+      <p class='pn-vh'>Gastos anotados</p><div class='pn-gmov'>${(d.gastos || []).length ? d.gastos.map(g => `<div><span>${esc(g.detalle || 'Gasto')}${g.fecha ? `<small>${esc(fechaCorta(g.fecha))}</small>` : ''}</span><b>−${clp(g.monto)}</b></div>`).join('') : `<p class='pn-empty'>Sin gastos anotados.</p>`}</div>
+      ${v.sueldos ? `<p class='pn-vh'>Sueldos de ustedes</p><div class='pn-gmov'>${fila('Sueldos', v.sueldos, '−')}</div>` : ''}</div>`; };
   const AREA_TXT = {Verano:'Academia de Verano', Anual:'Academia Anual', Adultos:'Academia Adultos', Surfshop:'Surf Shop', Casa:'Casa Storm'};
   const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
   let fCorr = 'enero';
@@ -531,10 +540,11 @@
       <div class='pn-stat'><small>Gastos ${esc(mesCorto(f.mes))}</small><b>${clp(f.gastos)}</b></div>
       <div class='pn-stat pn-stat--main${f.balance<0?' pn-fneg':''}'><small>Balance del mes</small><b>${f.balance<0?'−':''}${clp(Math.abs(f.balance))}</b><em>ingresos − gastos</em></div>
     </div>
-    ${f.verano && (f.verano.meses[0].ingresos || f.verano.meses[1].ingresos || f.verano.meses[0].gastosAnotados || f.verano.meses[1].gastosAnotados) ? `<div class='pn-card'><h3>Academia de Verano ${f.verano.anio}<span class='pn-count'>deja ${f.verano.deja<0?'−':''}${clp(Math.abs(f.verano.deja))}</span></h3>
+    ${f.verano && (f.verano.meses[0].ingresos || f.verano.meses[1].ingresos || f.verano.meses[0].gastosAnotados || f.verano.meses[1].gastosAnotados) ? `<details class='pn-card pn-vdet'><summary><h3>Academia de Verano ${f.verano.anio}<span class='pn-count'>deja ${f.verano.deja<0?'−':''}${clp(Math.abs(f.verano.deja))}</span></h3>
       ${f.verano.meses.map(v => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(v.mes))}</b><span class='${v.deja<0?'neg':''}'>${v.deja<0?'−':''}${clp(Math.abs(v.deja))}</span></div>
         <small>${v.ninos} niños · inscripciones ${clp(v.ingresos)} · gastos anotados ${clp(v.gastosAnotados)} · comisión ${clp(v.comision)} · sueldos ustedes ${clp(v.sueldos)}${v.ninos?' · deja '+clp(v.porNino)+' por niño':''}</small></div>`).join('')}
-      <p class='pn-sub' style='margin-top:8px'>Cuenta todos los gastos del Verano, aunque los pagues antes (ej. la sala de yoga en diciembre).</p></div>` : ''}
+      <p class='pn-sub' style='margin-top:8px'>Cuenta todos los gastos del Verano, aunque los pagues antes (ej. la sala de yoga en diciembre).</p><span class='pn-vver'>Ver detalle</span></summary>
+      ${f.verano.meses.map(veranoDetalle).join('')}</details>` : ''}
     <div class='pn-card'><h3>Por área</h3>
       ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(AREA_TXT[a.area]||a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
         <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>

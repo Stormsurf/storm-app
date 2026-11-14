@@ -235,3 +235,10 @@
 .pn-in-anim{animation:pn-fade .22s ease-out}
 @keyframes pn-fade{from{opacity:0;transform:translateY(6px)}}
 @media (prefers-reduced-motion:reduce){.pn-in-anim,.pn-toast,.pn-pill{animation:none;transition:none}}
+
+.pn-vdet>summary{list-style:none;cursor:pointer}.pn-vdet>summary::-webkit-details-marker{display:none}
+.pn-vver{display:inline-block;margin-top:6px;font-size:1.3rem;font-weight:600;color:var(--ink)}.pn-vver::after{content:' ›'}
+.pn-vdet[open] .pn-vver{display:none}
+.pn-vmes{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.pn-vmes h4{margin:0 0 4px;font-size:1.6rem;font-weight:600}
+.pn-vh{margin:12px 0 4px;font-size:1.2rem;font-weight:600;opacity:.65;text-transform:uppercase;letter-spacing:.04em}
+.pn-vmes .pn-gmov span small{display:block;font-size:1.15rem;opacity:.6}
