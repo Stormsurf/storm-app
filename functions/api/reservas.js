@@ -354,7 +354,7 @@ async function crearOrden(env, r) {
     type: 'online', processing_mode: 'manual', total_amount: String(r.total), external_reference: r.ref,
     description: 'Clase de surf Storm', ...(r.correo ? { payer: { email: r.correo } } : {}),
     items: [{ title: 'Clase de surf Storm · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(r.fecha) + ' ' + r.hora, quantity: 1, unit_price: String(r.total) }],
-    config: { online: { success_url: vuelta + 'ok', pending_url: vuelta + 'pendiente', failure_url: vuelta + 'error', auto_return: 'approved' } }
+    config: { online: { success_url: vuelta + 'ok', pending_url: vuelta + 'pendiente', failure_url: vuelta + 'error', auto_return: 'approved' } , payment_method: { max_installments: 1 } }
   };
   let res = {}, code = 0;
   try {
