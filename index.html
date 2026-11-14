@@ -313,6 +313,10 @@ body:has(.mc-hero--login) .ap-top{display:none}
 .ad-res a i{font-style:normal;font-size:2.2rem}
 .ad-res a h3{margin:6px 0 2px;font-size:1.5rem;font-weight:600;line-height:1.25}
 .ad-res a p{margin:0;font-size:1.25rem;opacity:.65;line-height:1.35}
+
+.ad-undo{display:block;margin:10px auto 0;font-size:1.3rem}
+.ad-hoy .ad-undo{color:#fff;opacity:.8}
+.ad-row .ad-undo{display:inline;margin:0 0 0 8px;font-size:1.2rem}
 </style>
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap mc'>
@@ -919,14 +923,14 @@ body:has(.mc-hero--login) .ap-top{display:none}
     const hoy = d.hoy;
     if(hoy && hoy.cancelada) h += `<div class='mc-card ad-hoy'><small>Hoy no hay clase</small><h3>${esc(hoy.texto)}</h3><p>${esc(hoy.cambio)}</p></div>`;
     else if(hoy) h += `<div class='mc-card ad-hoy'><small>Hoy hay clase</small><h3>${esc(hoy.texto)}</h3><p>${esc(hoy.horario)}${hoy.cambio ? ' · ' + esc(hoy.cambio) : ''}</p>
-      <button class='ad-big${hoy.fui ? ' done' : ''}' data-adfui='${hoy.fecha}'>${hoy.fui ? '✓ Quedó anotado que viniste' : 'Vine a la clase'}</button>
+      <button class='ad-big${hoy.fui ? ' done' : ''}' data-adfui='${hoy.fecha}'>${hoy.fui ? '✓ Quedó anotado que viniste' : 'Vine a la clase'}</button>${hoy.quitar ? `<button class='mc-link ad-undo' data-adno='${hoy.fecha}'>Me equivoqué, no vine</button>` : ''}
       <span class='ad-wa'>Si la clase cambia por el pronóstico, te avisamos aquí y por WhatsApp.</span></div>`;
     const debe = c.debe > 0;
     const plan = c.plan === '4 clases' ? 'Plan 4 clases' : c.plan === '8 clases' ? 'Plan 8 clases' : c.plan ? 'Clase suelta' : 'Sin plan';
     h += `<h2 class='mc-h2'>Mis clases</h2><div class='mc-card'><div class='ad-plan'><div class='ad-ring${debe ? ' warn' : ''}'><div><b>${debe ? '!' : (c.quedan || 0)}</b><small>${debe ? 'por pagar' : 'te quedan'}</small></div></div>
       <div><h3>${plan}</h3><p>${c.pagadas ? `Fuiste a ${c.fue.length} de ${c.pagadas} ${c.pagadas === 1 ? 'clase pagada' : 'clases pagadas'}.` : `Fuiste a ${(c.fue||[]).length} ${(c.fue||[]).length === 1 ? 'clase' : 'clases'}.`}${c.vence && c.quedan ? ' Úsalas hasta el ' + adFecha(c.vence) + '.' : ''}${debe ? ' Tienes ' + clp(c.debe) + ' por pagar.' : ''}</p></div></div>`;
     const pas = (d.pasadas || []).filter(x => !hoy || x.fecha !== hoy.fecha);
-    if(pas.length) h += `<div style='margin-top:14px;border-top:1px solid var(--line)'>` + pas.map(x => `<div class='ad-row'><div><b>${esc(x.texto)}</b><small>${x.cancelada ? esc(x.cambio) : esc(x.horario) + (x.cambio ? ' · ' + esc(x.cambio) : '')}</small></div>${x.cancelada ? "<span class='ad-tag t-chg'>Cancelada</span>" : x.fui ? "<span class='ad-tag t-ok'>Fuiste</span>" : x.puede ? `<button class='ad-mini' data-adfui='${x.fecha}'>Sí fui</button>` : "<span class='ad-tag t-no'>No fuiste</span>"}</div>`).join('') + `</div><p class='mc-note' style='margin-top:8px'>¿Fuiste y no lo marcaste? Toca "Sí fui".</p>`;
+    if(pas.length) h += `<div style='margin-top:14px;border-top:1px solid var(--line)'>` + pas.map(x => `<div class='ad-row'><div><b>${esc(x.texto)}</b><small>${x.cancelada ? esc(x.cambio) : esc(x.horario) + (x.cambio ? ' · ' + esc(x.cambio) : '')}</small></div>${x.cancelada ? "<span class='ad-tag t-chg'>Cancelada</span>" : x.fui ? (x.quitar ? `<span class='ad-tag t-ok'>Fuiste</span><button class='mc-link ad-undo' data-adno='${x.fecha}'>Desmarcar</button>` : "<span class='ad-tag t-ok'>Fuiste</span>") : x.puede ? `<button class='ad-mini' data-adfui='${x.fecha}'>Sí fui</button>` : "<span class='ad-tag t-no'>No fuiste</span>"}</div>`).join('') + `</div><p class='mc-note' style='margin-top:8px'>¿Fuiste y no lo marcaste? Toca "Sí fui".</p>`;
     h += `</div>`;
     if((d.proximas || []).length){
       h += `<h2 class='mc-h2' id='mc-s-cal'>Próximas clases</h2><div class='mc-card' style='padding-top:8px;padding-bottom:8px'>` + d.proximas.map(x => `<div class='ad-row'><div><b>${esc(x.texto)}</b><small>${esc(x.horario)}${x.cambio ? ' · ' + esc(x.cambio) : ''}</small></div><button class='ad-mini${x.voy ? ' on' : ''}' data-advoy='${x.fecha}' data-si='${x.voy ? 0 : 1}'>${x.voy ? '✓ Voy' : 'Voy'}</button></div>`).join('') + `</div><p class='mc-note'>Marca "Voy" para que el instructor sepa cuántos llegan. El día antes en la tarde te llega un recordatorio.</p>`;
@@ -944,11 +948,12 @@ body:has(.mc-hero--login) .ap-top{display:none}
     bindSw();
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null, adultos:null}; vista = ''; hero(); login(); };
     const accion = async (b, body, okTxt) => {
-      app.querySelectorAll('[data-adfui],[data-advoy],[data-adpay]').forEach(x => x.disabled = true); const t0 = b.textContent; b.textContent = okTxt;
+      app.querySelectorAll('[data-adfui],[data-advoy],[data-adpay],[data-adno]').forEach(x => x.disabled = true); const t0 = b.textContent; b.textContent = okTxt;
       try{ const r = await call(body); if(r.url){ location.href = r.url; return; } D.adultos = r; guardarDatos(D); msg = ''; renderAdultos(r); }
       catch(x){ msg = `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`; b.textContent = t0; renderAdultos(D.adultos); }
     };
     app.querySelectorAll('[data-adfui]').forEach(b => b.onclick = () => { if(!b.classList.contains('done')) accion(b, {accion:'adultos-fui', fecha:b.dataset.adfui}, 'Anotando…'); });
+    app.querySelectorAll('[data-adno]').forEach(b => b.onclick = () => { if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Seguro? Toca otra vez'; return; } accion(b, {accion:'adultos-fui', fecha:b.dataset.adno, si:false}, 'Quitando…'); });
     app.querySelectorAll('[data-advoy]').forEach(b => b.onclick = () => accion(b, {accion:'adultos-voy', fecha:b.dataset.advoy, si: b.dataset.si === '1'}, '…'));
     app.querySelectorAll('[data-adpay]').forEach(b => b.onclick = () => accion(b, {accion:'adultos-pagar', plan:b.dataset.adpay}, 'Abriendo Mercado Pago…'));
   }
