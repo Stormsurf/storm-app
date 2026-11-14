@@ -423,8 +423,8 @@
     return h;
   }
 
-  const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Por pagar', 'Aún no paga']];
-  const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m;
+  const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Flow', 'Reserva online · Flow'], ['Por pagar', 'Aún no paga']];
+  const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m === 'Flow' ? 'Reserva online · Flow' : m;
   // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 5
   function cotiza(p, m) {
     const a = E.ajustes || {}, g = [];
@@ -485,7 +485,7 @@
           <p class='es-edp'>Vacío = según la tabla de precios. Si cambias las personas, se recalcula solo.</p></details>
         ${pie('datos', 'Guardar cambios')}</div>`;
     }
-    if (modo === 'cancelar') return `<div class='es-caja es-ed'><p class='es-edp' style='font-size:1.5rem;color:var(--ink)'>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.medio === 'Mercado Pago' ? ' Si hay que devolver el dinero, hazlo desde Mercado Pago.' : ''}</p>${pie('cancelar', 'Sí, cancelar clase', ' rojo')}</div>`;
+    if (modo === 'cancelar') return `<div class='es-caja es-ed'><p class='es-edp' style='font-size:1.5rem;color:var(--ink)'>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.medio === 'Mercado Pago' || r.medio === 'Flow' ? ' Si hay que devolver el dinero, hazlo desde ' + r.medio + '.' : ''}</p>${pie('cancelar', 'Sí, cancelar clase', ' rojo')}</div>`;
     return '';
   }
   const cabeza = t => `<header class='es-pgh'><button class='es-back' data-pgx aria-label='Volver'>${ICO_S.atras}</button><h2>${t}</h2></header>`;

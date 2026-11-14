@@ -83,6 +83,8 @@
 .rs-sum b{font-weight:600}
 .rs-go{display:block;width:100%;margin-top:14px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:inherit;font-size:1.7rem;font-weight:600;padding:16px;cursor:pointer}
 .rs-go:disabled{opacity:.4;cursor:default}
+.rs-flow{background:#fff;color:var(--ink);border:1.5px solid var(--ink);margin-top:10px;padding:12px 16px;font-size:1.5rem}
+.rs-flow small{display:block;font-size:1.15rem;font-weight:500;color:var(--mute);margin-top:2px}
 .rs-err{margin:10px 0 0;color:#a12c1c;font-size:1.4rem}
 .rs-mp{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-size:1.2rem;color:var(--mute)}
 .rs-skel{height:220px;border-radius:16px;background:linear-gradient(90deg,#f3f1ed 25%,#ebe8e3 50%,#f3f1ed 75%);background-size:200% 100%;animation:rs-sk 1.2s infinite}
@@ -205,8 +207,9 @@
         </div>
         ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${inter ? 'Clase intermedia · ' : ''}${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 8' : ''}${S.ninos ? ' · ' + S.ninos + ' de 7 a 11' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
         <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
+        ${D && D.flow ? `<button class='rs-go rs-flow' id='rs-flow'${listo2?'':' disabled'}>Pagar con Flow<small>Webpay · tarjetas extranjeras · transferencia</small></button>` : ''}
         <p class='rs-err' id='rs-err' hidden></p>
-        <p class='rs-mp'>🔒 Pago seguro con Mercado Pago</p>
+        <p class='rs-mp'>🔒 Pago seguro con Mercado Pago${D && D.flow ? ' o Flow' : ''}</p>
       </div>
       <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tengo una pregunta sobre las clases de surf')}'>¿Dudas? Escríbenos por WhatsApp</a>`;
     root.querySelectorAll('.rs-f [name]').forEach(i => { if(i.name in guardado){ if(i.type === 'checkbox') i.checked = guardado[i.name]; else i.value = guardado[i.name]; } });
@@ -219,21 +222,24 @@
     const mv = n => { const [y,m] = S.mes.split('-').map(Number), x = new Date(Date.UTC(y, m-1+n, 1)); S.mes = x.toISOString().slice(0,7); pintar(); };
     const pv = $('#rs-prev'), nx = $('#rs-next'), rt = $('#rs-retry');
     if(pv) pv.onclick = () => mv(-1); if(nx) nx.onclick = () => mv(1); if(rt) rt.onclick = cargar;
-    const go = $('#rs-go');
-    if(go) go.onclick = async () => {
+    const go = $('#rs-go'), gf = $('#rs-flow');
+    const pagar = async (medio) => {
+      const b = medio === 'flow' ? gf : go;
       const f = {}; root.querySelectorAll('.rs-f [name]').forEach(i => f[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
       const e = $('#rs-err'), msg = t => { e.hidden = false; e.textContent = t; };
       if(f.nombre.length < 2) return msg('Escribe tu nombre.');
       if(f.telefono.replace(/\D/g,'').length < 8) return msg('Revisa tu teléfono.');
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.correo)) return msg('Revisa tu correo.');
       if(!f.acepta) return msg('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.');
-      go.disabled = true; go.textContent = 'Conectando con Mercado Pago…'; e.hidden = true;
+      const antes = b.innerHTML; go.disabled = true; if(gf) gf.disabled = true; b.textContent = 'Conectando con ' + (medio === 'flow' ? 'Flow' : 'Mercado Pago') + '…'; e.hidden = true;
       try{
-        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora}, f));
+        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora, medio}, f));
         try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
         location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] : u; })(r.url);
-      }catch(x){ go.disabled = false; go.textContent = 'Pagar ' + clp(totalDe(S.personas, S.menores, S.ninos)); msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
+      }catch(x){ go.disabled = false; if(gf) gf.disabled = false; b.innerHTML = antes; msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
     };
+    if(go) go.onclick = () => pagar('mp');
+    if(gf) gf.onclick = () => pagar('flow');
   }
 
   // Vuelta desde Mercado Pago
@@ -265,7 +271,7 @@
     const pendiente = r && r.estado === 'pendiente' && pago !== 'error';
     root.innerHTML = `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>${pendiente ? '…' : '!'}</div>
       <h2>${pendiente ? 'Tu pago está en revisión' : 'El pago no se completó'}</h2>
-      <p>${pendiente ? 'Apenas Mercado Pago lo confirme te llega el comprobante por correo. Guardamos tu horario por unos minutos.' : 'No se hizo ningún cobro. Puedes intentarlo de nuevo.'}</p>
+      <p>${pendiente ? 'Apenas ' + (q.get('via') === 'flow' ? 'Flow' : 'Mercado Pago') + ' lo confirme te llega el comprobante por correo. Guardamos tu horario por unos minutos.' : 'No se hizo ningún cobro. Puedes intentarlo de nuevo.'}</p>
       <a class='rs-btn2' href='/reservar/'>${pendiente ? 'Volver' : 'Intentar de nuevo'}</a></div>
       <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tuve un problema al pagar mi clase (' + ref + ')')}'>¿Problemas? Escríbenos por WhatsApp</a>`;
   }

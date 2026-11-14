@@ -11,10 +11,14 @@
  *   CLAVE_WEB     La misma clave del Panel (CLAVE_WEB de los programas de las academias)
  *   CLAVE_CORREO  Clave del programa de correos de contacto@stormsurf.cl
  *   TAREA_CLAVE   Clave para la revisión automática
+ *   FLOW_API_KEY  API Key de Flow (flow.cl > Mis datos > Integración): segunda forma de pago (Webpay, tarjetas extranjeras, transferencia)
+ *   FLOW_SECRET   Secret Key de Flow (mismo lugar)
+ *   FLOW_API      Opcional: https://sandbox.flow.cl/api para probar con la cuenta de pruebas de Flow
  */
 
 const TZ = 'America/Santiago';
 const MP_API = 'https://api.mercadopago.com';
+const FLOW_API = 'https://www.flow.cl/api';
 let PAGINA = 'https://app.stormsurf.cl/reservar/';
 let PANEL = 'https://app.stormsurf.cl/agenda/';
 const CORREO_URL = 'https://script.google.com/macros/s/AKfycbzmzD794KtxFxndjERPQ8kneEvRMyBmd7tmcgD7Rvdl6eJv2ZsHDsFBnAvluCQYDOZ7/exec';
@@ -121,7 +125,7 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
-const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago'];
+const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow'];
 function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; }
@@ -236,7 +240,7 @@ function topeVerano(a, ag, fecha, hora, lista) {
   return lista.filter(n => usados.has(n)).concat(lista.filter(n => !usados.has(n)).slice(0, cupo));
 }
 
-async function disponibilidad(db, d) {
+async function disponibilidad(db, d, env) {
   const a = await ajustes(db);
   const hoy = ahoraChile();
   const personas = Math.max(1, Math.min(a.maxWeb, Math.floor(Number(d.personas) || 1)));
@@ -249,7 +253,7 @@ async function disponibilidad(db, d) {
     const horas = horasDia(a, f).filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
     if (horas.length) dias[f] = horas;
   }
-  return { ok: true, precios: a.precios, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
+  return { ok: true, precios: a.precios, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, flow: !!flowListo(env), cotizacion: c, dias, hoy: hoy.fecha, hasta };
 }
 
 // ---------- reservar y pagar ----------
@@ -329,11 +333,12 @@ async function reservar(env, d) {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) throw err('Revisa tu correo.');
   if (!d.acepta) throw err('Para reservar, acepta las condiciones.');
   if (!permitido(a, fecha, hora)) throw err('Ese horario ya no se puede reservar. Elige otro.');
-  if (!env.MP_TOKEN) throw err('Las reservas en línea no están activas en este momento. Escríbenos por WhatsApp.');
+  const conFlow = d.medio === 'flow' && flowListo(env);
+  if (!conFlow && !env.MP_TOKEN) throw err('Las reservas en línea no están activas en este momento. Escríbenos por WhatsApp.');
   await limpiarRetenciones(db);
   const ref = nuevaRef(), t = ahoraChile();
   const base = { ref, creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pendiente', fecha, hora, personas, menores: c.menores, ninos: c.ninos, nombre, telefono, correo, comentario,
-    total: c.precio, pago_instructor: c.pagoInstructor, medio: 'Mercado Pago', nivel: c.nivel };
+    total: c.precio, pago_instructor: c.pagoInstructor, medio: conFlow ? 'Flow' : 'Mercado Pago', nivel: c.nivel };
   // Instructor al azar entre los libres; si dos personas reservan a la vez, el segundo intenta con otro.
   let elegido = null;
   for (let intento = 0; intento < 3 && !elegido; intento++) {
@@ -345,10 +350,11 @@ async function reservar(env, d) {
     catch (x) { if (!/UNIQUE|constraint/i.test(String(x.message))) throw x; }
   }
   if (!elegido) throw err('Ese horario se acaba de ocupar. Elige otro.');
-  const o = await crearOrden(env, elegido);
+  const quien = conFlow ? 'Flow' : 'Mercado Pago';
+  const o = conFlow ? await crearOrdenFlow(env, elegido) : await crearOrden(env, elegido);
   if (!o) {
-    await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = ? WHERE ref = ?").bind('Mercado Pago no respondió', ref)]);
-    throw err('No pudimos conectar con Mercado Pago. Intenta de nuevo en un momento.');
+    await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = ? WHERE ref = ?").bind(quien + ' no respondió', ref)]);
+    throw err('No pudimos conectar con ' + quien + '. Intenta de nuevo en un momento.');
   }
   return { ok: true, url: o.url, ref, total: c.precio };
 }
@@ -375,8 +381,52 @@ async function crearOrden(env, r) {
   return { id: res.id, url: res.checkout_url };
 }
 
-/** Consulta la orden en Mercado Pago y, si está pagada, confirma la reserva. */
+// ---------- Flow (flow.cl): segunda forma de pago ----------
+// El token del cobro se guarda en orden_mp como "flow:<token>". Flow avisa a ?flow=1 (urlConfirmation) y devuelve al cliente por ?flow=vuelta.
+const flowListo = env => env && env.FLOW_API_KEY && env.FLOW_SECRET;
+async function flowFirmar(env, p) {
+  const txt = Object.keys(p).sort().map(k => k + p[k]).join('');
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.FLOW_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(txt)))].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function flowLlamar(env, ruta, p, post) {
+  p = Object.assign({ apiKey: env.FLOW_API_KEY }, p);
+  const s = await flowFirmar(env, p), q = new URLSearchParams(Object.assign({}, p, { s }));
+  const u = (env.FLOW_API || FLOW_API) + ruta;
+  try {
+    const x = post ? await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: q.toString() }) : await fetch(u + '?' + q.toString());
+    const o = await x.json().catch(() => ({}));
+    if (!x.ok) console.error('Flow', ruta, x.status, JSON.stringify(o));
+    return x.ok ? o : null;
+  } catch (e) { console.error(e); return null; }
+}
+async function crearOrdenFlow(env, r) {
+  const api = PAGINA.replace(/\/reservar\/$/, '/api/reservas');
+  const o = await flowLlamar(env, '/payment/create', {
+    commerceOrder: r.ref, subject: ('Clase de surf Storm · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(r.fecha) + ' ' + r.hora).slice(0, 255),
+    currency: 'CLP', amount: r.total, email: r.correo, paymentMethod: 9,
+    urlConfirmation: api + '?flow=1', urlReturn: api + '?flow=vuelta&ref=' + encodeURIComponent(r.ref), timeout: 1800
+  }, true);
+  if (!o || !o.url || !o.token) return null;
+  const url = o.url + '?token=' + o.token;
+  await env.DB.prepare('UPDATE reservas SET orden_mp = ?, link_pago = ? WHERE ref = ?').bind('flow:' + o.token, url, r.ref).run();
+  return { id: o.flowOrder, url };
+}
+/** Estados de Flow: 1 pendiente, 2 pagada, 3 rechazada, 4 anulada. */
+async function revisarFlow(env, r, ctx) {
+  const o = await flowLlamar(env, '/payment/getStatus', { token: r.orden_mp.slice(5) });
+  if (!o) return r.estado;
+  if (Number(o.status) === 2) return confirmar(env, r, Number(o.amount), ctx);
+  if (Number(o.status) === 4 || Number(o.status) === 3 && r.estado === 'pendiente' && Date.now() - r.creada_ms > 3600000) {
+    await env.DB.batch([env.DB.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref), env.DB.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref)]);
+    return 'vencida';
+  }
+  return Number(o.status) === 3 ? 'rechazada' : r.estado;
+}
+
+/** Consulta la orden en Mercado Pago (o Flow) y, si está pagada, confirma la reserva. */
 async function revisarPago(env, r, ctx) {
+  if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && String(r.orden_mp || '').startsWith('flow:')) return flowListo(env) ? revisarFlow(env, r, ctx) : r.estado;
   if (!r || r.estado !== 'pendiente' && r.estado !== 'vencida' || !r.orden_mp || !env.MP_TOKEN) return r && r.estado;
   let o = null;
   try {
@@ -1075,6 +1125,18 @@ export async function onRequest(context) {
       if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, context); }
       return json({ ok: true });
     }
+    // Flow: aviso de pago (POST token) y vuelta del cliente (POST o GET con token) → a la página de reservas
+    const fl = url.searchParams.get('flow');
+    if (fl) {
+      let token = url.searchParams.get('token') || '';
+      if (request.method === 'POST') try { const f = await request.formData(); token = String(f.get('token') || token); } catch (_) {}
+      let r = null;
+      if (token) r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind('flow:' + token).first();
+      if (!r && url.searchParams.get('ref')) r = await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(url.searchParams.get('ref')).first();
+      let est = r ? await revisarPago(env, r, context) : '';
+      if (fl === 'vuelta') return Response.redirect(PAGINA + '?ref=' + encodeURIComponent(r ? r.ref : (url.searchParams.get('ref') || '')) + '&pago=' + (est === 'rechazada' || est === 'vencida' ? 'error' : 'ok') + '&via=flow', 303);
+      return json({ ok: true });
+    }
     if (url.searchParams.get('tarea')) {
       if (!env.TAREA_CLAVE || url.searchParams.get('tarea') !== env.TAREA_CLAVE) return json({ ok: false }, 403);
       return json(await revisionAutomatica(env, context));
@@ -1083,7 +1145,7 @@ export async function onRequest(context) {
     if (request.method !== 'POST') return json({ ok: false, error: 'Método no permitido' }, 405);
     const d = await request.json().catch(() => ({}));
     const acc = d.accion;
-    if (acc === 'disponibilidad') return json(await disponibilidad(env.DB, d));
+    if (acc === 'disponibilidad') return json(await disponibilidad(env.DB, d, env));
     if (acc === 'reservar') return json(await reservar(env, d));
     if (acc === 'estado') return json(await estado(env, d, context));
     if (acc === 'ficha') return json(await fichaVer(env, d));
