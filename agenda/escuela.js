@@ -533,13 +533,13 @@
   function clientesVista() {
     const l = E.clientes || [];
     return `<div class='es-srch'>${ICO_S.buscar}<input data-cq type='search' placeholder='Buscar por nombre, teléfono o correo' autocomplete='off'></div>
-      <div class='es-grp'>${l.map(c => `<button class='es-row' data-cliv='${esc(c.nombre)}' data-q='${esc((c.nombre + ' ' + c.telefono + ' ' + c.correo).toLowerCase())}'>${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b><small>${esc([c.telefono, c.clases + (c.clases === 1 ? ' clase' : ' clases')].filter(Boolean).join(' · '))}</small></span><span class='es-rc'>›</span></button>`).join('') || `<p class='pn-empty' style='padding:16px'>Todavía no hay clientes.</p>`}</div>
+      <div class='es-grp'>${l.map(c => `<button class='es-row' data-cliv='${esc(c.nombre)}' data-q='${esc((c.nombre + ' ' + c.telefono + ' ' + c.correo).toLowerCase())}'>${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b><small>${esc([c.telefono, c.clases ? c.clases + (c.clases === 1 ? ' clase' : ' clases') : ''].filter(Boolean).join(' · '))}</small></span><span class='es-rc'>›</span></button>`).join('') || `<p class='pn-empty' style='padding:16px'>Todavía no hay clientes.</p>`}</div>
       <p class='pn-note'>Cada persona que reserva queda guardada aquí.</p>`;
   }
   function paginaCliente(nombre) {
     const c = (E.clientes || []).find(x => x.nombre === nombre) || { nombre, telefono: '', correo: '', clases: 0 }, cl = clasesDe(c);
     let h = `<div class='es-pg'>${cabeza('Cliente')}<div class='es-pgb'>`;
-    h += `<div class='es-hero'>${avatar(c.nombre, 'xl')}<div><b>${esc(c.nombre)}</b><small>${c.clases} clase${c.clases === 1 ? '' : 's'} con Storm</small></div></div>`;
+    h += `<div class='es-hero'>${avatar(c.nombre, 'xl')}<div><b>${esc(c.nombre)}</b><small>${c.clases ? `${c.clases} clase${c.clases === 1 ? '' : 's'} con Storm` : 'Cliente de AgendaPro'}</small></div></div>`;
     h += botonesContacto(c.telefono, c.correo);
     h += grupo('Datos', [c.telefono ? fila(ICO_S.tel, esc(c.telefono), 'Teléfono') : '', c.correo ? fila(ICO_S.mail, esc(c.correo), 'Correo') : '', !c.telefono && !c.correo ? fila(ICO_S.persona, 'Sin teléfono ni correo', '') : '']);
     h += grupo('Clases', cl.map(r => { const E0 = estadoDe(r); return fila(ICO_S.cal, esc(flarga(r.fecha)) + ' · ' + esc(r.hora), esc(gentes(r) + ' · ' + E0.t), { tag: 'button', at: `data-ver='${esc(r.ref)}'`, ic: E0.c }); }));

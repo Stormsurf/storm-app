@@ -623,6 +623,13 @@ async function panel(env, q) {
   if (todo) { // clientes que ya reservaron, para no escribirlos de nuevo en la reserva a mano
     const cl = await env.DB.prepare("SELECT nombre, telefono, correo, MAX(creada_ms) AS ult, COUNT(*) AS n FROM reservas WHERE estado IN ('pagada', 'pendiente', 'revisar') GROUP BY lower(nombre) ORDER BY ult DESC LIMIT 1000").all();
     out.clientes = cl.results.map(c => ({ nombre: c.nombre, telefono: c.telefono || '', correo: c.correo || '', clases: c.n }));
+    // más los clientes guardados (lista de AgendaPro), sin repetir a quienes ya reservaron
+    try {
+      const sol = t => String(t || '').replace(/\D/g, '').slice(-8);
+      const ya = new Set(); out.clientes.forEach(c => { ya.add('n' + c.nombre.toLowerCase()); if (sol(c.telefono)) ya.add('t' + sol(c.telefono)); if (c.correo) ya.add('m' + c.correo.toLowerCase()); });
+      const gu = await env.DB.prepare('SELECT nombre, telefono, correo FROM clientes ORDER BY nombre LIMIT 3000').all();
+      gu.results.forEach(c => { if (ya.has('n' + c.nombre.toLowerCase()) || (sol(c.telefono) && ya.has('t' + sol(c.telefono))) || (c.correo && ya.has('m' + c.correo.toLowerCase()))) return; out.clientes.push({ nombre: c.nombre, telefono: c.telefono, correo: c.correo, clases: 0 }); });
+    } catch (x) { console.error('clientes', x); }
   }
   return out;
 }
