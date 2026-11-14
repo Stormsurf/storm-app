@@ -503,7 +503,6 @@ function correoReservada(r, a, ins) {
     '<tr><td style="padding:22px 26px 0"><div style="background:#E3F1F1;border-radius:18px;padding:20px;text-align:center"><p style="margin:0;font-size:14px;color:#0f6e74;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Tu clase</p><p style="margin:6px 0 2px;font-size:22px;font-weight:700">' + esc(fechaLarga(r.fecha)) + '</p><p style="margin:0;font-size:20px">' + esc(r.hora) + ' a ' + esc(fin) + ' hrs</p></div>' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px">' +
     '<tr>' + dato('Personas', r.personas + edades(r)) + '</tr>' +
-    (ins.length ? '<tr>' + dato(ins.length === 1 ? 'Instructor' : 'Instructores', esc(ins.join(' y '))) + '</tr>' : '') +
     '<tr>' + dato('Dónde', esc(a.lugar)) + '</tr>' +
     '<tr>' + dato('Total pagado', clp(r.total)) + '</tr>' +
     '<tr>' + dato('Reserva', esc(r.ref)) + '</tr></table></td></tr>' +
@@ -521,7 +520,7 @@ async function avisarReserva(env, r, a) {
   const ins = parseLista(r.instructores);
   const cuando = fechaLarga(r.fecha) + ', ' + r.hora + ' hrs';
   const html = correoReservada(r, a, ins);
-  const p = [enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: '🏄 ¡Tu clase de surf está reservada! · ' + cuando, html,
+  const p = [enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: '¡Tu clase de surf está reservada! · ' + cuando, html,
     body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\n📍 Nuestra ubicación: ' + MAPA + '\n\n🏄 ¿Qué debes traer?\n' + TRAER.map(t => '✅ ' + t).join('\n') + '\n\nNosotros te entregamos todo el equipamiento necesario 💙\nReferencia ' + r.ref })];
   const lista = await env.DB.prepare('SELECT nombre, correo FROM instructores').all();
   lista.results.filter(i => ins.includes(i.nombre) && i.correo).forEach(i => p.push(enviarCorreo(env, { to: i.correo, subject: 'Nueva clase particular · ' + cuando,
@@ -551,7 +550,7 @@ async function revisionAutomatica(env, ctx) {
   const { results } = await db.prepare("SELECT * FROM reservas WHERE estado = 'pendiente' AND creada_ms > ?").bind(Date.now() - 2 * 86400000).all();
   let pagadas = 0;
   for (const r of results) {
-    const e = await revisarPago(env, r, null);
+    const e = await revisarPago(env, r, ctx); // con ctx: los avisos (push y correos) terminan de enviarse aunque la revisión acabe
     if (e === 'pagada') pagadas++;
     else if (e === 'pendiente') {
       const guarda = await db.prepare('SELECT COUNT(*) AS n FROM bloques WHERE ref = ?').bind(r.ref).first();
