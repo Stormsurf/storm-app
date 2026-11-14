@@ -19,11 +19,24 @@
 <body>
 <header class="ap-top"><a href="https://www.stormsurf.cl" aria-label="Storm"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></a></header>
 <main>
-<link rel="stylesheet" href="/panel/panel.css?v=2">
+<link rel="stylesheet" href="/panel/panel.css?v=3">
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='pn-app'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
 </section>
-<script src="/panel/panel.js?v=3"></script>
+<script src="/panel/panel.js?v=4"></script>
+<script>
+// Versión nueva: si subimos cambios, la app se recarga sola al volver a abrirla (sin perder lo que se está escribiendo).
+(() => {
+  let etag = null;
+  const ver = async () => { try{ const r = await fetch(location.pathname, {method:'HEAD', cache:'no-store'}); return r.headers.get('etag') || r.headers.get('last-modified'); }catch(_){ return null; } };
+  ver().then(e => etag = e);
+  document.addEventListener('visibilitychange', async () => {
+    if(document.visibilityState !== 'visible' || !etag) return;
+    const e = await ver(); const a = document.activeElement;
+    if(e && e !== etag && !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value)) location.reload();
+  });
+})();
+</script>
 
 
 </main>
