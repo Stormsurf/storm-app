@@ -507,7 +507,7 @@
     document.documentElement.style.overflow = 'hidden'; document.body.appendChild(pg); pg.scrollTop = 0;
   }
   document.addEventListener('click', e => { if(e.target.closest('[data-verdet]')) abrirVeranoDetalle(); });
-  const AREA_TXT = {Verano:'Academia de Verano', Anual:'Academia Anual', Adultos:'Academia Adultos', Surfshop:'Surf Shop', Casa:'Casa Storm'};
+  const AREA_TXT = {Verano:'Academia de Verano', Anual:'Academia Anual', Adultos:'Academia Adultos', Surfshop:'Surf Shop', Casa:'Casa Storm', Revisar:'Sin nombre (Tuu)'};
   const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
   let fCorr = 'enero';
   let FIN = null, fMes = '', fTipo = 'gasto', fArea = [10,11,0,1].includes(new Date().getMonth()) ? 'Verano' : 'Anual';
@@ -536,6 +536,50 @@
     }
     return new Promise((res, rej) => enFondo(body, 'el ' + (b.tipo === 'ingreso' ? 'ingreso' : 'gasto'), d => { FIN = d; fMes = d.mes; cacheGuardar('finanzas', d); if(app && app.querySelector("[data-pane='finanzas']") && !escribiendo(app.querySelector("[data-pane='finanzas']"))) pintarFinanzas(); res(d); }, e => { if(antes && FIN && FIN.movs && FIN.movs.some(x => x.enviando)) FIN = JSON.parse(antes); if(app && app.querySelector("[data-pane='finanzas']")) try{ pintarFinanzas(); }catch(_){} rej(new Error(e)); }));
   }
+
+  // ---------- Ventas de la máquina Tuu (recepción) ----------
+  // Se leen solas desde Cloudflare (/api/reservas). Las que llegan sin producto quedan "Por revisar": un toque y quedan ordenadas.
+  const TUU = {}, TUU_CAT = {producto:'Producto', renta:'Renta', clase:'Clase'};
+  const mesIso = m => { const p = String(m || '').split(' '), i = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].indexOf(p[0]); return i < 0 ? '' : p[1] + '-' + String(i + 1).padStart(2, '0'); };
+  async function postTuu(body){
+    const r = await fetch('/api/reservas', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, auth, body))});
+    const d = await r.json(); if(!d.ok) throw new Error(d.error || 'No se pudo'); return d;
+  }
+  async function cargarTuu(mes, forzar){
+    const k = mesIso(mes); if(!k) return;
+    if(TUU[k] && !forzar && Date.now() - TUU[k].t < 60000) return;
+    try{ const d = await postTuu({accion:'tuu-mes', mes:k, forzar: !!forzar}); TUU[k] = {t: Date.now(), d}; }
+    catch(x){ TUU[k] = {t: Date.now(), error: x.message}; }
+    pintarTuu(mes);
+  }
+  function pintarTuu(mes){ const el = app && app.querySelector('#pn-tuu'); if(el) { el.innerHTML = tuuHtml(mes); enlazarTuu(el, mes); } }
+  function tuuHtml(mes){
+    const x = TUU[mesIso(mes)];
+    if(!x) return `<div class='pn-card'><h3>Ventas Tuu</h3><p class='pn-sub'>Cargando…</p></div>`;
+    if(x.error) return /clave/i.test(x.error) ? '' : `<div class='pn-card'><h3>Ventas Tuu</h3><p class='pn-sub'>No se pudo leer Tuu: ${esc(x.error)}</p></div>`;
+    const d = x.d, fila = (t, v, neg) => v ? `<div><span>${t}</span><b class='${neg?'':'pn-fin'}'>${neg?'−':'+'}${clp(v)}</b></div>` : '';
+    const hora = d.actualizado ? new Date(d.actualizado).toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', hourCycle:'h23'}) : '';
+    return `<div class='pn-card'><h3>Ventas Tuu<span class='pn-count'>${d.ventas} venta${d.ventas===1?'':'s'} · ${clp(d.total)}</span></h3>
+      <div class='pn-gmov'>
+        ${fila('Productos (Surf Shop)', d.productos)}${fila('Rentas', d.rentas)}${fila('Clases vendidas en Tuu (Escuela)', d.clases)}${fila('Sin nombre, por revisar', d.sinNombre)}
+        ${d.agenda ? `<div><span>Clases de la Agenda pagadas con POS <small>(ya están en Escuela, no se suman de nuevo)</small></span><b>${clp(d.agenda)}</b></div>` : ''}
+        ${fila('Comisión Tuu (tarjetas)', d.comision, true)}
+        <div><span>Efectivo ${clp(d.efectivo)} · Tarjeta ${clp(d.tarjeta)}</span></div>
+      </div>
+      ${d.porRevisar.length ? `<h3 style='margin-top:14px'>Por revisar<span class='pn-count'>${d.porRevisar.length}</span></h3><p class='pn-sub'>Se vendieron sin elegir producto. Toca qué era cada una.</p>
+        ${d.porRevisar.map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-acts'>${Object.keys(TUU_CAT).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}` : ''}
+      ${d.detalle.some(v => v.aMano) ? `<details style='margin-top:10px'><summary class='pn-sub'>Ordenadas a mano (${d.detalle.filter(v=>v.aMano).length})</summary>${d.detalle.filter(v => v.aMano).map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)} · ${esc(TUU_CAT[v.categoria]||v.categoria)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)}${v.productos?' · '+esc(v.productos):''}</small></div><div class='pn-acts'><button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat=''>Deshacer</button></div></div>`).join('')}</details>` : ''}
+      <p class='pn-sub' style='margin-top:8px'>Se lee sola de la máquina Tuu${hora?' (al día a las '+esc(hora)+')':''}. Nombre con "Renta" o "Arriendo" va a Rentas; con "Clase" o "Grupal" a Escuela; lo demás a Surf Shop. <button class='pn-link' data-tuuya style='border:0;background:none;padding:0;font:inherit;cursor:pointer'>Actualizar ahora</button></p>
+      ${d.error ? `<p class='pn-sub'>Ojo: la última lectura de Tuu falló (${esc(d.error)}). Se muestra lo último que llegó.</p>` : ''}</div>`;
+  }
+  function enlazarTuu(el, mes){
+    el.querySelectorAll('[data-tuu]').forEach(b => b.onclick = async () => {
+      b.disabled = true; b.textContent = '…';
+      try{ const d = await postTuu({accion:'tuu-asignar', id: b.dataset.tuu, categoria: b.dataset.cat}); TUU[mesIso(mes)] = {t: Date.now(), d}; pintarTuu(mes); cargarFinanzas(mes); }
+      catch(x){ alert(x.message); pintarTuu(mes); }
+    });
+    const ya = el.querySelector('[data-tuuya]'); if(ya) ya.onclick = () => { ya.textContent = 'Actualizando…'; cargarTuu(mes, true); };
+  }
   function pintarFinanzas(){
     const pane = app.querySelector("[data-pane='finanzas']"); if(!pane || !FIN) return;
     const f = FIN, max = Math.max(1, ...f.areas.map(a => Math.max(a.ingresos, a.gastos)));
@@ -562,8 +606,9 @@
     <div class='pn-card'><h3>Por área</h3>
       ${f.areas.map(a => `<div class='pn-farea'><div class='pn-fah'><b>${esc(AREA_TXT[a.area]||a.area)}</b><span class='${a.ingresos-a.gastos<0?'neg':''}'>${a.ingresos-a.gastos<0?'−':''}${clp(Math.abs(a.ingresos-a.gastos))}</span></div>
         <div class='pn-fbar'><i class='in' style='width:${a.ingresos/max*100}%'></i></div><div class='pn-fbar'><i class='out' style='width:${a.gastos/max*100}%'></i></div>
-        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${({Verano:' (inscripciones solas, menos comisión, sueldos de ustedes en ene/feb y lo que anotes)', Anual:' (mensualidades, instructores y comisión, solos)', Escuela:' (clases de tu planilla menos comisión e instructores, solos)', Rentas:' (arriendos de tu planilla y del Verano, solos)', Surfshop:' (tienda de tu planilla, sola)', Casa:' (gastos fijos solos, más mantención, crecimiento y marketing)'})[a.area]||''}</small></div>`).join('')}
+        <small>entró ${clp(a.ingresos)} · salió ${clp(a.gastos)}${({Verano:' (inscripciones solas, menos comisión, sueldos de ustedes en ene/feb y lo que anotes)', Anual:' (mensualidades, instructores y comisión, solos)', Escuela:' (clases de la Agenda y de Tuu, menos comisión e instructores, solas)', Rentas:' (arriendos de Tuu y del Verano, solos, menos comisión)', Surfshop:' (productos vendidos en Tuu, solos, menos comisión)', Revisar:' (ventas de Tuu sin producto: tócalas abajo para ordenarlas)', Casa:' (gastos fijos solos, más mantención, crecimiento y marketing)'})[a.area]||''}</small></div>`).join('')}
     </div>
+    <div id='pn-tuu'>${tuuHtml(f.mes)}</div>
     ${f.ventas ? `<div class='pn-card'><h3>Escuela y tienda (de tu planilla 2026)</h3><div class='pn-gmov'>
       <div><span>Clases</span><b class='pn-fin'>+${clp(f.ventas.clases)}</b></div>
       <div><span>Comisión AgendaPro/TUU (${String(Math.round(f.ventas.pct*1000)/10).replace('.',',')}%)</span><b>−${clp(f.ventas.comision)}</b></div>
@@ -580,6 +625,7 @@
       <p class='pn-sub' style='margin-top:8px'>Tócalo cuando lo pagues. Quedan por pagar ${clp(f.fijos.filter(x=>!x.pagado).reduce((t,x)=>t+x.monto,0))}. Los montos se cambian en la pestaña Fijos de la planilla.</p></div>
     ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
     pane.innerHTML = h;
+    cargarTuu(f.mes);
     pane.querySelectorAll('[data-ftipo]').forEach(b => b.onclick = () => { fTipo = b.dataset.ftipo; pintarFinanzas(); });
     pane.querySelectorAll('[data-farea]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fArea = b.dataset.farea; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });
     pane.querySelectorAll('[data-fcorr]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fCorr = b.dataset.fcorr; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });

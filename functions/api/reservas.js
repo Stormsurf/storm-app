@@ -558,6 +558,8 @@ async function revisionAutomatica(env, ctx) {
       if (!(guarda && guarda.n)) await db.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref).run();
     }
   }
+  // Ventas de la máquina Tuu: el mes actual (y el anterior los primeros 3 días, por ventas que llegan tarde).
+  if (env.TUU_KEY) try { const hoy = ahoraChile().fecha; await tuuSincronizar(env, hoy.slice(0, 7)); if (+hoy.slice(8) <= 3) await tuuSincronizar(env, sumarDias(hoy.slice(0, 8) + '01', -1).slice(0, 7)); } catch (x) { console.error(x); }
   let anual = null; try { anual = await sincronizarAnual(env); } catch (x) { console.error(x); anual = { error: x.message }; }
   const rec = await recordatorios(env, a);
   let resumen = 0; try { resumen = await pushResumen(env, a); } catch (x) { console.error(x); }
@@ -673,8 +675,9 @@ async function finanzasMes(env, d) {
   const { results } = await env.DB.prepare("SELECT total, medio, pago_instructor, instructores, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all();
   const porMedio = {}, porInstructor = {};
   results.forEach(r => { porMedio[r.medio] = (porMedio[r.medio] || 0) + (r.total || 0); const p = pagosDe(r); Object.keys(p).forEach(i => porInstructor[i] = (porInstructor[i] || 0) + p[i]); });
+  let tuu = null; try { tuu = await tuuResumen(env, mes); if (tuu) { delete tuu.detalle; tuu.porRevisar = tuu.porRevisar.length; } } catch (x) { console.error(x); tuu = { ok: false, error: x.message }; }
   return { ok: true, mes, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0), mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
-    instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor };
+    instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor, tuu };
 }
 
 async function editar(env, q, d, ctx) {
@@ -925,6 +928,127 @@ async function fichasLeer(env, q, d) {
     fichas: fs.map(f => Object.assign(JSON.parse(f.datos), { n: f.n, firma: f.firma, creada: f.creada })) };
 }
 
+// ---------- Tuu (máquina de pago de la recepción) ----------
+// Lee las ventas de la máquina Tuu con su API de reportes (clave TUU_KEY en Cloudflare) y las guarda en D1 (tabla tuu_ventas).
+// Cada venta se separa sola por el nombre del producto: Renta/Arriendo → rentas; Clase/Grupal → clases; lo demás → productos.
+// Venta sin producto (solo el monto): si calza con una clase de la Agenda pagada con POS ese día y por ese monto, es esa clase
+// (ya está contada en la Agenda, no se suma de nuevo; solo se descuenta su comisión). Si no calza, queda "Por revisar" en Finanzas.
+const TUU_API = 'https://integrations.payment.haulmer.com/Report/get-report';
+const TUU_CADA_MIN = 15;
+const TUU_CATS = ['producto', 'renta', 'clase'];
+async function tuuTablas(db) {
+  await db.batch([
+    db.prepare("CREATE TABLE IF NOT EXISTS tuu_ventas (id TEXT PRIMARY KEY, fecha TEXT NOT NULL, hora TEXT NOT NULL, monto INTEGER NOT NULL, comision INTEGER NOT NULL DEFAULT 0, tipo TEXT NOT NULL DEFAULT '', items TEXT NOT NULL DEFAULT '[]', estado TEXT NOT NULL DEFAULT '', categoria TEXT NOT NULL DEFAULT '', quien TEXT NOT NULL DEFAULT '')"),
+    db.prepare('CREATE INDEX IF NOT EXISTS tuu_fecha ON tuu_ventas(fecha)'),
+    db.prepare("CREATE TABLE IF NOT EXISTS tuu_sync (mes TEXT PRIMARY KEY, ms INTEGER NOT NULL, error TEXT NOT NULL DEFAULT '')")
+  ]);
+}
+const tuuCatItem = n => /\b(renta|rentas|arriendo|arriendos|arrienda|alquiler)\b/i.test(n) ? 'renta' : /\b(clase|clases|grupal|curso|lecci[oó]n)\b/i.test(n) ? 'clase' : 'producto';
+const tuuEfectivo = t => /cash|efectivo/i.test(String(t || ''));
+async function tuuPedir(env, desde, hasta) {
+  const out = [];
+  for (let page = 1; page <= 100; page++) {
+    const r = await fetch(env.TUU_API || TUU_API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': env.TUU_KEY },
+      body: JSON.stringify({ Filters: { StartDate: desde, EndDate: hasta }, page, pageSize: 20 }) });
+    const txt = await r.text();
+    let j = null; try { j = JSON.parse(txt.replace(/,\s*([\]}])/g, '$1')); } catch (_) {}
+    if (r.status === 404 || (j && String(j.code) === '404')) break; // sin ventas en esas fechas
+    if (!r.ok || !j || !j.content) throw new Error('Tuu ' + r.status + ': ' + String((j && j.message) || txt).slice(0, 160));
+    const c = j.content, lista = Array.isArray(c.reports) ? c.reports : [];
+    out.push(...lista);
+    if (!lista.length || page >= (Number(c.totalPages) || 1)) break;
+  }
+  return out;
+}
+/** Trae de Tuu las ventas del mes (AAAA-MM) si la copia tiene más de 15 minutos. */
+async function tuuSincronizar(env, mes, forzar) {
+  if (!env.TUU_KEY) return { ok: false, error: 'Falta la clave de Tuu' };
+  const db = env.DB; await tuuTablas(db);
+  const hoy = ahoraChile().fecha;
+  if (mes > hoy.slice(0, 7)) return { ok: true };
+  const antes = await db.prepare('SELECT ms FROM tuu_sync WHERE mes = ?').bind(mes).first();
+  // Meses ya cerrados (más de 3 días después) no se vuelven a pedir si ya se trajeron una vez después de cerrar.
+  const fin = mes + '-' + String(new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).getUTCDate()).padStart(2, '0');
+  const cerrado = sumarDias(fin, 3) < hoy;
+  if (antes && !forzar && (cerrado ? antes.ms > Date.parse(sumarDias(fin, 3) + 'T12:00:00Z') : Date.now() - antes.ms < TUU_CADA_MIN * 60000)) return { ok: true, ms: antes.ms };
+  const hasta = fin < hoy ? fin : hoy;
+  try {
+    const tramos = [[mes + '-01', hasta < mes + '-15' ? hasta : mes + '-15']];
+    if (hasta >= mes + '-16') tramos.push([mes + '-16', hasta]);
+    const ventas = [];
+    for (const [a, b] of tramos) ventas.push(...await tuuPedir(env, a, b));
+    const st = ventas.filter(v => v && v.saleId != null).map(v => {
+      const t = String(v.paymentDataTime || ''), x = v.extraData || {};
+      const items = (Array.isArray(x.items) ? x.items : []).map(i => ({ nombre: String(i.name || '').trim(), cantidad: Number(i.quantity) || 1, precio: Math.round(Number(i.price) || 0) }));
+      const com = tuuEfectivo(v.typeTransaction) ? 0 : Math.round(Number(x.amountCommission) || 0);
+      return db.prepare('INSERT INTO tuu_ventas (id, fecha, hora, monto, comision, tipo, items, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET fecha = excluded.fecha, hora = excluded.hora, monto = excluded.monto, comision = excluded.comision, tipo = excluded.tipo, items = excluded.items, estado = excluded.estado')
+        .bind(String(v.saleId), t.slice(0, 10), t.slice(11, 16), Math.round(Number(v.amount) || 0), com, String(v.typeTransaction || ''), JSON.stringify(items), String(v.status || ''));
+    });
+    for (let i = 0; i < st.length; i += 50) await db.batch(st.slice(i, i + 50));
+    await db.prepare("INSERT OR REPLACE INTO tuu_sync (mes, ms, error) VALUES (?, ?, '')").bind(mes, Date.now()).run();
+    return { ok: true, ms: Date.now(), ventas: ventas.length };
+  } catch (x) {
+    console.error(x);
+    await db.prepare('INSERT OR REPLACE INTO tuu_sync (mes, ms, error) VALUES (?, ?, ?)').bind(mes, antes ? antes.ms : 0, String(x.message).slice(0, 300)).run();
+    return { ok: false, error: x.message };
+  }
+}
+/** Suma del mes por categoría, con la lista de ventas por revisar. */
+async function tuuResumen(env, mes, forzar) {
+  if (!env.TUU_KEY) return { ok: false, error: 'Falta la clave de Tuu' };
+  const sync = await tuuSincronizar(env, mes, forzar);
+  const db = env.DB;
+  const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
+    db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? ORDER BY fecha, hora").bind(mes).all(),
+    db.prepare("SELECT ref, fecha, hora, total, nombre FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND medio = 'POS'").bind(mes).all(),
+    db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
+  ]);
+  const r = { ok: true, mes, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
+    comProductos: 0, comRentas: 0, comClases: 0, comSinNombre: 0, comAgenda: 0, efectivo: 0, tarjeta: 0, porRevisar: [], detalle: [],
+    actualizado: est ? est.ms : 0, error: sync.ok ? '' : (est && est.error) || sync.error || '' };
+  const usadas = new Set();
+  const calzaAgenda = v => { const a = agenda.find(x => !usadas.has(x.ref) && x.fecha === v.fecha && x.total === v.monto); if (a) usadas.add(a.ref); return a; };
+  const suma = (cat, monto, com) => {
+    const k = { producto: 'productos', renta: 'rentas', clase: 'clases', revisar: 'sinNombre', agenda: 'agenda' }[cat];
+    const c = { producto: 'comProductos', renta: 'comRentas', clase: 'comClases', revisar: 'comSinNombre', agenda: 'comAgenda' }[cat];
+    r[k] += monto; r[c] += com;
+  };
+  ventas.filter(v => !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado)).forEach(v => {
+    r.ventas++; r.total += v.monto; if (tuuEfectivo(v.tipo)) r.efectivo += v.monto; else r.tarjeta += v.monto;
+    let items = []; try { items = JSON.parse(v.items || '[]'); } catch (_) {}
+    const base = { id: v.id, fecha: v.fecha, hora: v.hora, monto: v.monto, comision: v.comision, pago: tuuEfectivo(v.tipo) ? 'Efectivo' : 'Tarjeta', productos: items.map(i => (i.cantidad > 1 ? i.cantidad + ' × ' : '') + i.nombre).join(', ') };
+    if (TUU_CATS.includes(v.categoria)) { suma(v.categoria, v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: v.categoria, aMano: true })); return; }
+    const conNombre = items.filter(i => i.nombre && i.precio);
+    const cats = [...new Set(conNombre.map(i => tuuCatItem(i.nombre)))];
+    // Sin producto, o solo "clase": ¿es una clase de la Agenda pagada con POS?
+    if (!conNombre.length || (cats.length === 1 && cats[0] === 'clase')) {
+      const a = calzaAgenda(v);
+      if (a) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: a.hora + ' · ' + a.nombre })); return; }
+    }
+    if (!conNombre.length) { suma('revisar', v.monto, v.comision); r.porRevisar.push(base); r.detalle.push(Object.assign(base, { categoria: 'revisar' })); return; }
+    // Una venta puede traer productos y rentas juntos: se reparte según el precio de cada uno.
+    const bruto = conNombre.reduce((t, i) => t + i.precio * i.cantidad, 0) || 1;
+    let restoM = v.monto, restoC = v.comision;
+    cats.forEach((cat, n) => {
+      const parte = conNombre.filter(i => tuuCatItem(i.nombre) === cat).reduce((t, i) => t + i.precio * i.cantidad, 0) / bruto;
+      const m = n === cats.length - 1 ? restoM : Math.round(v.monto * parte), c = n === cats.length - 1 ? restoC : Math.round(v.comision * parte);
+      restoM -= m; restoC -= c; suma(cat, m, c);
+    });
+    r.detalle.push(Object.assign(base, { categoria: cats.length === 1 ? cats[0] : 'mixta' }));
+  });
+  r.comision = r.comProductos + r.comRentas + r.comClases + r.comSinNombre + r.comAgenda;
+  return r;
+}
+async function tuuAsignar(env, q, d) {
+  const cat = TUU_CATS.includes(d.categoria) ? d.categoria : '';
+  await tuuTablas(env.DB);
+  const v = await env.DB.prepare('SELECT id, fecha FROM tuu_ventas WHERE id = ?').bind(String(d.id || '')).first();
+  if (!v) throw err('No encontramos esa venta.');
+  await env.DB.prepare('UPDATE tuu_ventas SET categoria = ?, quien = ? WHERE id = ?').bind(cat, q.email, v.id).run();
+  await anotar(env.DB, q, 'tuu ' + v.id + ' → ' + (cat || 'automático'));
+  return tuuResumen(env, v.fecha.slice(0, 7));
+}
+
 // ---------- entrada ----------
 export async function onRequest(context) {
   const { request, env } = context;
@@ -963,6 +1087,8 @@ export async function onRequest(context) {
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
     if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
+    if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));
+    if (acc === 'tuu-asignar') return json(await tuuAsignar(env, q, d));
     if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }
     if (acc === 'editar') return json(await editar(env, q, d, context));
     if (acc === 'cancelar') return json(await cancelar(env, q, d, context));
