@@ -621,7 +621,7 @@
       const orden = ['Escuela','Rentas','Anual','Verano','Adultos','Surfshop','Casa','Revisar'];
       return orden.map(k => k === 'Verano' ? verano() : (f.areas.find(a => a.area === k) ? card(f.areas.find(a => a.area === k)) : '')).join('');
     })()}
-    <h2 class='pn-fh2'>Lo que vas anotando</h2>
+    <h2 class='pn-fh2'>Gastos que vas sumando</h2>
     ${(() => { const fila = m => `<div><span>${esc(m.detalle)}${m.area!=='Casa' && m.area!=='Verano' ? ' · '+esc(AREA_TXT[m.area]||m.area) : ''}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b>${m.enviando ? `<i class='pn-spin' title='Guardando'></i>` : `<button data-fdel='${m.fila}' aria-label='Borrar'>×</button>`}</div>`;
       const grupo = (titulo, lista, vacio) => `<div class='pn-card'><h3>${titulo}<span class='pn-count'>${clp(lista.reduce((t,m)=>t+(/^ingreso/i.test(m.tipo)?0:m.monto),0))}</span></h3>${lista.length ? `<div class='pn-gmov'>${lista.map(fila).join('')}</div>` : `<p class='pn-empty'>${vacio}</p>`}</div>`;
       const casa = f.movs.filter(m => m.area === 'Casa'), ver = f.movs.filter(m => m.area === 'Verano'), otros = f.movs.filter(m => m.area !== 'Casa' && m.area !== 'Verano');
