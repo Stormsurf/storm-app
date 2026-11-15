@@ -77,7 +77,7 @@
     try{
       const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({accion:'adultos-inscribir', nombre, correo, telefono, plan})});
       const d = await r.json(); if(!d.ok) throw new Error(d.error || 'No se pudo crear el pago.');
-      location.href = d.url;
+      location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] : u; })(d.url);
     }catch(x){ err(x.message); b.disabled = false; b.textContent = 'Pagar con Mercado Pago'; }
   };
 })();

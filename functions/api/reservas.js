@@ -353,6 +353,9 @@ async function reservar(env, d) {
   return { ok: true, url: o.url, ref, total: c.precio };
 }
 
+/** Link de pago de Storm (/pagar/): ahí se elige tarjeta (sin salir a la app de Mercado Pago) o cuenta Mercado Pago. */
+const linkStorm = u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? PAGINA.replace(/reservar\/$/, '') + 'pagar/?o=' + m[1] : (u || ''); };
+
 /** Crea el cobro en Mercado Pago y lo deja anotado en la reserva. Devuelve { id, url } o null si Mercado Pago no respondió. */
 async function crearOrden(env, r) {
   const vuelta = PAGINA + '?ref=' + encodeURIComponent(r.ref) + '&pago=';
@@ -584,7 +587,7 @@ async function quien(env, d) {
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
 const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, nivel: r.nivel || '', fichasPapel: !!r.fichas_papel, instructores: parseLista(r.instructores),
-  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? r.link_pago : '' } : {}) });
+  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? linkStorm(r.link_pago) : '' } : {}) });
 
 async function panel(env, q) {
   const db = env.DB, a = await ajustes(db), hoy = ahoraChile().fecha, admin = q.rol === 'admin', todo = admin || q.rol === 'recepcion';
@@ -820,7 +823,7 @@ async function manual(env, q, d, ctx) {
     const o = await crearOrden(env, r);
     if (!o) { await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = 'Mercado Pago no respondió' WHERE ref = ?").bind(r.ref)]); throw err('Mercado Pago no respondió. Intenta de nuevo.'); }
     const out = await panel(env, q);
-    out.nuevoLink = { ref: r.ref, url: o.url, nombre: r.nombre, telefono: r.telefono, fecha, hora, personas, total, hasta: ahoraChile(hasta) };
+    out.nuevoLink = { ref: r.ref, url: linkStorm(o.url), nombre: r.nombre, telefono: r.telefono, fecha, hora, personas, total, hasta: ahoraChile(hasta) };
     return out;
   }
   if (d.avisar && r.correo) tarea(ctx, avisarReserva(env, Object.assign({}, r, { instructores: JSON.stringify(ins) }), a));

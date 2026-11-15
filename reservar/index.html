@@ -231,7 +231,7 @@
       try{
         const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora}, f));
         try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
-        location.href = r.url;
+        location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] : u; })(r.url);
       }catch(x){ go.disabled = false; go.textContent = 'Pagar ' + clp(totalDe(S.personas, S.menores, S.ninos)); msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
     };
   }

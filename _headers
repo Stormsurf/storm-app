@@ -16,3 +16,5 @@
   Cache-Control: no-cache
 /app.css
   Cache-Control: no-cache
+/pagar/*
+  Cache-Control: no-cache

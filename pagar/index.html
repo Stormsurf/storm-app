@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pagar · Storm</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#EFECE8">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="apple-touch-icon" href="/icons/storm-app-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css?v=1">
+<style>
+.pg{--ac:#4F7F86;--ac-soft:#E3EDEE;--ink:#2C2C2B;--line:rgba(44,44,43,.09);max-width:520px;margin:0 auto;padding:0 16px 40px;color:var(--ink)}
+.pg-hero{text-align:center;margin-top:10px}
+.pg-hero small{display:block;font-size:1.2rem;letter-spacing:.12em;text-transform:uppercase;opacity:.55;font-weight:600}
+.pg-hero h1{margin:6px 0 0;font-weight:600;font-size:3.4rem;line-height:1.1}
+.pg-hero p{margin:6px auto 0;max-width:36ch;font-size:1.45rem;opacity:.7}
+.pg-h2{margin:24px 0 10px;font-weight:500;font-size:1.9rem;text-align:center}
+.pg-opt{display:flex;align-items:center;gap:14px;width:100%;margin-top:10px;border:1.5px solid var(--line);border-radius:16px;padding:16px;background:#fff;font:inherit;color:var(--ink);text-align:left;cursor:pointer;text-decoration:none}
+.pg-opt i{font-style:normal;font-size:2.4rem;flex:none;width:40px;text-align:center}
+.pg-opt b{display:block;font-size:1.7rem;font-weight:600}
+.pg-opt small{display:block;font-size:1.3rem;opacity:.65;margin-top:2px}
+.pg-opt.on{border-color:var(--ac);background:var(--ac-soft);box-shadow:inset 0 0 0 1px var(--ac)}
+#brick{margin-top:12px}
+.pg-err{margin-top:12px;padding:12px 14px;border-radius:12px;background:#F6E3DF;font-size:1.45rem}
+.pg-ok{margin-top:16px;padding:16px;border-radius:14px;background:var(--ac-soft);font-size:1.5rem;text-align:center}
+.pg-note{font-size:1.3rem;opacity:.6;margin-top:16px;line-height:1.5;text-align:center}
+.pg-note a{color:inherit}
+</style>
+</head>
+<body>
+<header class="ap-top"><a href="/" aria-label="Storm"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></a></header>
+<main class="pg" id="pg"><p class="pg-note">Cargando…</p></main>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<script>
+(() => {
+  const pg = document.getElementById('pg');
+  const id = new URLSearchParams(location.search).get('o') || '';
+  const clp = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-CL');
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const ayuda = `<p class="pg-note">El pago lo procesa Mercado Pago de forma segura. ¿Dudas? <a href="https://wa.me/56977744306" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></p>`;
+  let D = null, brick = null, pagando = false;
+
+  const error = t => { const e = document.getElementById('err'); if(e){ e.hidden = !t; e.textContent = t || ''; } };
+
+  async function tarjeta(){
+    document.getElementById('op-tarjeta').classList.add('on');
+    const box = document.getElementById('brick');
+    if(brick) return;
+    if(!D.publicKey || !window.MercadoPago){ error('El pago con tarjeta no está disponible en este momento. Usa tu cuenta Mercado Pago o escríbenos por WhatsApp.'); return; }
+    box.innerHTML = '';
+    const mp = new MercadoPago(D.publicKey, { locale: 'es-CL' });
+    brick = await mp.bricks().create('cardPayment', 'brick', {
+      initialization: { amount: D.monto },
+      customization: { paymentMethods: { maxInstallments: 1, minInstallments: 1 }, visual: { style: { theme: 'default', customVariables: { baseColor: '#4F7F86' } } } },
+      callbacks: {
+        onReady: () => {},
+        onError: e => console.error(e),
+        onSubmit: (f, extra) => new Promise(async (ok, mal) => {
+          if(pagando) return mal();
+          pagando = true; error('');
+          try{
+            const r = await fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+              o: id, token: f.token, payment_method_id: f.payment_method_id, issuer_id: f.issuer_id,
+              payment_type: (extra && extra.paymentTypeId) || f.payment_type_id || '', email: f.payer && f.payer.email, identification: f.payer && f.payer.identification
+            }) }).then(x => x.json());
+            if(r.ok){
+              ok();
+              pg.innerHTML = `<div class="pg-ok"><b>¡Pago listo!</b><br>Te llevamos de vuelta…</div>`;
+              location.href = r.vuelta || '/';
+              return;
+            }
+            mal(); error(r.error || 'No se pudo hacer el pago.');
+            // El formulario se vuelve a armar para intentar de nuevo (cada intento usa datos nuevos de la tarjeta)
+            try{ brick.unmount(); }catch(_){}
+            brick = null; pagando = false; tarjeta();
+          }catch(x){ mal(); pagando = false; error('No pudimos conectar. Revisa tu internet e intenta de nuevo.'); }
+        })
+      }
+    });
+  }
+
+  function pintar(){
+    if(D.estado === 'processed'){
+      pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>Pago listo</h1><p>Este pago ya está hecho.</p></div><a class="pg-opt" href="${esc(D.vuelta || '/')}"><i>✓</i><span><b>Volver</b></span></a>`;
+      return;
+    }
+    if(D.estado !== 'created'){
+      pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>Pago vencido</h1><p>Este link de pago ya no sirve. Vuelve atrás y empieza de nuevo.</p></div>${ayuda}`;
+      return;
+    }
+    pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
+      <h2 class="pg-h2">¿Cómo quieres pagar?</h2>
+      <button class="pg-opt" id="op-tarjeta" type="button"><i>💳</i><span><b>Tarjeta</b><small>Crédito, débito o prepago, sin cuenta Mercado Pago</small></span></button>
+      <div id="brick"></div>
+      <div class="pg-err" id="err" hidden></div>
+      <a class="pg-opt" id="op-cuenta" href="${esc(D.cuenta)}"><i>👤</i><span><b>Con mi cuenta Mercado Pago</b><small>Usa el saldo o las tarjetas guardadas en tu cuenta</small></span></a>
+      ${ayuda}`;
+    document.getElementById('op-tarjeta').onclick = tarjeta;
+  }
+
+  fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {
+    if(!r.ok){ pg.innerHTML = `<div class="pg-err">${esc(r.error)}</div>${ayuda}`; return; }
+    D = r; pintar();
+  }).catch(() => { pg.innerHTML = `<div class="pg-err">No pudimos cargar el pago. Revisa tu internet y recarga.</div>${ayuda}`; });
+})();
+</script>
+</body>
+</html>

@@ -949,7 +949,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null, adultos:null}; vista = ''; hero(); login(); };
     const accion = async (b, body, okTxt) => {
       app.querySelectorAll('[data-adfui],[data-advoy],[data-adpay],[data-adno]').forEach(x => x.disabled = true); const t0 = b.textContent; b.textContent = okTxt;
-      try{ const r = await call(body); if(r.url){ location.href = r.url; return; } D.adultos = r; guardarDatos(D); msg = ''; renderAdultos(r); }
+      try{ const r = await call(body); if(r.url){ location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] : u; })(r.url); return; } D.adultos = r; guardarDatos(D); msg = ''; renderAdultos(r); }
       catch(x){ msg = `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`; b.textContent = t0; renderAdultos(D.adultos); }
     };
     app.querySelectorAll('[data-adfui]').forEach(b => b.onclick = () => { if(!b.classList.contains('done')) accion(b, {accion:'adultos-fui', fecha:b.dataset.adfui}, 'Anotando…'); });
