@@ -246,3 +246,13 @@
 .pn-vh{margin:14px 0 4px;font-size:1.2rem;font-weight:600;opacity:.65;text-transform:uppercase;letter-spacing:.04em}
 .pn-vmes .pn-gmov span small{display:block;font-size:1.15rem;opacity:.6}
 .pn-vtot{background:#0f6e74;color:#fff;border-radius:18px;padding:16px 18px}.pn-vtot.neg{background:#b4532a}.pn-vtot small{display:block;font-size:1.3rem;opacity:.8}.pn-vtot b{display:block;font-size:2.6rem;font-weight:700;margin-top:2px}
+/* Finanzas como el resumen de la planilla: Ingresos, Gastos, Total por área */
+.pn-fres h3{margin-bottom:6px}
+.pn-fsec{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.pn-fsec>div{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:1.3rem}
+.pn-fsec>div span{opacity:.75}
+.pn-fsec .pn-fsh{font-size:1.4rem}.pn-fsec .pn-fsh b{font-weight:600}
+.pn-fsec .pn-fnada{opacity:.45}
+.pn-ftot{display:flex;justify-content:space-between;margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(46,125,90,.1);font-size:1.5rem;font-weight:600;color:var(--ok)}
+.pn-ftot.neg{background:rgba(200,80,60,.1);color:var(--warn)}
+.pn-fh2{font-size:1.7rem;font-weight:600;margin:22px 4px 10px}

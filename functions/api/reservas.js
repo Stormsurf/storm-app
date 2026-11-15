@@ -674,7 +674,7 @@ async function pagosSemana(env, q, d) {
 /** Para Finanzas (programa de la planilla Anual): ventas del mes, por medio de pago, y lo que se paga a instructores. mes = 'AAAA-MM'. */
 async function finanzasMes(env, d) {
   const mes = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7);
-  const { results } = await env.DB.prepare("SELECT total, medio, pago_instructor, instructores, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all();
+  const { results } = await env.DB.prepare("SELECT total, medio, pago_instructor, instructores, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND fecha >= ? AND estado = 'pagada'").bind(mes, TUU_DESDE).all();
   const porMedio = {}, porInstructor = {};
   results.forEach(r => { porMedio[r.medio] = (porMedio[r.medio] || 0) + (r.total || 0); const p = pagosDe(r); Object.keys(p).forEach(i => porInstructor[i] = (porInstructor[i] || 0) + p[i]); });
   let tuu = null; try { tuu = await tuuResumen(env, mes); if (tuu) { delete tuu.detalle; tuu.porRevisar = tuu.porRevisar.length; } } catch (x) { console.error(x); tuu = { ok: false, error: x.message }; }
@@ -937,7 +937,7 @@ async function fichasLeer(env, q, d) {
 // (ya está contada en la Agenda, no se suma de nuevo; solo se descuenta su comisión). Si no calza, queda "Por revisar" en Finanzas.
 const TUU_API = 'https://integrations.payment.haulmer.com/Report/get-report';
 const TUU_CADA_MIN = 15;
-const TUU_DESDE = '2026-11-15'; // Isidora (14-11): Tuu cuenta desde el 15 de noviembre; lo anterior ya está en la planilla 2026.
+const TUU_DESDE = '2026-11-16'; // Isidora (15-11): Finanzas cuenta Tuu y Panel Storm desde el lunes 16 de noviembre; lo anterior está en la planilla 2026.
 const TUU_CATS = ['producto', 'renta', 'clase'];
 async function tuuTablas(db) {
   await db.batch([
