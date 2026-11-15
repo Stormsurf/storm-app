@@ -256,3 +256,6 @@
 .pn-ftot{display:flex;justify-content:space-between;margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(46,125,90,.1);font-size:1.5rem;font-weight:600;color:var(--ok)}
 .pn-ftot.neg{background:rgba(200,80,60,.1);color:var(--warn)}
 .pn-fh2{font-size:1.7rem;font-weight:600;margin:22px 4px 10px}
+.pn-fsec .pn-fsub2{padding:2px 0 2px 14px;font-size:1.2rem}.pn-fsec .pn-fsub2 span,.pn-fsec .pn-fsub2 b{opacity:.55;font-weight:400}
+.pn-fmesv{font-size:1.45rem;font-weight:600;margin:16px 0 2px}.pn-fmesv small{font-weight:400;opacity:.55;font-size:1.15rem}
+.pn-fres .pn-fmesv:first-of-type{margin-top:4px}

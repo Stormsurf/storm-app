@@ -589,7 +589,7 @@
       <input placeholder='${fTipo==='gasto'?'¿En qué fue? ej: hielo, parafina, bencina':'¿De qué? ej: clase particular, arriendo tabla'}' id='pn-fdet'>
       <div class='pn-gm'>${AREAS.map(a => `<button class='pn-gbtn${a===fArea?' on':''}' data-farea='${a}'>${AREA_TXT[a]||a}</button>`).join('')}</div>
       ${fArea==='Verano' ? `<p class='pn-sub' style='margin:10px 0 4px'>¿A qué corresponde?</p><div class='pn-fsw'>${['enero','febrero','ambos'].map(c => `<button data-fcorr='${c}' class='${fCorr===c?'on':''}'>${c==='ambos'?'Enero y febrero':cap(c)+' '+anioVer}</button>`).join('')}</div>` : ''}
-      ${fArea==='Casa' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Mantención oficina','Crecimiento','Marketing'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
+      ${fArea==='Casa' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['IVA','Mantención oficina','Crecimiento','Marketing'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
       ${fArea==='Verano' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Comida','Premios','Sala de yoga','Materiales'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
       <div class='pn-acts'><span id='pn-fmsg'></span><button class='pn-ntgo' id='pn-fgo'>Anotar ${fTipo}</button></div>
     </div>
@@ -599,16 +599,28 @@
       <div class='pn-stat'><small>Gastos ${esc(mesCorto(f.mes))}</small><b>${clp(f.gastos)}</b></div>
       <div class='pn-stat pn-stat--main${f.balance<0?' pn-fneg':''}'><small>Balance del mes</small><b>${f.balance<0?'−':''}${clp(Math.abs(f.balance))}</b><em>ingresos − gastos</em></div>
     </div>
-    ${f.verano && (f.verano.meses[0].ingresos || f.verano.meses[1].ingresos || f.verano.meses[0].gastosAnotados || f.verano.meses[1].gastosAnotados) ? `<div class='pn-card pn-vdet' role='button' tabindex='0' data-verdet>${(VERANO_FIN = f.verano, '')}<h3>Academia de Verano ${f.verano.anio}<span class='pn-count'>deja ${f.verano.deja<0?'−':''}${clp(Math.abs(f.verano.deja))}</span></h3>
-      ${f.verano.meses.map(v => `<div class='pn-farea'><div class='pn-fah'><b>${esc(cap(v.mes))}</b><span class='${v.deja<0?'neg':''}'>${v.deja<0?'−':''}${clp(Math.abs(v.deja))}</span></div>
-        <small>${v.ninos} niños · inscripciones ${clp(v.ingresos)} · gastos anotados ${clp(v.gastosAnotados)} · comisión ${clp(v.comision)} · sueldos ustedes ${clp(v.sueldos)}${v.ninos?' · deja '+clp(v.porNino)+' por niño':''}</small></div>`).join('')}
-      <p class='pn-sub' style='margin-top:8px'>Cuenta todos los gastos del Verano, aunque los pagues antes (ej. la sala de yoga en diciembre).</p><span class='pn-vver'>Ver detalle</span></div>` : ''}
-    ${['Escuela','Rentas','Anual','Verano','Adultos','Surfshop','Casa','Revisar'].map(k => f.areas.find(a => a.area === k)).filter(Boolean).map(a => { const t = a.ingresos - a.gastos, L = a.lineas || {ingresos: a.ingresos ? [{detalle:'Ingresos', monto:a.ingresos}] : [], gastos: a.gastos ? [{detalle:'Gastos', monto:a.gastos}] : []};
-      return `<div class='pn-card pn-fres'><h3>${esc(AREA_TXT[a.area]||a.area)}</h3>
-      <div class='pn-fsec'><div class='pn-fsh'><b>Ingresos</b><b class='pn-fin'>${clp(a.ingresos)}</b></div>${L.ingresos.map(x => `<div><span>${esc(x.detalle)}</span><b>${clp(x.monto)}</b></div>`).join('') || `<div><span class='pn-fnada'>Sin ingresos</span></div>`}</div>
-      <div class='pn-fsec'><div class='pn-fsh'><b>Gastos</b><b>${a.gastos?'−':''}${clp(a.gastos)}</b></div>${L.gastos.map(x => `<div><span>${esc(x.detalle)}</span><b>−${clp(x.monto)}</b></div>`).join('') || `<div><span class='pn-fnada'>Sin gastos</span></div>`}</div>
-      <div class='pn-ftot${t<0?' neg':''}'><b>Total</b><b>${t<0?'−':''}${clp(Math.abs(t))}</b></div></div>`; }).join('')}
-    <div id='pn-tuu'>${tuuHtml(f.mes)}</div>
+    ${(() => {
+      const L = x => `<div><span>${esc(x.detalle)}</span><b>${x.neg?'−':''}${clp(x.monto)}</b></div>` + (x.items && x.items.length ? x.items.map(y => `<div class='pn-fsub2'><span>${esc(y.detalle)}</span><b>−${clp(y.monto)}</b></div>`).join('') : '');
+      const sec = (tit, total, lineas, neg) => `<div class='pn-fsec'><div class='pn-fsh'><b>${tit}</b><b class='${neg?'':'pn-fin'}'>${neg && total?'−':''}${clp(total)}</b></div>${lineas.map(x => L(Object.assign({neg}, x))).join('')}</div>`;
+      const tot = (t, tit) => `<div class='pn-ftot${t<0?' neg':''}'><b>${tit||'Total'}</b><b>${t<0?'−':''}${clp(Math.abs(t))}</b></div>`;
+      const card = a => { const t = a.ingresos - a.gastos, Ls = a.lineas || {ingresos: [], gastos: []};
+        let h = `<div class='pn-card pn-fres'><h3>${esc(AREA_TXT[a.area]||a.area)}</h3>`;
+        if (a.area !== 'Casa') h += sec('Ingresos', a.ingresos, Ls.ingresos);
+        if (a.area !== 'Rentas' && (a.gastos || a.area === 'Casa' || a.area === 'Escuela')) h += sec('Gastos', a.gastos, Ls.gastos, true);
+        h += tot(t, a.area === 'Casa' ? 'Total gastos' : 'Total');
+        if (a.area === 'Surfshop' && a.inversion != null) { const queda = a.inversion - t; h += `<div class='pn-fsec'><div><span>Inversión acumulada (meses anteriores)</span><b>−${clp(a.inversion)}</b></div><div class='pn-fsh'><b>Queda por recuperar</b><b>${queda>0?'−':''}${clp(Math.abs(queda))}</b></div></div>`; }
+        return h + `</div>`; };
+      const verano = () => { const v = f.verano; if(!v) return ''; VERANO_FIN = v;
+        const mesH = m => { const d = m.detalle || {}, ing = [{detalle:'Inscripciones', monto:m.ingresos}].filter(x=>x.monto), gas = [];
+          if (d.comisionMP != null) { if (d.comisionMP) gas.push({detalle:'Comisión Mercado Pago', monto:d.comisionMP}); if (d.comisionShopify) gas.push({detalle:'Comisión Shopify', monto:d.comisionShopify}); } else if (m.comision) gas.push({detalle:'Comisión', monto:m.comision});
+          if (m.sueldos) gas.push({detalle:'Sueldos Isidora y Diego', monto:m.sueldos});
+          (d.gastos || []).forEach(x => gas.push({detalle:x.detalle, monto:x.monto}));
+          if (!d.gastos && m.gastosAnotados) gas.push({detalle:'Gastos anotados', monto:m.gastosAnotados});
+          return `<h4 class='pn-fmesv'>${esc(cap(m.mes))}${m.ninos?` <small>${m.ninos} niños</small>`:''}</h4>` + sec('Ingresos', m.ingresos, ing) + sec('Gastos', m.gastos, gas, true) + tot(m.deja, 'Total ' + esc(cap(m.mes).split(' ')[0].toLowerCase())); };
+        return `<div class='pn-card pn-fres pn-vdet' role='button' tabindex='0' data-verdet><h3>Academia de Verano ${v.anio}</h3>${v.meses.map(mesH).join('')}${tot(v.deja, 'Total temporada')}<span class='pn-vver'>Ver detalle</span></div>`; };
+      const orden = ['Escuela','Rentas','Anual','Verano','Adultos','Surfshop','Casa','Revisar'];
+      return orden.map(k => k === 'Verano' ? verano() : (f.areas.find(a => a.area === k) ? card(f.areas.find(a => a.area === k)) : '')).join('');
+    })()}
     <h2 class='pn-fh2'>Gastos que vas sumando</h2>
     ${(() => { const fila = m => `<div><span>${esc(m.detalle)}${m.area!=='Casa' && m.area!=='Verano' ? ' · '+esc(AREA_TXT[m.area]||m.area) : ''}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b>${m.enviando ? `<i class='pn-spin' title='Guardando'></i>` : `<button data-fdel='${m.fila}' aria-label='Borrar'>×</button>`}</div>`;
       const grupo = (titulo, lista, vacio) => `<div class='pn-card'><h3>${titulo}<span class='pn-count'>${clp(lista.reduce((t,m)=>t+(/^ingreso/i.test(m.tipo)?0:m.monto),0))}</span></h3>${lista.length ? `<div class='pn-gmov'>${lista.map(fila).join('')}</div>` : `<p class='pn-empty'>${vacio}</p>`}</div>`;
@@ -619,7 +631,6 @@
         + grupo('Academia de Verano', ver, 'Aún no sumas gastos del Verano este mes.') + (otros.length ? grupo('Otras áreas', otros, '') : ''); })()}
     ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
     pane.innerHTML = h;
-    cargarTuu(f.mes);
     pane.querySelectorAll('[data-ftipo]').forEach(b => b.onclick = () => { fTipo = b.dataset.ftipo; pintarFinanzas(); });
     pane.querySelectorAll('[data-farea]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fArea = b.dataset.farea; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });
     pane.querySelectorAll('[data-fcorr]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fCorr = b.dataset.fcorr; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });
