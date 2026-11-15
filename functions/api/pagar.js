@@ -18,6 +18,7 @@
 const MP_API = 'https://api.mercadopago.com';
 const ANUAL = 'https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec';  // Anual y Adultos
 const VERANO = 'https://script.google.com/macros/s/AKfycbzSHDu8whWWNwq-EFwaWqwKOtyU5pnyPuixutUI8sd5twFaTjDibN11TA3bMH_UddTo/exec';
+const PUBLIC_KEY = 'APP_USR-d9421f08-0996-410b-bd5c-5947565d6099'; // Public Key de producción (es pública, no es secreta)
 const REF_OK = /^(AA|AD|AV|ES)-[\w-]+$/;
 
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -91,7 +92,7 @@ export async function onRequest(context) {
     return json({
       ok: true, estado: o.status, monto: Number(o.total_amount), titulo: it.title || o.description || 'Pago Storm',
       cuenta: o.checkout_url || '', vuelta: online.success_url || '', volver: online.failure_url || '',
-      publicKey: env.MP_PUBLIC_KEY || ''
+      publicKey: env.MP_PUBLIC_KEY || PUBLIC_KEY
     });
   }
 
