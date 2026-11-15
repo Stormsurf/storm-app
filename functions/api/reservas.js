@@ -1007,14 +1007,15 @@ async function tuuResumen(env, mes, forzar) {
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
     db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
-    db.prepare("SELECT ref, fecha, hora, total, nombre FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND medio = 'POS'").bind(mes).all(),
+    db.prepare("SELECT ref, fecha, hora, total, nombre, medio FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND medio IN ('POS', 'Efectivo')").bind(mes).all(),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
   ]);
   const r = { ok: true, mes, desde: TUU_DESDE, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
     comProductos: 0, comRentas: 0, comClases: 0, comSinNombre: 0, comAgenda: 0, efectivo: 0, tarjeta: 0, porRevisar: [], detalle: [],
     actualizado: est ? est.ms : 0, error: sync.ok ? '' : (est && est.error) || sync.error || '' };
   const usadas = new Set();
-  const calzaAgenda = v => { const a = agenda.find(x => !usadas.has(x.ref) && x.fecha === v.fecha && x.total === v.monto); if (a) usadas.add(a.ref); return a; };
+  // Tarjeta en Tuu calza con clase anotada POS; efectivo en Tuu calza con clase anotada Efectivo (o POS).
+  const calzaAgenda = v => { const ef = tuuEfectivo(v.tipo); const a = agenda.find(x => !usadas.has(x.ref) && x.fecha === v.fecha && x.total === v.monto && (x.medio === 'POS' || (ef && x.medio === 'Efectivo'))); if (a) usadas.add(a.ref); return a; };
   const suma = (cat, monto, com) => {
     const k = { producto: 'productos', renta: 'rentas', clase: 'clases', revisar: 'sinNombre', agenda: 'agenda' }[cat];
     const c = { producto: 'comProductos', renta: 'comRentas', clase: 'comClases', revisar: 'comSinNombre', agenda: 'comAgenda' }[cat];
