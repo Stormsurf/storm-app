@@ -19,7 +19,7 @@ const MP_API = 'https://api.mercadopago.com';
 const ANUAL = 'https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec';  // Anual y Adultos
 const VERANO = 'https://script.google.com/macros/s/AKfycbzSHDu8whWWNwq-EFwaWqwKOtyU5pnyPuixutUI8sd5twFaTjDibN11TA3bMH_UddTo/exec';
 const PUBLIC_KEY = 'APP_USR-d9421f08-0996-410b-bd5c-5947565d6099'; // Public Key de producción (es pública, no es secreta)
-const REF_OK = /^(AA|AD|AV|ES)-[\w-]+$/;
+const REF_OK = /^(AA|AD|AV|ES|PRUEBA)-[\w-]+$/; // PRUEBA- solo en la vista previa
 
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 const fallo = m => json({ ok: false, error: m });
@@ -54,10 +54,11 @@ async function mp(env, path, opt = {}) {
 }
 
 /** La orden original, solo si es de Storm (referencia conocida). */
-async function leerOrden(env, id) {
+async function leerOrden(env, id, url) {
   if (!/^ORD[A-Z0-9]{10,40}$/.test(String(id || ''))) return null;
   const { code, body } = await mp(env, '/v1/orders/' + encodeURIComponent(id));
   if (code !== 200 || !body || !REF_OK.test(String(body.external_reference || ''))) return null;
+  if (/^PRUEBA-/.test(body.external_reference) && !/\.storm-app\.pages\.dev$/.test(url.hostname)) return null;
   // Reservas: solo mientras el horario sigue guardado para esa persona
   if (/^ES-/.test(body.external_reference) && body.status === 'created' && env.DB) {
     const r = await env.DB.prepare('SELECT estado FROM reservas WHERE ref = ?').bind(body.external_reference).first();
@@ -68,6 +69,7 @@ async function leerOrden(env, id) {
 
 /** Avisa al programa que corresponde, igual que el aviso de Mercado Pago. Ese programa vuelve a leer la orden en Mercado Pago. */
 async function avisar(env, ref, id, origen) {
+  if (/^PRUEBA-/.test(ref)) return;
   const body = JSON.stringify({ type: 'order', action: 'order.processed', data: { id } });
   const url = /^ES-/.test(ref) ? null : (/^AV-/.test(ref) ? VERANO : ANUAL) + '?mp=1&type=order&data.id=' + encodeURIComponent(id);
   if (/^ES-/.test(ref)) {
@@ -85,7 +87,13 @@ export async function onRequest(context) {
   if (!env.MP_TOKEN) return fallo('El pago en línea no está activo en este momento. Escríbenos por WhatsApp.');
 
   if (request.method === 'GET') {
-    const o = await leerOrden(env, url.searchParams.get('o'));
+    // Vista previa: cobro de prueba de $1.000 para probar la tarjeta de verdad (después se devuelve en Mercado Pago)
+    if (url.searchParams.get('prueba') && /\.storm-app\.pages\.dev$/.test(url.hostname)) {
+      const ref = 'PRUEBA-' + Date.now(), vuelta = url.origin + '/pagar/?listo=1';
+      const { body } = await mp(env, '/v1/orders', { method: 'POST', headers: { 'X-Idempotency-Key': ref }, body: JSON.stringify({ type: 'online', processing_mode: 'manual', total_amount: '1000', external_reference: ref, description: 'Prueba Storm', items: [{ title: 'Prueba de pago Storm', quantity: 1, unit_price: '1000' }], config: { online: { success_url: vuelta, failure_url: vuelta, auto_return: 'approved' }, payment_method: { max_installments: 1 } } }) });
+      return Response.redirect(url.origin + '/pagar/?o=' + encodeURIComponent((body && body.id) || ''), 302);
+    }
+    const o = await leerOrden(env, url.searchParams.get('o'), url);
     if (!o) return fallo('No encontramos este pago. Vuelve atrás e intenta de nuevo.');
     const online = (o.config && o.config.online) || {};
     const it = (o.items || [])[0] || {};
@@ -99,7 +107,7 @@ export async function onRequest(context) {
   if (request.method !== 'POST') return json({ ok: false, error: 'Método no permitido' }, 405);
   let d = {};
   try { d = await request.json(); } catch (_) {}
-  const o = await leerOrden(env, d.o);
+  const o = await leerOrden(env, d.o, url);
   if (!o) return fallo('No encontramos este pago. Vuelve atrás e intenta de nuevo.');
   if (o.status !== 'created') return fallo(o.status === 'processed' ? 'Este pago ya está hecho.' : 'Este pago ya no está disponible. Vuelve atrás e intenta de nuevo.');
   const token = String(d.token || ''), metodo = String(d.payment_method_id || ''), tipo = d.payment_type === 'debit_card' ? 'debit_card' : (d.payment_type === 'prepaid_card' ? 'prepaid_card' : 'credit_card');

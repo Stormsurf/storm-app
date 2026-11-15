@@ -102,6 +102,7 @@
     document.getElementById('op-tarjeta').onclick = tarjeta;
   }
 
+  if(new URLSearchParams(location.search).get('listo')){ pg.innerHTML = `<div class="pg-ok"><b>¡Pago de prueba listo!</b><br>Llegó a Mercado Pago. Puedes devolverlo desde tu cuenta.</div>`; return; }
   fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {
     if(!r.ok){ pg.innerHTML = `<div class="pg-err">${esc(r.error)}</div>${ayuda}`; return; }
     D = r; pintar();
