@@ -110,3 +110,42 @@
   setInterval(() => { const e = (auth() || {}).email || ''; if (e !== (decidir.e || '')) { decidir.e = e; sincronizar(); decidir(); } }, 2500);
   addEventListener('load', () => setTimeout(() => { decidir.e = (auth() || {}).email || ''; decidir(); }, 1200));
 })();
+
+// ---------- Actualizar: botón ↻ y deslizar hacia abajo (como recargar la página) ----------
+// La app igual se actualiza sola al abrirla y al volver a ella; esto es para pedirlo cuando uno quiera.
+(() => {
+  const ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
+  window.STORM_REF_ICO = ICO;
+  const escribiendo = () => { const a = document.activeElement; return !!(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value); };
+  function actualizar(btn) {
+    if (btn) btn.classList.add('go');
+    if (typeof window.stormActualizar === 'function') {
+      Promise.resolve(window.stormActualizar()).catch(() => {}).then(() => { if (btn) btn.classList.remove('go'); });
+    } else location.reload();
+  }
+  window.stormRefrescar = actualizar;
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-actualizar]'); if (b) { e.preventDefault(); actualizar(b); } });
+
+  // Deslizar hacia abajo desde arriba de todo.
+  let y0 = null, dy = 0, ind = null;
+  const LIM = 80;
+  const bloqueado = t => !!(t.closest && t.closest('input,textarea,select,.st-sheet,.sp-mas,.pn-toast,[data-sin-ptr]')) || document.querySelector('.sp-mas, .st-sheet');
+  addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || scrollY > 0 || bloqueado(e.target)) { y0 = null; return; }
+    y0 = e.touches[0].clientY; dy = 0;
+  }, { passive: true });
+  addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy <= 0 || scrollY > 0) { if (ind) ind.style.opacity = 0; return; }
+    if (!ind) { ind = document.createElement('div'); ind.className = 'st-ptr'; ind.innerHTML = ICO; document.body.appendChild(ind); }
+    const p = Math.min(1, dy / LIM);
+    ind.style.opacity = p; ind.style.transform = `translateY(${Math.min(dy, LIM) * .7 - 20}px) rotate(${p * 270}deg)`;
+  }, { passive: true });
+  addEventListener('touchend', () => {
+    if (y0 == null || !ind) { y0 = null; return; }
+    const listo = dy >= LIM && !escribiendo(); y0 = null;
+    if (listo) { ind.classList.add('go'); ind.style.transform = `translateY(${LIM * .7 - 20}px)`; setTimeout(() => actualizar(), 150); }
+    else { ind.style.opacity = 0; }
+  }, { passive: true });
+})();

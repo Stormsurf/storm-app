@@ -31,3 +31,13 @@ button,input,textarea,select{font-family:inherit}
 .st-ok{display:block;width:100%;margin-top:14px;background:#2C2C2B;color:#fff;border:0;border-radius:999px;padding:14px;font:inherit;font-weight:600;font-size:1.5rem;cursor:pointer}
 .st-bell{width:46px;height:46px;border-radius:12px;flex:none;background:#E6F1F8;color:#2d6e94;display:grid;place-items:center}
 .st-bell svg{width:24px;height:24px}
+/* Sin zoom al tocar dos veces (iPhone y Android) */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+/* Deslizar hacia abajo para actualizar */
+.st-ptr{position:fixed;left:50%;top:calc(6px + env(safe-area-inset-top));z-index:9997;width:38px;height:38px;margin-left:-19px;border-radius:50%;background:#fff;color:#0f6e74;box-shadow:0 4px 14px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(-50px);pointer-events:none}
+.st-ptr svg{width:20px;height:20px}
+.st-ptr.go svg{animation:st-rot .8s linear infinite}
+@keyframes st-rot{to{transform:rotate(360deg)}}
+.st-ref{width:40px;height:40px;border-radius:50%;border:1px solid rgba(44,44,43,.12);background:#fff;color:#0f6e74;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
+.st-ref svg{width:19px;height:19px}
+.st-ref.go svg{animation:st-rot .8s linear infinite}
