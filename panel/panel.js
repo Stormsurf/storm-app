@@ -600,7 +600,7 @@
       <div class='pn-stat pn-stat--main${f.balance<0?' pn-fneg':''}'><small>Balance del mes</small><b>${f.balance<0?'−':''}${clp(Math.abs(f.balance))}</b><em>ingresos − gastos</em></div>
     </div>
     ${(() => {
-      const L = x => `<div><span>${esc(x.detalle)}</span><b>${x.neg?'−':''}${clp(x.monto)}</b></div>` + (x.items && x.items.length ? x.items.map(y => `<div class='pn-fsub2'><span>${esc(y.detalle)}</span><b>−${clp(y.monto)}</b></div>`).join('') : '');
+      const L = x => `<div><span>${esc(String(x.detalle).replace(/(\d+,\d)\d+%/, '$1%'))}</span><b>${x.neg?'−':''}${clp(x.monto)}</b></div>` + (x.items && x.items.length ? x.items.map(y => `<div class='pn-fsub2'><span>${esc(y.detalle)}</span><b>−${clp(y.monto)}</b></div>`).join('') : '');
       const sec = (tit, total, lineas, neg) => `<div class='pn-fsec'><div class='pn-fsh'><b>${tit}</b><b class='${neg?'':'pn-fin'}'>${neg && total?'−':''}${clp(total)}</b></div>${lineas.map(x => L(Object.assign({neg}, x))).join('')}</div>`;
       const tot = (t, tit) => `<div class='pn-ftot${t<0?' neg':''}'><b>${tit||'Total'}</b><b>${t<0?'−':''}${clp(Math.abs(t))}</b></div>`;
       const card = a => { const t = a.ingresos - a.gastos, Ls = a.lineas || {ingresos: [], gastos: []};
