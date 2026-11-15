@@ -611,7 +611,7 @@
         if (a.area === 'Surfshop' && a.inversion != null) { const queda = a.inversion - t; h += `<div class='pn-fsec'><div><span>Inversión acumulada (meses anteriores)</span><b>−${clp(a.inversion)}</b></div><div class='pn-fsh'><b>Queda por recuperar</b><b>${queda>0?'−':''}${clp(Math.abs(queda))}</b></div></div>`; }
         return h + `</div>`; };
       const verano = () => { const v = f.verano; if(!v) return ''; VERANO_FIN = v;
-        const mesH = m => { const d = m.detalle || {}, ing = [{detalle:'Inscripciones', monto:m.ingresos}].filter(x=>x.monto), gas = [];
+        const mesH = m => { const d = m.detalle || {}, arr = d.arriendos || 0, ing = [{detalle:'Inscripciones', monto:m.ingresos - arr}, {detalle:'Arriendos', monto:arr}].filter(x=>x.monto), gas = [];
           if (d.comisionMP != null) { if (d.comisionMP) gas.push({detalle:'Comisión Mercado Pago', monto:d.comisionMP}); if (d.comisionShopify) gas.push({detalle:'Comisión Shopify', monto:d.comisionShopify}); } else if (m.comision) gas.push({detalle:'Comisión', monto:m.comision});
           if (m.sueldos) gas.push({detalle:'Sueldos Isidora y Diego', monto:m.sueldos});
           (d.gastos || []).forEach(x => gas.push({detalle:x.detalle, monto:x.monto}));
@@ -621,7 +621,7 @@
       const orden = ['Escuela','Rentas','Anual','Verano','Adultos','Surfshop','Casa','Revisar'];
       return orden.map(k => k === 'Verano' ? verano() : (f.areas.find(a => a.area === k) ? card(f.areas.find(a => a.area === k)) : '')).join('');
     })()}
-    <h2 class='pn-fh2'>Gastos que vas sumando</h2>
+    <h2 class='pn-fh2'>Lo que vas anotando</h2>
     ${(() => { const fila = m => `<div><span>${esc(m.detalle)}${m.area!=='Casa' && m.area!=='Verano' ? ' · '+esc(AREA_TXT[m.area]||m.area) : ''}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b>${m.enviando ? `<i class='pn-spin' title='Guardando'></i>` : `<button data-fdel='${m.fila}' aria-label='Borrar'>×</button>`}</div>`;
       const grupo = (titulo, lista, vacio) => `<div class='pn-card'><h3>${titulo}<span class='pn-count'>${clp(lista.reduce((t,m)=>t+(/^ingreso/i.test(m.tipo)?0:m.monto),0))}</span></h3>${lista.length ? `<div class='pn-gmov'>${lista.map(fila).join('')}</div>` : `<p class='pn-empty'>${vacio}</p>`}</div>`;
       const casa = f.movs.filter(m => m.area === 'Casa'), ver = f.movs.filter(m => m.area === 'Verano'), otros = f.movs.filter(m => m.area !== 'Casa' && m.area !== 'Verano');
