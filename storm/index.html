@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/app.css?v=1">
 <link rel="stylesheet" href="/panel/panel.css?v=8">
 <script>window.STORM_SHELL = true;</script>
-<script src="/agenda/escuela.js?v=23"></script>
+<script src="/agenda/escuela.js?v=24"></script>
 <style>
 .pn-go{background:#0f6e74}.pn-in:focus{border-color:#0f6e74}
 .ap-top{display:none}
@@ -225,6 +225,7 @@ main .pn{max-width:1440px}
   const leer = () => { try{ return JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(_){ return null; } };
   const borrar = () => { try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY + '-datos'); localStorage.removeItem('storm-agenda-datos'); }catch(_){} };
   let auth = leer(), area = (() => { try{ return sessionStorage.getItem('storm-area') || 'hoy'; }catch(_){ return 'hoy'; } })();
+  if(/[?&]clase=/.test(location.search)) area = 'particulares'; // aviso de clase: abre Clases con esa clase
   const sv = d => `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>${d}</svg>`;
   const I = {
     hoy: sv("<circle cx='12' cy='12' r='4'/><path d='M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4'/>"),

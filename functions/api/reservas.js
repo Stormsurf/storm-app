@@ -428,11 +428,11 @@ async function estado(env, d, ctx) {
 // ---------- notificaciones a la app (Panel Storm / Agenda Storm, OneSignal) ----------
 // Llegan a quien tenga la app con notificaciones activadas y haya entrado con ese correo. Requiere ONESIGNAL_KEY (secreto en Cloudflare).
 const ONESIGNAL_APP = 'be18352b-5820-4912-aa46-d851890394a3';
-async function enviarPush(env, correos, titulo, texto) {
+async function enviarPush(env, correos, titulo, texto, ref) {
   const a = [...new Set((correos || []).map(norm).filter(Boolean))];
   if (!env.ONESIGNAL_KEY || !a.length) return false;
   const r = await fetch('https://api.onesignal.com/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: (/^os_v2_/.test(env.ONESIGNAL_KEY) ? 'Key ' : 'Basic ') + env.ONESIGNAL_KEY }, // llaves nuevas (os_v2_) o antiguas
-    body: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: 'push', include_aliases: { external_id: a }, headings: { en: titulo, es: titulo }, contents: { en: texto, es: texto }, url: PANEL }) });
+    body: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: 'push', include_aliases: { external_id: a }, headings: { en: titulo, es: titulo }, contents: { en: texto, es: texto }, url: PANEL + (ref ? '?clase=' + encodeURIComponent(ref) : '') }) }); // tocar el aviso abre esa clase
   const t = await r.text(); if (!r.ok) console.error('push', r.status, t);
   let j = {}; try { j = JSON.parse(t); } catch (_) {}
   // true = llegó a alguien; si no, el detalle de OneSignal (ej. ese correo no tiene la app con notificaciones)
@@ -445,8 +445,8 @@ const quienClase = r => r.nombre + ' · ' + r.personas + ' persona' + (r.persona
 async function pushNueva(env, r, a, aAdmins) {
   const ins = parseLista(r.instructores), dur = durDe(a, r);
   const cuando = diaCorto(r.fecha) + ' · ' + r.hora + ' a ' + deMin(aMin(r.hora) + dur);
-  const p = [enviarPush(env, await correosDe(env.DB, ins), 'Nueva clase particular 🏄', cuando + '\n' + quienClase(r) + (ins.length > 1 ? ' · con ' + ins.join(' y ') : ''))];
-  if (aAdmins) p.push(enviarPush(env, a.admins, 'Nueva reserva 🏄 ' + clp(r.total), cuando + '\n' + quienClase(r) + ' · ' + ins.join(' y ')));
+  const p = [enviarPush(env, await correosDe(env.DB, ins), 'Nueva clase particular 🏄', cuando + '\n' + quienClase(r) + (ins.length > 1 ? ' · con ' + ins.join(' y ') : ''), r.ref)];
+  if (aAdmins) p.push(enviarPush(env, a.admins, 'Nueva reserva 🏄 ' + clp(r.total), cuando + '\n' + quienClase(r) + ' · ' + ins.join(' y '), r.ref));
   await Promise.all(p);
 }
 /** Resumen del día siguiente (una vez, desde las 19:00): a cada instructor sus clases y a las administradoras todas */
@@ -705,10 +705,10 @@ async function editar(env, q, d, ctx) {
     const antes = parseLista(r.instructores), nuevos = ins.filter(i => !antes.includes(i)), salen = antes.filter(i => !ins.includes(i));
     const cuando = diaCorto(fecha) + ' · ' + hora, movida = fecha !== r.fecha || hora !== r.hora;
     tarea(ctx, (async () => {
-      if (nuevos.length) await enviarPush(env, await correosDe(db, nuevos), 'Te asignaron una clase 🏄', cuando + '\n' + quienClase(r));
+      if (nuevos.length) await enviarPush(env, await correosDe(db, nuevos), 'Te asignaron una clase 🏄', cuando + '\n' + quienClase(r), r.ref);
       if (salen.length) await enviarPush(env, await correosDe(db, salen), 'Ya no tienes esta clase', diaCorto(r.fecha) + ' · ' + r.hora + '\n' + quienClase(r));
       const siguen = ins.filter(i => antes.includes(i));
-      if (movida && siguen.length) await enviarPush(env, await correosDe(db, siguen), 'Clase cambiada de hora', 'Ahora: ' + cuando + '\n' + quienClase(r));
+      if (movida && siguen.length) await enviarPush(env, await correosDe(db, siguen), 'Clase cambiada de hora', 'Ahora: ' + cuando + '\n' + quienClase(r), r.ref);
     })());
   }
   return panel(env, q);

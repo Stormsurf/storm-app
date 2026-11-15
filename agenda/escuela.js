@@ -2,6 +2,8 @@
    Habla con /api/reservas (Cloudflare). Usa la misma sesión del Panel. */
 (() => {
   const API = '/api/reservas';
+  // Al tocar un aviso de clase nueva llega ?clase=REF: se abre esa clase apenas estén los datos
+  let pedida = (() => { try { return new URLSearchParams(location.search).get('clase') || ''; } catch (_) { return ''; } })();
   const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const DC = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -361,6 +363,7 @@
   // ---------- pintar ----------
   function pintar() {
     if (!pane || !E) return;
+    if (pedida && (E.reservas || []).some(r => r.ref === pedida)) { vista = { t: 'clase', ref: pedida }; pila = []; manualOn = false; pedida = ''; try { history.replaceState(null, '', location.pathname); } catch (_) {} }
     const recep = E.rol === 'recepcion', admin = E.rol === 'admin' || recep;
     if (recep && !['dia', 'reservas'].includes(sub)) sub = 'dia';
     let h = `<style>${css}</style>`, cuerpo = '';
@@ -950,7 +953,8 @@
       const cambio = !E || JSON.stringify(E) !== JSON.stringify(d);
       E = d; guardarCache(d);
       const a = document.activeElement;
-      if (cambio && !(a && pane.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) pintar();
+      if (pedida || (cambio && !(a && pane.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))) pintar();
+      pedida = '';
     } catch (x) {
       if (salir && /sesión|expir/i.test(x.message)) return salir(x.message);
       if (!E) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`;
