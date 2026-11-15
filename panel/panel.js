@@ -539,7 +539,7 @@
 
   // ---------- Ventas de la máquina Tuu (recepción) ----------
   // Se leen solas desde Cloudflare (/api/reservas). Las que llegan sin producto quedan "Por revisar": un toque y quedan ordenadas.
-  const TUU = {}, TUU_CAT = {producto:'Producto', renta:'Renta', clase:'Clase ya anotada'};
+  const TUU = {}, TUU_CAT = {producto:'Producto (Surf Shop)', renta:'Renta'};
   const mesIso = m => { const p = String(m || '').split(' '), i = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].indexOf(p[0]); return i < 0 ? '' : p[1] + '-' + String(i + 1).padStart(2, '0'); };
   async function postTuu(body){
     const r = await fetch('/api/reservas', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, auth, body))});
@@ -554,23 +554,11 @@
   }
   function pintarTuu(mes){ const el = app && app.querySelector('#pn-tuu'); if(el) { el.innerHTML = tuuHtml(mes); enlazarTuu(el, mes); } }
   function tuuHtml(mes){
-    const x = TUU[mesIso(mes)];
-    if(!x) return `<div class='pn-card'><h3>Ventas Tuu</h3><p class='pn-sub'>Cargando…</p></div>`;
-    if(x.error) return /clave/i.test(x.error) ? '' : `<div class='pn-card'><h3>Ventas Tuu</h3><p class='pn-sub'>No se pudo leer Tuu: ${esc(x.error)}</p></div>`;
-    const d = x.d, fila = (t, v, neg) => v ? `<div><span>${t}</span><b class='${neg?'':'pn-fin'}'>${neg?'−':'+'}${clp(v)}</b></div>` : '';
-    const hora = d.actualizado ? new Date(d.actualizado).toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', hourCycle:'h23'}) : '';
-    return `<div class='pn-card'><h3>Ventas Tuu<span class='pn-count'>${d.ventas} venta${d.ventas===1?'':'s'} · ${clp(d.total)}</span></h3>
-      <div class='pn-gmov'>
-        ${fila('Productos (Surf Shop)', d.productos)}${fila('Rentas', d.rentas)}${fila('Sin nombre, por revisar', d.sinNombre)}
-        ${d.agenda ? `<div><span>Clases cobradas en Tuu <small>(ya están anotadas, no se suman de nuevo; solo se descuenta su comisión)</small></span><b>${clp(d.agenda)}</b></div>` : ''}
-        ${fila('Comisión Tuu (tarjetas)', d.comision, true)}
-        <div><span>Efectivo ${clp(d.efectivo)} · Tarjeta ${clp(d.tarjeta)}</span></div>
-      </div>
-      ${d.porRevisar.length ? `<h3 style='margin-top:14px'>Por revisar<span class='pn-count'>${d.porRevisar.length}</span></h3><p class='pn-sub'>Se vendieron sin elegir producto. Toca qué era cada una.</p>
-        ${d.porRevisar.map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-acts'>${Object.keys(TUU_CAT).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}` : ''}
-      ${d.detalle.length ? `<details style='margin-top:10px'><summary class='pn-sub' style='cursor:pointer'>Ver todas las ventas (${d.detalle.length})</summary>${d.detalle.slice().reverse().map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)} · ${esc(v.categoria === 'agenda' ? 'Clase ya anotada (no se suma)' : v.categoria === 'revisar' ? 'Por revisar' : v.categoria === 'mixta' ? 'Productos y rentas' : (TUU_CAT[v.categoria]||v.categoria))}${v.aMano ? ' · a mano' : ''}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}${v.clase ? ' · ' + esc(v.clase) : ''}${v.productos ? ' · ' + esc(v.productos) : ''}</small></div><div class='pn-acts'>${v.aMano ? `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat=''>Deshacer</button>` : Object.keys(TUU_CAT).filter(c => c !== v.categoria && !(c === 'clase' && v.categoria === 'agenda')).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}</details>` : ''}
-      <p class='pn-sub' style='margin-top:8px'>Cuenta desde el ${esc(corta(d.desde||''))} (lo anterior está en tu planilla 2026). Se lee sola de la máquina Tuu${hora?' (al día a las '+esc(hora)+')':''}. Nombre con "Renta" o "Arriendo" va a Rentas; otros productos a Surf Shop. Las clases y las ventas solo con monto se toman como clases ya anotadas: no se suman de nuevo. Si alguna era un producto o una renta, cámbiala en Ver todas las ventas. <button class='pn-link' data-tuuya style='border:0;background:none;padding:0;font:inherit;cursor:pointer'>Actualizar ahora</button></p>
-      ${d.error ? `<p class='pn-sub'>Ojo: la última lectura de Tuu falló (${esc(d.error)}). Se muestra lo último que llegó.</p>` : ''}</div>`;
+    // Solo se muestra cuando hay ventas de Tuu sin producto que no calzan con una clase POS del Panel: Isidora elige si fue renta o producto.
+    const x = TUU[mesIso(mes)]; if(!x || x.error || !x.d || !x.d.porRevisar || !x.d.porRevisar.length) return '';
+    const d = x.d;
+    return `<div class='pn-card'><h3>Ventas Tuu por revisar<span class='pn-count'>${d.porRevisar.length}</span></h3><p class='pn-sub'>Se vendieron en la máquina sin elegir producto y no calzan con ninguna clase POS del Panel. Toca qué era cada una.</p>
+      ${d.porRevisar.map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-acts'>${Object.keys(TUU_CAT).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}</div>`;
   }
   function enlazarTuu(el, mes){
     el.querySelectorAll('[data-tuu]').forEach(b => b.onclick = async () => {
@@ -621,6 +609,7 @@
       const orden = ['Escuela','Rentas','Anual','Verano','Adultos','Surfshop','Casa','Revisar'];
       return orden.map(k => k === 'Verano' ? verano() : (f.areas.find(a => a.area === k) ? card(f.areas.find(a => a.area === k)) : '')).join('');
     })()}
+    <div id='pn-tuu'>${tuuHtml(f.mes)}</div>
     <h2 class='pn-fh2'>Gastos que vas sumando</h2>
     ${(() => { const fila = m => `<div><span>${esc(m.detalle)}${m.area!=='Casa' && m.area!=='Verano' ? ' · '+esc(AREA_TXT[m.area]||m.area) : ''}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b>${m.enviando ? `<i class='pn-spin' title='Guardando'></i>` : `<button data-fdel='${m.fila}' aria-label='Borrar'>×</button>`}</div>`;
       const grupo = (titulo, lista, vacio) => `<div class='pn-card'><h3>${titulo}<span class='pn-count'>${clp(lista.reduce((t,m)=>t+(/^ingreso/i.test(m.tipo)?0:m.monto),0))}</span></h3>${lista.length ? `<div class='pn-gmov'>${lista.map(fila).join('')}</div>` : `<p class='pn-empty'>${vacio}</p>`}</div>`;
@@ -631,6 +620,7 @@
         + grupo('Academia de Verano', ver, 'Aún no sumas gastos del Verano este mes.') + (otros.length ? grupo('Otras áreas', otros, '') : ''); })()}
     ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
     pane.innerHTML = h;
+    cargarTuu(f.mes); enlazarTuu(pane.querySelector('#pn-tuu') || pane, f.mes);
     pane.querySelectorAll('[data-ftipo]').forEach(b => b.onclick = () => { fTipo = b.dataset.ftipo; pintarFinanzas(); });
     pane.querySelectorAll('[data-farea]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fArea = b.dataset.farea; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });
     pane.querySelectorAll('[data-fcorr]').forEach(b => b.onclick = () => { const m = pane.querySelector('#pn-fmonto').value, d = pane.querySelector('#pn-fdet').value; fCorr = b.dataset.fcorr; pintarFinanzas(); pane.querySelector('#pn-fmonto').value = m; pane.querySelector('#pn-fdet').value = d; });

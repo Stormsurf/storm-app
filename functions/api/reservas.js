@@ -1025,6 +1025,9 @@ async function tuuResumen(env, mes, forzar) {
     let items = []; try { items = JSON.parse(v.items || '[]'); } catch (_) {}
     const base = { id: v.id, fecha: v.fecha, hora: v.hora, monto: v.monto, comision: v.comision, pago: tuuEfectivo(v.tipo) ? 'Efectivo' : 'Tarjeta', productos: items.map(i => (i.cantidad > 1 ? i.cantidad + ' × ' : '') + i.nombre).join(', ') };
     // Isidora (14-11): las clases siempre quedan anotadas en otro lado (Agenda, planilla). Las que pasan por Tuu no suman de nuevo: solo su comisión.
+    // Isidora (15-11): la clase a veces se anota en el Panel después de cobrar en Tuu. El cruce se rehace cada vez que se lee,
+    // así que una venta sin producto pasa sola a "clase ya anotada" cuando aparece la clase POS de ese día y monto (aunque antes se haya marcado renta o producto).
+    if (!items.some(i => i.nombre && i.precio)) { const a0 = calzaAgenda(v); if (a0) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: a0.hora + ' · ' + a0.nombre })); return; } }
     if (v.categoria === 'clase') { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', aMano: true })); return; }
     if (TUU_CATS.includes(v.categoria)) { suma(v.categoria, v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: v.categoria, aMano: true })); return; }
     const conNombre = items.filter(i => i.nombre && i.precio);
@@ -1034,8 +1037,10 @@ async function tuuResumen(env, mes, forzar) {
       const a = calzaAgenda(v);
       if (a) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: a.hora + ' · ' + a.nombre })); return; }
     }
-    // Sin producto o solo "clase": es una clase que ya está anotada (Agenda o planilla). No se suma de nuevo; solo su comisión.
-    if (!conNombre.length || (cats.length === 1 && cats[0] === 'clase')) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda' })); return; }
+    // Isidora (15-11): una venta sin producto es clase SOLO si calza con una clase POS del Panel (arriba). Si no calza, es renta o producto: queda "Por revisar".
+    if (!conNombre.length) { suma('revisar', v.monto, v.comision); r.porRevisar.push(base); r.detalle.push(Object.assign(base, { categoria: 'revisar' })); return; }
+    // Con nombre de clase ("Clase 2 Personas"): es una clase ya anotada. No se suma de nuevo; solo su comisión.
+    if (cats.length === 1 && cats[0] === 'clase') { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda' })); return; }
     // Una venta puede traer productos y rentas juntos: se reparte según el precio de cada uno.
     const bruto = conNombre.reduce((t, i) => t + i.precio * i.cantidad, 0) || 1;
     let restoM = v.monto, restoC = v.comision;
