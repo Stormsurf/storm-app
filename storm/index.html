@@ -251,6 +251,8 @@ main .pn{max-width:1440px}
   const GRUPO = { anual: 'academias', verano: 'academias', adultos: 'academias', finanzas: 'plata', sueldos: 'plata' };
   const SEG = { academias: [['anual', 'Anual'], ['verano', 'Verano'], ['adultos', 'Adultos']], plata: [['finanzas', 'Este mes'], ['sueldos', 'Sueldos'], ['particulares:pagos', 'Pagos particulares']] };
   let ultimo = (() => { try{ return JSON.parse(sessionStorage.getItem('storm-ultimo') || 'null') || {}; }catch(_){ return {}; } })();
+  // Verano: los instructores lo ven desde el 15 de diciembre (cuando termina la Anual) hasta fin de febrero
+  const veranoVisible = () => { if(esAdmin()) return true; const d = new Date(), m = d.getMonth(); return m === 0 || m === 1 || (m === 11 && d.getDate() >= 15); };
   if(!ultimo.academias) ultimo.academias = [0, 1].includes(new Date().getMonth()) ? 'verano' : 'anual';
   if(!ultimo.plata) ultimo.plata = 'finanzas';
 
@@ -312,7 +314,7 @@ main .pn{max-width:1440px}
       ${adm ? `<button class='sp-plus' data-anotar aria-label='Anotar'>${I.mas2}</button>` : ''}
       ${adm ? b('plata', 'Plata', I.finanzas, ' data-solo-cel') : ''}
       ${b('academias', 'Academias', I.anual, ' data-solo-cel')}
-      ${ac}Academias</div>${b('anual', 'Academia Anual', I.anual, ' data-solo-pc')}${b('verano', 'Academia de Verano', I.verano, ' data-solo-pc')}${b('adultos', 'Academia de Adultos', I.adultos, ' data-solo-pc')}
+      ${ac}Academias</div>${b('anual', 'Academia Anual', I.anual, ' data-solo-pc')}${veranoVisible() ? b('verano', 'Academia de Verano', I.verano, ' data-solo-pc') : ''}${b('adultos', 'Academia de Adultos', I.adultos, ' data-solo-pc')}
       ${adm ? `${ac}Plata</div>${b('finanzas', 'Este mes', I.finanzas, ' data-solo-pc')}${b('sueldos', 'Sueldos', I.pago, ' data-solo-pc')}` : ''}
       <div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
   }
@@ -363,6 +365,7 @@ main .pn{max-width:1440px}
   function ir(a){
     if(a === 'academias' || a === 'plata'){ a = ultimo[a]; }
     if(!TIT[a] || (!esAdmin() && GRUPO[a] === 'plata')) a = 'hoy';
+    if(a === 'verano' && !veranoVisible()) a = 'anual';
     if(esRecep()) a = 'particulares';
     area = a; try{ sessionStorage.setItem('storm-area', a); }catch(_){}
     const g = GRUPO[a]; if(g){ ultimo[g] = a; try{ sessionStorage.setItem('storm-ultimo', JSON.stringify(ultimo)); }catch(_){} }
@@ -376,7 +379,7 @@ main .pn{max-width:1440px}
     const seg = root.querySelector('.sp-seg');
     seg.hidden = !g; seg.dataset.g = g || '';
     if(g){
-      seg.innerHTML = SEG[g].map(([k, t]) => `<button class='${k === a ? 'on' : ''}' data-seg='${k}'>${t}</button>`).join('');
+      seg.innerHTML = SEG[g].filter(([k]) => k !== 'verano' || veranoVisible()).map(([k, t]) => `<button class='${k === a ? 'on' : ''}' data-seg='${k}'>${t}</button>`).join('');
       seg.querySelectorAll('[data-seg]').forEach(b => b.onclick = () => { const [x, sub] = b.dataset.seg.split(':'); ir(x); if(sub) StormEscuela.ir(sub); });
     }
     if(a === 'hoy') pintarHoy();

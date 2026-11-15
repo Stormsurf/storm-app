@@ -309,7 +309,7 @@
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
     LISTA = d.lista || []; LISTA_TODOS = d.listaTodos || []; EXTRAS_PEND = d.extrasPend || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button><button class='pn-tab' data-tab='lista'>Lista</button><button class='pn-tab' data-tab='alumnos'>Alumnos</button><button class='pn-tab' data-tab='mensajes'>Mensajes</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='lista'>Lista</button>`}<button class='pn-tab' data-tab='alumnos'>Alumnos</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='mensajes'>Mensajes</button>`}${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
@@ -865,7 +865,7 @@
   function ponerSelector(){
     if(!API_VERANO) return;
     const head = app.querySelector('.pn-head'); if(!head || app.querySelector('.pn-sw')) return;
-    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button><button data-acad='verano'>Verano</button><button data-acad='adultos'>Adultos</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}</div>`);
+    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button>${ES_ADMIN || (() => { const d = new Date(), m = d.getMonth(); return m === 0 || m === 1 || (m === 11 && d.getDate() >= 15); })() ? `<button data-acad='verano'>Verano</button>` : ''}<button data-acad='adultos'>Adultos</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}</div>`);
     if(!app.querySelector('.pn-adultos')) app.insertAdjacentHTML('beforeend', `<div class='pn-adultos' hidden></div>`);
     app.querySelectorAll('[data-acad]').forEach(b => b.onclick = () => { acad = b.dataset.acad; try{ sessionStorage.setItem(KEY + '-acad', acad); }catch(_){} mostrarAcad(); });
     mostrarAcad();
