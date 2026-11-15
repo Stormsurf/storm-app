@@ -57,6 +57,11 @@ async function leerOrden(env, id) {
   if (!/^ORD[A-Z0-9]{10,40}$/.test(String(id || ''))) return null;
   const { code, body } = await mp(env, '/v1/orders/' + encodeURIComponent(id));
   if (code !== 200 || !body || !REF_OK.test(String(body.external_reference || ''))) return null;
+  // Reservas: solo mientras el horario sigue guardado para esa persona
+  if (/^ES-/.test(body.external_reference) && body.status === 'created' && env.DB) {
+    const r = await env.DB.prepare('SELECT estado FROM reservas WHERE ref = ?').bind(body.external_reference).first();
+    if (!r || r.estado !== 'pendiente') body.status = r && r.estado === 'pagada' ? 'processed' : 'expired';
+  }
   return body;
 }
 
