@@ -22,6 +22,10 @@ const CORREO_STORM = 'isidoravergara@gmail.com';
 const MAPA = 'https://maps.app.goo.gl/xcFSTmgfwwKACqfb7';
 const TRAER = ['Traje de baño (para usar debajo del wetsuit)', 'Toalla', 'Bloqueador solar', 'Botella con agua', 'Ropa cómoda para después de la clase'];
 const WHATSAPP = '56977744306';
+// Reseñas (Isidora 16-11): reemplaza el correo de AgendaPro. Sin link de Google no se manda nada.
+const GOOGLE_RESENA = 'https://g.page/r/CVXN28sfJWmyEAE/review';
+const RESENA_DESDE = '2026-11-17'; // solo clases desde este día (no se le escribe a clientes antiguos)
+const RESENA_HORAS = 2; // horas después de que termina la clase
 const SESION_DIAS = 365;
 const BLOQUE = 30; // minutos
 
@@ -546,6 +550,75 @@ async function recordatorios(env, a) {
   return results.length;
 }
 
+// ---------- reseñas ----------
+// Un correo por cliente (por correo electrónico), 2 horas después de su primera clase pagada desde RESENA_DESDE.
+async function resenaTabla(db) {
+  await db.prepare("CREATE TABLE IF NOT EXISTS resenas (ref TEXT PRIMARY KEY, correo TEXT NOT NULL, nombre TEXT NOT NULL, fecha TEXT NOT NULL, enviada_ms INTEGER NOT NULL, estrellas INTEGER NOT NULL DEFAULT 0, comentario TEXT NOT NULL DEFAULT '', publicar INTEGER NOT NULL DEFAULT 0, respondida_ms INTEGER NOT NULL DEFAULT 0)").run();
+}
+const linkResena = (r, n) => PAGINA + 'resena/?r=' + encodeURIComponent(r.ref) + '&k=' + encodeURIComponent(r.clave || '') + (n ? '&e=' + n : '');
+function correoResena(r) {
+  const F = 'font-family:Helvetica,Arial,sans-serif;';
+  const estrella = n => '<a href="' + linkResena(r, n) + '" style="text-decoration:none;color:#F2B300;font-size:42px;padding:0 3px" title="' + n + '">&#9733;</a>';
+  const html = '<div style="background:#EFECE8;padding:28px 12px;' + F + 'color:#2C2C2B"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#fff;border-radius:22px;overflow:hidden">' +
+    '<tr><td style="padding:26px 26px 0;text-align:center"><img src="https://app.stormsurf.cl/img/storm-logo.png" alt="Storm" width="110" style="display:inline-block"></td></tr>' +
+    '<tr><td style="padding:18px 26px 0;text-align:center"><p style="margin:0;font-size:40px">🤙</p><h1 style="font-size:27px;line-height:1.15;margin:6px 0 10px">¡Gracias por surfear con Storm!</h1><p style="margin:0;font-size:16px;line-height:1.55;color:#5c5b58">Hola ' + esc(r.nombre.split(' ')[0]) + ', esperamos que lo hayas pasado increíble en el agua.</p></td></tr>' +
+    '<tr><td style="padding:22px 26px 0"><div style="background:#E3F1F1;border-radius:18px;padding:22px;text-align:center"><p style="margin:0;font-size:18px;line-height:1.45"><b>¿Cómo estuvo tu clase?</b></p><p style="margin:4px 0 0;font-size:15px;color:#5c5b58">Toca las estrellas</p>' +
+    '<p style="margin:6px 0 0">' + [1, 2, 3, 4, 5].map(estrella).join('') + '</p><p style="margin:2px 0 0;font-size:13px;color:#8a8986">1 = no me gustó · 5 = me encantó</p></div></td></tr>' +
+    '<tr><td style="padding:18px 26px 0;text-align:center"><p style="margin:0;font-size:15px;line-height:1.5;color:#5c5b58">Tu opinión nos ayuda a mejorar y a que más personas conozcan Storm.</p></td></tr>' +
+    '<tr><td style="padding:24px 26px 28px;text-align:center"><p style="margin:0;font-size:17px">¡Te esperamos de vuelta en el agua! 🌊<br><b>Equipo Storm</b></p></td></tr></table>' +
+    '<p style="text-align:center;margin:16px 0 0;font-size:12px;color:#8a8986">Storm Surf Academy · Playa de Matanzas, Navidad · <a href="https://www.stormsurf.cl" style="color:#2d6e94">stormsurf.cl</a></p></div>';
+  return html.replace(/[^\x00-\x7F]/gu, c => '&#' + c.codePointAt(0) + ';');
+}
+const googleResena = a => (a && a.linkResena) || GOOGLE_RESENA;
+async function pedirResenas(env, a) {
+  if (!googleResena(a) || !env.CLAVE_CORREO) return 0;
+  const t = ahoraChile();
+  if (aMin(t.hora) < aMin('09:00') || aMin(t.hora) > aMin('21:30')) return 0; // de noche espera a la mañana
+  const db = env.DB; await resenaTabla(db);
+  const inicio = env.RESENA_DESDE || RESENA_DESDE, desde = sumarDias(t.fecha, -3) > inicio ? sumarDias(t.fecha, -3) : inicio;
+  const { results } = await db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND estado = 'pagada' AND correo != '' AND ref NOT IN (SELECT ref FROM resenas) ORDER BY fecha, hora").bind(desde, t.fecha).all();
+  const ahora = minLocal(t.fecha, t.hora);
+  let n = 0;
+  for (const r of results) {
+    if (minLocal(r.fecha, r.hora) + durDe(a, r) + RESENA_HORAS * 60 > ahora) continue;
+    const correo = norm(r.correo);
+    const ya = await db.prepare('SELECT ref FROM resenas WHERE correo = ? LIMIT 1').bind(correo).first();
+    if (ya) continue; // ya se le pidió una vez
+    if (!r.clave) { r.clave = nuevaClave(); await db.prepare('UPDATE reservas SET clave = ? WHERE ref = ?').bind(r.clave, r.ref).run(); }
+    // Se anota antes de mandar: nunca dos correos a la misma persona.
+    const ins = await db.prepare('INSERT OR IGNORE INTO resenas (ref, correo, nombre, fecha, enviada_ms) VALUES (?, ?, ?, ?, ?)').bind(r.ref, correo, r.nombre, r.fecha, Date.now()).run();
+    if (!ins.meta || !ins.meta.changes) continue;
+    await enviarCorreo(env, { to: r.correo, subject: '¿Cómo estuvo tu clase de surf?', html: correoResena(r),
+      body: 'Hola ' + r.nombre.split(' ')[0] + ', ¡gracias por surfear con Storm!\n\n¿Cómo estuvo tu clase? Cuéntanos aquí (1 minuto): ' + linkResena(r) + '\n\n¡Te esperamos de vuelta en el agua!\nEquipo Storm' });
+    n++;
+  }
+  return n;
+}
+async function resenaDe(env, d) {
+  const db = env.DB; await resenaTabla(db);
+  if (d.ref === 'PRUEBA' && d.k === 'prueba') return { ref: 'PRUEBA', clave: 'prueba', nombre: 'Camila Prueba', prueba: true };
+  const r = await db.prepare('SELECT ref, clave, nombre FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
+  if (!r || !r.clave || r.clave !== String(d.k || '')) throw err('Este link no es válido. Escríbenos por WhatsApp.');
+  return r;
+}
+/** El cliente abre el link (con o sin estrellas) o envía su comentario. */
+async function resenaGuardar(env, d, ctx) {
+  const db = env.DB, r = await resenaDe(env, d), a = await ajustes(db);
+  const e = Math.max(0, Math.min(5, Math.floor(Number(d.estrellas) || 0)));
+  const comentario = String(d.comentario || '').trim().slice(0, 1500);
+  if (r.prueba) return { ok: true, prueba: true, nombre: 'Camila', google: googleResena(a), whatsapp: WHATSAPP };
+  const antes = await db.prepare('SELECT * FROM resenas WHERE ref = ?').bind(r.ref).first();
+  if (!antes) await db.prepare('INSERT OR IGNORE INTO resenas (ref, correo, nombre, fecha, enviada_ms) SELECT ref, lower(correo), nombre, fecha, 0 FROM reservas WHERE ref = ?').bind(r.ref).run();
+  if (e) await db.prepare('UPDATE resenas SET estrellas = ?, respondida_ms = ? WHERE ref = ?').bind(e, Date.now(), r.ref).run();
+  if (d.enviar) {
+    await db.prepare('UPDATE resenas SET comentario = ?, publicar = ? WHERE ref = ?').bind(comentario, d.publicar && e >= 4 ? 1 : 0, r.ref).run();
+    const est = e || (antes && antes.estrellas) || 0;
+    if (comentario) tarea(ctx, correoStorm(env, (est && est <= 3 ? 'Comentario para mejorar' : 'Nuevo comentario') + ' · ' + est + ' estrellas · ' + r.nombre,
+      r.nombre + ' (' + r.ref + ') puso ' + est + ' de 5 estrellas y escribió:\n\n' + comentario + '\n\nLo ves en Agenda Storm > Ajustes > Reseñas: ' + PANEL));
+  }
+  return { ok: true, nombre: r.nombre.split(' ')[0], google: googleResena(a), whatsapp: WHATSAPP };
+}
+
 /** Cada 5 minutos: pagos pendientes, horarios no pagados y recordatorios. */
 async function revisionAutomatica(env, ctx) {
   const db = env.DB, a = await ajustes(db);
@@ -564,8 +637,9 @@ async function revisionAutomatica(env, ctx) {
   if (env.TUU_KEY) try { const hoy = ahoraChile().fecha; await tuuSincronizar(env, hoy.slice(0, 7)); if (+hoy.slice(8) <= 3) await tuuSincronizar(env, sumarDias(hoy.slice(0, 8) + '01', -1).slice(0, 7)); } catch (x) { console.error(x); }
   let anual = null; try { anual = await sincronizarAnual(env); } catch (x) { console.error(x); anual = { error: x.message }; }
   const rec = await recordatorios(env, a);
+  let resenas = 0; try { resenas = await pedirResenas(env, a); } catch (x) { console.error(x); }
   let resumen = 0; try { resumen = await pushResumen(env, a); } catch (x) { console.error(x); }
-  return { ok: true, revisadas: results.length, pagadas, recordatorios: rec, anual, resumen };
+  return { ok: true, revisadas: results.length, pagadas, recordatorios: rec, resenas, anual, resumen };
 }
 
 // ---------- Panel ----------
@@ -621,6 +695,9 @@ async function panel(env, q) {
     const pagoPor = {};
     porIns.results.forEach(r => { const p = pagosDe(r); Object.keys(p).forEach(i => { pagoPor[i] = (pagoPor[i] || 0) + p[i]; }); });
     out.mes = { mes, clases: m.n, total: m.total, pagoInstructores: m.pago, pagoPor };
+    await resenaTabla(db);
+    out.resenas = (await db.prepare('SELECT ref, nombre, fecha, enviada_ms, estrellas, comentario, publicar FROM resenas ORDER BY COALESCE(NULLIF(respondida_ms, 0), enviada_ms) DESC LIMIT 200').all()).results;
+    out.linkResena = googleResena(a);
     out.faltaConfigurar = ['MP_TOKEN', 'CLAVE_CORREO', 'TAREA_CLAVE', 'ONESIGNAL_KEY'].filter(k => !env[k]);
   } else {
     const mes = hoy.slice(0, 7);
@@ -859,6 +936,7 @@ async function guardarAjustes(env, q, d) {
   ['horaTarde', 'cierreNoche'].forEach(k => { if (d[k]) { const h = normHora(d[k]); if (h) st.push([k, h]); } });
   if (d.lugar) st.push(['lugar', String(d.lugar).trim()]);
   if (d.admins) { const l = d.admins.map(norm).filter(x => /@/.test(x)); if (!l.includes(q.email)) l.push(q.email); st.push(['admins', l]); }
+  if (d.linkResena != null) { const l = String(d.linkResena).trim(); if (l && !/^https:\/\/\S+$/.test(l)) throw err('El link de Google debe empezar con https://'); st.push(['linkResena', l]); }
   if (d.recepcion) st.push(['recepcion', d.recepcion.map(norm).filter(x => /@/.test(x))]);
   if (st.length) await db.batch(st.map(([k, v]) => db.prepare('INSERT OR REPLACE INTO ajustes (clave, valor) VALUES (?, ?)').bind(k, JSON.stringify(v))));
   await anotar(db, q, 'ajustes ' + st.map(x => x[0]).join(','));
@@ -1094,6 +1172,7 @@ export async function onRequest(context) {
     if (acc === 'estado') return json(await estado(env, d, context));
     if (acc === 'ficha') return json(await fichaVer(env, d));
     if (acc === 'ficha-guardar') return json(await fichaGuardar(env, d, request));
+    if (acc === 'resena') return json(await resenaGuardar(env, d, context));
     const q = await quien(env, d);
     if (acc === 'fichas') return json(await fichasLeer(env, q, d));
     if (acc === 'escuela') return json(await panel(env, q));
@@ -1105,6 +1184,7 @@ export async function onRequest(context) {
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));
     if (acc === 'tuu-asignar') return json(await tuuAsignar(env, q, d));
+    if (acc === 'resena-prueba') { const a = await ajustes(env.DB); if (!googleResena(a)) throw err('Primero pega el link de Google.'); await enviarCorreo(env, { to: q.email, subject: '¿Cómo estuvo tu clase de surf?', html: correoResena({ ref: 'PRUEBA', clave: 'prueba', nombre: 'Camila Prueba' }), body: 'Prueba' }); return json({ ok: true }); }
     if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }
     if (acc === 'editar') return json(await editar(env, q, d, context));
     if (acc === 'cancelar') return json(await cancelar(env, q, d, context));

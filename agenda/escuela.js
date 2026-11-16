@@ -732,7 +732,7 @@
 
   function ajustes() {
     const a = E.ajustes;
-    const TABS = [['instructores', 'Instructores'], ['precios', 'Precios'], ['reglas', 'Reglas para reservar'], ['bloqueos', 'Horas bloqueadas'], ['admins', 'Accesos y avisos']];
+    const TABS = [['instructores', 'Instructores'], ['precios', 'Precios'], ['reglas', 'Reglas para reservar'], ['bloqueos', 'Horas bloqueadas'], ['admins', 'Accesos y avisos'], ['resenas', 'Reseñas']];
     if (!ajTab) {
       const it = (k, ic, c, t, d) => fila(ic, t, d, { tag: 'button', at: `data-ajt='${k}'`, ic: c });
       return `<div class='es-ajw'>` + grupo('Equipo', [
@@ -742,7 +742,8 @@
         + grupo('Clases', [
           it('precios', '$', 'ok', 'Precios', 'Lo que paga el cliente y recibe el instructor'),
           it('reglas', ICO_S.regla, '', 'Horarios y reglas para reservar', 'Horas de clase y hasta cuándo se reserva'),
-          it('bloqueos', ICO_S.candado, 'gris', 'Horas bloqueadas', 'Academia Anual y compromisos fijos')])
+          it('bloqueos', ICO_S.candado, 'gris', 'Horas bloqueadas', 'Academia Anual y compromisos fijos'),
+          it('resenas', '★', 'pend', 'Reseñas', (() => { const l = (E.resenas || []).filter(r => r.estrellas); return l.length ? l.length + ' respuestas · promedio ' + (l.reduce((t, r) => t + r.estrellas, 0) / l.length).toFixed(1).replace('.', ',') + ' ★' : 'Correo después de cada clase'; })())])
         + grupo('Reserva online', [fila(ICO_S.link, 'Link para reservar', esc(E.link.replace('https://', '')), { tag: 'button', at: 'data-copiar', fin: `<span class='es-btn sec' style='flex:none'>Copiar</span>` })]) + `</div>`;
     }
     let h = `<div class='es-ajw'><button class='es-volver' data-ajt=''>${ICO_S.atras.replace('<svg', "<svg width='20' height='20'")}Ajustes</button><h2 class='es-ajh'>${(TABS.find(t => t[0] === ajTab) || [, ''])[1]}</h2>`;
@@ -808,6 +809,17 @@
         <div class='es-acc'><button class='es-btn' data-aj='admins'>Guardar</button></div><p class='es-err vivo'></p></div>
         <div class='pn-card'><h3>Notificaciones</h3><p class='pn-sub'>Llegan al celular cuando alguien reserva y el día antes a las 19:00. Prueba que te lleguen a ti:</p>
         <div class='es-acc'><button class='es-btn sec' data-pp>Mandarme una notificación de prueba</button></div><p class='pn-sub' data-ppr></p></div>`;
+    }
+    if (ajTab === 'resenas') {
+      const R = E.resenas || [], resp = R.filter(r => r.estrellas), st = n => `<span style='color:#F2B300;letter-spacing:1px'>${'★'.repeat(n)}</span><span style='color:#ddd;letter-spacing:1px'>${'★'.repeat(5 - n)}</span>`;
+      h += `<p class='es-intro'>2 horas después de su clase, cada cliente recibe un correo para poner estrellas (una sola vez por persona). Con 4 o 5 lo invitamos a Google; con 1 a 3 te escribe a ti.</p>`;
+      h += `<div class='pn-card'><h3>Link de reseñas de Google</h3><p class='pn-sub'>En Google, busca Storm con la cuenta de Storm y toca "Pedir reseñas". Pega ese link aquí. Sin link no se manda ningún correo.</p>
+        <div class='es-f'><label class='w'>Link<input id='es-glink' placeholder='https://g.page/r/…/review' value='${esc(E.linkResena || '')}'></label></div>
+        <div class='es-acc'><button class='es-btn' data-aj='resenas'>Guardar</button><button class='es-btn sec' data-rp>Mandarme un correo de prueba</button></div><p class='es-err vivo'></p></div>`;
+      h += resp.length ? `<div class='pn-card'><h3>${resp.length} respuestas · promedio ${(resp.reduce((t, r) => t + r.estrellas, 0) / resp.length).toFixed(1).replace('.', ',')} ★</h3><p class='pn-sub'>${R.length} correos enviados.</p></div>` : '';
+      h += R.length ? R.map(r => `<div class='pn-card'><div style='display:flex;justify-content:space-between;gap:10px;align-items:baseline'><b>${esc(r.nombre)}</b><span style='font-size:1.25rem;color:#8a8986'>${esc(r.fecha.split('-').reverse().slice(0, 2).join('-'))}</span></div>
+        <p style='margin:4px 0 0;font-size:1.8rem'>${r.estrellas ? st(r.estrellas) : `<span style='font-size:1.3rem;color:#8a8986'>Aún no responde</span>`}</p>${r.comentario ? `<p style='margin:6px 0 0;font-size:1.45rem;line-height:1.45'>${esc(r.comentario)}</p>${r.publicar ? `<p style='margin:4px 0 0;font-size:1.2rem;color:#2f7a4d'>Se puede mostrar en la web</p>` : ''}` : ''}</div>`).join('')
+        : `<div class='pn-card'><p class='pn-empty'>Todavía no hay reseñas.</p></div>`;
     }
     return h + `</div>`;
   }
@@ -920,6 +932,7 @@
     if (pp) pp.onclick = async () => { const o = $('[data-ppr]'); pp.disabled = true; o.textContent = 'Enviando…';
       try { const r = await post({ accion: 'probar-push' }); o.textContent = r.enviado ? '¡Enviada! Debería llegarte en unos segundos donde tengas Panel Storm o Agenda Storm con notificaciones.' : 'No llegó: este correo (' + auth.email + ') no tiene la app con notificaciones activadas. Abre Panel Storm en el celular, entra con ese correo y acepta las notificaciones. (' + r.detalle + ')'; }
       catch (x) { o.textContent = x.message; } pp.disabled = false; };
+    const rp = $('[data-rp]'); if (rp) rp.onclick = async () => { rp.disabled = true; rp.textContent = 'Enviando…'; try { await post({ accion: 'resena-prueba' }); rp.textContent = 'Listo, revisa tu correo'; } catch (x) { rp.disabled = false; rp.textContent = 'Mandarme un correo de prueba'; rp.parentNode.nextElementSibling.textContent = x.message; } };
     $$('[data-aj]').forEach(b => b.onclick = async () => {
       const t = b.dataset.aj;
       if (t === 'precios') {
@@ -927,6 +940,7 @@
         if (await accion({ accion: 'ajustes', precios, pagos }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
       }
       if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, maxSeguidas: $('#es-seg').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-mismo').checked ? $('#es-tarde').value : '23:59', cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
+      if (t === 'resenas' && await accion({ accion: 'ajustes', linkResena: $('#es-glink').value.trim() }, b)) { msg = 'Link guardado.'; pintar(); }
       if (t === 'admins' && await accion({ accion: 'ajustes', admins: $('#es-adm').value.split(/[,\s]+/).filter(Boolean), recepcion: $('#es-rec').value.split(/[,\s]+/).filter(Boolean) }, b)) { msg = 'Accesos guardados.'; pintar(); }
       if (t === 'instructores') {
         b.disabled = true; b.textContent = 'Guardando…';

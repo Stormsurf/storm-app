@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>¿Cómo estuvo tu clase? · Storm</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#EFECE8">
+<link rel="icon" href="/icons/storm-app-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#EFECE8;color:#2C2C2B;font-family:'DM Sans',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.rs{max-width:440px;margin:0 auto;padding:22px 14px 40px}
+.rs-c{background:#fff;border-radius:22px;padding:26px 22px;text-align:center}
+.rs-logo{width:96px;display:block;margin:0 auto 6px}
+.rs-st{display:flex;justify-content:center;gap:4px;margin:12px 0 2px}
+.rs-st button{border:0;background:none;font-size:44px;line-height:1;color:#ddd;cursor:pointer;padding:2px 3px;transition:transform .1s}
+.rs-st button.on{color:#F2B300}
+.rs-st button:active{transform:scale(1.15)}
+.rs-ley{margin:0;font-size:13px;color:#8a8986}
+h1{margin:10px 0 8px;font-size:24px;line-height:1.2;font-weight:700}
+.rs-p{margin:0;font-size:16px;line-height:1.5;color:#5c5b58}
+.rs-b{display:block;width:100%;border:0;text-decoration:none;text-align:center;background:#2C2C2B;color:#fff;font:inherit;font-weight:700;font-size:16px;padding:15px 18px;border-radius:999px;margin:18px 0 0;cursor:pointer}
+.rs-b.sec{background:#E3F1F1;color:#0f6e74}
+.rs-b:disabled{opacity:.6}
+.rs-l{display:block;text-align:left;font-size:15px;color:#5c5b58;margin:20px 0 6px}
+textarea{width:100%;min-height:110px;border:1.5px solid rgba(44,44,43,.15);border-radius:14px;padding:12px;font:inherit;font-size:16px;resize:vertical;color:#2C2C2B}
+textarea:focus{outline:none;border-color:#61A1C8}
+.rs-ch{display:flex;gap:9px;align-items:flex-start;text-align:left;font-size:14px;color:#5c5b58;margin:10px 0 0;line-height:1.4}
+.rs-ch input{width:20px;height:20px;flex:none;margin:0;accent-color:#2C2C2B}
+.rs-chico{margin:16px 0 0;font-size:14px;color:#8a8986}
+.rs-chico a{color:#5c5b58}
+.rs-err{color:#a6402c;font-size:14px;margin:10px 0 0}
+.rs-pie{text-align:center;margin:16px 0 0;font-size:12px;color:#8a8986}
+.rs-pie a{color:#2d6e94}
+</style>
+</head>
+<body>
+<div class="rs"><div class="rs-c" id="c"><img class="rs-logo" src="/img/storm-logo.png" alt="Storm"><p class="rs-p">Cargando…</p></div>
+<p class="rs-pie">Storm Surf Academy · Playa de Matanzas, Navidad · <a href="https://www.stormsurf.cl">stormsurf.cl</a></p></div>
+<script>
+(function(){
+  var API = '/api/reservas', q = new URLSearchParams(location.search), ref = q.get('r') || '', k = q.get('k') || '';
+  var e = Math.max(0, Math.min(5, parseInt(q.get('e'), 10) || 0)), info = null, listo = false, c = document.getElementById('c');
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); };
+  function post(b){ b.accion = 'resena'; b.ref = ref; b.k = k; return fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}).then(function(r){ return r.json(); }).then(function(d){ if(!d.ok) throw new Error(d.error || 'Algo falló'); return d; }); }
+  var logo = '<img class="rs-logo" src="/img/storm-logo.png" alt="Storm">';
+  var estrellas = function(){ var h = '<div class="rs-st">'; for (var i = 1; i <= 5; i++) h += '<button data-e="' + i + '" class="' + (i <= e ? 'on' : '') + '" aria-label="' + i + ' estrellas">&#9733;</button>'; return h + '</div>'; };
+  var google = function(t, cls){ return info.google ? '<a class="rs-b' + (cls || '') + '" href="' + esc(info.google) + '" target="_blank" rel="noopener">' + t + '</a>' : ''; };
+  function pintar(){
+    var h = logo + estrellas();
+    if (listo) {
+      h += '<h1>¡Gracias, ' + esc(info.nombre) + '!</h1><p class="rs-p">' + (e >= 4 ? 'Nos alegra mucho. ¡Te esperamos de vuelta en el agua!' : 'Leemos cada comentario para mejorar. Gracias por contarnos.') + '</p>';
+      if (e >= 4 && info.google) h += google('Dejar mi reseña en Google');
+    } else if (!e) {
+      h += '<p class="rs-ley">1 = no me gustó · 5 = me encantó</p><h1>¿Cómo estuvo tu clase?</h1><p class="rs-p">Toca las estrellas.</p>';
+    } else if (e >= 4) {
+      h += '<h1>¡Qué bueno, ' + esc(info.nombre) + '!</h1><p class="rs-p">¿Lo compartes en Google? Es lo que más nos ayuda.</p>' + google('Dejar mi reseña en Google')
+        + '<label class="rs-l" for="t">Y si quieres, cuéntanos qué te gustó:</label><textarea id="t" placeholder="Lo mejor fue…"></textarea>'
+        + '<label class="rs-ch"><input type="checkbox" id="pub" checked> Pueden mostrar mi comentario en stormsurf.cl</label>'
+        + '<button class="rs-b sec" id="env">Enviar a Storm</button><p class="rs-err" id="err"></p>';
+    } else {
+      h += '<h1>Gracias por contarnos</h1><p class="rs-p">¿Qué podríamos haber hecho mejor? Lo lee Isidora directamente.</p>'
+        + '<textarea id="t" style="margin-top:16px" placeholder="Escribe aquí…"></textarea><button class="rs-b" id="env">Enviar a Storm</button><p class="rs-err" id="err"></p>'
+        + (info.google ? '<p class="rs-chico">También puedes <a href="' + esc(info.google) + '" target="_blank" rel="noopener">dejar tu reseña en Google</a>.</p>' : '');
+    }
+    c.innerHTML = h;
+    c.querySelectorAll('[data-e]').forEach(function(b){ b.onclick = function(){ var t = document.getElementById('t'), txt = t ? t.value : ''; e = +b.dataset.e; listo = false; post({estrellas: e}).catch(function(){}); pintar(); var t2 = document.getElementById('t'); if (t2) t2.value = txt; }; });
+    var env = document.getElementById('env');
+    if (env) env.onclick = function(){
+      var t = document.getElementById('t').value.trim(), pub = document.getElementById('pub');
+      if (!t) { document.getElementById('err').textContent = 'Escribe tu comentario.'; return; }
+      env.disabled = true; env.textContent = 'Enviando…';
+      post({estrellas: e, comentario: t, publicar: !!(pub && pub.checked), enviar: true}).then(function(){ listo = true; pintar(); })
+        .catch(function(x){ env.disabled = false; env.textContent = 'Enviar a Storm'; document.getElementById('err').textContent = x.message; });
+    };
+  }
+  post({estrellas: e}).then(function(d){ info = d; pintar(); })
+    .catch(function(x){ c.innerHTML = logo + '<h1>Ups</h1><p class="rs-p">' + esc(x.message) + '</p><a class="rs-b" href="https://wa.me/56977744306">Escríbenos por WhatsApp</a>'; });
+})();
+</script>
+</body>
+</html>
