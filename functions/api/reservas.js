@@ -125,7 +125,7 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
-const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago'];
+const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow'];
 function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; }
@@ -380,7 +380,20 @@ async function crearOrden(env, r) {
 }
 
 /** Consulta la orden en Mercado Pago y, si está pagada, confirma la reserva. */
+// Flow (tarjeta extranjera desde /pagar): el cobro se guarda en orden_mp como "flow:<token>". Estados: 1 pendiente, 2 pagada, 3 rechazada, 4 anulada.
+async function flowEstado(env, token) {
+  if (!env.FLOW_API_KEY || !env.FLOW_SECRET) return null;
+  const p = { apiKey: env.FLOW_API_KEY, token };
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.FLOW_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const s = [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(Object.keys(p).sort().map(x => x + p[x]).join(''))))].map(b => b.toString(16).padStart(2, '0')).join('');
+  try { const x = await fetch((env.FLOW_API || 'https://www.flow.cl/api') + '/payment/getStatus?' + new URLSearchParams(Object.assign({}, p, { s }))); return x.ok ? await x.json() : null; } catch (_) { return null; }
+}
+
 async function revisarPago(env, r, ctx) {
+  if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && String(r.orden_mp || '').startsWith('flow:')) {
+    const o = await flowEstado(env, r.orden_mp.slice(5));
+    return o && Number(o.status) === 2 && String(o.commerceOrder || '').indexOf(r.ref) === 0 ? confirmar(env, r, Number(o.amount), ctx) : r.estado;
+  }
   if (!r || r.estado !== 'pendiente' && r.estado !== 'vencida' || !r.orden_mp || !env.MP_TOKEN) return r && r.estado;
   let o = null;
   try {
@@ -1157,6 +1170,13 @@ export async function onRequest(context) {
       let id = url.searchParams.get('data.id') || url.searchParams.get('id');
       try { const b = await request.clone().json(); if (b && b.data && b.data.id) id = b.data.id; } catch (_) {}
       if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, context); }
+      return json({ ok: true });
+    }
+    // Pago con Flow desde /pagar: se vuelve a revisar en Flow (no se confía en lo que llega)
+    if (url.searchParams.get('flowok')) {
+      const b = await request.json().catch(() => ({}));
+      const r = b.ref ? await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(b.ref)).first() : null;
+      if (r && b.token && r.orden_mp === 'flow:' + b.token) await revisarPago(env, r, context);
       return json({ ok: true });
     }
     if (url.searchParams.get('tarea')) {

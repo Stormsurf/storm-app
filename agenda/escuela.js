@@ -425,7 +425,7 @@
   }
 
   const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Por pagar', 'Aún no paga']];
-  const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m;
+  const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m === 'Flow' ? 'Reserva online (Flow)' : m;
   // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 5
   function cotiza(p, m) {
     const a = E.ajustes || {}, g = [];
@@ -508,7 +508,7 @@
     ]);
     if (admin) {
       let pago = fila('$', esc(E0.t), clp(r.total), { ic: E0.c });
-      if (viva && r.medio === 'Por pagar') pago += `<div class='es-rpago'><span>¿Ya pagó? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
+      if (viva && r.medio === 'Por pagar') pago += `<div class='es-rpago'><span>¿Ya pagó? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago', 'Flow'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
       h += grupo('Pago', [pago,
         r.linkPago && wa(r.telefono) ? fila(ICO_S.wa, 'Mandar link de pago por WhatsApp', '', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(ml)}'`, ic: 'ok' }) : '',
         r.linkPago ? fila(ICO_S.link, 'Copiar link de pago', '', { tag: 'button', at: `data-lf='${esc(ml)}'` }) : '']);

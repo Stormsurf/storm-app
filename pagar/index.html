@@ -25,7 +25,12 @@
 .pg-opt small{display:block;font-size:1.3rem;opacity:.65;margin-top:2px}
 .pg-opt.on{border-color:var(--ac);background:var(--ac-soft);box-shadow:inset 0 0 0 1px var(--ac)}
 #brick{margin-top:12px}
-.pg-extr{margin:10px 2px 0;font-size:1.35rem;line-height:1.45;opacity:.8}
+.pg-fl{margin-top:10px;padding:14px;border-radius:14px;background:#fff;border:1.5px solid var(--line)}
+.pg-fl label{display:block;font-size:1.35rem;opacity:.75;margin-bottom:6px}
+.pg-fl input{width:100%;box-sizing:border-box;font:inherit;font-size:1.6rem;padding:12px;border-radius:10px;border:1.5px solid var(--line)}
+.pg-fl button{width:100%;margin-top:10px;font:inherit;font-size:1.6rem;font-weight:600;padding:13px;border:0;border-radius:12px;background:var(--ac);color:#fff;cursor:pointer}
+.pg-fl button:disabled{opacity:.5}
+.pg-fl p{font-size:1.3rem;opacity:.65;margin:10px 0 0;line-height:1.45}
 .pg-err{margin-top:12px;padding:12px 14px;border-radius:12px;background:#F6E3DF;font-size:1.45rem}
 .pg-ok{margin-top:16px;padding:16px;border-radius:14px;background:var(--ac-soft);font-size:1.5rem;text-align:center}
 .pg-note{font-size:1.3rem;opacity:.6;margin-top:16px;line-height:1.5;text-align:center}
@@ -58,7 +63,7 @@
     const mp = new MercadoPago(D.publicKey, { locale: EN ? 'en-US' : 'es-CL' });
     brick = await mp.bricks().create('cardPayment', 'brick', {
       initialization: { amount: D.monto },
-      customization: { paymentMethods: { maxInstallments: 1, minInstallments: 1 }, visual: { style: { theme: 'default', customVariables: { baseColor: '#4F7F86' } }, texts: { cardholderIdentification: { placeholder: EN ? 'Passport: numbers only' : 'RUT o pasaporte (solo números)' } } } },
+      customization: { paymentMethods: { maxInstallments: 1, minInstallments: 1 }, visual: { style: { theme: 'default', customVariables: { baseColor: '#4F7F86' } } } },
       callbacks: {
         onReady: () => {},
         onError: e => console.error(e),
@@ -98,12 +103,39 @@
     pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
       <h2 class="pg-h2">¿Cómo quieres pagar?</h2>
       <button class="pg-opt" id="op-tarjeta" type="button"><i>💳</i><span><b>Tarjeta</b><small>Crédito, débito o prepago, sin cuenta Mercado Pago</small></span></button>
-      <p class="pg-extr">🌎 <b>${EN ? 'No Chilean RUT?' : '¿Sin RUT chileno?'}</b> ${EN ? 'In "Document" choose <b>Otro</b> and type only the <b>numbers</b> of your passport (no letters).' : 'En el documento elige <b>Otro</b> y escribe solo los <b>números</b> de tu pasaporte (sin letras).'}</p>
       <div id="brick"></div>
       <div class="pg-err" id="err" hidden></div>
+ ${D.flow ? `<button class="pg-opt" id="op-flow" type="button"><i>🌎</i><span><b>${EN ? 'Foreign card (no RUT)' : 'Tarjeta extranjera'}</b><small>${EN ? 'Visa or Mastercard from outside Chile, with your passport' : 'Sin RUT chileno, con pasaporte (Visa o Mastercard)'}</small></span></button><div id="flowbox"></div>` : ''}
       <a class="pg-opt" id="op-cuenta" href="${esc(D.cuenta)}"><i>👤</i><span><b>Con mi cuenta Mercado Pago</b><small>Usa el saldo o las tarjetas guardadas en tu cuenta</small></span></a>
       ${ayuda}`;
     document.getElementById('op-tarjeta').onclick = tarjeta;
+    if(D.flow) document.getElementById('op-flow').onclick = conFlow;
+    const fq = new URLSearchParams(location.search).get('flow');
+    if(fq) error(fq === 'pendiente'
+      ? (EN ? 'Your payment is still being processed. If it was charged, you will get an email; please do not pay again.' : 'Tu pago se está procesando. Si se cobró, te llegará un correo; no pagues de nuevo.')
+      : (EN ? 'The card payment was not completed. You can try again or use another card.' : 'El pago no se completó. Puedes intentar de nuevo o usar otra tarjeta.'));
+  }
+
+  // Tarjeta extranjera: se paga en Flow (Webpay), que no pide RUT
+  function conFlow(){
+    document.getElementById('op-flow').classList.add('on');
+    const box = document.getElementById('flowbox');
+    if(box.innerHTML) return;
+    box.innerHTML = `<div class="pg-fl"><label for="fl-mail">${EN ? 'Your email (for the receipt)' : 'Tu correo (para el comprobante)'}</label>
+      <input id="fl-mail" type="email" autocomplete="email" inputmode="email" placeholder="${EN ? 'name@email.com' : 'nombre@correo.com'}">
+      <button id="fl-ir" type="button">${EN ? 'Continue to pay' : 'Continuar al pago'} · ${clp(D.monto)}</button>
+      <p>${EN ? 'You will be taken to Flow (Webpay), a secure Chilean payment page. Amount in Chilean pesos (CLP).' : 'Te llevamos a Flow (Webpay), página de pago segura. Monto en pesos chilenos.'}</p></div>`;
+    document.getElementById('fl-ir').onclick = async () => {
+      const b = document.getElementById('fl-ir'), email = document.getElementById('fl-mail').value.trim();
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ error(EN ? 'Please check your email.' : 'Revisa tu correo.'); return; }
+      b.disabled = true; error('');
+      try{
+        const r = await fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ o: id, flow: 1, email }) }).then(x => x.json());
+        if(r.ok && r.url){ location.href = r.url; return; }
+        error(r.error || (EN ? 'Could not start the payment.' : 'No se pudo iniciar el pago.'));
+      }catch(_){ error(EN ? 'Connection problem. Please try again.' : 'No pudimos conectar. Intenta de nuevo.'); }
+      b.disabled = false;
+    };
   }
 
   if(new URLSearchParams(location.search).get('listo')){ pg.innerHTML = `<div class="pg-ok"><b>¡Pago de prueba listo!</b><br>Llegó a Mercado Pago. Puedes devolverlo desde tu cuenta.</div>`; return; }
