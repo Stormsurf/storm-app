@@ -56,7 +56,7 @@
   .es-dbp.no{background:#e0a03a}
   .es-db.pend{background:#E3F1F1;color:#0f6e74;border:1.5px dashed #0f6e74}
   .es-db.otra{background:#F3F1EC;color:#6b6a67;border:1.5px dashed #c9c5bd;cursor:default;z-index:1}
-  @media (min-width:1000px){.es-db b{font-size:1.45rem;margin:1px 0}} /* computador: nombre del cliente un poco más grande (Isidora 16-11) */
+  @media (min-width:1000px){.es-db{font-size:1.25rem}.es-db b{font-size:1.4rem}.es-dbh{font-size:1.2rem}} /* computador: letras de las clases levemente más grandes, mismo tamaño de calendario (Isidora 16-11) */
   .es-ahora{position:absolute;left:0;right:0;border-top:2px solid #e0484e;z-index:3}
   /* cascarón: barra abajo en el celular, menú a la izquierda en el computador */
   .ap-top,.pn-head{display:none}
