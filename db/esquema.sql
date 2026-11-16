@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS reservas (
   pagos TEXT, -- JSON {instructor: monto} (lo que gana cada uno en esta clase)
   duracion INTEGER DEFAULT 0, -- minutos; 0 = la general (1:30)
   fichas_papel INTEGER DEFAULT 0, -- 1 = fichas hechas en papel (presencial)
-  nivel TEXT NOT NULL DEFAULT '' -- 'intermedio' = clase para alumnos intermedios
+  nivel TEXT NOT NULL DEFAULT '', -- 'intermedio' = clase para alumnos intermedios
+  pack TEXT NOT NULL DEFAULT '' -- id del pack con que se pagó (la clase va en $0, medio 'Pack')
 );
 CREATE INDEX IF NOT EXISTS reservas_fecha ON reservas(fecha);
 CREATE INDEX IF NOT EXISTS reservas_estado ON reservas(estado);
