@@ -56,6 +56,7 @@
   .es-dbp.no{background:#e0a03a}
   .es-db.pend{background:#E3F1F1;color:#0f6e74;border:1.5px dashed #0f6e74}
   .es-db.otra{background:#F3F1EC;color:#6b6a67;border:1.5px dashed #c9c5bd;cursor:default;z-index:1}
+  @media (min-width:1000px){.es-db{font-size:1.5rem;padding:8px 10px;border-radius:10px}.es-db b{font-size:1.8rem;margin:2px 0}.es-dbh{font-size:1.45rem;padding-right:28px}.es-dbp{width:24px;height:24px;font-size:1.35rem}} /* computador: letras de las clases más grandes (Isidora 16-11) */
   .es-ahora{position:absolute;left:0;right:0;border-top:2px solid #e0484e;z-index:3}
   /* cascarón: barra abajo en el celular, menú a la izquierda en el computador */
   .ap-top,.pn-head{display:none}

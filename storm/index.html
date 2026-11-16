@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/app.css?v=2">
 <link rel="stylesheet" href="/panel/panel.css?v=9">
 <script>window.STORM_SHELL = true;</script>
-<script src="/agenda/escuela.js?v=24"></script>
+<script src="/agenda/escuela.js?v=25"></script>
 <style>
 .pn-go{background:#0f6e74}.pn-in:focus{border-color:#0f6e74}
 .ap-top{display:none}
@@ -454,7 +454,6 @@ main .pn{max-width:1440px}
     const hoyF = E ? E.hoy : '';
     const partHoy = part.filter(r => r.fecha === hoyF);
     const espera = part.filter(r => r.fecha >= hoyF && (r.estado === 'pendiente' || r.medio === 'Por pagar'));
-    const sinFicha = part.filter(r => r.fecha >= hoyF && r.estado !== 'pendiente' && (r.fichas || []).length < r.personas);
     // clases que ya pasaron y siguen sin pagar (para cobrarlas)
     const atras = adm ? part.filter(r => r.fecha < hoyF && r.estado === 'pagada' && r.medio === 'Por pagar').sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
     const acadHoy = P ? (P.clases || []).filter(c => c.cuando === 'Hoy') : [];
@@ -465,7 +464,6 @@ main .pn{max-width:1440px}
       ${tile('', I.hoy, partHoy.length + acadHoy.filter(c => !c.cancelada).length, 'clases hoy', partHoy.length ? partHoy.length + ' particular' + (partHoy.length === 1 ? '' : 'es') : '', 'hoy-lista')}
       ${adm ? tile(faltan ? 'warn' : 'ok', I.pago, faltan, 'faltan por pagar', 'Academia Anual', 'anual:pagos') : ''}
       ${adm ? tile(espera.length + atras.length ? 'warn' : 'ok', I.pago, espera.length + atras.length, 'particulares sin pagar', atras.length ? atras.length + (atras.length === 1 ? ' ya pasó' : ' ya pasaron') : '', atras.length ? 'sin-pagar' : 'particulares:reservas') : ''}
-      ${tile(sinFicha.length ? 'warn' : 'ok', I.ficha, sinFicha.length, 'clases sin fichas', 'particulares', 'particulares:reservas')}
       ${adm && avisos ? tile('warn', I.grupo, avisos, 'avisos de la Anual', 'alumnos sin grupo o pagos', 'anual:avisos') : ''}
       ${(() => { const d0 = new Date(), fm = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate() - d0.getDate() < 3; return adm && (fm || [5, 6, 0].includes(d0.getDay())) ? tile('', I.pago, '$', fm ? 'revisar sueldos del mes' : 'revisar sueldos de la semana', 'instructores', fm ? 'sueldos' : 'particulares:pagos') : ''; })()}
     </div>`;
