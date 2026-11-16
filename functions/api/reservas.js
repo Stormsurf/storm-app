@@ -597,7 +597,7 @@ async function panel(env, q) {
   const [sem, exc, res, ocu, sync] = await Promise.all([
     db.prepare('SELECT * FROM semana').all(),
     db.prepare('SELECT * FROM excepciones WHERE fecha >= ?').bind(hoy).all(),
-    db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta).all(),
+    db.prepare("SELECT * FROM reservas WHERE (fecha BETWEEN ? AND ? OR (fecha < ? AND medio = 'Por pagar' AND estado = 'pagada')) AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta, desde).all(), // + las antiguas que nunca se pagaron (para cobrarlas)
     leerOcupaciones(db, hoy, hasta),
     db.prepare("SELECT valor FROM ajustes WHERE clave = 'anualSync'").first()
   ]);

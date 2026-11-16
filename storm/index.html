@@ -53,6 +53,7 @@ main .pn{max-width:1440px}
 .sp-line{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-left:5px solid #0f6e74;border-radius:14px;padding:12px 14px;margin-top:8px;cursor:pointer;width:100%;font:inherit;text-align:left;color:var(--ink)}
 .sp-line .h{font-size:1.7rem;font-weight:700;min-width:58px}
 .sp-line b{display:block;font-size:1.45rem;font-weight:600}.sp-line small{display:block;font-size:1.2rem;color:#8a8986}
+.sp-line.debe{border-left-color:#b5662b}.sp-line.debe .h{font-size:1.4rem;white-space:nowrap;min-width:84px}.sp-line.debe .h small{font-size:1.15rem;font-weight:500;color:#8a8986}.sp-line.debe .tag{background:#fbeee2;color:#b5662b}
 .sp-line .tag{margin-left:auto;flex:none;border-radius:999px;padding:3px 10px;font-size:1.1rem;font-weight:700;background:#E3F1F1;color:#0f6e74}
 .sp-line.anual{border-left-color:#61A1C8}.sp-line.anual .tag{background:#E6F1F8;color:#2d6e94}
 .sp-line.verano{border-left-color:#e0b43a}.sp-line.verano .tag{background:#FFF4CC;color:#7a5a00}
@@ -454,6 +455,8 @@ main .pn{max-width:1440px}
     const partHoy = part.filter(r => r.fecha === hoyF);
     const espera = part.filter(r => r.fecha >= hoyF && (r.estado === 'pendiente' || r.medio === 'Por pagar'));
     const sinFicha = part.filter(r => r.fecha >= hoyF && r.estado !== 'pendiente' && (r.fichas || []).length < r.personas);
+    // clases que ya pasaron y siguen sin pagar (para cobrarlas)
+    const atras = adm ? part.filter(r => r.fecha < hoyF && r.estado === 'pagada' && r.medio === 'Por pagar').sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
     const acadHoy = P ? (P.clases || []).filter(c => c.cuando === 'Hoy') : [];
     const faltan = P && P.actual ? P.actual.faltan.reduce((t, f) => t + f.alumnos.length, 0) : 0;
     const avisos = P && P.sinGrupo ? P.sinGrupo.length + (P.revisar || []).length : 0;
@@ -461,7 +464,7 @@ main .pn{max-width:1440px}
     let h = `<div class='sp-tiles'>
       ${tile('', I.hoy, partHoy.length + acadHoy.filter(c => !c.cancelada).length, 'clases hoy', partHoy.length ? partHoy.length + ' particular' + (partHoy.length === 1 ? '' : 'es') : '', 'hoy-lista')}
       ${adm ? tile(faltan ? 'warn' : 'ok', I.pago, faltan, 'faltan por pagar', 'Academia Anual', 'anual:pagos') : ''}
-      ${adm ? tile(espera.length ? 'warn' : 'ok', I.pago, espera.length, 'particulares sin pagar', '', 'particulares:reservas') : ''}
+      ${adm ? tile(espera.length + atras.length ? 'warn' : 'ok', I.pago, espera.length + atras.length, 'particulares sin pagar', atras.length ? atras.length + (atras.length === 1 ? ' ya pasó' : ' ya pasaron') : '', atras.length ? 'sin-pagar' : 'particulares:reservas') : ''}
       ${tile(sinFicha.length ? 'warn' : 'ok', I.ficha, sinFicha.length, 'clases sin fichas', 'particulares', 'particulares:reservas')}
       ${adm && avisos ? tile('warn', I.grupo, avisos, 'avisos de la Anual', 'alumnos sin grupo o pagos', 'anual:avisos') : ''}
       ${(() => { const d0 = new Date(), fm = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate() - d0.getDate() < 3; return adm && (fm || [5, 6, 0].includes(d0.getDay())) ? tile('', I.pago, '$', fm ? 'revisar sueldos del mes' : 'revisar sueldos de la semana', 'instructores', fm ? 'sueldos' : 'particulares:pagos') : ''; })()}
@@ -472,6 +475,12 @@ main .pn{max-width:1440px}
     acadHoy.forEach(c => lineas.push({ h: String(c.horario || '').slice(0, 5), html: `<button class='sp-line anual${c.cancelada ? ' cancel' : ''}' data-go='anual:clases'><span class='h'>${esc(String(c.horario || '').replace(/\s*hrs?\.?$/i, ''))}</span><span><b>${esc(c.clase)}</b><small>${c.cancelada ? 'Cancelada' : (c.van || 0) + ' alumnos'}</small></span><span class='tag'>Anual</span></button>` }));
     lineas.sort((a, b) => a.h < b.h ? -1 : 1);
     h += `<p class='sp-h3' id='hoy-lista'>El día de hoy</p>` + (lineas.length ? lineas.map(l => l.html).join('') : `<div class='sp-vacio'>Hoy no hay clases. 🌊</div>`);
+    // clases pasadas sin pagar
+    if(atras.length){
+      const fc = f => { const [y, m, d] = f.split('-'); return DIAS[new Date(+y, m - 1, +d).getDay()].slice(0, 3) + ' ' + (+d) + '/' + (+m); };
+      const tot = atras.reduce((t, r) => t + (Number(r.total) || 0), 0);
+      h += `<p class='sp-h3' id='sin-pagar' style='color:#b5662b'>Ya pasaron y no se han pagado${tot ? ' · ' + clpS(tot) : ''}</p>` + atras.map(r => `<button class='sp-line debe' data-clase='${esc(r.ref)}'><span class='h'>${esc(fc(r.fecha))}<small>${esc(r.hora)}</small></span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}${r.total ? ' · ' + clpS(r.total) : ''}</small></span><span class='tag'>Cobrar</span></button>`).join('');
+    }
     // lo que viene mañana
     const man = E ? part.filter(r => r.fecha === sumar(hoyF, 1)) : [];
     const acadMan = P ? (P.clases || []).filter(c => c.cuando === 'Mañana') : [];
@@ -480,9 +489,11 @@ main .pn{max-width:1440px}
         + acadMan.map(c => `<button class='sp-line anual${c.cancelada ? ' cancel' : ''}' data-go='anual:clases'><span class='h'>${esc(String(c.horario || '').replace(/\s*hrs?\.?$/i, ''))}</span><span><b>${esc(c.clase)}</b><small>${c.cancelada ? 'Cancelada' : (c.van || 0) + ' alumnos'}</small></span><span class='tag'>Anual</span></button>`).join('');
     }
     el.innerHTML = h;
+    el.querySelectorAll('[data-clase]').forEach(b => b.onclick = () => { ir('particulares'); StormEscuela.clase(b.dataset.clase); });
     el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
       const [a, s] = b.dataset.go.split(':');
       if(a === 'hoy-lista') return document.getElementById('hoy-lista').scrollIntoView({ behavior: 'smooth' });
+      if(a === 'sin-pagar') return document.getElementById('sin-pagar').scrollIntoView({ behavior: 'smooth' });
       ir(a);
       if(a === 'particulares' && s) StormEscuela.ir(s);
       if(a === 'anual' && s) setTimeout(() => StormPanel.tab(s), 50);
