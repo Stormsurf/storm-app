@@ -25,6 +25,7 @@
 .pg-opt small{display:block;font-size:1.3rem;opacity:.65;margin-top:2px}
 .pg-opt.on{border-color:var(--ac);background:var(--ac-soft);box-shadow:inset 0 0 0 1px var(--ac)}
 #brick{margin-top:12px}
+.pg-extr{margin:10px 2px 0;font-size:1.35rem;line-height:1.45;opacity:.8}
 .pg-err{margin-top:12px;padding:12px 14px;border-radius:12px;background:#F6E3DF;font-size:1.45rem}
 .pg-ok{margin-top:16px;padding:16px;border-radius:14px;background:var(--ac-soft);font-size:1.5rem;text-align:center}
 .pg-note{font-size:1.3rem;opacity:.6;margin-top:16px;line-height:1.5;text-align:center}
@@ -43,6 +44,8 @@
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const ayuda = `<p class="pg-note">El pago lo procesa Mercado Pago de forma segura. ¿Dudas? <a href="https://wa.me/56977744306" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></p>`;
   let D = null, brick = null, pagando = false;
+  // Celular o computador en otro idioma (extranjeros): el formulario de la tarjeta sale en inglés
+  const EN = !/^es\b/i.test(navigator.language || 'es');
 
   const error = t => { const e = document.getElementById('err'); if(e){ e.hidden = !t; e.textContent = t || ''; } };
 
@@ -52,10 +55,10 @@
     if(brick) return;
     if(!D.publicKey || !window.MercadoPago){ error('El pago con tarjeta no está disponible en este momento. Usa tu cuenta Mercado Pago o escríbenos por WhatsApp.'); return; }
     box.innerHTML = '';
-    const mp = new MercadoPago(D.publicKey, { locale: 'es-CL' });
+    const mp = new MercadoPago(D.publicKey, { locale: EN ? 'en-US' : 'es-CL' });
     brick = await mp.bricks().create('cardPayment', 'brick', {
       initialization: { amount: D.monto },
-      customization: { paymentMethods: { maxInstallments: 1, minInstallments: 1 }, visual: { style: { theme: 'default', customVariables: { baseColor: '#4F7F86' } } } },
+      customization: { paymentMethods: { maxInstallments: 1, minInstallments: 1 }, visual: { style: { theme: 'default', customVariables: { baseColor: '#4F7F86' } }, texts: { cardholderIdentification: { placeholder: EN ? 'Passport: numbers only' : 'RUT o pasaporte (solo números)' } } } },
       callbacks: {
         onReady: () => {},
         onError: e => console.error(e),
@@ -95,6 +98,7 @@
     pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
       <h2 class="pg-h2">¿Cómo quieres pagar?</h2>
       <button class="pg-opt" id="op-tarjeta" type="button"><i>💳</i><span><b>Tarjeta</b><small>Crédito, débito o prepago, sin cuenta Mercado Pago</small></span></button>
+      <p class="pg-extr">🌎 <b>${EN ? 'No Chilean RUT?' : '¿Sin RUT chileno?'}</b> ${EN ? 'In "Document" choose <b>Otro</b> and type only the <b>numbers</b> of your passport (no letters).' : 'En el documento elige <b>Otro</b> y escribe solo los <b>números</b> de tu pasaporte (sin letras).'}</p>
       <div id="brick"></div>
       <div class="pg-err" id="err" hidden></div>
       <a class="pg-opt" id="op-cuenta" href="${esc(D.cuenta)}"><i>👤</i><span><b>Con mi cuenta Mercado Pago</b><small>Usa el saldo o las tarjetas guardadas en tu cuenta</small></span></a>
