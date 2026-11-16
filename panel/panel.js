@@ -611,13 +611,13 @@
     })()}
     <div id='pn-tuu'>${tuuHtml(f.mes)}</div>
     <h2 class='pn-fh2'>Gastos que vas sumando</h2>
-    ${(() => { const fila = m => `<div><span>${esc(m.detalle)}${m.area!=='Casa' && m.area!=='Verano' ? ' · '+esc(AREA_TXT[m.area]||m.area) : ''}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b>${m.enviando ? `<i class='pn-spin' title='Guardando'></i>` : `<button data-fdel='${m.fila}' aria-label='Borrar'>×</button>`}</div>`;
-      const grupo = (titulo, lista, vacio) => `<div class='pn-card'><h3>${titulo}<span class='pn-count'>${clp(lista.reduce((t,m)=>t+(/^ingreso/i.test(m.tipo)?0:m.monto),0))}</span></h3>${lista.length ? `<div class='pn-gmov'>${lista.map(fila).join('')}</div>` : `<p class='pn-empty'>${vacio}</p>`}</div>`;
+    ${(() => { const fila = m => `<div><span>${esc(m.detalle)}${m.corr && m.corr!==m.mes ? ' · '+esc(cap(m.corr)) : ''} · ${esc(corta(m.fecha))}</span><b class='${/^ingreso/i.test(m.tipo)?'pn-fin':''}'>${/^ingreso/i.test(m.tipo)?'+':'−'}${clp(m.monto)}</b>${m.enviando ? `<i class='pn-spin' title='Guardando'></i>` : `<button data-fdel='${m.fila}' aria-label='Borrar'>×</button>`}</div>`;
+      const grupo = (titulo, lista, vacio) => { const g = lista.reduce((t,m)=>t+(/^ingreso/i.test(m.tipo)?0:m.monto),0), i = lista.reduce((t,m)=>t+(/^ingreso/i.test(m.tipo)?m.monto:0),0); return `<div class='pn-card'><h3>${titulo}<span class='pn-count'>${g||!i ? clp(g) : '+'+clp(i)}</span></h3>${lista.length ? `<div class='pn-gmov'>${lista.map(fila).join('')}</div>` : `<p class='pn-empty'>${vacio}</p>`}</div>`; };
       const casa = f.movs.filter(m => m.area === 'Casa'), ver = f.movs.filter(m => m.area === 'Verano'), otros = f.movs.filter(m => m.area !== 'Casa' && m.area !== 'Verano');
       return grupo('Casa Storm', casa, 'Aún no sumas gastos de Casa Storm este mes.') + `<div class='pn-card pn-ffij'><h3>Gastos fijos<span class='pn-count'>${f.fijos.filter(x=>x.pagado).length} de ${f.fijos.length} pagados</span></h3>
       ${f.fijos.map(x => `<button class='pn-fij${x.pagado?' on':''}' data-fij='${esc(x.detalle)}'><i>${x.pagado?'✓':''}</i><span><b>${esc(x.detalle)}</b><small>${x.pagado?'Pagado el '+esc(corta(x.pagado)):'Por pagar'}</small></span><em>${clp(x.monto)}</em></button>`).join('')}
       <p class='pn-sub' style='margin-top:8px'>Tócalo cuando lo pagues. Quedan por pagar ${clp(f.fijos.filter(x=>!x.pagado).reduce((t,x)=>t+x.monto,0))}. Los montos se cambian en la pestaña Fijos de la planilla.</p></div>`
-        + grupo('Academia de Verano', ver, 'Aún no sumas gastos del Verano este mes.') + (otros.length ? grupo('Otras áreas', otros, '') : ''); })()}
+        + grupo('Academia de Verano', ver, 'Aún no sumas gastos del Verano este mes.') + [...new Set(otros.map(m => m.area))].map(ar => grupo(esc(AREA_TXT[ar]||ar), otros.filter(m => m.area === ar), '')).join(''); })()}
     ${f.planilla ? `<p class='pn-note'><a class='pn-link' href='${esc(f.planilla)}' target='_blank' rel='noopener'>Abrir la planilla Finanzas Storm</a></p>` : ''}`;
     pane.innerHTML = h;
     cargarTuu(f.mes); enlazarTuu(pane.querySelector('#pn-tuu') || pane, f.mes);
