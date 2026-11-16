@@ -44,7 +44,7 @@
   .es-dc{position:absolute;left:0;right:0;border:0;border-top:1px solid #f0eee9;background:transparent;padding:0;cursor:pointer}
   .es-dc.no{background:#ECEAE6;cursor:default}
   .es-dc:not(.no):hover{background:#E3F1F1}
-  .es-db{position:absolute;left:3px;right:3px;border:0;border-radius:8px;background:#0f6e74;color:#fff;text-align:left;padding:4px 6px;font:inherit;font-size:1.15rem;line-height:1.25;overflow:hidden;cursor:pointer;z-index:2}
+  .es-db{position:absolute;left:3px;right:3px;border:0;border-left:4px solid #61A1C8;border-radius:8px;background:#DCEBF5;color:#1d4f70;text-align:left;padding:4px 6px;font:inherit;font-size:1.15rem;line-height:1.25;overflow:hidden;cursor:pointer;z-index:2}
   .es-db b{display:block;font-size:1.2rem;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .es-db small{display:block;opacity:.9}
   .es-dbh{display:block;font-style:normal;font-size:1.1rem;font-weight:700;opacity:.85;white-space:nowrap;padding-right:18px}
