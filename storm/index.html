@@ -54,6 +54,7 @@ main .pn{max-width:1440px}
 .sp-line .h{font-size:1.7rem;font-weight:700;min-width:58px}
 .sp-line b{display:block;font-size:1.45rem;font-weight:600}.sp-line small{display:block;font-size:1.2rem;color:#8a8986}
 .sp-line.debe{border-left-color:#b5662b}.sp-line.debe .h{font-size:1.4rem;white-space:nowrap;min-width:84px}.sp-line.debe .h small{font-size:1.15rem;font-weight:500;color:#8a8986}.sp-line.debe .tag{background:#fbeee2;color:#b5662b}
+.sp-line.adultos{border-left-color:#7a5aa6}.sp-line.adultos .tag{background:#efe9f6;color:#6a4b95}
 .sp-line .tag{margin-left:auto;flex:none;border-radius:999px;padding:3px 10px;font-size:1.1rem;font-weight:700;background:#E3F1F1;color:#0f6e74}
 .sp-line.anual{border-left-color:#61A1C8}.sp-line.anual .tag{background:#E6F1F8;color:#2d6e94}
 .sp-line.verano{border-left-color:#e0b43a}.sp-line.verano .tag{background:#FFF4CC;color:#7a5a00}
@@ -215,7 +216,7 @@ main .pn{max-width:1440px}
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='st'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
 </section>
-<script src="/panel/panel.js?v=13"></script>
+<script src="/panel/panel.js?v=14"></script>
 <script>
 (()=>{
   const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
@@ -445,8 +446,13 @@ main .pn{max-width:1440px}
   const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'], MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const hoyLargo = () => { const d = new Date(); return DIAS[d.getDay()].replace(/^./, c => c.toUpperCase()) + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()]; };
 
+  let aduPedido = false;
   function pintarHoy(){
     const el = root.querySelector('[data-a="hoy"]'); if(!el) return;
+    if(!aduPedido && StormPanel.cargarAdultos){ aduPedido = true; StormPanel.cargarAdultos().then(() => { if(area === 'hoy') pintarHoy(); }); }
+    const ADU = StormPanel.adultos ? StormPanel.adultos() : null;
+    const aduDe = f => ADU && ADU.clases ? ADU.clases.filter(c => c.fecha === f) : [];
+    const aduLinea = c => `<button class='sp-line adultos${c.cancelada ? ' cancel' : ''}' data-go='adultos'><span class='h'>${esc(String(c.hora || c.horario || '').slice(0, 5))}</span><span><b>Academia de Adultos</b><small>${c.cancelada ? 'Cancelada' : (c.voy || []).length + ' dijeron que van'}${c.cambio ? ' · ' + esc(c.cambio) : ''}</small></span><span class='tag'>Adultos</span></button>`;
     const E = StormEscuela.datos(), P = StormPanel.datos(), V = StormPanel.verano(), adm = esAdmin();
     if(!E && !P){ el.innerHTML = `<div class='pn-skel'></div><div class='pn-skel'></div>`; return; }
     const yo = E && E.yo;
@@ -457,11 +463,12 @@ main .pn{max-width:1440px}
     // clases que ya pasaron y siguen sin pagar (para cobrarlas)
     const atras = adm ? part.filter(r => r.fecha < hoyF && r.estado === 'pagada' && r.medio === 'Por pagar').sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
     const acadHoy = P ? (P.clases || []).filter(c => c.cuando === 'Hoy') : [];
+    const aduHoy = aduDe(hoyF || (ADU && ADU.hoy) || '');
     const faltan = P && P.actual ? P.actual.faltan.reduce((t, f) => t + f.alumnos.length, 0) : 0;
     const avisos = P && P.sinGrupo ? P.sinGrupo.length + (P.revisar || []).length : 0;
     const tile = (cls, ico, n, t, s, go) => `<button class='sp-tile ${cls}' data-go='${go}'><i>${ico}</i><b>${n}</b><span>${t}</span>${s ? `<small>${s}</small>` : ''}</button>`;
     let h = `<div class='sp-tiles'>
-      ${tile('', I.hoy, partHoy.length + acadHoy.filter(c => !c.cancelada).length, 'clases hoy', partHoy.length ? partHoy.length + ' particular' + (partHoy.length === 1 ? '' : 'es') : '', 'hoy-lista')}
+      ${tile('', I.hoy, partHoy.length + acadHoy.filter(c => !c.cancelada).length + aduHoy.filter(c => !c.cancelada).length, 'clases hoy', partHoy.length ? partHoy.length + ' particular' + (partHoy.length === 1 ? '' : 'es') : '', 'hoy-lista')}
       ${adm ? tile(faltan ? 'warn' : 'ok', I.pago, faltan, 'faltan por pagar', 'Academia Anual', 'anual:pagos') : ''}
       ${adm ? tile(espera.length + atras.length ? 'warn' : 'ok', I.pago, espera.length + atras.length, 'particulares sin pagar', atras.length ? atras.length + (atras.length === 1 ? ' ya pasó' : ' ya pasaron') : '', atras.length ? 'sin-pagar' : 'particulares:reservas') : ''}
       ${adm && avisos ? tile('warn', I.grupo, avisos, 'avisos de la Anual', 'alumnos sin grupo o pagos', 'anual:avisos') : ''}
@@ -471,6 +478,7 @@ main .pn{max-width:1440px}
     const lineas = [];
     partHoy.forEach(r => lineas.push({ h: r.hora, html: `<button class='sp-line' data-go='particulares:dia'><span class='h'>${esc(r.hora)}</span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}</small></span><span class='tag'>Particular</span></button>` }));
     acadHoy.forEach(c => lineas.push({ h: String(c.horario || '').slice(0, 5), html: `<button class='sp-line anual${c.cancelada ? ' cancel' : ''}' data-go='anual:clases'><span class='h'>${esc(String(c.horario || '').replace(/\s*hrs?\.?$/i, ''))}</span><span><b>${esc(c.clase)}</b><small>${c.cancelada ? 'Cancelada' : (c.van || 0) + ' alumnos'}</small></span><span class='tag'>Anual</span></button>` }));
+    aduHoy.forEach(c => lineas.push({ h: String(c.hora || c.horario || '').slice(0, 5).padStart(5, '0'), html: aduLinea(c) }));
     lineas.sort((a, b) => a.h < b.h ? -1 : 1);
     h += `<p class='sp-h3' id='hoy-lista'>El día de hoy</p>` + (lineas.length ? lineas.map(l => l.html).join('') : `<div class='sp-vacio'>Hoy no hay clases. 🌊</div>`);
     // clases pasadas sin pagar
@@ -482,9 +490,11 @@ main .pn{max-width:1440px}
     // lo que viene mañana
     const man = E ? part.filter(r => r.fecha === sumar(hoyF, 1)) : [];
     const acadMan = P ? (P.clases || []).filter(c => c.cuando === 'Mañana') : [];
-    if(man.length || acadMan.length){
+    const aduMan = hoyF ? aduDe(sumar(hoyF, 1)) : [];
+    if(man.length || acadMan.length || aduMan.length){
       h += `<p class='sp-h3'>Mañana</p>` + man.map(r => `<button class='sp-line' data-go='particulares:dia'><span class='h'>${esc(r.hora)}</span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}</small></span><span class='tag'>Particular</span></button>`).join('')
-        + acadMan.map(c => `<button class='sp-line anual${c.cancelada ? ' cancel' : ''}' data-go='anual:clases'><span class='h'>${esc(String(c.horario || '').replace(/\s*hrs?\.?$/i, ''))}</span><span><b>${esc(c.clase)}</b><small>${c.cancelada ? 'Cancelada' : (c.van || 0) + ' alumnos'}</small></span><span class='tag'>Anual</span></button>`).join('');
+        + acadMan.map(c => `<button class='sp-line anual${c.cancelada ? ' cancel' : ''}' data-go='anual:clases'><span class='h'>${esc(String(c.horario || '').replace(/\s*hrs?\.?$/i, ''))}</span><span><b>${esc(c.clase)}</b><small>${c.cancelada ? 'Cancelada' : (c.van || 0) + ' alumnos'}</small></span><span class='tag'>Anual</span></button>`).join('')
+        + aduMan.map(aduLinea).join('');
     }
     el.innerHTML = h;
     el.querySelectorAll('[data-clase]').forEach(b => b.onclick = () => { ir('particulares'); StormEscuela.clase(b.dataset.clase); });

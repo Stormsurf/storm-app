@@ -1108,6 +1108,12 @@
   // Dentro de la plataforma Storm (/storm/) el menú de afuera decide qué se ve.
   if(window.STORM_SHELL){
     window.StormPanel = {
+      adultos: () => ADU,
+      async cargarAdultos(){ // para Hoy: trae las clases de Adultos sin abrir la pestaña
+        if(!ADU) ADU = cacheLeer('adultos');
+        try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); ADU = d; cacheGuardar('adultos', d); }catch(_){}
+        return ADU;
+      },
       montar(el, a){ app = el; auth = a; load(); },
       ir(x){ acad = x; try{ sessionStorage.setItem(KEY + '-acad', x); }catch(_){} if(app && app.querySelector('.pn-sw')) mostrarAcad(); },
       tab(t){ tab = t; const b = app && app.querySelector(`.pn-tab[data-tab='${t}']`); if(b) b.click(); },
