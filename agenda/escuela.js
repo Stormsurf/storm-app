@@ -242,6 +242,9 @@
   .es-row.rojo .es-rx b{color:#a12c1c}
   .es-row .es-sw{flex:none}
   .es-rpago{padding:4px 16px 14px;display:flex;flex-wrap:wrap;gap:8px}
+  .es-pkz{display:flex;align-items:center;gap:12px;background:#E3F1F1;border-radius:14px;padding:12px 14px;margin:8px 0 10px;cursor:pointer}
+  .es-pkz .es-rx b{font-size:1.4rem}.es-pkz .es-rx small{color:#0f6e74}
+  .es-pkb{display:flex;gap:6px;padding:0 16px 14px 62px}.es-pkb i{flex:1;max-width:46px;height:10px;border-radius:6px;background:#0f6e74}.es-pkb i.us{background:#DCD8D0}
   .es-rpago span{width:100%;font-size:1.3rem;color:#b5662b;font-weight:600}
   .es-rpago button{border:1.5px solid #e0a03a;background:#fff;color:#7a4a1a;border-radius:999px;padding:9px 14px;font:inherit;font-size:1.4rem;font-weight:600;cursor:pointer}
   .es-hero{display:flex;align-items:center;gap:16px;margin:8px auto 4px}
@@ -410,6 +413,8 @@
          <div class='pn-stat'><small>Queda para Storm</small><b>${clp((m.total || 0) - (m.pagoInstructores || 0))}</b><em>antes de comisión</em></div></div>
 `
       : `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Tus clases particulares en ${mesTxt}</small><b>${m.clases || 0}</b><em>${clp(m.pagoYo)} a pagarte</em></div></div>`;
+    const pks = (E.packs || []).filter(k => k.quedan > 0);
+    if (admin && pks.length && !verPasadas) h += grupo('Packs con clases', pks.map(k => `<button class='es-row' data-cliv='${esc(k.nombre)}'>${avatar(k.nombre)}<span class='es-rx'><b>${esc(k.nombre)}</b><small>${esc(packTxt(k))}${k.medio === 'Por pagar' ? ' · <span style="color:#b26a00">no ha pagado</span>' : ''}</small></span><span class='es-rc'>›</span></button>`));
     const lista = E.reservas.filter(r => verPasadas ? r.fecha < E.hoy : r.fecha >= E.hoy).filter(r => !filtroIns || r.instructores.includes(filtroIns));
     if (verPasadas) lista.reverse();
     if (admin) {
@@ -436,10 +441,18 @@
     const precios = g.map(x => Number((a.precios || {})[x]) || 0);
     return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
   }
+  // ---------- packs de clases (5 clases con 10% de descuento, se pagan una vez) ----------
+  const PK = () => (E.ajustes || {}).pack || { clases: 5, descuento: 10 };
+  const precioPack = p => { const k = PK(), v = Number(((E.ajustes || {}).precios || {})[Math.min(5, Math.max(1, Math.floor(+p || 1)))]) || 0; return Math.round(v * k.clases * (100 - k.descuento) / 100 / 100) * 100; };
+  const packDe = c => { if (!c) return null; const t = wa(c.telefono), n = String(c.nombre || '').trim().toLowerCase(); return (E.packs || []).find(k => k.quedan > 0 && (k.nombre.trim().toLowerCase() === n || (t && wa(k.telefono) === t))) || null; };
+  const packsDeCliente = c => { const t = wa(c.telefono), n = String(c.nombre || '').trim().toLowerCase(); return (E.packs || []).filter(k => k.nombre.trim().toLowerCase() === n || (t && wa(k.telefono) === t)); };
+  const packTxt = k => (k.quedan === 1 ? 'Queda 1' : 'Quedan ' + k.quedan) + ' de ' + k.clases + ' clases';
+  const packDeClase = r => r.pack ? (E.packs || []).find(k => k.id === r.pack) : null;
   function estadoDe(r) {
     if (r.estado === 'cancelada') return { c: 'gris', i: '×', t: 'Cancelada' };
     if (r.estado === 'pendiente') return { c: 'pend', i: '$', t: r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago' : 'Pagando ahora' };
     if (r.estado === 'revisar') return { c: 'mal', i: '!', t: 'Revisar: ' + (r.nota || '') };
+    if (r.medio === 'Pack') { const k = packDeClase(r), n = k ? (k.refs || []).indexOf(r.ref) + 1 : 0; return { c: 'ok', i: '$', t: 'Pack' + (n ? ' · clase ' + n + ' de ' + k.clases : '') }; }
     if (r.medio === 'Por pagar') return { c: 'pend', i: '$', t: 'No ha pagado' };
     if (r.medio) return { c: 'ok', i: '$', t: 'Pagada · ' + medioTxt(r.medio) };
     return { c: 'ok', i: '✓', t: 'Confirmada' };
@@ -451,7 +464,7 @@
   function tarjeta(r, admin) {
     const E0 = estadoDe(r), est = `<span class='es-st ${E0.c}'><i>${E0.i}</i>${esc(E0.t)}</span>`;
     return `<div class='es-r es-r--${E0.c} es-rv' data-ver='${esc(r.ref)}' role='button' tabindex='0'><div class='es-r-top'><div class='es-h'>${esc(r.hora)}<small>a ${fin(r.hora, r.duracion)}</small></div>
-      <div class='es-who'><b>${esc(r.nombre)}</b><small>${gentes(r)}${admin ? ' · ' + clp(r.total) : ''}</small>
+      <div class='es-who'><b>${esc(r.nombre)}</b><small>${gentes(r)}${admin && r.medio !== 'Pack' ? ' · ' + clp(r.total) : ''}</small>
       <div class='es-tags'>${est}${fichasTag(r)}${r.instructores.map(i => `<span class='es-ins'>${esc(i)}</span>`).join('')}</div></div>
       ${contacto(r)}<span class='es-rc'>›</span></div>${r.comentario ? `<p class='es-com'>${esc(r.comentario)}</p>` : ''}</div>`;
   }
@@ -479,14 +492,14 @@
         <div class='es-3'><label><span class='es-lb'>Personas</span><input class='es-in' name='personas' type='number' min='1' value='${r.personas}' inputmode='numeric'></label>
           <label><span class='es-lb'>Niños &lt;8</span><input class='es-in' name='menores' type='number' min='0' value='${r.menores || 0}' inputmode='numeric'></label>
           <label><span class='es-lb'>Duración</span><select class='es-in' name='duracion'>${[[60, '1 h'], [90, '1 h 30'], [120, '2 h']].map(([x, t]) => `<option value='${x}'${x === dur ? ' selected' : ''}>${t}</option>`).join('')}</select></label></div>
-        <div class='es-2'><label><span class='es-lb'>¿Cómo pagó?</span><select class='es-in' name='medio'>${MEDIOS.map(([x, t]) => `<option value='${x}'${x === r.medio ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-          <label><span class='es-lb'>Total</span><input class='es-in' name='total' inputmode='numeric' value='${r.total || 0}'></label></div>
+        ${r.pack ? `<p class='es-edp'>Esta clase se pagó con su pack. Si no va, cancélala y la clase vuelve al pack.</p>` : `<div class='es-2'><label><span class='es-lb'>¿Cómo pagó?</span><select class='es-in' name='medio'>${MEDIOS.map(([x, t]) => `<option value='${x}'${x === r.medio ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label><span class='es-lb'>Total</span><input class='es-in' name='total' inputmode='numeric' value='${r.total || 0}'></label></div>`}
         <label><span class='es-lb'>Nota interna</span><input class='es-in' name='comentario' value='${esc(r.comentario || '')}'></label>
         <details class='es-det'><summary>Opciones avanzadas</summary><label><span class='es-lb'>Pago a cada instructor</span><input class='es-in' name='pagoInstructor' inputmode='numeric' value='${uno}' data-orig='${uno}' placeholder='según la tabla'></label>
           <p class='es-edp'>Vacío = según la tabla de precios. Si cambias las personas, se recalcula solo.</p></details>
         ${pie('datos', 'Guardar cambios')}</div>`;
     }
-    if (modo === 'cancelar') return `<div class='es-caja es-ed'><p class='es-edp' style='font-size:1.5rem;color:var(--ink)'>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.medio === 'Mercado Pago' ? ' Si hay que devolver el dinero, hazlo desde Mercado Pago.' : ''}</p>${pie('cancelar', 'Sí, cancelar clase', ' rojo')}</div>`;
+    if (modo === 'cancelar') return `<div class='es-caja es-ed'><p class='es-edp' style='font-size:1.5rem;color:var(--ink)'>¿Cancelar la clase de <b>${esc(r.nombre)}</b>? El horario queda libre.${r.pack ? ' La clase vuelve a su pack.' : ''}${r.medio === 'Mercado Pago' ? ' Si hay que devolver el dinero, hazlo desde Mercado Pago.' : ''}</p>${pie('cancelar', 'Sí, cancelar clase', ' rojo')}</div>`;
     return '';
   }
   const cabeza = t => `<header class='es-pgh'><button class='es-back' data-pgx aria-label='Volver'>${ICO_S.atras}</button><h2>${t}</h2></header>`;
@@ -507,7 +520,8 @@
       r.comentario ? fila(ICO_S.nota, 'Comentario', esc(r.comentario)) : ''
     ]);
     if (admin) {
-      let pago = fila('$', esc(E0.t), clp(r.total), { ic: E0.c });
+      const kp = packDeClase(r);
+      let pago = r.medio === 'Pack' ? fila('$', 'Pagada con pack' + (kp && (kp.refs || []).includes(r.ref) ? ' · clase ' + ((kp.refs || []).indexOf(r.ref) + 1) + ' de ' + kp.clases : ''), kp ? esc(packTxt(kp)) : '', kp ? { tag: 'button', at: `data-cliv='${esc(r.nombre)}'`, ic: 'ok' } : { ic: 'ok' }) : fila('$', esc(E0.t), clp(r.total), { ic: E0.c });
       if (viva && r.medio === 'Por pagar') pago += `<div class='es-rpago'><span>¿Ya pagó? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
       h += grupo('Pago', [pago,
         r.linkPago && wa(r.telefono) ? fila(ICO_S.wa, 'Mandar link de pago por WhatsApp', '', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(ml)}'`, ic: 'ok' }) : '',
@@ -526,7 +540,7 @@
     if (admin && viva) {
       if (abierta === r.ref) h += `<p class='es-gt'>${{ ins: 'Cambiar instructor', mover: 'Mover', datos: 'Editar', cancelar: 'Cancelar clase' }[modo] || ''}</p>` + editor(r);
       else h += grupo('Cambiar', [
-        fila(ICO_S.nota, 'Editar datos y pago', 'Nombre, personas, total, cómo pagó', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='datos'` }),
+        fila(ICO_S.nota, 'Editar datos y pago', r.pack ? 'Nombre, personas, duración' : 'Nombre, personas, total, cómo pagó', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='datos'` }),
         fila(ICO_S.mover, 'Mover día u hora', 'Se mantiene el instructor', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='mover'` }),
         fila(ICO_S.persona, 'Cambiar instructor', '', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='ins'` }),
         fila(ICO_S.borrar, 'Cancelar clase', 'El horario queda libre', { tag: 'button', at: `data-abre='${esc(r.ref)}' data-modo='cancelar'`, ic: 'mal', cl: 'rojo' })]);
@@ -546,9 +560,36 @@
     h += `<div class='es-hero'>${avatar(c.nombre, 'xl')}<div><b>${esc(c.nombre)}</b><small>${c.clases ? `${c.clases} clase${c.clases === 1 ? '' : 's'} con Storm` : 'Cliente de AgendaPro'}</small></div></div>`;
     h += botonesContacto(c.telefono, c.correo);
     h += grupo('Datos', [c.telefono ? fila(ICO_S.tel, esc(c.telefono), 'Teléfono') : '', c.correo ? fila(ICO_S.mail, esc(c.correo), 'Correo') : '', !c.telefono && !c.correo ? fila(ICO_S.persona, 'Sin teléfono ni correo', '') : '']);
+    h += packGrupo(c);
     h += grupo('Clases', cl.map(r => { const E0 = estadoDe(r); return fila(ICO_S.cal, esc(flarga(r.fecha)) + ' · ' + esc(r.hora), esc(gentes(r) + ' · ' + E0.t), { tag: 'button', at: `data-ver='${esc(r.ref)}'`, ic: E0.c }); }));
     if (!cl.length) h += `<p class='pn-note'>Sus clases antiguas no se muestran aquí.</p>`;
     return h + `</div><div class='es-pgf'><button class='es-big' data-agendar='${esc(c.nombre)}'>Agendar clase</button></div></div>`;
+  }
+
+  // Pack en la página del cliente: cuántas le quedan, si pagó, y vender uno nuevo
+  let packVender = false;
+  function packGrupo(c) {
+    const l = packsDeCliente(c), act = l.filter(k => k.quedan > 0), k = PK();
+    let h = '';
+    l.forEach(p => {
+      const pagado = p.medio !== 'Por pagar';
+      h += grupo(l.length > 1 ? 'Pack del ' + esc(fcorta(p.creada.slice(0, 10))) : 'Pack de clases', [
+        `<div class='es-row'><i class='es-ri ${p.quedan > 0 ? 'ok' : 'gris'}'>${p.clases}</i><span class='es-rx'><b>${esc(packTxt(p))}</b><small>${p.personas} persona${p.personas === 1 ? '' : 's'} · ${clp(p.total)} · ${pagado ? 'pagado con ' + esc(p.medio) : 'no ha pagado'}</small></span></div>
+         <div class='es-pkb'>${Array.from({ length: p.clases }, (_, i) => `<i class='${i < p.usadas ? 'us' : ''}'></i>`).join('')}</div>`,
+        !pagado ? `<div class='es-rpago'><span>¿Ya pagó el pack? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pkpago='${esc(p.id)}' data-m='${v}'>${t}</button>`).join('')}</div>` : '',
+        p.usadas === 0 ? fila(ICO_S.borrar, 'Anular pack', 'Si fue un error', { tag: 'button', at: `data-pkanular='${esc(p.id)}'`, ic: 'mal', cl: 'rojo' }) : ''
+      ]);
+    });
+    if (!act.length) {
+      if (packVender) h += `<p class='es-gt'>Vender pack</p><div class='es-caja es-ed es-pkv'>
+          <p class='es-edp'>${k.clases} clases con ${k.descuento}% de descuento. Se paga una vez y cada clase que le anotes descuenta una.</p>
+          <div class='es-2'><label><span class='es-lb'>Personas por clase</span><input class='es-in' name='personas' type='number' min='1' max='5' value='1' inputmode='numeric'></label>
+            <label><span class='es-lb'>Precio del pack</span><input class='es-in' name='total' inputmode='numeric' value='${precioPack(1)}' data-auto='1'></label></div>
+          <label><span class='es-lb'>¿Cómo paga?</span><select class='es-in' name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}</select></label>
+          <p class='es-err vivo'></p><button class='es-big' data-pkgo='${esc(c.nombre)}' data-tel='${esc(c.telefono || '')}' data-mail='${esc(c.correo || '')}'>Vender pack</button><button class='es-no' data-pkno>Cancelar</button></div>`;
+      else h += grupo('', [fila(String(k.clases), 'Vender pack de ' + k.clases + ' clases', k.descuento + '% de descuento · ' + clp(precioPack(1)) + ' para 1 persona', { tag: 'button', at: 'data-pkv', ic: 'ok' })]);
+    }
+    return h;
   }
 
   // Nueva clase: página completa, con flecha para volver
@@ -565,21 +606,43 @@
         <label><span class='es-lb'>Duración</span><select class='es-in' name='duracion'><option value='60'>1 h</option><option value='90' selected>1 h 30</option><option value='120'>2 h</option></select></label></div>
       <span class='es-lb'>Instructores <small>· si no eliges, la app elige entre los libres</small></span>
       <div class='es-mchips'>${n.map(i => `<button type='button' class='es-chip' data-mi='${esc(i.nombre)}'>${esc(i.nombre)}</button>`).join('')}</div>
-      <div class='es-caja'><b>Pago</b>
-        <div class='es-2'><label><span class='es-lb'>Total a cobrar</span><input class='es-in' name='total' inputmode='numeric' value='${(cotiza(2, 0).precio || '')}' data-auto='1'></label>
+      <div class='es-caja'><b>Pago</b><input type='hidden' name='pack' value=''><div data-pkz></div>
+        <div class='es-2' data-pkh><label><span class='es-lb' data-pkl>Total a cobrar</span><input class='es-in' name='total' inputmode='numeric' value='${(cotiza(2, 0).precio || '')}' data-auto='1'></label>
           <label><span class='es-lb'>N° instructores</span><input class='es-in' type='number' name='nInstructores' min='1' value='${cotiza(2, 0).ins}' inputmode='numeric' data-auto='1'></label></div>
-        <label><span class='es-lb'>¿Cómo paga?</span><select class='es-in' name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}<option value='Link de pago'>Aún no paga: mandarle link de pago</option></select></label>
-        <label class='es-chk'><input type='checkbox' name='avisar'>Si ya pagó, mandarle el comprobante por correo</label></div>
+        <label data-pkm><span class='es-lb'>¿Cómo paga?</span><select class='es-in' name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}<option value='Link de pago' data-link>Aún no paga: mandarle link de pago</option></select></label>
+        <label class='es-chk' data-pka><input type='checkbox' name='avisar'>Si ya pagó, mandarle el comprobante por correo</label></div>
       <label><span class='es-lb'>Nota interna</span><textarea class='es-in' name='comentario' rows='2' placeholder='Solo la ve el equipo'></textarea></label>
       <p class='es-nota' style='margin-top:14px'>El total y los instructores salen de la tabla de precios; puedes cambiarlos. Se pueden anotar clases que ya pasaron.</p>
       </div><div class='es-pgf'><p class='es-err vivo'></p><button class='es-big' data-manual-go>Crear clase</button></div></div>`;
+  }
+  // Pack en Nueva clase: si el cliente tiene pack, se usa (la clase va en $0); si no, se puede vender uno ahora (esta es su 1ª clase)
+  function zonaPack(pg, c) {
+    const z = pg.querySelector('[data-pkz]'); if (!z) return;
+    const k = PK(), tiene = packDe(c), inp = pg.querySelector('[name=pack]'), tot = pg.querySelector('[name=total]');
+    pg._cli = c;
+    z.innerHTML = tiene
+      ? `<label class='es-pkz'><span class='es-rx'><b>Usar su pack</b><small>${esc(packTxt(tiene))}${tiene.medio === 'Por pagar' ? ' · el pack no está pagado' : ''}</small></span><span class='es-sw'><input type='checkbox' data-pku='${esc(tiene.id)}' checked><span class='es-tg'></span></span></label>`
+      : `<label class='es-pkz'><span class='es-rx'><b>Vender pack de ${k.clases} clases</b><small>${k.descuento}% de descuento · esta es su primera clase</small></span><span class='es-sw'><input type='checkbox' data-pkn><span class='es-tg'></span></span></label>`;
+    const aplicar = () => {
+      const u = z.querySelector('[data-pku]'), n = z.querySelector('[data-pkn]'), usa = u && u.checked, vende = n && n.checked;
+      inp.value = usa ? u.dataset.pku : vende ? 'nuevo' : '';
+      pg.querySelector('[data-pkh]').style.display = usa ? 'none' : '';
+      pg.querySelector('[data-pkm]').style.display = usa ? 'none' : '';
+      pg.querySelector('[data-pka]').style.display = usa ? 'none' : '';
+      pg.querySelector('[data-pkl]').textContent = vende ? 'Precio del pack (' + k.clases + ' clases)' : 'Total a cobrar';
+      const lk = pg.querySelector('[data-link]'); if (lk) { lk.disabled = vende; if (vende && pg.querySelector('[name=medio]').value === 'Link de pago') pg.querySelector('[name=medio]').value = 'Por pagar'; }
+      const per = pg.querySelector('[name=personas]').value, pm = pg.querySelector('[name=menores]').value;
+      tot.value = vende ? precioPack(per) : (cotiza(per, pm).precio || ''); tot.dataset.auto = '1';
+    };
+    z.querySelectorAll('input').forEach(i => i.onchange = aplicar);
+    aplicar();
   }
   // hoja para buscar o crear el cliente (sin volver a pintar la página)
   function hojaCliente(pg, crear) {
     const fuera = () => w.remove();
     const w = document.createElement('div'); w.className = 'es-hf';
     const elegir = c => { pg.querySelector('[name=nombre]').value = c.nombre; pg.querySelector('[name=telefono]').value = c.telefono || ''; pg.querySelector('[name=correo]').value = c.correo || '';
-      const b = pg.querySelector('[data-cli]'); b.classList.remove('vacio'); b.innerHTML = `${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b>${c.telefono || c.correo ? `<small>${esc(c.telefono || c.correo)}</small>` : ''}</span><span class='es-rc'>›</span>`; fuera(); };
+      const b = pg.querySelector('[data-cli]'); b.classList.remove('vacio'); b.innerHTML = `${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b>${c.telefono || c.correo ? `<small>${esc(c.telefono || c.correo)}</small>` : ''}</span><span class='es-rc'>›</span>`; fuera(); zonaPack(pg, c); };
     const lista = q => (E.clientes || []).filter(c => !q || (c.nombre + ' ' + c.telefono + ' ' + c.correo).toLowerCase().includes(q)).slice(0, 60)
       .map((c, k) => `<button class='es-row' data-k='${(E.clientes || []).indexOf(c)}'>${avatar(c.nombre)}<span class='es-rx'><b>${esc(c.nombre)}</b>${c.telefono ? `<small>${esc(c.telefono)}</small>` : ''}</span></button>`).join('') || `<p class='es-nota'>No hay nadie con ese nombre. Créalo con el botón de arriba.</p>`;
     const buscar = () => {
@@ -762,6 +825,9 @@
         <table class='es-tab'><tr><th>Personas</th><th>Cliente paga</th><th>Instructor recibe</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
         <tr><td colspan='2'>Grupo grande o empresa</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
         ${nota('Con niños menores de 8 la app arma los grupos sola: 2 niños por instructor, y si sobra uno se suma al último par.')}
+        <h3 style='margin-top:18px'>Pack de clases</h3><p class='pn-sub'>Se vende desde la página del cliente o al anotar una clase. El instructor recibe lo mismo de siempre por cada clase.</p>
+        <div class='es-f'><label>Clases del pack<input data-pk='clases' inputmode='numeric' value='${PK().clases}'></label><label>Descuento (%)<input data-pk='descuento' inputmode='numeric' value='${PK().descuento}'></label></div>
+        ${nota('Con 1 persona el pack queda en ' + clp(precioPack(1)) + ' (' + PK().clases + ' clases de ' + clp(a.precios[1]) + ' menos ' + PK().descuento + '%).')}
         <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
     }
     if (ajTab === 'reglas') {
@@ -832,7 +898,7 @@
     $$('[data-lf]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.lf); const t = b.querySelector('.es-rx b') || b; t.textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', b.dataset.lf); } });
     $$('[data-copiar]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(E.link); (b.querySelector('.es-btn') || b).textContent = '¡Copiado!'; } catch (_) { prompt('Copia el link:', E.link); } });
     $$('[data-pgx]').forEach(b => b.onclick = () => { if (manualOn) manualOn = false; else if (abierta) { abierta = ''; modo = ''; } else vista = pila.pop() || null; msg = ''; pintar(); });
-    const abrir = v => { if (vista) pila.push(vista); vista = v; abierta = ''; modo = ''; msg = ''; pintar(); const b = pane.querySelector('.es-pgb'); if (b) b.scrollTop = 0; };
+    const abrir = v => { if (vista) pila.push(vista); vista = v; abierta = ''; modo = ''; packVender = false; msg = ''; pintar(); const b = pane.querySelector('.es-pgb'); if (b) b.scrollTop = 0; };
     $$('[data-ver]').forEach(c => c.onclick = e => { if (e.target.closest('a') || (e.target.closest('button') && e.target.closest('button') !== c)) return; abrir({ t: 'clase', ref: c.dataset.ver }); });
     $$('[data-cliv]').forEach(b => b.onclick = () => abrir({ t: 'cliente', nombre: b.dataset.cliv }));
     const cq = $('[data-cq]'); if (cq) cq.oninput = () => { const v = cq.value.trim().toLowerCase(); $$('[data-cliv]').forEach(b => b.style.display = !v || b.dataset.q.includes(v) ? '' : 'none'); };
@@ -861,6 +927,13 @@
       if (go.dataset.go === 'cancelar') accion({ accion: 'cancelar', ref: abierta }, go).then(ok => { if (ok) { msg = 'Clase de ' + r.nombre + ' cancelada.'; pintar(); } });
     };
     $$('[data-pago]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.pago); accion({ accion: 'datos', ref: b.dataset.pago, medio: b.dataset.m }, b).then(ok => { if (ok) { msg = (r ? r.nombre + ': ' : '') + 'pagada con ' + b.textContent + '.'; pintar(); } }); });
+    $$('[data-pkv]').forEach(b => b.onclick = () => { packVender = true; pintar(); const f = pane.querySelector('.es-pkv'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); });
+    $$('[data-pkno]').forEach(b => b.onclick = () => { packVender = false; pintar(); });
+    const pkv = $('.es-pkv'); if (pkv) { const per = pkv.querySelector('[name=personas]'), t = pkv.querySelector('[name=total]'); per.oninput = () => { if (t.dataset.auto) t.value = precioPack(per.value); }; t.oninput = () => { delete t.dataset.auto; }; }
+    $$('[data-pkgo]').forEach(b => b.onclick = () => { const f = b.closest('.es-pkv'), v = { accion: 'pack', vender: 1, nombre: b.dataset.pkgo, telefono: b.dataset.tel, correo: b.dataset.mail }; f.querySelectorAll('[name]').forEach(i => v[i.name] = i.value.trim());
+      accion(v, b).then(ok => { if (ok) { packVender = false; msg = 'Pack vendido a ' + v.nombre + '.'; pintar(); } }); });
+    $$('[data-pkpago]').forEach(b => b.onclick = () => accion({ accion: 'pack', id: b.dataset.pkpago, pagado: b.dataset.m }, b).then(ok => { if (ok) { msg = 'Pack pagado con ' + b.textContent + '.'; pintar(); } }));
+    $$('[data-pkanular]').forEach(b => b.onclick = () => { if (!confirm('¿Anular este pack?')) return; accion({ accion: 'pack', id: b.dataset.pkanular, anular: 1 }, b).then(ok => { if (ok) { msg = 'Pack anulado.'; pintar(); } }); });
     $$('[data-papel]').forEach(c => c.onchange = () => accion({ accion: 'datos', ref: c.dataset.papel, fichasPapel: c.checked ? 1 : 0 }, null).then(ok => { if (ok) { msg = c.checked ? 'Fichas en papel anotadas.' : 'Listo.'; pintar(); } }));
     $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.es-pg, .pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
     const nomIn = $('[name=nombre][list=es-clientes]');
@@ -876,7 +949,8 @@
     const mc = pgN;
     if (mc) {
       const re = () => { const c = cotiza(mc.querySelector('[name=personas]').value, mc.querySelector('[name=menores]').value), t = mc.querySelector('[name=total]'), n = mc.querySelector('[name=nInstructores]');
-        if (t.dataset.auto) t.value = c.precio || ''; t.placeholder = c.precio ? '' : 'escribe el total (grupo grande)';
+        const pk = mc.querySelector('[name=pack]').value;
+        if (t.dataset.auto) t.value = pk === 'nuevo' ? precioPack(mc.querySelector('[name=personas]').value) : (c.precio || ''); t.placeholder = c.precio ? '' : 'escribe el total (grupo grande)';
         if (n.dataset.auto) n.value = Math.max(c.ins, mc.querySelectorAll('[data-mi].on').length); };
       mc.querySelectorAll('[name=personas],[name=menores]').forEach(i => i.addEventListener('input', re));
       mc.querySelectorAll('[name=total],[name=nInstructores]').forEach(i => i.addEventListener('input', () => { delete i.dataset.auto; }));
@@ -887,7 +961,7 @@
       const elegidos = [...c.querySelectorAll('[data-mi].on')].map(b => b.dataset.mi);
       const body = Object.assign({ accion: 'manual' }, v, { instructores: elegidos });
       if (!v.nombre) { c.querySelector('.es-err').textContent = 'Elige o crea el cliente.'; return; }
-      accion(body, mg).then(ok => { if (ok) { manualOn = false; vista = null; pila = []; msg = E.nuevoLink ? '' : 'Clase de ' + v.nombre + ' guardada.'; linkNuevo = E.nuevoLink || null; sub = 'reservas'; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+      accion(body, mg).then(ok => { if (ok) { manualOn = false; vista = null; pila = []; msg = E.nuevoLink ? '' : 'Clase de ' + v.nombre + ' guardada' + (v.pack === 'nuevo' ? ' y pack vendido' : v.pack ? ' con su pack' : '') + '.'; linkNuevo = E.nuevoLink || null; sub = 'reservas'; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
     };
     // calendario
     $$('[data-ci]').forEach(b => b.onclick = () => { calIns = b.dataset.ci; pintar(); });
@@ -936,8 +1010,8 @@
     $$('[data-aj]').forEach(b => b.onclick = async () => {
       const t = b.dataset.aj;
       if (t === 'precios') {
-        const precios = {}, pagos = {}; $$('[data-pr]').forEach(i => precios[i.dataset.pr] = i.value); $$('[data-pa]').forEach(i => pagos[i.dataset.pa] = i.value);
-        if (await accion({ accion: 'ajustes', precios, pagos }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
+        const precios = {}, pagos = {}, pack = {}; $$('[data-pr]').forEach(i => precios[i.dataset.pr] = i.value); $$('[data-pa]').forEach(i => pagos[i.dataset.pa] = i.value); $$('[data-pk]').forEach(i => pack[i.dataset.pk] = i.value);
+        if (await accion({ accion: 'ajustes', precios, pagos, pack }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
       }
       if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, maxSeguidas: $('#es-seg').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-mismo').checked ? $('#es-tarde').value : '23:59', cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
       if (t === 'resenas' && await accion({ accion: 'ajustes', linkResena: $('#es-glink').value.trim() }, b)) { msg = 'Link guardado.'; pintar(); }

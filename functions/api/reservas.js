@@ -46,6 +46,7 @@ const AJUSTES_BASE = {
   verano: { meses: [1, 2], dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', instructores: 1, cambios: { '09:00': '09:30', '10:30': '11:00' } },
   horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
+  pack: { clases: 5, descuento: 10 }, // pack de clases particulares (Isidora 16-11): 5 clases con 10% de descuento, sin vencimiento por ahora
   intermedio: { precio: 45000, instructores: ['Diego', 'Francisco'] }, // clase para alumnos intermedios: precio si es individual (desde 2, tabla normal), solo con estos instructores
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
 };
@@ -316,6 +317,7 @@ async function guardarReserva(db, a, r, hastaMs) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(r.ref, r.creada, r.creada_ms, r.estado, r.fecha, r.hora, r.personas, r.menores, r.ninos || 0, JSON.stringify(r.instructores),
       r.nombre, r.telefono, r.correo, r.comentario, r.total, r.pago_instructor, r.medio, r.orden_mp || '', r.nota || '', r.clave || (r.clave = nuevaClave()), JSON.stringify(r.pagos), Number(r.duracion) || 0, r.nivel || '')];
   r.instructores.forEach(i => bloquesDe(r.hora, durDe(a, r)).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, hastaMs))));
+  if (r.pack) st.push(db.prepare('UPDATE reservas SET pack = ? WHERE ref = ?').bind(r.pack, r.ref));
   await db.batch(st);
 }
 const limpiarRetenciones = db => db.prepare('DELETE FROM bloques WHERE hasta > 0 AND hasta < ?').bind(Date.now()).run();
@@ -661,7 +663,7 @@ async function quien(env, d) {
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
 const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, nivel: r.nivel || '', fichasPapel: !!r.fichas_papel, instructores: parseLista(r.instructores),
-  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? linkStorm(r.link_pago) : '' } : {}) });
+  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { pack: r.pack || '', correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? linkStorm(r.link_pago) : '' } : {}) });
 
 async function panel(env, q) {
   const db = env.DB, a = await ajustes(db), hoy = ahoraChile().fecha, admin = q.rol === 'admin', todo = admin || q.rol === 'recepcion';
@@ -688,9 +690,10 @@ async function panel(env, q) {
     excepciones: exc.results.filter(e => todo || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
     reservas: reservas.map(r => Object.assign(filaPanel(r, todo), { fichas: fichasPor[r.ref] || [], linkFicha: linkFicha(r) })), link: PAGINA };
   if (admin) {
-    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins, recepcion: a.recepcion || [] };
+    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins, recepcion: a.recepcion || [], pack: a.pack };
     const mes = hoy.slice(0, 7);
     const m = await db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS total, COALESCE(SUM(pago_instructor),0) AS pago FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).first();
+    m.total += await packsVendidos(db, mes); // los packs cuentan el mes en que se pagan (sus clases van en $0)
     const porIns = await db.prepare("SELECT instructores, pago_instructor, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all();
     const pagoPor = {};
     porIns.results.forEach(r => { const p = pagosDe(r); Object.keys(p).forEach(i => { pagoPor[i] = (pagoPor[i] || 0) + p[i]; }); });
@@ -706,7 +709,8 @@ async function panel(env, q) {
     porIns.results.forEach(r => { const p = pagosDe(r); if (q.yo in p) { clases++; pago += p[q.yo]; } });
     out.mes = { mes, clases, pagoYo: pago };
   }
-  if (!admin && todo) out.ajustes = { precios: a.precios, maxWeb: a.maxWeb, horarios: a.horarios };
+  if (!admin && todo) out.ajustes = { precios: a.precios, maxWeb: a.maxWeb, horarios: a.horarios, pack: a.pack };
+  if (todo) out.packs = await packsLista(db);
   if (todo) { // clientes que ya reservaron, para no escribirlos de nuevo en la reserva a mano
     const cl = await env.DB.prepare("SELECT nombre, telefono, correo, MAX(creada_ms) AS ult, COUNT(*) AS n FROM reservas WHERE estado IN ('pagada', 'pendiente', 'revisar') GROUP BY lower(nombre) ORDER BY ult DESC LIMIT 1000").all();
     out.clientes = cl.results.map(c => ({ nombre: c.nombre, telefono: c.telefono || '', correo: c.correo || '', clases: c.n }));
@@ -748,14 +752,68 @@ async function pagosSemana(env, q, d) {
   return { ok: true, lunes, domingo, hoy, instructores: lista, total: lista.reduce((t, x) => t + x.total, 0) };
 }
 
+// ---------- Packs de clases (Isidora 16-11) ----------
+// Se paga una vez (5 clases con 10% de descuento) y cada clase anotada con el pack descuenta una. Cancelar una clase devuelve la clase al pack.
+async function packTabla(db) {
+  await db.prepare("CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, creada TEXT NOT NULL, creada_ms INTEGER NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', personas INTEGER NOT NULL DEFAULT 1, clases INTEGER NOT NULL DEFAULT 5, total INTEGER NOT NULL DEFAULT 0, medio TEXT NOT NULL DEFAULT 'Por pagar', fecha_pago TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activo', nota TEXT NOT NULL DEFAULT '')").run();
+}
+async function packsLista(db) {
+  await packTabla(db);
+  let r;
+  try { r = await db.prepare("SELECT p.*, (SELECT COUNT(*) FROM reservas x WHERE x.pack = p.id AND x.estado IN ('pagada', 'pendiente', 'revisar')) AS usadas FROM packs p WHERE p.estado = 'activo' ORDER BY p.creada_ms DESC").all(); }
+  catch (_) { r = await db.prepare("SELECT p.*, 0 AS usadas FROM packs p WHERE p.estado = 'activo' ORDER BY p.creada_ms DESC").all(); } // antes de agregar la columna reservas.pack
+  let orden = []; try { orden = (await db.prepare("SELECT ref, pack FROM reservas WHERE pack != '' AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").all()).results; } catch (_) {}
+  return r.results.map(p => ({ refs: orden.filter(x => x.pack === p.id).map(x => x.ref), id: p.id, creada: p.creada, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, clases: p.clases, total: p.total, medio: p.medio, fechaPago: p.fecha_pago, usadas: p.usadas, quedan: p.clases - p.usadas, nota: p.nota }));
+}
+async function packsDelMes(db, mes) {
+  await packTabla(db);
+  return (await db.prepare("SELECT * FROM packs WHERE estado = 'activo' AND medio != 'Por pagar' AND substr(fecha_pago,1,7) = ? AND fecha_pago >= ?").bind(mes, TUU_DESDE).all()).results;
+}
+const packsVendidos = async (db, mes) => (await packsDelMes(db, mes)).reduce((t, k) => t + (k.total || 0), 0);
+/** Precio de un pack: clases × precio de la tabla para esas personas, menos el descuento (redondeado a $100). */
+const precioPack = (a, personas) => { const k = a.pack || AJUSTES_BASE.pack, p = Number(a.precios[Math.min(5, Math.max(1, personas))]) || 0; return Math.round(p * k.clases * (100 - k.descuento) / 100 / 100) * 100; };
+async function crearPack(db, a, q, d) {
+  await packTabla(db);
+  const t = ahoraChile(), k = a.pack || AJUSTES_BASE.pack, medio = MEDIOS.includes(d.medio) && d.medio !== 'Mercado Pago' ? d.medio : 'Por pagar';
+  const p = { id: 'PK-' + t.fecha.slice(2).replace(/-/g, '') + '-' + Math.floor(Math.random() * 90000 + 10000), nombre: d.nombre, telefono: d.telefono || '', correo: d.correo || '', personas: d.personas || 1, clases: k.clases, total: d.total, medio };
+  await db.prepare('INSERT INTO packs (id, creada, creada_ms, nombre, telefono, correo, personas, clases, total, medio, fecha_pago, nota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(p.id, t.fecha + ' ' + t.hora, Date.now(), p.nombre, p.telefono, p.correo, p.personas, p.clases, p.total, medio, medio === 'Por pagar' ? '' : t.fecha, 'Vendido por ' + q.email).run();
+  await anotar(db, q, 'pack ' + p.id + ' ' + p.nombre + ' ' + p.total);
+  return p;
+}
+/** Vender un pack solo (sin clase), marcar que se pagó, o anularlo (sus clases quedan como estaban). */
+async function packAccion(env, q, d) {
+  const db = env.DB, a = await ajustes(db);
+  await packTabla(db);
+  if (d.vender) {
+    const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Elige el cliente.');
+    const personas = Math.max(1, Math.min(5, Math.floor(Number(d.personas) || 1)));
+    const total = d.total === '' || d.total == null ? precioPack(a, personas) : Math.round(Number(String(d.total).replace(/\D/g, '')) || 0);
+    if (!(total > 0)) throw err('Escribe el precio del pack.');
+    await crearPack(db, a, q, { nombre, telefono: String(d.telefono || '').trim(), correo: norm(d.correo), personas, total, medio: d.medio });
+  } else {
+    const p = await db.prepare('SELECT * FROM packs WHERE id = ?').bind(String(d.id || '')).first();
+    if (!p) throw err('No encontramos ese pack.');
+    if (d.pagado) { const medio = MEDIOS.includes(d.pagado) && !['Mercado Pago', 'Por pagar'].includes(d.pagado) ? d.pagado : ''; if (!medio) throw err('¿Cómo pagó?');
+      await db.prepare('UPDATE packs SET medio = ?, fecha_pago = ? WHERE id = ?').bind(medio, ahoraChile().fecha, p.id).run(); }
+    if (d.anular) await db.prepare("UPDATE packs SET estado = 'anulado', nota = TRIM(nota || ' · anulado por ' || ?) WHERE id = ?").bind(q.email, p.id).run();
+    await anotar(db, q, 'pack ' + p.id + (d.anular ? ' anulado' : ' pagado ' + d.pagado));
+  }
+  return panel(env, q);
+}
+
 /** Para Finanzas (programa de la planilla Anual): ventas del mes, por medio de pago, y lo que se paga a instructores. mes = 'AAAA-MM'. */
 async function finanzasMes(env, d) {
   const mes = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7);
   const { results } = await env.DB.prepare("SELECT total, medio, pago_instructor, instructores, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND fecha >= ? AND estado = 'pagada'").bind(mes, TUU_DESDE).all();
   const porMedio = {}, porInstructor = {};
   results.forEach(r => { porMedio[r.medio] = (porMedio[r.medio] || 0) + (r.total || 0); const p = pagosDe(r); Object.keys(p).forEach(i => porInstructor[i] = (porInstructor[i] || 0) + p[i]); });
+  // Packs: el ingreso entra el mes en que se pagan, con su forma de pago (así la comisión sale bien); sus clases van en $0 con medio 'Pack'.
+  const packs = await packsDelMes(env.DB, mes);
+  packs.forEach(k => { porMedio[k.medio] = (porMedio[k.medio] || 0) + (k.total || 0); });
+  const totalPacks = packs.reduce((t, k) => t + (k.total || 0), 0);
   let tuu = null; try { tuu = await tuuResumen(env, mes); if (tuu) { delete tuu.detalle; tuu.porRevisar = tuu.porRevisar.length; } } catch (x) { console.error(x); tuu = { ok: false, error: x.message }; }
-  return { ok: true, mes, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0), mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
+  return { ok: true, mes, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0) + totalPacks, packs: packs.length, totalPacks, mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
     instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor, tuu };
 }
 
@@ -799,8 +857,8 @@ async function datos(env, q, d) {
   const personas = d.personas != null ? Math.floor(Number(d.personas)) : r.personas; if (!(personas >= 1)) throw err('¿Cuántas personas son?');
   const menores = d.menores != null ? Math.max(0, Math.min(personas, Math.floor(Number(d.menores) || 0))) : Math.min(personas, r.menores || 0);
   const num = v => Math.round(Number(String(v).replace(/\D/g, '')) || 0);
-  const total = d.total != null && d.total !== '' ? num(d.total) : r.total;
-  const medio = MEDIOS.includes(d.medio) ? d.medio : r.medio;
+  const total = r.pack ? 0 : d.total != null && d.total !== '' ? num(d.total) : r.total; // clase de un pack: se pagó con el pack
+  const medio = r.pack ? 'Pack' : MEDIOS.includes(d.medio) ? d.medio : r.medio;
   const papel = d.fichasPapel != null ? (d.fichasPapel ? 1 : 0) : (r.fichas_papel || 0);
   const dur = d.duracion != null && [60, 90, 120].includes(Number(d.duracion)) ? (Number(d.duracion) === a.duracion ? 0 : Number(d.duracion)) : (Number(r.duracion) || 0);
   const ins = parseLista(r.instructores);
@@ -875,8 +933,13 @@ async function manual(env, q, d, ctx) {
   const nIns = Math.max(c.instructores, Math.floor(Number(d.nInstructores) || 0), elegidos.length);
   // Si van más instructores que los de la tabla (grupo grande), cada uno se paga como grupo
   const pagoManual = d.pagoInstructor === '' || d.pagoInstructor == null ? null : Math.round(Number(String(d.pagoInstructor).replace(/\D/g, '')) || 0);
-  const conLink = d.medio === 'Link de pago';
+  // Pack (Isidora 16-11): 'nuevo' = vende un pack ahora y esta es su 1ª clase; o el id de un pack que ya tiene. La clase va en $0 con medio 'Pack'.
+  let pack = null;
+  if (d.pack === 'nuevo') pack = { nuevo: true };
+  else if (d.pack) { await packTabla(db); pack = (await packsLista(db)).find(k => k.id === String(d.pack)); if (!pack) throw err('No encontramos ese pack.'); if (pack.quedan <= 0) throw err('Ese pack ya no tiene clases.'); }
+  const conLink = !pack && d.medio === 'Link de pago';
   const medio = conLink ? 'Mercado Pago' : MEDIOS.includes(d.medio) ? d.medio : 'Por pagar';
+  if (pack && pack.nuevo && !(total > 0)) throw err('Escribe el precio del pack.');
   if (conLink && !(total > 0)) throw err('Escribe el total a cobrar.');
   if (conLink && !env.MP_TOKEN) throw err('Falta conectar Mercado Pago (MP_TOKEN).');
   const duracion = [60, 90, 120].includes(Number(d.duracion)) && Number(d.duracion) !== a.duracion ? Number(d.duracion) : 0;
@@ -888,6 +951,10 @@ async function manual(env, q, d, ctx) {
   const t = ahoraChile();
   const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conLink ? 'pendiente' : 'pagada', fecha, hora, personas, menores, ninos, instructores: ins, nombre,
     telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pagoManual, medio, duracion, nota: 'Agregada a mano por ' + q.email };
+  if (pack) {
+    if (pack.nuevo) pack = await crearPack(db, a, q, { nombre, telefono: r.telefono, correo: r.correo, personas, total, medio });
+    r.pack = pack.id; r.total = 0; r.medio = 'Pack';
+  }
   // Con link: el horario se guarda hasta que paguen (máximo las horas de "horasLink", y nunca después de que empiece la clase).
   const desfase = minLocal(t.fecha, t.hora) - Math.floor(Date.now() / 60000);
   const inicioMs = (minLocal(fecha, hora) - desfase) * 60000;
@@ -937,6 +1004,7 @@ async function guardarAjustes(env, q, d) {
   if (d.lugar) st.push(['lugar', String(d.lugar).trim()]);
   if (d.admins) { const l = d.admins.map(norm).filter(x => /@/.test(x)); if (!l.includes(q.email)) l.push(q.email); st.push(['admins', l]); }
   if (d.linkResena != null) { const l = String(d.linkResena).trim(); if (l && !/^https:\/\/\S+$/.test(l)) throw err('El link de Google debe empezar con https://'); st.push(['linkResena', l]); }
+  if (d.pack) { const c = Math.max(2, Math.min(20, n(d.pack.clases) || 5)), ds = Math.max(0, Math.min(50, n(d.pack.descuento))); st.push(['pack', { clases: c, descuento: ds }]); }
   if (d.recepcion) st.push(['recepcion', d.recepcion.map(norm).filter(x => /@/.test(x))]);
   if (st.length) await db.batch(st.map(([k, v]) => db.prepare('INSERT OR REPLACE INTO ajustes (clave, valor) VALUES (?, ?)').bind(k, JSON.stringify(v))));
   await anotar(db, q, 'ajustes ' + st.map(x => x[0]).join(','));
@@ -1085,7 +1153,8 @@ async function tuuResumen(env, mes, forzar) {
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
     db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
-    db.prepare("SELECT ref, fecha, hora, total, nombre, medio FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND medio IN ('POS', 'Efectivo')").bind(mes).all(),
+    db.prepare("SELECT ref, fecha, hora, total, nombre, medio FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND medio IN ('POS', 'Efectivo')").bind(mes).all()
+      .then(async x => { const k = (await packsDelMes(db, mes)).filter(p => p.medio === 'POS' || p.medio === 'Efectivo'); x.results = x.results.concat(k.map(p => ({ ref: p.id, fecha: p.fecha_pago, hora: '', total: p.total, nombre: 'Pack ' + p.nombre, medio: p.medio }))); return x; }),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
   ]);
   const r = { ok: true, mes, desde: TUU_DESDE, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
@@ -1180,7 +1249,7 @@ export async function onRequest(context) {
     if (acc === 'disponible') return json(await disponible(env, q, d));
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
-    if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
+    if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'pack'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));
     if (acc === 'tuu-asignar') return json(await tuuAsignar(env, q, d));
@@ -1190,6 +1259,7 @@ export async function onRequest(context) {
     if (acc === 'cancelar') return json(await cancelar(env, q, d, context));
     if (acc === 'datos') return json(await datos(env, q, d));
     if (acc === 'manual') return json(await manual(env, q, d, context));
+    if (acc === 'pack') return json(await packAccion(env, q, d));
     if (acc === 'instructor') return json(await guardarInstructor(env, q, d));
     if (acc === 'ajustes') return json(await guardarAjustes(env, q, d));
     if (acc === 'fijo') return json(await guardarFijo(env, q, d));
