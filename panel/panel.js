@@ -977,9 +977,41 @@
     if(!ADU){ ADU = cacheLeer('adultos'); if(ADU) pintarAdultos(); else pane.innerHTML = `${SK(1)}${SK(1)}`; }
     else pintarAdultos();
     let listo = false;
-    rapidaPrimero('adultos-panel', 'adultos', () => listo, d => { if(escribiendo(pane)) return; ADU = d; pintarAdultos(); });
-    try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); listo = true; ADU = d; cacheGuardar('adultos', d); if(!escribiendo(pane)) pintarAdultos(); }
+    rapidaPrimero('adultos-panel', 'adultos', () => listo, d => { if(escribiendo(pane)) return; ADU = adConCola(d); pintarAdultos(); });
+    try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); listo = true; ADU = adConCola(d); cacheGuardar('adultos', d); if(!escribiendo(pane)) pintarAdultos(); }
     catch(x){ if(!ADU) pane.innerHTML = `<div class='pn-msg'>${esc(x.message)}</div>`; }
+  }
+  // Pasar lista: se marca al instante en pantalla y se guarda por detrás, de a una, reintentando si falla.
+  let adCola = [], adGuardando = false, adAviso = '';
+  function adMarcarLocal(c, clave, vino){
+    c.vino = (c.vino || []).filter(v => v.clave !== clave);
+    if(vino) c.vino.push({ clave, marco: 'Instructor' });
+  }
+  const adConCola = d => { adCola.forEach(t => { const k = (d.clases || []).find(x => x.fecha === t.fecha); if(k) adMarcarLocal(k, t.alumno, t.vino); }); return d; };
+  function adMarcar(c, clave, vino){
+    adMarcarLocal(c, clave, vino); adAviso = '';
+    adCola = adCola.filter(x => !(x.fecha === c.fecha && x.alumno === clave));
+    adCola.push({ fecha: c.fecha, alumno: clave, vino, intentos: 0 });
+    pintarAdultos(); adGuardar();
+  }
+  async function adGuardar(){
+    if(adGuardando) return; adGuardando = true;
+    let ultimo = null;
+    while(adCola.length){
+      const t = adCola[0];
+      try{ ultimo = await post(Object.assign({}, auth, {accion:'adultos-lista', fecha:t.fecha, alumno:t.alumno, vino:t.vino})); adCola.shift(); }
+      catch(x){
+        t.intentos++;
+        if(t.intentos < 3){ await new Promise(r => setTimeout(r, 1500 * t.intentos)); continue; }
+        adCola.shift();
+        const c = (ADU.clases || []).find(k => k.fecha === t.fecha); if(c) adMarcarLocal(c, t.alumno, !t.vino);
+        const a = (ADU.alumnos || []).find(k => k.clave === t.alumno);
+        adAviso = 'No se pudo guardar ' + (a ? a.nombre : 'una marca') + '. Revisa la señal y vuelve a tocarlo.';
+        pintarAdultos();
+      }
+    }
+    adGuardando = false;
+    if(ultimo && ultimo.ok !== false){ ADU = ultimo; cacheGuardar('adultos', ultimo); if(!escribiendo(app.querySelector('.pn-adultos'))) pintarAdultos(); }
   }
   async function adEnviar(body, btn){
     if(btn){ btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = '…'; }
@@ -1003,7 +1035,7 @@
         <div class='pn-card'>${(k.ganado != null ? [['Entró este mes', clp(k.ingresos)], ['Comisión Mercado Pago', '− ' + clp(k.comision)], ['Valor de las clases hechas', clp(k.hechas)]].concat(k.vencido ? [['Clases no usadas (plan vencido)', clp(k.vencido)]] : []).concat([['50% instructor', clp(k.instructor)], ['50% Storm', clp(k.storm)], ['Pagado y aún por usar', clp(k.porUsar)], ['Clases hechas', k.clasesHechas], ['Asistencias', k.asistencias]])
           : [['Entró', clp(k.ingresos)], ['Comisión Mercado Pago', '− ' + clp(k.comision)], ['Neto', clp(k.ingresos - k.comision)], ['50% instructor', clp(k.instructor)], ['50% Storm', clp(k.storm)], ['Clases hechas', k.clasesHechas], ['Asistencias', k.asistencias]]).map(r => `<div style='display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:1.45rem'><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div></details>`;
     }
-    let h = top + `<p class='pn-note' style='text-align:left;margin-top:14px'>Toca a cada persona que vino. Si alguien no está en la lista, agrégalo abajo. Aquí también cambias o cancelas una clase.</p>`;
+    let h = top + (adAviso ? `<div class='pn-msg' style='margin-top:12px'>${esc(adAviso)}</div>` : '') + `<p class='pn-note' style='text-align:left;margin-top:14px'>Toca a cada persona que vino. Si alguien no está en la lista, agrégalo abajo. Aquí también cambias o cancelas una clase.</p>`;
     h += `<div style='display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px'>` + cls.slice().reverse().map(x => { const k = adDia(x.fecha);
       return `<button data-adcl='${x.fecha}' style='flex:none;border:1.5px solid ${x.fecha === adSel ? '#2C2C2B' : x.fecha === hoy ? '#4F7F86' : 'rgba(44,44,43,.12)'};background:${x.fecha === adSel ? '#2C2C2B' : '#fff'};color:${x.fecha === adSel ? '#fff' : '#2C2C2B'};border-radius:14px;padding:8px 12px;font:inherit;cursor:pointer;line-height:1.15;text-align:center;${x.cancelada ? 'text-decoration:line-through;opacity:.55' : ''}'><small style='display:block;font-size:1.1rem;text-transform:uppercase;opacity:.7'>${k.d}</small><b style='font-size:1.8rem'>${k.n}</b></button>`; }).join('') + `</div>`;
     if(!c){ pane.innerHTML = h + `<div class='pn-card'><p class='pn-empty'>No hay clases cargadas.</p></div>`; return; }
@@ -1055,7 +1087,7 @@
       if(adTipo === 'cancelar' && !confirm('¿Cancelar la clase del ' + c.texto.toLowerCase() + '?')) return;
       if(await adEnviar(body, ag)){ adForm = false; if(body.nueva) adSel = body.nueva; pintarAdultos(); }
     };
-    pane.querySelectorAll('[data-adal]').forEach(r => r.onclick = () => { r.style.opacity = .5; adEnviar({accion:'adultos-lista', fecha:c.fecha, alumno:r.dataset.adal, vino: r.dataset.on !== '1'}); });
+    pane.querySelectorAll('[data-adal]').forEach(r => r.onclick = () => adMarcar(c, r.dataset.adal, r.dataset.on !== '1'));
     const an = pane.querySelector('[data-adagregar]'); if(an) an.onclick = () => { const n = pane.querySelector('#ad-nuevo').value.trim(); if(n) adEnviar({accion:'adultos-agregar', fecha:c.fecha, nombre:n}, an); };
     pane.querySelectorAll('[data-adpagode]').forEach(b => b.onclick = () => { adPagoDe = adPagoDe === b.dataset.adpagode ? '' : b.dataset.adpagode; pintarAdultos(); });
     pane.querySelectorAll('[data-adpagar]').forEach(b => b.onclick = async () => {
@@ -1119,7 +1151,7 @@
       adultos: () => ADU,
       async cargarAdultos(){ // para Hoy: trae las clases de Adultos sin abrir la pestaña
         if(!ADU) ADU = cacheLeer('adultos');
-        try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); ADU = d; cacheGuardar('adultos', d); }catch(_){}
+        try{ const d = await post(Object.assign({}, auth, {accion:'adultos-panel'})); ADU = adConCola(d); cacheGuardar('adultos', d); }catch(_){}
         return ADU;
       },
       montar(el, a){ app = el; auth = a; load(); },
