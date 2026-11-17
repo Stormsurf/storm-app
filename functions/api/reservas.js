@@ -129,7 +129,7 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
-const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay'];
+const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay', 'Webpay crédito', 'Webpay débito'];
 function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; }
@@ -412,7 +412,11 @@ async function revisarPago(env, r, ctx) {
   }
   if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && om.startsWith('webpay:')) {
     const o = await webpayEstado(env, om.slice(7));
-    return o && o.status === 'AUTHORIZED' && Number(o.response_code) === 0 ? confirmar(env, r, Number(o.amount), ctx) : r.estado;
+    if (!(o && o.status === 'AUTHORIZED' && Number(o.response_code) === 0)) return r.estado;
+    // Débito o prepago vs crédito: Finanzas cobra distinta comisión
+    r.medio = ['VD', 'VP'].includes(o.payment_type_code) ? 'Webpay débito' : 'Webpay crédito';
+    await env.DB.prepare('UPDATE reservas SET medio = ? WHERE ref = ?').bind(r.medio, r.ref).run();
+    return confirmar(env, r, Number(o.amount), ctx);
   }
   if (!r || r.estado !== 'pendiente' && r.estado !== 'vencida' || !r.orden_mp || !env.MP_TOKEN) return r && r.estado;
   let o = null;

@@ -128,7 +128,7 @@ async function webpay(env, metodo, ruta, body) {
 }
 
 /** Pago hecho fuera de Mercado Pago (Flow o Webpay): avisa al programa que corresponde. id = 'flow:<n>' o 'webpay:<token>'. */
-async function avisarExterno(env, ref, id, monto, origen, token) {
+async function avisarExterno(env, ref, id, monto, origen, token, tipo) {
   if (/^PRUEBA-/.test(ref)) return;
   if (/^ES-/.test(ref)) {
     try { await fetch(origen + '/api/reservas?externo=1', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref, token }) }); } catch (_) {}
@@ -136,8 +136,9 @@ async function avisarExterno(env, ref, id, monto, origen, token) {
   }
   if (!env.CLAVE_WEB) return;
   const ts = String(Math.floor(Date.now() / 1000)); monto = String(Math.round(Number(monto)));
-  const firma = await hmacHex(env.CLAVE_WEB, 'flow|' + ref + '|' + id + '|' + monto + '|' + ts);
-  try { await fetch(/^AV-/.test(ref) ? VERANO : ANUAL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'pago-flow', ref, id, monto, ts, firma }), redirect: 'follow' }); } catch (_) {}
+  // tipo (Webpay): 'debito' o 'credito', para la comisión en Finanzas (débito/prepago 1,49% + IVA, crédito 2,29% + IVA)
+  const firma = await hmacHex(env.CLAVE_WEB, 'flow|' + ref + '|' + id + '|' + monto + '|' + ts + (tipo ? '|' + tipo : ''));
+  try { await fetch(/^AV-/.test(ref) ? VERANO : ANUAL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ accion: 'pago-flow', ref, id, monto, ts, firma }, tipo ? { tipo } : {})), redirect: 'follow' }); } catch (_) {}
 }
 
 /** Revisa el cobro en Flow (estado 2 = pagado) y, si está pagado, avisa al programa que corresponde. Devuelve { st, o, pagado }. */
@@ -174,7 +175,7 @@ export async function onRequest(context) {
     const ref = o && o.external_reference;
     const ok = c && c.status === 'AUTHORIZED' && Number(c.response_code) === 0 && ref && REF_OK.test(ref) && Math.round(Number(c.amount)) >= Math.round(Number(o.total_amount));
     if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return /\.storm-app\.pages\.dev$/.test(url.hostname) ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(tok), 303) : vuelve('error'); }
-    await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok);
+    await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok, ['VD', 'VP'].includes(c.payment_type_code) ? 'debito' : 'credito');
     // Comprobante (lo pide Transbank): se muestra en /pagar y desde ahí sigue a la página de siempre
     const cp = new URLSearchParams({ o: oid, comprobante: '1', oc: c.buy_order || '', m: String(Math.round(Number(c.amount))), ac: c.authorization_code || '', d: (c.card_detail || {}).card_number || '',
       f: c.transaction_date || '', t: c.payment_type_code || '', n: String(c.installments_number || 0) });

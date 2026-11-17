@@ -100,6 +100,23 @@
       pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>Pago vencido</h1><p>Este link de pago ya no sirve. Vuelve atrás y empieza de nuevo.</p></div>${ayuda}`;
       return;
     }
+    // Con Webpay (Transbank): "Tarjeta" paga con Webpay para todos (chilenas y extranjeras, sin RUT). Mercado Pago queda solo con la cuenta.
+    if(D.webpay){
+      pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
+        <h2 class="pg-h2">${EN ? 'How would you like to pay?' : '¿Cómo quieres pagar?'}</h2>
+        <button class="pg-opt" id="op-wp" type="button"><i>💳</i><span><b>${EN ? 'Card' : 'Tarjeta'}</b><small>${EN ? 'Credit, debit or prepaid, Chilean or foreign (Webpay)' : 'Crédito, débito o prepago, chilena o extranjera (Webpay)'}</small></span></button>
+        <div class="pg-err" id="err" hidden></div>
+        <a class="pg-opt" id="op-cuenta" href="${esc(D.cuenta)}"><i>👤</i><span><b>${EN ? 'With my Mercado Pago account' : 'Con mi cuenta Mercado Pago'}</b><small>${EN ? 'Use your Mercado Pago balance or saved cards' : 'Usa el saldo o las tarjetas guardadas en tu cuenta'}</small></span></a>
+        <p class="pg-note">${EN ? 'Payments are processed securely by Transbank (Webpay) or Mercado Pago.' : 'Pago seguro con Webpay (Transbank) o Mercado Pago.'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+      const b = document.getElementById('op-wp');
+      b.onclick = async () => {
+        if(b.disabled) return; b.disabled = true; b.classList.add('on'); error('');
+        b.querySelector('small').textContent = EN ? 'Taking you to Webpay…' : 'Te llevamos a Webpay…';
+        if(!(await irExterno(''))){ b.disabled = false; b.classList.remove('on'); b.querySelector('small').textContent = EN ? 'Credit, debit or prepaid, Chilean or foreign (Webpay)' : 'Crédito, débito o prepago, chilena o extranjera (Webpay)'; }
+      };
+      avisosVuelta();
+      return;
+    }
     pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
       <h2 class="pg-h2">¿Cómo quieres pagar?</h2>
       <button class="pg-opt" id="op-tarjeta" type="button"><i>💳</i><span><b>Tarjeta</b><small>Crédito, débito o prepago, sin cuenta Mercado Pago</small></span></button>
@@ -110,6 +127,11 @@
       ${ayuda}`;
     document.getElementById('op-tarjeta').onclick = tarjeta;
     if(D.flow) document.getElementById('op-flow').onclick = conFlow;
+    avisosVuelta();
+  }
+
+  // Mensaje al volver de Webpay o Flow sin pagar
+  function avisosVuelta(){
     const fq = new URLSearchParams(location.search).get('flow');
     if(fq) error(fq === 'pendiente'
       ? (EN ? 'Your payment is still being processed. If it was charged, you will get an email; please do not pay again.' : 'Tu pago se está procesando. Si se cobró, te llegará un correo; no pagues de nuevo.')
@@ -132,14 +154,19 @@
       const b = document.getElementById('fl-ir'), em = document.getElementById('fl-mail'), email = em ? em.value.trim() : '';
       if(em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ error(EN ? 'Please check your email.' : 'Revisa tu correo.'); return; }
       b.disabled = true; error('');
-      try{
-        const r = await fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ o: id, flow: 1, email }) }).then(x => x.json());
-        if(r.ok && r.url && r.token_ws){ const f = document.createElement('form'); f.method = 'POST'; f.action = r.url; f.innerHTML = '<input type="hidden" name="token_ws">'; f.firstChild.value = r.token_ws; document.body.appendChild(f); f.submit(); return; }
-        if(r.ok && r.url){ location.href = r.url; return; }
-        error(r.error || (EN ? 'Could not start the payment.' : 'No se pudo iniciar el pago.'));
-      }catch(_){ error(EN ? 'Connection problem. Please try again.' : 'No pudimos conectar. Intenta de nuevo.'); }
-      b.disabled = false;
+      if(!(await irExterno(email))) b.disabled = false;
     };
+  }
+
+  // Crea el cobro en Webpay o Flow y lleva a la persona a pagar. Devuelve false si no se pudo.
+  async function irExterno(email){
+    try{
+      const r = await fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ o: id, flow: 1, email }) }).then(x => x.json());
+      if(r.ok && r.url && r.token_ws){ const f = document.createElement('form'); f.method = 'POST'; f.action = r.url; f.innerHTML = '<input type="hidden" name="token_ws">'; f.firstChild.value = r.token_ws; document.body.appendChild(f); f.submit(); return true; }
+      if(r.ok && r.url){ location.href = r.url; return true; }
+      error(r.error || (EN ? 'Could not start the payment.' : 'No se pudo iniciar el pago.'));
+    }catch(_){ error(EN ? 'Connection problem. Please try again.' : 'No pudimos conectar. Intenta de nuevo.'); }
+    return false;
   }
 
   // Comprobante de pago con Webpay (Transbank)
