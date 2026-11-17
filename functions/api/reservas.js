@@ -51,6 +51,8 @@ const AJUSTES_BASE = {
 };
 const INSTRUCTORES_BASE = ['Diego', 'Iñaki', 'Francisco', 'Emerson'];
 const FIJOS_BASE = [['Francisco', 6, '09:00', '11:00', 'Taller municipal'], ['Francisco', 0, '12:00', '14:00', 'Taller municipal']];
+// Instructores que dan el Surfskate de la Academia Anual (solo a ellos se les bloquea la agenda en ese horario)
+const INST_SKATE = ['Emerson', 'Diego'];
 const ANUAL_API = 'https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec';
 
 // ---------- utilidades ----------
@@ -178,12 +180,14 @@ async function sincronizarAnual(env, forzar) {
     if (!d.ok) throw new Error('Calendario Anual: ' + (d.error || r.status));
     (d.clases || []).forEach(c => {
       const h = String(c.horario || '').match(/\d{1,2}[:.]\d{2}/g) || [];
-      if (esFecha(c.fecha) && h.length >= 2 && c.fecha >= hoy) filas.push([c.fecha, normHora(h[0]), normHora(h[1]), 'Academia Anual · ' + (c.clase || '')]);
+      // Se guardan también los días ya pasados del mes, para que la agenda de días anteriores siga mostrando la clase.
+      // Surfskate bloquea solo a los instructores que la dan; Surf bloquea a todos.
+      if (esFecha(c.fecha) && h.length >= 2) (/skate/i.test(c.clase || '') ? INST_SKATE : ['*']).forEach(i => filas.push([i, c.fecha, normHora(h[0]), normHora(h[1]), 'Academia Anual · ' + (c.clase || '')]));
     });
   }
   const st = [db.prepare("DELETE FROM ocupaciones WHERE origen = 'anual'")];
-  filas.forEach(f => st.push(db.prepare("INSERT INTO ocupaciones (origen, instructor, fecha, desde, hasta, motivo) VALUES ('anual', '*', ?, ?, ?, ?)").bind(...f)));
-  const info = { ms: Date.now(), cuando: hoy + ' ' + ahoraChile().hora, clases: filas.length };
+  filas.forEach(f => st.push(db.prepare("INSERT INTO ocupaciones (origen, instructor, fecha, desde, hasta, motivo) VALUES ('anual', ?, ?, ?, ?, ?)").bind(...f)));
+  const info = { ms: Date.now(), cuando: hoy + ' ' + ahoraChile().hora, clases: new Set(filas.map(f => f[1] + f[2])).size };
   st.push(db.prepare("INSERT OR REPLACE INTO ajustes (clave, valor) VALUES ('anualSync', ?)").bind(JSON.stringify(info)));
   await db.batch(st);
   return info;
