@@ -114,6 +114,8 @@
     if(fq) error(fq === 'pendiente'
       ? (EN ? 'Your payment is still being processed. If it was charged, you will get an email; please do not pay again.' : 'Tu pago se está procesando. Si se cobró, te llegará un correo; no pagues de nuevo.')
       : (EN ? 'The card payment was not completed. You can try again or use another card.' : 'El pago no se completó. Puedes intentar de nuevo o usar otra tarjeta.'));
+    const tk = new URLSearchParams(location.search).get('tk');
+    if(tk) document.getElementById('err').insertAdjacentHTML('beforeend', '<br><small style="word-break:break-all">Token (prueba): ' + esc(tk) + '</small>');
   }
 
   // Tarjeta extranjera: se paga en Flow (Webpay), que no pide RUT
@@ -155,6 +157,7 @@
       [EN ? 'Installments' : 'Cuotas', t === 'VD' || t === 'VP' ? (EN ? 'None' : 'Sin cuotas') : String(n || 1)],
       [EN ? 'Card' : 'Tarjeta', '**** ' + (Q.get('d') || '')]
     ];
+    if(Q.get('tk')) filas.push(['Token (prueba)', Q.get('tk')]);
     pg.innerHTML = `<div class="pg-hero"><small>Webpay</small><h1>${EN ? 'Payment approved' : 'Pago aprobado'}</h1><p>${EN ? 'Save this receipt.' : 'Guarda este comprobante.'}</p></div>
       <div class="pg-fl" id="detalle">${filas.map(([a, b]) => `<p style="display:flex;justify-content:space-between;gap:12px;opacity:1;margin:6px 0"><span style="opacity:.6">${a}</span><b style="text-align:right">${esc(b)}</b></p>`).join('')}</div>
       <a class="pg-opt" id="seguir" href="/"><i>✓</i><span><b>${EN ? 'Continue' : 'Continuar'}</b></span></a>

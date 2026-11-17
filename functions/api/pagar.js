@@ -173,11 +173,12 @@ export async function onRequest(context) {
     const o = c && c.session_id ? (await mp(env, '/v1/orders/' + encodeURIComponent(c.session_id))).body : null;
     const ref = o && o.external_reference;
     const ok = c && c.status === 'AUTHORIZED' && Number(c.response_code) === 0 && ref && REF_OK.test(ref) && Math.round(Number(c.amount)) >= Math.round(Number(o.total_amount));
-    if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return vuelve('error'); }
+    if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return /\.storm-app\.pages\.dev$/.test(url.hostname) ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(tok), 303) : vuelve('error'); }
     await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok);
     // Comprobante (lo pide Transbank): se muestra en /pagar y desde ahí sigue a la página de siempre
     const cp = new URLSearchParams({ o: oid, comprobante: '1', oc: c.buy_order || '', m: String(Math.round(Number(c.amount))), ac: c.authorization_code || '', d: (c.card_detail || {}).card_number || '',
       f: c.transaction_date || '', t: c.payment_type_code || '', n: String(c.installments_number || 0) });
+    if (/\.storm-app\.pages\.dev$/.test(url.hostname)) cp.set('tk', tok); // vista previa: token visible para la validación de Transbank
     return Response.redirect(origen + '/pagar/?' + cp.toString(), 303);
   }
 
