@@ -129,7 +129,7 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
-const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow'];
+const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay'];
 function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; }
@@ -395,10 +395,24 @@ async function flowEstado(env, token) {
   try { const x = await fetch((env.FLOW_API || 'https://www.flow.cl/api') + '/payment/getStatus?' + new URLSearchParams(Object.assign({}, p, { s }))); return x.ok ? await x.json() : null; } catch (_) { return null; }
 }
 
+// Webpay Plus (Transbank) desde /pagar: orden_mp = "webpay:<token>". Se consulta el estado de la transacción (sirve hasta 7 días).
+async function webpayEstado(env, token) {
+  if (/\.storm-app\.pages\.dev\//.test(PAGINA) && !env.WEBPAY_CODIGO) env = Object.assign({}, env, { WEBPAY_PRUEBA: '1' }); // vista previa: modo prueba
+  const c = env.WEBPAY_CODIGO && env.WEBPAY_LLAVE ? [env.WEBPAY_API || 'https://webpay3g.transbank.cl', env.WEBPAY_CODIGO, env.WEBPAY_LLAVE]
+    : env.WEBPAY_PRUEBA ? ['https://webpay3gint.transbank.cl', '597055555532', '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C'] : null;
+  if (!c) return null;
+  try { const x = await fetch(c[0] + '/rswebpaytransaction/api/webpay/v1.2/transactions/' + encodeURIComponent(token), { headers: { 'Tbk-Api-Key-Id': c[1], 'Tbk-Api-Key-Secret': c[2] } }); return x.ok ? await x.json() : null; } catch (_) { return null; }
+}
+
 async function revisarPago(env, r, ctx) {
-  if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && String(r.orden_mp || '').startsWith('flow:')) {
-    const o = await flowEstado(env, r.orden_mp.slice(5));
+  const om = String((r && r.orden_mp) || '');
+  if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && om.startsWith('flow:')) {
+    const o = await flowEstado(env, om.slice(5));
     return o && Number(o.status) === 2 && String(o.commerceOrder || '').indexOf(r.ref) === 0 ? confirmar(env, r, Number(o.amount), ctx) : r.estado;
+  }
+  if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && om.startsWith('webpay:')) {
+    const o = await webpayEstado(env, om.slice(7));
+    return o && o.status === 'AUTHORIZED' && Number(o.response_code) === 0 ? confirmar(env, r, Number(o.amount), ctx) : r.estado;
   }
   if (!r || r.estado !== 'pendiente' && r.estado !== 'vencida' || !r.orden_mp || !env.MP_TOKEN) return r && r.estado;
   let o = null;
@@ -1179,11 +1193,11 @@ export async function onRequest(context) {
       if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, context); }
       return json({ ok: true });
     }
-    // Pago con Flow desde /pagar: se vuelve a revisar en Flow (no se confía en lo que llega)
-    if (url.searchParams.get('flowok')) {
+    // Pago con Flow o Webpay desde /pagar: se vuelve a revisar allá (no se confía en lo que llega)
+    if (url.searchParams.get('externo')) {
       const b = await request.json().catch(() => ({}));
       const r = b.ref ? await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(b.ref)).first() : null;
-      if (r && b.token && r.orden_mp === 'flow:' + b.token) await revisarPago(env, r, context);
+      if (r && b.token && (r.orden_mp === 'flow:' + b.token || r.orden_mp === 'webpay:' + b.token)) await revisarPago(env, r, context);
       return json({ ok: true });
     }
     if (url.searchParams.get('tarea')) {

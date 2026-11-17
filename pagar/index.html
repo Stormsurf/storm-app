@@ -121,16 +121,18 @@
     document.getElementById('op-flow').classList.add('on');
     const box = document.getElementById('flowbox');
     if(box.innerHTML) return;
-    box.innerHTML = `<div class="pg-fl"><label for="fl-mail">${EN ? 'Your email (for the receipt)' : 'Tu correo (para el comprobante)'}</label>
+    if(D.webpay){ box.innerHTML = `<div class="pg-fl"><button id="fl-ir" type="button">${EN ? 'Continue to pay' : 'Continuar al pago'} · ${clp(D.monto)}</button><p>${EN ? 'You will be taken to Webpay (Transbank), the secure Chilean payment page. Amount in Chilean pesos (CLP).' : 'Te llevamos a Webpay (Transbank), página de pago segura. Monto en pesos chilenos.'}</p></div>`; }
+    else box.innerHTML = `<div class="pg-fl"><label for="fl-mail">${EN ? 'Your email (for the receipt)' : 'Tu correo (para el comprobante)'}</label>
       <input id="fl-mail" type="email" autocomplete="email" inputmode="email" placeholder="${EN ? 'name@email.com' : 'nombre@correo.com'}">
       <button id="fl-ir" type="button">${EN ? 'Continue to pay' : 'Continuar al pago'} · ${clp(D.monto)}</button>
       <p>${EN ? 'You will be taken to Flow (Webpay), a secure Chilean payment page. Amount in Chilean pesos (CLP).' : 'Te llevamos a Flow (Webpay), página de pago segura. Monto en pesos chilenos.'}</p></div>`;
     document.getElementById('fl-ir').onclick = async () => {
-      const b = document.getElementById('fl-ir'), email = document.getElementById('fl-mail').value.trim();
-      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ error(EN ? 'Please check your email.' : 'Revisa tu correo.'); return; }
+      const b = document.getElementById('fl-ir'), em = document.getElementById('fl-mail'), email = em ? em.value.trim() : '';
+      if(em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ error(EN ? 'Please check your email.' : 'Revisa tu correo.'); return; }
       b.disabled = true; error('');
       try{
         const r = await fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ o: id, flow: 1, email }) }).then(x => x.json());
+        if(r.ok && r.url && r.token_ws){ const f = document.createElement('form'); f.method = 'POST'; f.action = r.url; f.innerHTML = '<input type="hidden" name="token_ws">'; f.firstChild.value = r.token_ws; document.body.appendChild(f); f.submit(); return; }
         if(r.ok && r.url){ location.href = r.url; return; }
         error(r.error || (EN ? 'Could not start the payment.' : 'No se pudo iniciar el pago.'));
       }catch(_){ error(EN ? 'Connection problem. Please try again.' : 'No pudimos conectar. Intenta de nuevo.'); }
