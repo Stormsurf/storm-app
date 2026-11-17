@@ -461,7 +461,7 @@ main .pn{max-width:1440px}
     const partHoy = part.filter(r => r.fecha === hoyF);
     const espera = part.filter(r => r.fecha >= hoyF && (r.estado === 'pendiente' || r.medio === 'Por pagar'));
     // clases que ya pasaron y siguen sin pagar (para cobrarlas)
-    const atras = adm ? part.filter(r => r.fecha < hoyF && r.estado === 'pagada' && r.medio === 'Por pagar').sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
+    const atras = adm ? part.filter(r => r.fecha < hoyF && (r.estado === 'pendiente' || (r.estado === 'pagada' && r.medio === 'Por pagar'))).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
     const acadHoy = P ? (P.clases || []).filter(c => c.cuando === 'Hoy') : [];
     const aduHoy = aduDe(hoyF || (ADU && ADU.hoy) || '');
     const faltan = P && P.actual ? P.actual.faltan.reduce((t, f) => t + f.alumnos.length, 0) : 0;

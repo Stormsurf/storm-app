@@ -117,6 +117,8 @@ async function instructores(db) {
   }
   return results;
 }
+/** Anotada a mano en la agenda: nunca se borra sola aunque no paguen (queda como 'sin pagar' para cobrarla). */
+const aMano = r => /^Agregada a mano/.test(String((r && r.nota) || ''));
 const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 
 /** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
@@ -394,6 +396,7 @@ async function revisarPago(env, r, ctx) {
   if (!o) return r.estado;
   if (o.status === 'processed' && o.status_detail === 'accredited') return confirmar(env, r, Number(o.total_paid_amount || o.total_amount), ctx);
   if (['canceled', 'expired', 'failed', 'refunded'].includes(o.status)) {
+    if (aMano(r)) return r.estado; // anotada a mano: se queda esperando pago (se cobra después)
     await env.DB.batch([env.DB.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref), env.DB.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref)]);
     return 'vencida';
   }
@@ -632,7 +635,7 @@ async function revisionAutomatica(env, ctx) {
   for (const r of results) {
     const e = await revisarPago(env, r, ctx); // con ctx: los avisos (push y correos) terminan de enviarse aunque la revisión acabe
     if (e === 'pagada') pagadas++;
-    else if (e === 'pendiente') {
+    else if (e === 'pendiente' && !aMano(r)) {
       const guarda = await db.prepare('SELECT COUNT(*) AS n FROM bloques WHERE ref = ?').bind(r.ref).first();
       if (!(guarda && guarda.n)) await db.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref).run();
     }
@@ -675,14 +678,14 @@ async function panel(env, q) {
   const [sem, exc, res, ocu, sync] = await Promise.all([
     db.prepare('SELECT * FROM semana').all(),
     db.prepare('SELECT * FROM excepciones WHERE fecha >= ?').bind(hoy).all(),
-    db.prepare("SELECT * FROM reservas WHERE (fecha BETWEEN ? AND ? OR (fecha < ? AND medio = 'Por pagar' AND estado = 'pagada')) AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta, desde).all(), // + las antiguas que nunca se pagaron (para cobrarlas)
+    db.prepare("SELECT * FROM reservas WHERE (fecha BETWEEN ? AND ? OR (fecha < ? AND medio = 'Por pagar' AND estado = 'pagada') OR (fecha < ? AND estado = 'pendiente' AND nota LIKE 'Agregada a mano%')) AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta, desde, desde).all(), // + las antiguas que nunca se pagaron (para cobrarlas)
     leerOcupaciones(db, hoy, hasta),
     db.prepare("SELECT valor FROM ajustes WHERE clave = 'anualSync'").first()
   ]);
   const fic = await db.prepare('SELECT ref, n, nombre FROM fichas WHERE ref IN (SELECT ref FROM reservas WHERE fecha BETWEEN ? AND ?)').bind(desde, hasta).all();
   const fichasPor = {}; fic.results.forEach(f => (fichasPor[f.ref] = fichasPor[f.ref] || []).push(f.nombre));
   const guardadas = new Set((await db.prepare('SELECT DISTINCT ref FROM bloques WHERE hasta > 0').all()).results.map(x => x.ref));
-  let reservas = res.results.filter(r => r.estado !== 'pendiente' || guardadas.has(r.ref));
+  let reservas = res.results.filter(r => r.estado !== 'pendiente' || guardadas.has(r.ref) || aMano(r));
   if (!todo) reservas = reservas.filter(r => parseLista(r.instructores).includes(q.yo));
   const out = { ok: true, rol: q.rol, yo: q.yo, hoy, duracion: a.duracion, horarios: a.horarios,
     instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono, rut: i.rut, tarifas: (() => { try { return JSON.parse(i.tarifas || 'null'); } catch (_) { return null; } })() } : {}) })),
@@ -892,11 +895,11 @@ async function manual(env, q, d, ctx) {
   const t = ahoraChile();
   const r = { ref: nuevaRef(), creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conLink ? 'pendiente' : 'pagada', fecha, hora, personas, menores, ninos, instructores: ins, nombre,
     telefono: String(d.telefono || '').trim(), correo: norm(d.correo), comentario: String(d.comentario || '').trim().slice(0, 500), total, pagoManual, medio, duracion, nota: 'Agregada a mano por ' + q.email };
-  // Con link: el horario se guarda hasta que paguen (máximo las horas de "horasLink", y nunca después de que empiece la clase).
+  // Anotada a mano (con o sin link): el horario queda tomado aunque no hayan pagado; si no vienen, se cancela a mano.
   const desfase = minLocal(t.fecha, t.hora) - Math.floor(Date.now() / 60000);
   const inicioMs = (minLocal(fecha, hora) - desfase) * 60000;
-  const hasta = conLink ? Math.min(Date.now() + (a.horasLink || 24) * 3600000, inicioMs) : 0;
-  if (conLink && hasta <= Date.now()) throw err('Esa clase ya empezó.');
+  if (conLink && inicioMs <= Date.now()) throw err('Esa clase ya empezó.');
+  const hasta = 0;
   try { await guardarReserva(db, a, r, hasta); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Ese instructor ya tiene otra clase a esa hora.'); throw x; }
   await anotar(db, q, 'manual ' + r.ref + (conLink ? ' con link' : ''));
@@ -904,7 +907,7 @@ async function manual(env, q, d, ctx) {
     const o = await crearOrden(env, r);
     if (!o) { await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = 'Mercado Pago no respondió' WHERE ref = ?").bind(r.ref)]); throw err('Mercado Pago no respondió. Intenta de nuevo.'); }
     const out = await panel(env, q);
-    out.nuevoLink = { ref: r.ref, url: linkStorm(o.url), nombre: r.nombre, telefono: r.telefono, fecha, hora, personas, total, hasta: ahoraChile(hasta) };
+    out.nuevoLink = { ref: r.ref, url: linkStorm(o.url), nombre: r.nombre, telefono: r.telefono, fecha, hora, personas, total };
     return out;
   }
   if (d.avisar && r.correo) tarea(ctx, avisarReserva(env, Object.assign({}, r, { instructores: JSON.stringify(ins) }), a));
