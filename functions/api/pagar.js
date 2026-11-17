@@ -167,7 +167,7 @@ export async function onRequest(context) {
     if (request.method === 'POST') try { q = new URLSearchParams([...q, ...(await request.formData())]); } catch (_) {}
     const tok = q.get('token_ws') || '', oid = q.get('o') || '';
     const vuelve = est => Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=' + est, 303);
-    if (!tok) return vuelve('error');
+    if (!tok) return /\.storm-app\.pages\.dev$/.test(url.hostname) && q.get('TBK_TOKEN') ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(q.get('TBK_TOKEN')), 303) : vuelve('error');
     let c = await webpay(env, 'PUT', '/' + encodeURIComponent(tok));
     if (!c) c = await webpay(env, 'GET', '/' + encodeURIComponent(tok)); // si ya se había confirmado (recargó la página)
     const o = c && c.session_id ? (await mp(env, '/v1/orders/' + encodeURIComponent(c.session_id))).body : null;
