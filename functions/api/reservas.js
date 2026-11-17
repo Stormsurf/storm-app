@@ -123,7 +123,7 @@ const aMano = r => /^Agregada a mano/.test(String((r && r.nota) || ''));
 const saldosDe = r => { try { const v = JSON.parse((r && r.saldos) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 /** Las partes pagadas de una clase: el pago original y cada diferencia ya cobrada, cada una con su forma de pago. */
 const partesPago = r => { const sl = saldosDe(r), base = (r.total || 0) - sl.reduce((t, x) => t + (x.monto || 0), 0);
-  return [{ monto: base, medio: r.medio, k: '' }].concat(sl.map((x, i) => ({ monto: x.monto || 0, medio: x.medio, k: '#' + i })).filter(x => x.medio)); };
+  return [{ monto: base, medio: r.medio, k: '' }].concat(sl.map((x, i) => ({ monto: x.monto || 0, medio: x.medio, k: '#' + i })).filter(x => x.medio && x.medio !== 'favor')); };
 const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 
 /** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
@@ -835,8 +835,17 @@ async function datos(env, q, d) {
   const pagos = repartirPago(a, await tarifas(db), personas, menores, r.ninos || 0, ins, pagoManual);
   // Esperando pago y anotan cómo pagó (POS, transferencia, efectivo, factura): queda pagada al tiro y con el horario fijo.
   // Clase ya pagada y sube el total (sumaron personas): la diferencia queda por cobrar aparte, sin tocar el pago original.
-  const saldos = saldosDe(r);
-  if (r.estado === 'pagada' && r.medio !== 'Por pagar' && total > r.total) saldos.push({ monto: total - r.total, medio: '', fecha: ahoraChile().fecha });
+  // Se recalcula cada vez: lo ya pagado (pago original + diferencias cobradas) se compara con el total nuevo.
+  // Si falta, queda UNA diferencia por cobrar; si sobra, queda "a favor del cliente" (nunca un cobro).
+  let saldos = saldosDe(r);
+  if (r.estado === 'pagada' && r.medio !== 'Por pagar' && (total !== r.total || saldos.length)) {
+    const base = (r.total || 0) - saldos.reduce((t, x) => t + (x.monto || 0), 0);
+    const cobradas = saldos.filter(x => x.medio && x.medio !== 'favor'), pagado = base + cobradas.reduce((t, x) => t + (x.monto || 0), 0);
+    const antes = saldos.find(x => !x.medio);
+    saldos = cobradas.slice();
+    if (total > pagado) saldos.push({ monto: total - pagado, medio: '', fecha: antes ? antes.fecha : ahoraChile().fecha });
+    else if (total < pagado) saldos.push({ monto: total - pagado, medio: 'favor', fecha: ahoraChile().fecha });
+  }
   const pagaAhora = r.estado === 'pendiente' && MEDIOS.includes(d.medio) && !['Mercado Pago', 'Por pagar'].includes(d.medio) && (d.medio !== r.medio || !!d.pagada);
   const st = [];
   if (pagaAhora) st.push(db.prepare("UPDATE reservas SET estado = 'pagada', link_pago = '' WHERE ref = ?").bind(r.ref), db.prepare('UPDATE bloques SET hasta = 0 WHERE ref = ?').bind(r.ref));

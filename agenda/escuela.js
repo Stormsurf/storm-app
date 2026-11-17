@@ -517,6 +517,7 @@
         const base = (r.total || 0) - r.saldos.reduce((t, x) => t + (x.monto || 0), 0);
         if (r.medio !== 'Por pagar') pago = fila('$', 'Pagó · ' + medioTxt(r.medio), clp(base), { ic: 'ok' });
         r.saldos.forEach((x, i) => {
+          if (x.medio === 'favor') { pago += fila('$', 'A favor del cliente', clp(-x.monto) + ' (bajaron personas: no se cobra)', { ic: 'ok' }); return; }
           pago += fila('$', x.medio ? 'Diferencia pagada · ' + medioTxt(x.medio) : 'Diferencia por cobrar', clp(x.monto), { ic: x.medio ? 'ok' : 'pend' });
           if (!x.medio && viva) pago += `<div class='es-rpago'><span>¿Ya pagó la diferencia? Toca cómo:</span>${botones(`data-saldo='${esc(r.ref)}' data-i='${i}'`)}</div>`;
         });
@@ -880,7 +881,9 @@
       const tot = f.querySelector("[name='total']"), dif = f.querySelector('.es-dif'), per = f.querySelector("[name='personas']"), men = f.querySelector("[name='menores']");
       const pagada = r.estado === 'pagada' && r.medio !== 'Por pagar';
       let escrito = false;
-      const avisar = () => { const d = (+String(tot.value).replace(/[^0-9]/g, '') || 0) - (r.total || 0); dif.hidden = !(pagada && d > 0); dif.innerHTML = `Ya pagó ${clp(r.total)}. La diferencia de <b>${clp(d)}</b> queda por cobrar aparte: después tocas cómo la pagó.`; };
+      const sl = r.saldos || [], pagado = (r.total || 0) - sl.filter(x => !x.medio || x.medio === 'favor').reduce((t, x) => t + (x.monto || 0), 0);
+      const avisar = () => { const d = (+String(tot.value).replace(/[^0-9]/g, '') || 0) - pagado; dif.hidden = !(pagada && d !== 0);
+        dif.innerHTML = d > 0 ? `Ya pagó ${clp(pagado)}. La diferencia de <b>${clp(d)}</b> queda por cobrar aparte: después tocas cómo la pagó.` : `Ya pagó ${clp(pagado)}. Quedan <b>${clp(-d)}</b> a favor del cliente (no se cobra nada).`; };
       const recalc = () => { if (escrito) return; const d = cotiza(per.value, men.value).precio - cotiza(r.personas, r.menores || 0).precio; tot.value = Math.max(0, (r.total || 0) + d); avisar(); };
       tot.addEventListener('input', () => { escrito = true; avisar(); });
       per.addEventListener('input', recalc); men.addEventListener('input', recalc);
