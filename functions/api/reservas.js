@@ -119,6 +119,11 @@ async function instructores(db) {
 }
 /** Anotada a mano en la agenda: nunca se borra sola aunque no paguen (queda como 'sin pagar' para cobrarla). */
 const aMano = r => /^Agregada a mano/.test(String((r && r.nota) || ''));
+/** Diferencias por cobrar (p. ej. sumaron una persona a una clase ya pagada): [{ monto, medio ('' = falta cobrar), fecha }] */
+const saldosDe = r => { try { const v = JSON.parse((r && r.saldos) || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
+/** Las partes pagadas de una clase: el pago original y cada diferencia ya cobrada, cada una con su forma de pago. */
+const partesPago = r => { const sl = saldosDe(r), base = (r.total || 0) - sl.reduce((t, x) => t + (x.monto || 0), 0);
+  return [{ monto: base, medio: r.medio, k: '' }].concat(sl.map((x, i) => ({ monto: x.monto || 0, medio: x.medio, k: '#' + i })).filter(x => x.medio)); };
 const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 
 /** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
@@ -699,7 +704,7 @@ async function quien(env, d) {
 }
 const anotar = (db, q, que) => db.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), q.email, que).run();
 const filaPanel = (r, admin) => ({ ref: r.ref, estado: r.estado, fecha: r.fecha, hora: r.hora, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, duracion: Number(r.duracion) || 0, nivel: r.nivel || '', fichasPapel: !!r.fichas_papel, instructores: parseLista(r.instructores),
-  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? linkStorm(r.link_pago) : '' } : {}) });
+  nombre: r.nombre, telefono: r.telefono, comentario: r.comentario, nota: r.nota, ...(admin ? { correo: r.correo, total: r.total, pagoInstructor: r.pago_instructor, pagos: pagosDe(r), medio: r.medio, creada: r.creada, linkPago: r.estado === 'pendiente' ? linkStorm(r.link_pago) : '', saldos: saldosDe(r) } : {}) });
 
 async function panel(env, q) {
   const db = env.DB, a = await ajustes(db), hoy = ahoraChile().fecha, admin = q.rol === 'admin', todo = admin || q.rol === 'recepcion';
@@ -709,7 +714,7 @@ async function panel(env, q) {
   const [sem, exc, res, ocu, sync] = await Promise.all([
     db.prepare('SELECT * FROM semana').all(),
     db.prepare('SELECT * FROM excepciones WHERE fecha >= ?').bind(hoy).all(),
-    db.prepare("SELECT * FROM reservas WHERE (fecha BETWEEN ? AND ? OR (fecha < ? AND medio = 'Por pagar' AND estado = 'pagada') OR (fecha < ? AND estado = 'pendiente' AND nota LIKE 'Agregada a mano%')) AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta, desde, desde).all(), // + las antiguas que nunca se pagaron (para cobrarlas)
+    db.prepare("SELECT * FROM reservas WHERE (fecha BETWEEN ? AND ? OR (fecha < ? AND medio = 'Por pagar' AND estado = 'pagada') OR (fecha < ? AND estado = 'pendiente' AND nota LIKE 'Agregada a mano%') OR (fecha < ? AND saldos LIKE '%\"medio\":\"\"%')) AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta, desde, desde, desde).all(), // + las antiguas que nunca se pagaron (para cobrarlas)
     leerOcupaciones(db, hoy, hasta),
     db.prepare("SELECT valor FROM ajustes WHERE clave = 'anualSync'").first()
   ]);
@@ -789,14 +794,27 @@ async function pagosSemana(env, q, d) {
 /** Para Finanzas (programa de la planilla Anual): ventas del mes, por medio de pago, y lo que se paga a instructores. mes = 'AAAA-MM'. */
 async function finanzasMes(env, d) {
   const mes = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7);
-  const { results } = await env.DB.prepare("SELECT total, medio, pago_instructor, instructores, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND fecha >= ? AND estado = 'pagada'").bind(mes, TUU_DESDE).all();
+  const { results } = await env.DB.prepare("SELECT total, medio, saldos, pago_instructor, instructores, pagos FROM reservas WHERE substr(fecha,1,7) = ? AND fecha >= ? AND estado = 'pagada'").bind(mes, TUU_DESDE).all();
   const porMedio = {}, porInstructor = {};
-  results.forEach(r => { porMedio[r.medio] = (porMedio[r.medio] || 0) + (r.total || 0); const p = pagosDe(r); Object.keys(p).forEach(i => porInstructor[i] = (porInstructor[i] || 0) + p[i]); });
+  // Cada parte con su forma de pago (el pago original y las diferencias ya cobradas); lo que falta cobrar todavía no cuenta.
+  results.forEach(r => { const partes = partesPago(r); r.total = partes.reduce((t, x) => t + x.monto, 0); partes.forEach(x => { porMedio[x.medio] = (porMedio[x.medio] || 0) + x.monto; }); const p = pagosDe(r); Object.keys(p).forEach(i => porInstructor[i] = (porInstructor[i] || 0) + p[i]); });
   let tuu = null; try { tuu = await tuuResumen(env, mes); if (tuu) { delete tuu.detalle; tuu.porRevisar = tuu.porRevisar.length; } } catch (x) { console.error(x); tuu = { ok: false, error: x.message }; }
   return { ok: true, mes, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0), mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
     instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor, tuu };
 }
 
+/** Anota cómo pagaron una diferencia pendiente (POS, transferencia, efectivo, factura). */
+async function cobrarSaldo(env, q, d) {
+  const db = env.DB, r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
+  if (!r) throw err('No encontramos la reserva.');
+  const sl = saldosDe(r), i = Number(d.i);
+  if (!sl[i]) throw err('Esa diferencia ya no está.');
+  if (!['POS', 'Transferencia', 'Efectivo', 'Factura'].includes(d.medio)) throw err('Elige cómo pagó.');
+  sl[i].medio = d.medio; sl[i].pagado = ahoraChile().fecha;
+  await db.prepare('UPDATE reservas SET saldos = ? WHERE ref = ?').bind(JSON.stringify(sl), r.ref).run();
+  await anotar(db, q, 'saldo ' + r.ref + ' ' + d.medio);
+  return panel(env, q);
+}
 async function editar(env, q, d, ctx) {
   const db = env.DB, a = await ajustes(db);
   const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(d.ref || '')).first();
@@ -846,15 +864,21 @@ async function datos(env, q, d) {
   // pago: si lo escribió ahora, ese; si lo había escrito antes, se mantiene; si no, la tabla
   const pagoManual = d.pagoInstructor !== undefined ? (d.pagoInstructor === '' ? null : num(d.pagoInstructor)) : (manualDe(viejo));
   const pagos = repartirPago(a, await tarifas(db), personas, menores, r.ninos || 0, ins, pagoManual);
+  // Esperando pago y anotan cómo pagó (POS, transferencia, efectivo, factura): queda pagada al tiro y con el horario fijo.
+  // Clase ya pagada y sube el total (sumaron personas): la diferencia queda por cobrar aparte, sin tocar el pago original.
+  const saldos = saldosDe(r);
+  if (r.estado === 'pagada' && r.medio !== 'Por pagar' && total > r.total) saldos.push({ monto: total - r.total, medio: '', fecha: ahoraChile().fecha });
+  const pagaAhora = r.estado === 'pendiente' && MEDIOS.includes(d.medio) && !['Mercado Pago', 'Por pagar'].includes(d.medio) && (d.medio !== r.medio || !!d.pagada);
   const st = [];
+  if (pagaAhora) st.push(db.prepare("UPDATE reservas SET estado = 'pagada', link_pago = '' WHERE ref = ?").bind(r.ref), db.prepare('UPDATE bloques SET hasta = 0 WHERE ref = ?').bind(r.ref));
   if (dur !== (Number(r.duracion) || 0)) {
-    const fijo = r.estado === 'pagada' || r.estado === 'revisar' ? 0 : Date.now() + a.retencionMin * 60000;
+    const fijo = pagaAhora || r.estado === 'pagada' || r.estado === 'revisar' || aMano(r) ? 0 : Date.now() + a.retencionMin * 60000;
     st.push(db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref));
     ins.forEach(i => bloquesDe(r.hora, dur || a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, fijo))));
   }
-  st.push(db.prepare('UPDATE reservas SET nombre = ?, telefono = ?, correo = ?, comentario = ?, personas = ?, menores = ?, total = ?, medio = ?, duracion = ?, pagos = ?, pago_instructor = ?, fichas_papel = ? WHERE ref = ?')
+  st.push(db.prepare('UPDATE reservas SET nombre = ?, telefono = ?, correo = ?, comentario = ?, personas = ?, menores = ?, total = ?, medio = ?, duracion = ?, pagos = ?, pago_instructor = ?, fichas_papel = ?, saldos = ? WHERE ref = ?')
     .bind(nombre, d.telefono != null ? String(d.telefono).trim() : r.telefono, d.correo != null ? norm(d.correo) : r.correo, d.comentario != null ? String(d.comentario).trim().slice(0, 500) : r.comentario,
-      personas, menores, total, medio, dur, JSON.stringify(pagos), sumaPagos(pagos), papel, r.ref));
+      personas, menores, total, medio, dur, JSON.stringify(pagos), sumaPagos(pagos), papel, JSON.stringify(saldos), r.ref));
   try { await db.batch(st); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Con esa duración choca con otra clase del instructor.'); throw x; }
   await anotar(db, q, 'datos ' + r.ref);
@@ -1123,7 +1147,7 @@ async function tuuResumen(env, mes, forzar) {
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
     db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
-    db.prepare("SELECT ref, fecha, hora, total, nombre, medio FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND medio IN ('POS', 'Efectivo')").bind(mes).all(),
+    db.prepare("SELECT ref, fecha, hora, total, nombre, medio, saldos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all().then(x => ({ results: x.results.flatMap(r => partesPago(r).filter(p => ['POS', 'Efectivo'].includes(p.medio)).map(p => ({ ref: r.ref + p.k, fecha: r.fecha, hora: r.hora, nombre: r.nombre + (p.k ? ' (diferencia)' : ''), total: p.monto, medio: p.medio }))) })),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
   ]);
   const r = { ok: true, mes, desde: TUU_DESDE, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
@@ -1225,7 +1249,7 @@ export async function onRequest(context) {
     if (acc === 'disponible') return json(await disponible(env, q, d));
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
-    if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
+    if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));
     if (acc === 'tuu-asignar') return json(await tuuAsignar(env, q, d));
@@ -1234,6 +1258,7 @@ export async function onRequest(context) {
     if (acc === 'editar') return json(await editar(env, q, d, context));
     if (acc === 'cancelar') return json(await cancelar(env, q, d, context));
     if (acc === 'datos') return json(await datos(env, q, d));
+    if (acc === 'saldo') return json(await cobrarSaldo(env, q, d));
     if (acc === 'manual') return json(await manual(env, q, d, context));
     if (acc === 'instructor') return json(await guardarInstructor(env, q, d));
     if (acc === 'ajustes') return json(await guardarAjustes(env, q, d));
