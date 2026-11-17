@@ -815,9 +815,12 @@ async function datos(env, q, d) {
   // pago: si lo escribió ahora, ese; si lo había escrito antes, se mantiene; si no, la tabla
   const pagoManual = d.pagoInstructor !== undefined ? (d.pagoInstructor === '' ? null : num(d.pagoInstructor)) : (manualDe(viejo));
   const pagos = repartirPago(a, await tarifas(db), personas, menores, r.ninos || 0, ins, pagoManual);
+  // Esperando pago y anotan cómo pagó (POS, transferencia, efectivo, factura): queda pagada al tiro y con el horario fijo.
+  const pagaAhora = r.estado === 'pendiente' && MEDIOS.includes(d.medio) && !['Mercado Pago', 'Por pagar'].includes(d.medio) && (d.medio !== r.medio || !!d.pagada);
   const st = [];
+  if (pagaAhora) st.push(db.prepare("UPDATE reservas SET estado = 'pagada', link_pago = '' WHERE ref = ?").bind(r.ref), db.prepare('UPDATE bloques SET hasta = 0 WHERE ref = ?').bind(r.ref));
   if (dur !== (Number(r.duracion) || 0)) {
-    const fijo = r.estado === 'pagada' || r.estado === 'revisar' ? 0 : Date.now() + a.retencionMin * 60000;
+    const fijo = pagaAhora || r.estado === 'pagada' || r.estado === 'revisar' || aMano(r) ? 0 : Date.now() + a.retencionMin * 60000;
     st.push(db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref));
     ins.forEach(i => bloquesDe(r.hora, dur || a.duracion).forEach(b => st.push(db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, ?)').bind(i, r.fecha, b, r.ref, fijo))));
   }
