@@ -175,8 +175,10 @@ export async function onRequest(context) {
     const ok = c && c.status === 'AUTHORIZED' && Number(c.response_code) === 0 && ref && REF_OK.test(ref) && Math.round(Number(c.amount)) >= Math.round(Number(o.total_amount));
     if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return vuelve('error'); }
     await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok);
-    const online = (o.config && o.config.online) || {};
-    return Response.redirect(/^PRUEBA-/.test(ref) ? origen + '/pagar/?listo=1' : (online.success_url || origen + '/'), 303);
+    // Comprobante (lo pide Transbank): se muestra en /pagar y desde ahí sigue a la página de siempre
+    const cp = new URLSearchParams({ o: oid, comprobante: '1', oc: c.buy_order || '', m: String(Math.round(Number(c.amount))), ac: c.authorization_code || '', d: (c.card_detail || {}).card_number || '',
+      f: c.transaction_date || '', t: c.payment_type_code || '', n: String(c.installments_number || 0) });
+    return Response.redirect(origen + '/pagar/?' + cp.toString(), 303);
   }
 
   // Flow avisa el pago (POST con token) y devuelve al cliente (?flow=vuelta, POST o GET con token)

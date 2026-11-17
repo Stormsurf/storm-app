@@ -140,6 +140,31 @@
     };
   }
 
+  // Comprobante de pago con Webpay (Transbank)
+  const Q = new URLSearchParams(location.search);
+  if(Q.get('comprobante')){
+    const tipos = { VD: EN ? 'Debit' : 'Débito', VN: EN ? 'Credit' : 'Crédito', VC: EN ? 'Credit, installments' : 'Crédito en cuotas', SI: EN ? 'Credit, 3 interest-free installments' : 'Crédito, 3 cuotas sin interés', S2: EN ? 'Credit, 2 interest-free installments' : 'Crédito, 2 cuotas sin interés', NC: EN ? 'Credit, interest-free installments' : 'Crédito, cuotas sin interés', VP: EN ? 'Prepaid' : 'Prepago' };
+    const t = Q.get('t') || '', n = Number(Q.get('n')) || 0, f = Q.get('f') ? new Date(Q.get('f')) : null;
+    const filas = [
+      [EN ? 'Merchant' : 'Comercio', 'Storm Surf Academy · app.stormsurf.cl'],
+      [EN ? 'Order number' : 'Orden de compra', Q.get('oc')],
+      [EN ? 'Amount' : 'Monto', clp(Q.get('m')) + ' CLP'],
+      [EN ? 'Authorization code' : 'Código de autorización', Q.get('ac')],
+      [EN ? 'Date' : 'Fecha', f && !isNaN(f) ? f.toLocaleString(EN ? 'en-US' : 'es-CL', { timeZone: 'America/Santiago', dateStyle: 'medium', timeStyle: 'short' }) : ''],
+      [EN ? 'Payment type' : 'Tipo de pago', tipos[t] || t],
+      [EN ? 'Installments' : 'Cuotas', t === 'VD' || t === 'VP' ? (EN ? 'None' : 'Sin cuotas') : String(n || 1)],
+      [EN ? 'Card' : 'Tarjeta', '**** ' + (Q.get('d') || '')]
+    ];
+    pg.innerHTML = `<div class="pg-hero"><small>Webpay</small><h1>${EN ? 'Payment approved' : 'Pago aprobado'}</h1><p>${EN ? 'Save this receipt.' : 'Guarda este comprobante.'}</p></div>
+      <div class="pg-fl" id="detalle">${filas.map(([a, b]) => `<p style="display:flex;justify-content:space-between;gap:12px;opacity:1;margin:6px 0"><span style="opacity:.6">${a}</span><b style="text-align:right">${esc(b)}</b></p>`).join('')}</div>
+      <a class="pg-opt" id="seguir" href="/"><i>✓</i><span><b>${EN ? 'Continue' : 'Continuar'}</b></span></a>
+      <p class="pg-note">${EN ? 'Payment processed by Webpay (Transbank).' : 'Pago procesado por Webpay (Transbank).'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+    fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {
+      if(r && r.vuelta) document.getElementById('seguir').href = r.vuelta;
+      if(r && r.titulo) document.getElementById('detalle').insertAdjacentHTML('beforeend', `<p style="display:flex;justify-content:space-between;gap:12px;opacity:1;margin:6px 0"><span style="opacity:.6">${EN ? 'Description' : 'Descripción'}</span><b style="text-align:right">${esc(r.titulo)}</b></p>`);
+    }).catch(() => {});
+    return;
+  }
   if(new URLSearchParams(location.search).get('listo')){ pg.innerHTML = `<div class="pg-ok"><b>¡Pago de prueba listo!</b><br>Llegó a Mercado Pago. Puedes devolverlo desde tu cuenta.</div>`; return; }
   fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {
     if(!r.ok){ pg.innerHTML = `<div class="pg-err">${esc(r.error)}</div>${ayuda}`; return; }
