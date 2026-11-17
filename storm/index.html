@@ -459,9 +459,10 @@ main .pn{max-width:1440px}
     const part = E ? E.reservas.filter(r => r.estado !== 'cancelada' && (adm || r.instructores.includes(yo))) : [];
     const hoyF = E ? E.hoy : '';
     const partHoy = part.filter(r => r.fecha === hoyF);
-    const espera = part.filter(r => r.fecha >= hoyF && (r.estado === 'pendiente' || r.medio === 'Por pagar'));
+    const falta = r => (r.saldos || []).some(x => !x.medio);
+    const espera = part.filter(r => r.fecha >= hoyF && (r.estado === 'pendiente' || r.medio === 'Por pagar' || falta(r)));
     // clases que ya pasaron y siguen sin pagar (para cobrarlas)
-    const atras = adm ? part.filter(r => r.fecha < hoyF && (r.estado === 'pendiente' || (r.estado === 'pagada' && r.medio === 'Por pagar'))).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
+    const atras = adm ? part.filter(r => r.fecha < hoyF && (r.estado === 'pendiente' || (r.estado === 'pagada' && (r.medio === 'Por pagar' || falta(r))))).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
     const acadHoy = P ? (P.clases || []).filter(c => c.cuando === 'Hoy') : [];
     const aduHoy = aduDe(hoyF || (ADU && ADU.hoy) || '');
     const faltan = P && P.actual ? P.actual.faltan.reduce((t, f) => t + f.alumnos.length, 0) : 0;
@@ -484,8 +485,9 @@ main .pn{max-width:1440px}
     // clases pasadas sin pagar
     if(atras.length){
       const fc = f => { const [y, m, d] = f.split('-'); return DIAS[new Date(+y, m - 1, +d).getDay()].slice(0, 3) + ' ' + (+d) + '/' + (+m); };
-      const tot = atras.reduce((t, r) => t + (Number(r.total) || 0), 0);
-      h += `<p class='sp-h3' id='sin-pagar' style='color:#b5662b'>Ya pasaron y no se han pagado${tot ? ' · ' + clpS(tot) : ''}</p>` + atras.map(r => `<button class='sp-line debe' data-clase='${esc(r.ref)}'><span class='h'>${esc(fc(r.fecha))}<small>${esc(r.hora)}</small></span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}${r.total ? ' · ' + clpS(r.total) : ''}</small></span><span class='tag'>Cobrar</span></button>`).join('');
+      const debe = r => r.estado === 'pagada' && r.medio !== 'Por pagar' && falta(r) ? (r.saldos || []).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0) : (Number(r.total) || 0);
+      const tot = atras.reduce((t, r) => t + debe(r), 0);
+      h += `<p class='sp-h3' id='sin-pagar' style='color:#b5662b'>Ya pasaron y no se han pagado${tot ? ' · ' + clpS(tot) : ''}</p>` + atras.map(r => `<button class='sp-line debe' data-clase='${esc(r.ref)}'><span class='h'>${esc(fc(r.fecha))}<small>${esc(r.hora)}</small></span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}${debe(r) ? ' · ' + clpS(debe(r)) : ''}</small></span><span class='tag'>Cobrar</span></button>`).join('');
     }
     // lo que viene mañana
     const man = E ? part.filter(r => r.fecha === sumar(hoyF, 1)) : [];
@@ -555,7 +557,7 @@ main .pn{max-width:1440px}
     }
     const tel = x.tel || (mismas[0] && mismas[0].telefono) || '';
     const k = [...x.n].reduce((k, ch) => (k * 31 + ch.charCodeAt(0)) % 997, 0);
-    const est = r => r.estado === 'cancelada' ? ['gris', 'Cancelada'] : r.estado === 'pendiente' || r.medio === 'Por pagar' ? ['pend', 'Falta pagar'] : ['ok', 'Pagada'];
+    const est = r => r.estado === 'cancelada' ? ['gris', 'Cancelada'] : r.estado === 'pendiente' || r.medio === 'Por pagar' || (r.saldos || []).some(x => !x.medio) ? ['pend', 'Falta pagar'] : ['ok', 'Pagada'];
     const w = document.createElement('div'); w.className = 'sp-mas sp-fi';
     w.innerHTML = `<div><button class='sp-fx' aria-label='Cerrar'>✕</button>
       <div class='sp-fh'><span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(x.n.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span><div><h2>${esc(x.n)}</h2><p>${[mismas.length ? 'Particulares' : '', anual.length ? 'Academia Anual' : ''].filter(Boolean).join(' · ') || esc(x.tipo)}</p></div></div>

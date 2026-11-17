@@ -436,10 +436,12 @@
     const precios = g.map(x => Number((a.precios || {})[x]) || 0);
     return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
   }
+  const faltaCobrar = r => (r.saldos || []).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0);
   function estadoDe(r) {
     if (r.estado === 'cancelada') return { c: 'gris', i: '×', t: 'Cancelada' };
     if (r.estado === 'pendiente') return { c: 'pend', i: '$', t: r.linkPago && r.nota && /mano/.test(r.nota) ? 'Esperando pago' : 'Pagando ahora' };
     if (r.estado === 'revisar') return { c: 'mal', i: '!', t: 'Revisar: ' + (r.nota || '') };
+    if (faltaCobrar(r) && r.medio !== 'Por pagar') return { c: 'pend', i: '$', t: 'Falta cobrar ' + clp(faltaCobrar(r)) };
     if (r.medio === 'Por pagar') return { c: 'pend', i: '$', t: 'No ha pagado' };
     if (r.medio) return { c: 'ok', i: '$', t: 'Pagada · ' + medioTxt(r.medio) };
     return { c: 'ok', i: '✓', t: 'Confirmada' };
@@ -481,6 +483,7 @@
           <label><span class='es-lb'>Duración</span><select class='es-in' name='duracion'>${[[60, '1 h'], [90, '1 h 30'], [120, '2 h']].map(([x, t]) => `<option value='${x}'${x === dur ? ' selected' : ''}>${t}</option>`).join('')}</select></label></div>
         <div class='es-2'><label><span class='es-lb'>¿Cómo pagó?</span><select class='es-in' name='medio'>${MEDIOS.map(([x, t]) => `<option value='${x}'${x === r.medio ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
           <label><span class='es-lb'>Total</span><input class='es-in' name='total' inputmode='numeric' value='${r.total || 0}'></label></div>
+        <p class='es-edp es-dif' hidden></p>
         <label><span class='es-lb'>Nota interna</span><input class='es-in' name='comentario' value='${esc(r.comentario || '')}'></label>
         <details class='es-det'><summary>Opciones avanzadas</summary><label><span class='es-lb'>Pago a cada instructor</span><input class='es-in' name='pagoInstructor' inputmode='numeric' value='${uno}' data-orig='${uno}' placeholder='según la tabla'></label>
           <p class='es-edp'>Vacío = según la tabla de precios. Si cambias las personas, se recalcula solo.</p></details>
@@ -508,6 +511,16 @@
     ]);
     if (admin) {
       let pago = fila('$', esc(E0.t), clp(r.total), { ic: E0.c });
+      // Diferencias (sumaron personas a una clase ya pagada): cada una con su forma de pago
+      const botones = (at) => MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button ${at} data-m='${v}'>${t}</button>`).join('');
+      if (r.saldos && r.saldos.length) {
+        const base = (r.total || 0) - r.saldos.reduce((t, x) => t + (x.monto || 0), 0);
+        if (r.medio !== 'Por pagar') pago = fila('$', 'Pagó · ' + medioTxt(r.medio), clp(base), { ic: 'ok' });
+        r.saldos.forEach((x, i) => {
+          pago += fila('$', x.medio ? 'Diferencia pagada · ' + medioTxt(x.medio) : 'Diferencia por cobrar', clp(x.monto), { ic: x.medio ? 'ok' : 'pend' });
+          if (!x.medio && viva) pago += `<div class='es-rpago'><span>¿Ya pagó la diferencia? Toca cómo:</span>${botones(`data-saldo='${esc(r.ref)}' data-i='${i}'`)}</div>`;
+        });
+      }
       if (viva && (r.medio === 'Por pagar' || r.estado === 'pendiente')) pago += `<div class='es-rpago'><span>¿Ya pagó? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
       h += grupo('Pago', [pago,
         r.linkPago && wa(r.telefono) ? fila(ICO_S.wa, 'Mandar link de pago por WhatsApp', '', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(ml)}'`, ic: 'ok' }) : '',
@@ -860,6 +873,18 @@
       }
       if (go.dataset.go === 'cancelar') accion({ accion: 'cancelar', ref: abierta }, go).then(ok => { if (ok) { msg = 'Clase de ' + r.nombre + ' cancelada.'; pintar(); } });
     };
+    $$('[data-saldo]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.saldo); accion({ accion: 'saldo', ref: b.dataset.saldo, i: +b.dataset.i, medio: b.dataset.m }, b).then(ok => { if (ok) { msg = (r ? r.nombre + ': ' : '') + 'diferencia pagada con ' + b.textContent + '.'; pintar(); } }); });
+    // Editar: al cambiar personas o niños, el total sube o baja según la tabla (mantiene descuentos) y avisa la diferencia por cobrar
+    $$('.es-datos').forEach(f => {
+      const r = E.reservas.find(x => x.ref === abierta); if (!r) return;
+      const tot = f.querySelector("[name='total']"), dif = f.querySelector('.es-dif'), per = f.querySelector("[name='personas']"), men = f.querySelector("[name='menores']");
+      const pagada = r.estado === 'pagada' && r.medio !== 'Por pagar';
+      let escrito = false;
+      const avisar = () => { const d = (+String(tot.value).replace(/[^0-9]/g, '') || 0) - (r.total || 0); dif.hidden = !(pagada && d > 0); dif.innerHTML = `Ya pagó ${clp(r.total)}. La diferencia de <b>${clp(d)}</b> queda por cobrar aparte: después tocas cómo la pagó.`; };
+      const recalc = () => { if (escrito) return; const d = cotiza(per.value, men.value).precio - cotiza(r.personas, r.menores || 0).precio; tot.value = Math.max(0, (r.total || 0) + d); avisar(); };
+      tot.addEventListener('input', () => { escrito = true; avisar(); });
+      per.addEventListener('input', recalc); men.addEventListener('input', recalc);
+    });
     $$('[data-pago]').forEach(b => b.onclick = () => { const r = E.reservas.find(x => x.ref === b.dataset.pago); accion({ accion: 'datos', ref: b.dataset.pago, medio: b.dataset.m, pagada: true }, b).then(ok => { if (ok) { msg = (r ? r.nombre + ': ' : '') + 'pagada con ' + b.textContent + '.'; pintar(); } }); });
     $$('[data-papel]').forEach(c => c.onchange = () => accion({ accion: 'datos', ref: c.dataset.papel, fichasPapel: c.checked ? 1 : 0 }, null).then(ok => { if (ok) { msg = c.checked ? 'Fichas en papel anotadas.' : 'Listo.'; pintar(); } }));
     $$('[data-mi]').forEach(b => b.onclick = () => { b.classList.toggle('on'); const card = b.closest('.es-pg, .pn-card'), n = card.querySelectorAll('[data-mi].on').length, ni = card.querySelector('[name=nInstructores]'); if (ni && n > +ni.value) ni.value = n; });
