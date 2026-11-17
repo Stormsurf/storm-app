@@ -114,7 +114,7 @@
 // ---------- Actualizar: botón ↻ y deslizar hacia abajo (como recargar la página) ----------
 // La app igual se actualiza sola al abrirla y al volver a ella; esto es para pedirlo cuando uno quiera.
 (() => {
-  const ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
+  const ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
   window.STORM_REF_ICO = ICO;
   const escribiendo = () => { const a = document.activeElement; return !!(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value); };
   function actualizar(btn) {

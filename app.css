@@ -39,5 +39,5 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .st-ptr.go svg{animation:st-rot .8s linear infinite}
 @keyframes st-rot{to{transform:rotate(360deg)}}
 .st-ref{width:40px;height:40px;border-radius:50%;border:1px solid rgba(44,44,43,.12);background:#fff;color:#0f6e74;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0}
-.st-ref svg{width:19px;height:19px}
+.st-ref svg{width:20px;height:20px}
 .st-ref.go svg{animation:st-rot .8s linear infinite}

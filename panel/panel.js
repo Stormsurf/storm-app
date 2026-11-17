@@ -302,9 +302,26 @@
     };
   }
 
+  // La copia guardada (o la copia rápida) puede ser de ayer: "Hoy", "Mañana" y "Ayer" se recalculan con la fecha de Chile,
+  // y las clases que ya pasaron se sacan de las próximas.
+  const hoyChile = () => new Intl.DateTimeFormat('en-CA', {timeZone:'America/Santiago', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+  const difDias = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+  function alDia(d){
+    if(!d || typeof d !== 'object') return d;
+    const hoy = hoyChile(), ok = f => /^\d{4}-\d{2}-\d{2}$/.test(String(f || ''));
+    if(Array.isArray(d.clases)) d.clases = d.clases.filter(c => !ok(c.fecha) || c.fecha >= hoy).map(c => {
+      if(!ok(c.fecha)) return c; const x = difDias(hoy, c.fecha);
+      return Object.assign({}, c, {cuando: x === 0 ? 'Hoy' : x === 1 ? 'Mañana' : cap(String(c.texto || c.cuando || '').split(' ')[0])});
+    });
+    if(Array.isArray(d.lista)) d.lista = d.lista.filter(c => !ok(c.fecha) || c.fecha <= hoy).map(c => {
+      if(!ok(c.fecha)) return c; const x = difDias(c.fecha, hoy);
+      return Object.assign({}, c, {cuando: x === 0 ? 'Hoy' : x === 1 ? 'Ayer' : (c.texto || c.cuando)});
+    });
+    return d;
+  }
   let ULT = null;
   function render(d){
-    ULT = d;
+    d = alDia(d); ULT = d;
     CL = []; ES_ADMIN = d.rol !== 'instructor';
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
@@ -1170,7 +1187,7 @@
       anotar: b => anotarFondo(b), // vuelve al tiro; la promesa se cumple cuando la planilla lo guardó
       pendientes: () => colaLeer().length,
       fin: () => FIN,
-      datos: () => cacheLeer('anual'),
+      datos: () => alDia(cacheLeer('anual')),
       verano: () => VER || cacheLeer('verano')
     };
   } else load();

@@ -324,7 +324,7 @@ main .pn{max-width:1440px}
   function abrir(){
     if(!auth) return login();
     root.innerHTML = `<div class='sp-app'>${nav()}<div class='sp-main'>
-      <div class='sp-top'><div><h1></h1><p></p></div><button class='st-ref sp-ref' data-actualizar aria-label='Actualizar' title='Actualizar'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button><button class='sp-yo-cel' data-cuenta aria-label='Mi cuenta'>${esc((auth.email || '?')[0].toUpperCase())}</button><div class='sp-bus'><span>${I.lupa}</span><input id='sp-q' type='search' placeholder='Buscar alumno o cliente' autocomplete='off'><div class='sp-res' hidden></div></div></div>
+      <div class='sp-top'><div><h1></h1><p></p></div><button class='st-ref sp-ref' data-actualizar aria-label='Actualizar' title='Actualizar'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></button><button class='sp-yo-cel' data-cuenta aria-label='Mi cuenta'>${esc((auth.email || '?')[0].toUpperCase())}</button><div class='sp-bus'><span>${I.lupa}</span><input id='sp-q' type='search' placeholder='Buscar alumno o cliente' autocomplete='off'><div class='sp-res' hidden></div></div></div>
       <div class='sp-seg' hidden></div>
       <div class='sp-area' data-a='hoy'></div>
       <div class='sp-area' data-a='particulares' hidden><div class='pn-escuela'></div></div>
@@ -461,7 +461,7 @@ main .pn{max-width:1440px}
     const partHoy = part.filter(r => r.fecha === hoyF);
     const espera = part.filter(r => r.fecha >= hoyF && (r.estado === 'pendiente' || r.medio === 'Por pagar'));
     // clases que ya pasaron y siguen sin pagar (para cobrarlas)
-    const atras = adm ? part.filter(r => r.fecha < hoyF && r.estado === 'pagada' && r.medio === 'Por pagar').sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
+    const atras = adm ? part.filter(r => r.fecha < hoyF && (r.estado === 'pendiente' || (r.estado === 'pagada' && r.medio === 'Por pagar'))).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1) : [];
     const acadHoy = P ? (P.clases || []).filter(c => c.cuando === 'Hoy') : [];
     const aduHoy = aduDe(hoyF || (ADU && ADU.hoy) || '');
     const faltan = P && P.actual ? P.actual.faltan.reduce((t, f) => t + f.alumnos.length, 0) : 0;

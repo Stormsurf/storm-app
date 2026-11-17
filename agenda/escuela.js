@@ -370,7 +370,7 @@
     let h = `<style>${css}</style>`, cuerpo = '';
     const toast = msg; msg = '';
     if (linkNuevo) { const L = linkNuevo;
-      cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado hasta el ${esc(fcorta(L.hasta.fecha))} a las ${esc(L.hasta.hora)}.</p>
+      cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado aunque no pague: si no viene, cancélala a mano.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
     const IT = recep ? [['dia', 'Agenda'], ['reservas', 'Clases']] : admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
     const TIT = { dia: 'Agenda del día', clientes: 'Clientes', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };

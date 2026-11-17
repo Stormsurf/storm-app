@@ -646,7 +646,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const nombres = xs => listaY([...new Set(xs.map(x => String(x||'').trim().split(/\s+/)[0]).filter(Boolean))]);
   function saludo(ns){
     const t = new Date();
-    return `<div class='mc-hi'><div><small>${DSEM[t.getDay()]} ${t.getDate()} de ${MESES[t.getMonth()]}</small><h2>${ns ? 'Hola, familia de ' + esc(ns) : 'Hola 👋'}</h2></div><span class='mc-acts'><button class='st-ref' data-actualizar aria-label='Actualizar' title='Actualizar'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button><button class='mc-link' id='mc-out'>Salir</button></span></div>`;
+    return `<div class='mc-hi'><div><small>${DSEM[t.getDay()]} ${t.getDate()} de ${MESES[t.getMonth()]}</small><h2>${ns ? 'Hola, familia de ' + esc(ns) : 'Hola 👋'}</h2></div><span class='mc-acts'><button class='st-ref' data-actualizar aria-label='Actualizar' title='Actualizar'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></button><button class='mc-link' id='mc-out'>Salir</button></span></div>`;
   }
   // Una clase de hoy deja de ser "próxima" cuando termina su horario (ej. "9:00 - 11:00"; si dice una sola hora, se cuentan 2 horas).
   const terminada = c => { const hs = String(c.horario || '').match(/\d{1,2}[:.]\d{2}/g); if(!hs) return false;
@@ -919,7 +919,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const adFecha = iso => { const d = new Date(iso + 'T12:00'); return d.getDate() + ' de ' + MESES[d.getMonth()]; };
   function renderAdultos(d){
     const c = d.cuenta || {}, P = d.planes || {}, t = new Date();
-    let h = `<div class='mc-hi'><div><small>${DSEM[t.getDay()]} ${t.getDate()} de ${MESES[t.getMonth()]}</small><h2>Hola, ${esc(String(d.alumno.nombre).split(' ')[0])}</h2></div><span class='mc-acts'><button class='st-ref' data-actualizar aria-label='Actualizar' title='Actualizar'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button><button class='mc-link' id='mc-out'>Salir</button></span></div>` + selector() + msg + `<div class='ad'>`;
+    let h = `<div class='mc-hi'><div><small>${DSEM[t.getDay()]} ${t.getDate()} de ${MESES[t.getMonth()]}</small><h2>Hola, ${esc(String(d.alumno.nombre).split(' ')[0])}</h2></div><span class='mc-acts'><button class='st-ref' data-actualizar aria-label='Actualizar' title='Actualizar'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></button><button class='mc-link' id='mc-out'>Salir</button></span></div>` + selector() + msg + `<div class='ad'>`;
     if(d.aviso && d.aviso.texto) h += `<div class='mc-card ad-aviso'><b>🔔 Aviso de la Academia</b><p>${esc(d.aviso.texto)}</p></div>`;
     const hoy = d.hoy;
     if(hoy && hoy.cancelada) h += `<div class='mc-card ad-hoy'><small>Hoy no hay clase</small><h3>${esc(hoy.texto)}</h3><p>${esc(hoy.cambio)}</p></div>`;
