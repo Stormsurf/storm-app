@@ -101,6 +101,7 @@
   };
   let L = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
   try{ L = localStorage.getItem('storm-ficha-lang') || L; }catch(_){}
+  { const l = new URLSearchParams(location.search).get('l'); if(l === 'es' || l === 'en') L = l; }
   const T = k => TX[L][k];
   const PREG = ['experiencia','seguro','alergias','medicamentos','regimen','operaciones','embarazada','otros'];
   let D = null, n = 1, F = nuevo(), aviso = '', ultimoUrg = null;

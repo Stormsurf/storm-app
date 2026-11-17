@@ -39,7 +39,7 @@
 </head>
 <body>
 <header class="ap-top"><a href="/" aria-label="Storm"><img src="/img/storm-logo.png" alt="Storm" width="96" height="52"></a></header>
-<main class="pg" id="pg"><p class="pg-note">Cargando…</p></main>
+<main class="pg" id="pg"><p class="pg-note">…</p></main>
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
 (() => {
@@ -47,10 +47,13 @@
   const id = new URLSearchParams(location.search).get('o') || '';
   const clp = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-CL');
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const ayuda = `<p class="pg-note">El pago lo procesa Mercado Pago de forma segura. ¿Dudas? <a href="https://wa.me/56977744306" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></p>`;
   let D = null, brick = null, pagando = false;
   // Celular o computador en otro idioma (extranjeros): el formulario de la tarjeta sale en inglés
-  const EN = !/^es\b/i.test(navigator.language || 'es');
+  let EN = !/^es\b/i.test(navigator.language || 'es');
+  try{ const g = localStorage.getItem('storm-lang'); if(g) EN = g === 'en'; }catch(_){}
+  { const l = new URLSearchParams(location.search).get('l'); if(l === 'es' || l === 'en') EN = l === 'en'; }
+  if(EN){ document.documentElement.lang = 'en'; document.title = 'Pay · Storm'; }
+  const ayuda = `<p class="pg-note">${EN ? 'Payments are processed securely by Mercado Pago. Questions?' : 'El pago lo procesa Mercado Pago de forma segura. ¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">${EN ? 'Message us on WhatsApp' : 'Escríbenos por WhatsApp'}</a></p>`;
 
   const error = t => { const e = document.getElementById('err'); if(e){ e.hidden = !t; e.textContent = t || ''; } };
 
@@ -58,7 +61,7 @@
     document.getElementById('op-tarjeta').classList.add('on');
     const box = document.getElementById('brick');
     if(brick) return;
-    if(!D.publicKey || !window.MercadoPago){ error('El pago con tarjeta no está disponible en este momento. Usa tu cuenta Mercado Pago o escríbenos por WhatsApp.'); return; }
+    if(!D.publicKey || !window.MercadoPago){ error(EN ? 'Card payment is not available right now. Use your Mercado Pago account or message us on WhatsApp.' : 'El pago con tarjeta no está disponible en este momento. Usa tu cuenta Mercado Pago o escríbenos por WhatsApp.'); return; }
     box.innerHTML = '';
     const mp = new MercadoPago(D.publicKey, { locale: EN ? 'en-US' : 'es-CL' });
     brick = await mp.bricks().create('cardPayment', 'brick', {
@@ -77,15 +80,15 @@
             }) }).then(x => x.json());
             if(r.ok){
               ok();
-              pg.innerHTML = `<div class="pg-ok"><b>¡Pago listo!</b><br>Te llevamos de vuelta…</div>`;
+              pg.innerHTML = `<div class="pg-ok"><b>${EN ? 'Payment done!' : '¡Pago listo!'}</b><br>${EN ? 'Taking you back…' : 'Te llevamos de vuelta…'}</div>`;
               location.href = r.vuelta || '/';
               return;
             }
-            mal(); error(r.error || 'No se pudo hacer el pago.');
+            mal(); error(EN ? 'The payment could not be completed. Please check your card details or try another card.' : (r.error || 'No se pudo hacer el pago.'));
             // El formulario se vuelve a armar para intentar de nuevo (cada intento usa datos nuevos de la tarjeta)
             try{ brick.unmount(); }catch(_){}
             brick = null; pagando = false; tarjeta();
-          }catch(x){ mal(); pagando = false; error('No pudimos conectar. Revisa tu internet e intenta de nuevo.'); }
+          }catch(x){ mal(); pagando = false; error(EN ? 'We could not connect. Check your internet and try again.' : 'No pudimos conectar. Revisa tu internet e intenta de nuevo.'); }
         })
       }
     });
@@ -93,11 +96,11 @@
 
   function pintar(){
     if(D.estado === 'processed'){
-      pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>Pago listo</h1><p>Este pago ya está hecho.</p></div><a class="pg-opt" href="${esc(D.vuelta || '/')}"><i>✓</i><span><b>Volver</b></span></a>`;
+      pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment done' : 'Pago listo'}</h1><p>${EN ? 'This payment has already been made.' : 'Este pago ya está hecho.'}</p></div><a class="pg-opt" href="${esc(D.vuelta || '/')}"><i>✓</i><span><b>${EN ? 'Back' : 'Volver'}</b></span></a>`;
       return;
     }
     if(D.estado !== 'created'){
-      pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>Pago vencido</h1><p>Este link de pago ya no sirve. Vuelve atrás y empieza de nuevo.</p></div>${ayuda}`;
+      pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment expired' : 'Pago vencido'}</h1><p>${EN ? 'This payment link is no longer valid. Go back and start again.' : 'Este link de pago ya no sirve. Vuelve atrás y empieza de nuevo.'}</p></div>${ayuda}`;
       return;
     }
     // Con Webpay (Transbank): "Tarjeta" paga con Webpay para todos (chilenas y extranjeras, sin RUT). Mercado Pago queda solo con la cuenta.
@@ -118,12 +121,12 @@
       return;
     }
     pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
-      <h2 class="pg-h2">¿Cómo quieres pagar?</h2>
-      <button class="pg-opt" id="op-tarjeta" type="button"><i>💳</i><span><b>Tarjeta</b><small>Crédito, débito o prepago, sin cuenta Mercado Pago</small></span></button>
+      <h2 class="pg-h2">${EN ? 'How would you like to pay?' : '¿Cómo quieres pagar?'}</h2>
+      <button class="pg-opt" id="op-tarjeta" type="button"><i>💳</i><span><b>${EN ? 'Card' : 'Tarjeta'}</b><small>${EN ? 'Credit, debit or prepaid, no Mercado Pago account needed' : 'Crédito, débito o prepago, sin cuenta Mercado Pago'}</small></span></button>
       <div id="brick"></div>
       <div class="pg-err" id="err" hidden></div>
  ${D.flow ? `<button class="pg-opt" id="op-flow" type="button"><i>🌎</i><span><b>${EN ? 'Foreign card (no RUT)' : 'Tarjeta extranjera'}</b><small>${EN ? 'Visa or Mastercard from outside Chile, with your passport' : 'Sin RUT chileno, con pasaporte (Visa o Mastercard)'}</small></span></button><div id="flowbox"></div>` : ''}
-      <a class="pg-opt" id="op-cuenta" href="${esc(D.cuenta)}"><i>👤</i><span><b>Con mi cuenta Mercado Pago</b><small>Usa el saldo o las tarjetas guardadas en tu cuenta</small></span></a>
+      <a class="pg-opt" id="op-cuenta" href="${esc(D.cuenta)}"><i>👤</i><span><b>${EN ? 'With my Mercado Pago account' : 'Con mi cuenta Mercado Pago'}</b><small>${EN ? 'Use your Mercado Pago balance or saved cards' : 'Usa el saldo o las tarjetas guardadas en tu cuenta'}</small></span></a>
       ${ayuda}`;
     document.getElementById('op-tarjeta').onclick = tarjeta;
     if(D.flow) document.getElementById('op-flow').onclick = conFlow;
@@ -199,7 +202,7 @@
   fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {
     if(!r.ok){ pg.innerHTML = `<div class="pg-err">${esc(r.error)}</div>${ayuda}`; return; }
     D = r; pintar();
-  }).catch(() => { pg.innerHTML = `<div class="pg-err">No pudimos cargar el pago. Revisa tu internet y recarga.</div>${ayuda}`; });
+  }).catch(() => { pg.innerHTML = `<div class="pg-err">${EN ? 'We could not load the payment. Check your internet and reload.' : 'No pudimos cargar el pago. Revisa tu internet y recarga.'}</div>${ayuda}`; });
 })();
 </script>
 </body>
