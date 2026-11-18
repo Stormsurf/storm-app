@@ -161,9 +161,12 @@
 .pn-gp h3 .pn-gsal small{display:block;font-size:1.1rem;font-weight:500;opacity:.75}
 .pn-gok{font-size:1.3rem;color:var(--ok);background:var(--ok-soft);padding:4px 10px;border-radius:999px}
 .pn-gcl{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.pn-gc{border:1.5px solid var(--ok);background:var(--ok-soft);color:var(--ink);border-radius:12px;padding:6px 10px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;line-height:1.15;text-align:center}
+.pn-gc{border:1.5px solid rgba(44,44,43,.22);background:#fff;color:var(--ink);border-radius:12px;padding:6px 10px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;line-height:1.15;text-align:center}
 .pn-gc small{display:block;font-size:1.05rem;font-weight:500;opacity:.65}
-.pn-gc.no{border-color:var(--warn);background:var(--warn-soft);color:var(--warn);text-decoration:line-through}
+.pn-gc.pag{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.pn-gc.sel{box-shadow:0 0 0 2px var(--ink)}
+.pn-gcbox .pn-acts{flex-wrap:wrap;gap:8px}
+.pn-gc.no{border-color:var(--warn);background:var(--warn-soft);color:var(--warn)}
 .pn-gc.no small{text-decoration:none}
 .pn-gc.ask{background:var(--ink);border-color:var(--ink);color:#fff;text-decoration:none}
 .pn-hint{font-size:1.15rem;opacity:.55;margin:6px 0 0}

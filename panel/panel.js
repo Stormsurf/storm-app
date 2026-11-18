@@ -419,7 +419,17 @@
 
 
   // ---------- Gastos de la Academia Anual (solo administradores) ----------
-  let GAS = null, gMes = '', gAbierto = '', gOtro = false;
+  let GAS = null, gMes = '', gAbierto = '', gOtro = false, gClase = '';
+  // Qué clases quedan pagadas al instructor: primero las que se pagaron una por una (nota "Clase …"),
+  // y lo demás que se le pagó (adelantos, montos sueltos) va cubriendo sus clases de la más antigua a la más nueva.
+  const notaClase = c => `Clase ${c.clase} ${c.texto}`;
+  function clasesPagadas(p){
+    const valor = c => c.clase === 'Skate' ? p.skate : p.surf, pagos = p.movs.filter(m => /^pago/i.test(m.tipo));
+    let libre = p.pagado;
+    const out = p.clases.map(c => { const m = c.falto ? null : pagos.find(x => x.detalle === notaClase(c)); if(m) libre -= m.monto; return Object.assign({}, c, {valor: valor(c), pagoFila: m ? m.fila : 0, pagada: !!m}); });
+    out.forEach(c => { if(!c.pagada && !c.falto && c.valor && libre >= c.valor){ c.pagada = true; libre -= c.valor; } });
+    return out;
+  }
   const mesCorto = m => cap(String(m).split(' ')[0]);
   async function cargarGastos(mes){
     const pane = app.querySelector("[data-pane='gastos']"); if(!pane) return;
@@ -451,8 +461,11 @@
       return `<div class='pn-card pn-gp'>
         <h3><span>${esc(p.nombre)}</span>${p.total && p.saldo <= 0 ? `<span class='pn-gok'>Pagado ✓</span>` : `<span class='pn-gsal'>${clp(p.saldo)}<small>por pagar</small></span>`}</h3>
         <p class='pn-sub'>${det} = <b>${clp(p.total)}</b>${p.pagado ? ` · pagado ${clp(p.pagado)}` : ''}</p>
-        ${p.fijo ? '' : `<div class='pn-gcl'>${p.clases.map(c => `<button class='pn-gc${c.falto?' no':''}' data-gp='${pi}' data-gcl='${c.fecha}' title='${c.falto?'No vino':'Vino'}'>${esc(c.texto)}<small>${c.clase}</small></button>`).join('')}</div>
-          <p class='pn-hint'>Toca una clase si no vino (se descuenta). Tócala de nuevo para deshacer.</p>`}
+        ${p.fijo ? '' : (() => { const cl = clasesPagadas(p), nPag = cl.filter(c => c.pagada).length, nVal = cl.filter(c => !c.falto).length, sel = cl.find(c => gClase === p.nombre + '|' + c.fecha);
+          return `<div class='pn-gcl'>${cl.map(c => `<button class='pn-gc${c.falto?' no':c.pagada?' pag':''}${sel === c ? ' sel' : ''}' data-gp='${pi}' data-gcl='${c.fecha}'>${c.pagada ? '✓ ' : ''}${esc(c.texto)}<small>${c.falto ? 'No vino' : c.pagada ? 'Pagada' : c.clase}</small></button>`).join('')}</div>
+          ${sel ? `<div class='pn-gbox pn-gcbox'><p><b>${esc(sel.clase)} ${esc(sel.texto)}</b> · ${sel.falto ? 'no vino' : sel.pagada ? 'pagada a ' + esc(p.nombre.split(' ')[0]) : 'por pagar'}</p>
+            <div class='pn-acts'>${sel.falto ? `<button class='pn-link' data-gcvino>Sí vino</button>` : `${sel.pagoFila ? `<button class='pn-link' data-gcdes='${sel.pagoFila}'>Deshacer pago</button>` : ''}${sel.pagada ? '' : `<button class='pn-link' data-gcfalta>No vino</button><button class='pn-ntgo' data-gcpag>Le pagué esta clase (${clp(sel.valor)})</button>`}`}<button class='pn-link' data-gccer>Cerrar</button></div></div>`
+          : `<p class='pn-hint'>${nVal ? `${nPag} de ${nVal} clases pagadas. ` : ''}Toca una clase para marcarla pagada o si no vino.</p>`}`; })()}
         ${p.movs.length ? `<div class='pn-gmov'>${p.movs.map(m => `<div><span>${esc(m.tipo)} · ${esc(corta(m.fecha))}${m.detalle ? ' · ' + esc(m.detalle) : ''}</span><b>${clp(m.monto)}</b><button data-gdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : ''}
         ${abierto ? `<div class='pn-gbox'>
             <p>¿Cuánto le pagaste a <b>${esc(p.nombre.split(' ')[0])}</b>?</p>
@@ -470,8 +483,8 @@
     </div>
     <p class='pn-note'>Los valores por clase y los pagos fijos están en la pestaña Sueldos de la planilla. Las clases canceladas en el Calendario no se pagan.</p>`;
     pane.innerHTML = h;
-    pane.querySelectorAll('[data-gmes]').forEach(b => b.onclick = () => { gAbierto = ''; gOtro = false; cargarGastos(b.dataset.gmes); });
-    pane.querySelectorAll('[data-gopen]').forEach(b => b.onclick = () => { gAbierto = g.personas[+b.dataset.gopen].nombre; gOtro = false; pintarGastos(); const i = pane.querySelector('#pn-gmonto'); i && i.focus(); });
+    pane.querySelectorAll('[data-gmes]').forEach(b => b.onclick = () => { gAbierto = ''; gOtro = false; gClase = ''; cargarGastos(b.dataset.gmes); });
+    pane.querySelectorAll('[data-gopen]').forEach(b => b.onclick = () => { gAbierto = g.personas[+b.dataset.gopen].nombre; gOtro = false; gClase = ''; pintarGastos(); const i = pane.querySelector('#pn-gmonto'); i && i.focus(); });
     pane.querySelectorAll('[data-gcan]').forEach(b => b.onclick = () => { gAbierto = ''; gOtro = false; pintarGastos(); });
     pane.querySelectorAll('[data-gpre]').forEach(b => b.onclick = () => { pane.querySelector('#pn-gmonto').value = b.dataset.gpre; });
     pane.querySelectorAll('[data-gsave]').forEach(b => b.onclick = () => {
@@ -480,10 +493,16 @@
       gasto({tipo:'pago', persona: g.personas[+b.dataset.gsave].nombre, monto, detalle: pane.querySelector('#pn-gnota').value.trim()}, b);
     });
     pane.querySelectorAll('[data-gcl]').forEach(b => b.onclick = () => {
-      const p = g.personas[+b.dataset.gp], c = p.clases.find(x => x.fecha === b.dataset.gcl);
-      if(!b.dataset.ok){ b.dataset.ok = 1; b.classList.add('ask'); b.firstChild.textContent = c.falto ? '¿Sí vino?' : '¿No vino?'; return; }
-      gasto(c.falto ? {tipo:'borrar', fila: c.falto} : {tipo:'falta', persona: p.nombre, clase: c.fecha}, b);
+      const k = g.personas[+b.dataset.gp].nombre + '|' + b.dataset.gcl;
+      gClase = gClase === k ? '' : k; gAbierto = ''; gOtro = false; pintarGastos();
     });
+    const gSel = () => { const [n, f] = gClase.split('|'), p = g.personas.find(x => x.nombre === n); return p && {p, c: clasesPagadas(p).find(x => x.fecha === f)}; };
+    const gcb = (sel, fn) => { const b = pane.querySelector(sel); if(b) b.onclick = () => { const s = gSel(); if(s && s.c){ gClase = ''; fn(s.p, s.c, b); } }; };
+    gcb('[data-gcpag]', (p, c, b) => gasto({tipo:'pago', persona: p.nombre, monto: c.valor, detalle: notaClase(c)}, b));
+    gcb('[data-gcdes]', (p, c, b) => gasto({tipo:'borrar', fila: c.pagoFila}, b));
+    gcb('[data-gcfalta]', (p, c, b) => gasto({tipo:'falta', persona: p.nombre, clase: c.fecha}, b));
+    gcb('[data-gcvino]', (p, c, b) => gasto({tipo:'borrar', fila: c.falto}, b));
+    const gcc = pane.querySelector('[data-gccer]'); if(gcc) gcc.onclick = () => { gClase = ''; pintarGastos(); };
     pane.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => {
       if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
       gasto({tipo:'borrar', fila: +b.dataset.gdel}, b);
