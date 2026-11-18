@@ -677,7 +677,7 @@
     const top = m => (m - D_INI) / 30 * D_ROW, alto = min => min / 30 * D_ROW;
     const mias = E.reservas.filter(r => r.estado !== 'cancelada' && (admin || r.instructores.includes(E.yo)));
     const hoyN = mias.filter(r => r.fecha === E.hoy), prox = hoyN.filter(r => r.hora >= new Date().toTimeString().slice(0, 5))[0];
-    const espera = mias.filter(r => r.fecha >= E.hoy && estadoDe(r).c === 'pend'), sinFicha = mias.filter(r => r.fecha >= E.hoy && r.fecha <= sumar(E.hoy, 7) && r.estado !== 'pendiente' && (r.fichas || []).length < r.personas);
+    const espera = mias.filter(r => r.fecha >= E.hoy && estadoDe(r).c === 'pend'), sinFicha = mias.filter(r => r.fecha >= E.hoy && r.fecha <= sumar(E.hoy, 7) && r.estado !== 'pendiente' && !r.fichasPapel && (r.fichas || []).length < r.personas);
     let h = `<div class='es-res'>
       <button class='es-rt' data-dv='hoy'><i>${ICO_S.cal}</i><b>${hoyN.length}</b><span>${hoyN.length === 1 ? 'clase hoy' : 'clases hoy'}</span>${prox ? `<small>Próxima ${esc(prox.hora)} · ${esc(prox.nombre.split(' ')[0])}</small>` : ''}</button>
       ${admin ? `<button class='es-rt${espera.length ? ' pend' : ''}' data-irv='reservas'><i>${ICO_S.pago}</i><b>${espera.length}</b><span>esperando pago</span></button>` : ''}
