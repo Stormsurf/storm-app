@@ -420,14 +420,14 @@
 
   // ---------- Gastos de la Academia Anual (solo administradores) ----------
   let GAS = null, gMes = '', gAbierto = '', gOtro = false, gClase = '';
-  // Qué clases quedan pagadas al instructor: primero las que se pagaron una por una (nota "Clase …"),
-  // y lo demás que se le pagó (adelantos, montos sueltos) va cubriendo sus clases de la más antigua a la más nueva.
+  // Una clase queda pagada al instructor solo si se marcó con "Le pagué esta clase" (pago con nota "Clase …").
+  // Los adelantos y montos sueltos bajan lo que falta pagar, pero no marcan clases.
   const notaClase = c => `Clase ${c.clase} ${c.texto}`;
   function clasesPagadas(p){
     const valor = c => c.clase === 'Skate' ? p.skate : p.surf, pagos = p.movs.filter(m => /^pago/i.test(m.tipo));
     let libre = p.pagado;
     const out = p.clases.map(c => { const m = c.falto ? null : pagos.find(x => x.detalle === notaClase(c)); if(m) libre -= m.monto; return Object.assign({}, c, {valor: valor(c), pagoFila: m ? m.fila : 0, pagada: !!m}); });
-    out.forEach(c => { if(!c.pagada && !c.falto && c.valor && libre >= c.valor){ c.pagada = true; libre -= c.valor; } });
+    out.suelto = libre;
     return out;
   }
   const mesCorto = m => cap(String(m).split(' ')[0]);
@@ -464,8 +464,8 @@
         ${p.fijo ? '' : (() => { const cl = clasesPagadas(p), nPag = cl.filter(c => c.pagada).length, nVal = cl.filter(c => !c.falto).length, sel = cl.find(c => gClase === p.nombre + '|' + c.fecha);
           return `<div class='pn-gcl'>${cl.map(c => `<button class='pn-gc${c.falto?' no':c.pagada?' pag':''}${sel === c ? ' sel' : ''}' data-gp='${pi}' data-gcl='${c.fecha}'>${c.pagada ? '✓ ' : ''}${esc(c.texto)}<small>${c.falto ? 'No vino' : c.pagada ? 'Pagada' : c.clase}</small></button>`).join('')}</div>
           ${sel ? `<div class='pn-gbox pn-gcbox'><p><b>${esc(sel.clase)} ${esc(sel.texto)}</b> · ${sel.falto ? 'no vino' : sel.pagada ? 'pagada a ' + esc(p.nombre.split(' ')[0]) : 'por pagar'}</p>
-            <div class='pn-acts'>${sel.falto ? `<button class='pn-link' data-gcvino>Sí vino</button>` : `${sel.pagoFila ? `<button class='pn-link' data-gcdes='${sel.pagoFila}'>Deshacer pago</button>` : ''}${sel.pagada ? '' : `<button class='pn-link' data-gcfalta>No vino</button><button class='pn-ntgo' data-gcpag>Le pagué esta clase (${clp(sel.valor)})</button>`}`}<button class='pn-link' data-gccer>Cerrar</button></div></div>`
-          : `<p class='pn-hint'>${nVal ? `${nPag} de ${nVal} clases pagadas. ` : ''}Toca una clase para marcarla pagada o si no vino.</p>`}`; })()}
+            <div class='pn-acts'>${sel.falto ? `<button class='pn-link' data-gcvino>Sí vino</button>` : `${sel.pagoFila ? `<button class='pn-link' data-gcdes='${sel.pagoFila}'>Desmarcar pago</button>` : ''}${sel.pagada ? '' : `<button class='pn-link' data-gcfalta>No vino</button><button class='pn-ntgo' data-gcpag>Le pagué esta clase (${clp(sel.valor)})</button>`}`}<button class='pn-link' data-gccer>Cerrar</button></div></div>`
+          : `<p class='pn-hint'>${nVal ? `${nPag} de ${nVal} clases pagadas. ` : ''}${cl.suelto > 0 ? `Además le pagaste ${clp(cl.suelto)} sin elegir clase (adelantos). ` : ''}Toca una clase para marcarla pagada o si no vino; tócala de nuevo para desmarcar.</p>`}`; })()}
         ${p.movs.length ? `<div class='pn-gmov'>${p.movs.map(m => `<div><span>${esc(m.tipo)} · ${esc(corta(m.fecha))}${m.detalle ? ' · ' + esc(m.detalle) : ''}</span><b>${clp(m.monto)}</b><button data-gdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : ''}
         ${abierto ? `<div class='pn-gbox'>
             <p>¿Cuánto le pagaste a <b>${esc(p.nombre.split(' ')[0])}</b>?</p>
