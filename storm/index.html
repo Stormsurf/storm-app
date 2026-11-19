@@ -602,6 +602,22 @@ main .pn{max-width:1440px}
   const sumar = (f, n) => { const d = new Date(f + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
   abrir();
 })();
+/* iPhone: al cerrar el teclado (buscador, formularios) a veces la pantalla queda corrida
+   y la barra de abajo se queda flotando a media pantalla. Le pedimos que se reacomode. */
+(function(){
+  let t = 0;
+  const reacomodar = () => { clearTimeout(t); t = setTimeout(() => {
+    const a = document.activeElement;
+    if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return; // el teclado sigue abierto
+    window.scrollTo(window.scrollX, window.scrollY);
+    document.body.style.minHeight = '100.1vh'; requestAnimationFrame(() => { document.body.style.minHeight = ''; });
+  }, 120); };
+  document.addEventListener('focusout', reacomodar);
+  if(window.visualViewport) visualViewport.addEventListener('resize', reacomodar);
+  window.addEventListener('orientationchange', reacomodar);
+  window.addEventListener('pageshow', reacomodar);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) reacomodar(); });
+})();
 </script>
 </main>
 <script>window.STORM_APP = { appId: "be18352b-5820-4912-aa46-d851890394a3", safariId: "web.onesignal.auto.1afb9025-a2b0-4a54-8c00-23b218b2b39b", clave: "storm-panel", nombre: "Storm", raiz: "/" };</script>
