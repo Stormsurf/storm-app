@@ -733,30 +733,56 @@ async function panel(env, q) {
   return out;
 }
 
-/** Pago semanal (lunes a domingo): cuánto transferir a cada instructor y si ya se pagó. */
+/** Pago semanal (lunes a domingo): cuánto transferir a cada instructor y qué clases ya se le pagaron.
+ *  Cada clase se marca pagada por separado (tabla pagos_clase). d.marcarClase = {instructor, ref, pagado} marca o desmarca una;
+ *  d.marcar = {instructor, pagado} paga de una vez todas sus clases por pagar hasta hoy (las de días que vienen no), o desmarca todas las de la semana. */
 async function pagosSemana(env, q, d) {
   const db = env.DB, hoy = ahoraChile().fecha, admin = q.rol === 'admin';
   let lunes = esFecha(d.lunes) ? d.lunes : hoy;
   lunes = sumarDias(lunes, -((diaSemana(lunes) + 6) % 7));
   const domingo = sumarDias(lunes, 6);
-  if (admin && d.marcar) {
-    const inst = String(d.marcar.instructor || '');
-    if (d.marcar.pagado) await db.prepare('INSERT OR REPLACE INTO pagos_semana (instructor, lunes, monto, pagado_el, por) VALUES (?, ?, ?, ?, ?)').bind(inst, lunes, Math.round(Number(d.marcar.monto) || 0), hoy, q.email).run();
-    else await db.prepare('DELETE FROM pagos_semana WHERE instructor = ? AND lunes = ?').bind(inst, lunes).run();
-    await anotar(db, q, 'pago semana ' + lunes + ' ' + inst + (d.marcar.pagado ? ' pagado' : ' desmarcado'));
+  await db.prepare("CREATE TABLE IF NOT EXISTS pagos_clase (instructor TEXT NOT NULL, ref TEXT NOT NULL, monto INTEGER NOT NULL DEFAULT 0, pagado_el TEXT NOT NULL, por TEXT NOT NULL DEFAULT '', PRIMARY KEY (instructor, ref))").run();
+  const leerClases = () => db.prepare("SELECT ref, fecha, hora, personas, menores, ninos, nombre, instructores, pago_instructor, pagos FROM reservas WHERE fecha BETWEEN ? AND ? AND estado = 'pagada' ORDER BY fecha, hora").bind(lunes, domingo).all();
+  let res = await leerClases();
+  const clasesDe = inst => res.results.filter(r => inst in pagosDe(r)).map(r => ({ r, monto: pagosDe(r)[inst] }));
+  // Pagos de antes (toda la semana marcada de una vez): pasan a pagos por clase, solo las clases hasta el día en que se pagó.
+  // (No se borran: se marcan '·migrado' en "por", así la versión anterior de la app las sigue viendo.)
+  const viejos = (await db.prepare("SELECT * FROM pagos_semana WHERE lunes = ? AND por NOT LIKE '%·migrado'").bind(lunes).all()).results;
+  if (viejos.length) {
+    const st = [];
+    viejos.forEach(v => { clasesDe(v.instructor).filter(c => c.r.fecha <= v.pagado_el).forEach(c => st.push(db.prepare('INSERT OR IGNORE INTO pagos_clase (instructor, ref, monto, pagado_el, por) VALUES (?, ?, ?, ?, ?)').bind(v.instructor, c.r.ref, c.monto, v.pagado_el, v.por || ''))); st.push(db.prepare("UPDATE pagos_semana SET por = por || '·migrado' WHERE instructor = ? AND lunes = ?").bind(v.instructor, lunes)); });
+    await db.batch(st);
   }
-  const [res, pag] = await Promise.all([
-    db.prepare("SELECT ref, fecha, hora, personas, menores, ninos, nombre, instructores, pago_instructor, pagos FROM reservas WHERE fecha BETWEEN ? AND ? AND estado = 'pagada' ORDER BY fecha, hora").bind(lunes, domingo).all(),
-    db.prepare('SELECT * FROM pagos_semana WHERE lunes = ?').bind(lunes).all()
-  ]);
+  if (admin && d.marcarClase) {
+    const inst = String(d.marcarClase.instructor || ''), ref = String(d.marcarClase.ref || '');
+    const c = clasesDe(inst).find(x => x.r.ref === ref);
+    if (d.marcarClase.pagado) { if (c) await db.prepare('INSERT OR REPLACE INTO pagos_clase (instructor, ref, monto, pagado_el, por) VALUES (?, ?, ?, ?, ?)').bind(inst, ref, c.monto, hoy, q.email).run(); }
+    else await db.prepare('DELETE FROM pagos_clase WHERE instructor = ? AND ref = ?').bind(inst, ref).run();
+    await anotar(db, q, 'pago clase ' + ref + ' ' + inst + (d.marcarClase.pagado ? ' pagada' : ' desmarcada'));
+  }
+  if (admin && d.marcar) {
+    const inst = String(d.marcar.instructor || ''), mias = clasesDe(inst), st = [];
+    if (d.marcar.pagado) mias.filter(c => c.r.fecha <= hoy).forEach(c => st.push(db.prepare('INSERT OR IGNORE INTO pagos_clase (instructor, ref, monto, pagado_el, por) VALUES (?, ?, ?, ?, ?)').bind(inst, c.r.ref, c.monto, hoy, q.email)));
+    else mias.forEach(c => st.push(db.prepare('DELETE FROM pagos_clase WHERE instructor = ? AND ref = ?').bind(inst, c.r.ref)));
+    if (st.length) await db.batch(st);
+    await anotar(db, q, 'pago semana ' + lunes + ' ' + inst + (d.marcar.pagado ? ' pagado hasta hoy' : ' desmarcado'));
+  }
+  const refs = res.results.map(r => r.ref);
+  const pag = refs.length ? (await db.prepare(`SELECT * FROM pagos_clase WHERE ref IN (${refs.map(() => '?').join(',')})`).bind(...refs).all()).results : [];
+  const pagada = {}; pag.forEach(x => { pagada[x.instructor + '|' + x.ref] = x; });
   const por = {};
   res.results.forEach(r => { const p = pagosDe(r); Object.keys(p).forEach(i => {
     if (!admin && i !== q.yo) return;
-    const x = por[i] = por[i] || { instructor: i, total: 0, clases: [] };
-    x.total += p[i]; x.clases.push({ fecha: r.fecha, hora: r.hora, cliente: r.nombre, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, monto: p[i] });
+    const x = por[i] = por[i] || { instructor: i, total: 0, pagadoMonto: 0, clases: [] };
+    const pg = pagada[i + '|' + r.ref];
+    x.total += p[i]; if (pg) x.pagadoMonto += p[i];
+    x.clases.push({ ref: r.ref, fecha: r.fecha, hora: r.hora, cliente: r.nombre, personas: r.personas, menores: r.menores, ninos: r.ninos || 0, monto: p[i], pagada: pg ? { el: pg.pagado_el } : null });
   }); });
-  pag.results.forEach(x => { if (admin || x.instructor === q.yo) { const y = por[x.instructor] = por[x.instructor] || { instructor: x.instructor, total: 0, clases: [] }; y.pagado = { monto: x.monto, el: x.pagado_el }; } });
-  const lista = Object.values(por).sort((a, b) => b.total - a.total);
+  const lista = Object.values(por).map(x => Object.assign(x, {
+    porPagar: x.total - x.pagadoMonto,
+    porPagarHoy: x.clases.filter(c => !c.pagada && c.fecha <= hoy).reduce((t, c) => t + c.monto, 0),
+    pagado: x.total && x.pagadoMonto >= x.total ? { monto: x.pagadoMonto, el: x.clases.reduce((m, c) => c.pagada && c.pagada.el > m ? c.pagada.el : m, '') } : null
+  })).sort((a, b) => b.total - a.total);
   return { ok: true, lunes, domingo, hoy, instructores: lista, total: lista.reduce((t, x) => t + x.total, 0) };
 }
 

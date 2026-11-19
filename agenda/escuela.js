@@ -277,6 +277,7 @@
   .es-psd{padding:0 16px 14px;border-top:1px solid #eeebe6;background:#FAF9F7}
   .es-psl{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #eeebe6;font-size:1.4rem}.es-psl small{display:block;color:#77756f;font-size:1.25rem}
   .es-psd .es-big{margin-top:14px}
+  .es-psl>b{margin-left:auto;align-self:center}.es-psc{flex:none;align-self:center;border:1.5px solid #0f6e74;background:#fff;color:#0f6e74;border-radius:999px;padding:6px 12px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;font-style:normal;min-width:84px;text-align:center}.es-psc.ok{border-color:#2f7a4d;background:#e5f2ea;color:#2f7a4d}em.es-psc{cursor:default;border-color:#d9d6d0;color:#77756f}em.es-psc.ok{border-color:#2f7a4d;color:#2f7a4d}.es-pshint{font-size:1.25rem;color:#77756f;margin:10px 0 0;line-height:1.4}
   .pn-stats+.es-grp{margin-top:14px}
   /* ajustes y disponibilidad: mismos campos y botones */
   .es-ajw .es-f input,.es-ajw .es-f select,.es-ajw .es-tab input,.es-ajw .es-op select,.es-ajw .es-tar input,.es-ajw .es-insrow input{min-height:48px;border-radius:12px;border:1px solid #d9d6d0;font-size:1.5rem;padding:10px 12px;box-sizing:border-box}
@@ -734,13 +735,17 @@
     const esEsta = PS.hoy >= PS.lunes && PS.hoy <= PS.domingo;
     let h = `<div class='es-wk' style='margin:6px 0 10px'><button data-psw='-7'>‹ Antes</button><b style='font-size:1.35rem'>${esEsta ? 'Esta semana · ' : ''}${esc(fcorta(PS.lunes))} – ${esc(fcorta(PS.domingo))}</b><button data-psw='7'>Después ›</button></div>`;
     if (admin) {
-      const pend = PS.instructores.filter(x => !x.pagado).reduce((t, x) => t + x.total, 0);
+      const pend = PS.instructores.reduce((t, x) => t + (x.porPagar != null ? x.porPagar : x.pagado ? 0 : x.total), 0);
       h += `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Total a transferir el domingo</small><b>${clp(PS.total)}</b><em>${pend && pend !== PS.total ? 'falta pagar ' + clp(pend) : pend ? 'clases particulares de la semana' : PS.total ? 'todo pagado ✓' : 'sin clases esta semana'}</em></div></div>`;
     }
     if (!PS.instructores.length) return h + `<div class='pn-card'><p class='pn-empty'>No hay clases pagadas esta semana.</p></div>`;
-    h += `<div class='es-grp'>` + PS.instructores.map(x => `<button class='es-row' data-psa='${esc(x.instructor)}'>${avatar(x.instructor)}<span class='es-rx'><b>${esc(x.instructor)}</b><small>${x.clases.length} clase${x.clases.length === 1 ? '' : 's'}${x.pagado ? ' · <span style="color:#2f7a4d">✓ pagado el ' + esc(fcorta(x.pagado.el)) + '</span>' : x.total ? ' · por pagar' : ''}</small></span><b class='es-monto${x.pagado ? ' ok' : ''}'>${clp(x.total)}</b><span class='es-rc' style='transform:rotate(${psAbierto === x.instructor ? 90 : 0}deg)'>›</span></button>
-        ${psAbierto === x.instructor ? `<div class='es-psd'>${x.clases.map(c => `<div class='es-psl'><span>${esc(fcorta(c.fecha))} · ${esc(c.hora)}<small>${esc(c.cliente)} · ${c.personas} persona${c.personas === 1 ? '' : 's'}${c.menores ? ' (' + c.menores + ' niño' + (c.menores === 1 ? '' : 's') + ')' : ''}</small></span><b>${clp(c.monto)}</b></div>`).join('')}
-          ${admin ? (x.pagado ? `<button class='es-no' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='0'>Desmarcar pagado</button>` : x.total ? `<button class='es-big' data-psp='${esc(x.instructor)}' data-pm='${x.total}' data-pv='1'>Marcar pagado · ${clp(x.total)}</button>` : '') : ''}</div>` : ''}`).join('') + `</div>`;
+    const resumen = x => x.pagado ? `<span style="color:#2f7a4d">✓ todo pagado</span>` : x.pagadoMonto ? `pagado ${clp(x.pagadoMonto)} · <span style="color:#b5662b">falta ${clp(x.porPagar)}</span>` : x.total ? 'por pagar' : '';
+    h += `<div class='es-grp'>` + PS.instructores.map(x => `<button class='es-row' data-psa='${esc(x.instructor)}'>${avatar(x.instructor)}<span class='es-rx'><b>${esc(x.instructor)}</b><small>${x.clases.length} clase${x.clases.length === 1 ? '' : 's'} · ${resumen(x)}</small></span><b class='es-monto${x.pagado ? ' ok' : ''}'>${clp(x.total)}</b><span class='es-rc' style='transform:rotate(${psAbierto === x.instructor ? 90 : 0}deg)'>›</span></button>
+        ${psAbierto === x.instructor ? `<div class='es-psd'>${x.clases.map(c => `<div class='es-psl'><span>${esc(fcorta(c.fecha))} · ${esc(c.hora)}<small>${esc(c.cliente)} · ${c.personas} persona${c.personas === 1 ? '' : 's'}${c.menores ? ' (' + c.menores + ' niño' + (c.menores === 1 ? '' : 's') + ')' : ''}</small></span><b>${clp(c.monto)}</b>${admin
+            ? (c.pagada ? `<button class='es-psc ok' data-psc='${esc(c.ref)}' data-psi='${esc(x.instructor)}' data-pv='0'>✓ Pagada</button>` : `<button class='es-psc' data-psc='${esc(c.ref)}' data-psi='${esc(x.instructor)}' data-pv='1'>Pagar</button>`)
+            : (c.pagada ? `<em class='es-psc ok'>✓ Pagada</em>` : `<em class='es-psc'>Por pagar</em>`)}</div>`).join('')}
+          ${admin ? (x.porPagarHoy ? `<button class='es-big' data-psp='${esc(x.instructor)}' data-pv='1'>Pagar lo hecho hasta hoy · ${clp(x.porPagarHoy)}</button>` : '')
+            + (x.pagadoMonto ? `<button class='es-no' data-psp='${esc(x.instructor)}' data-pv='0'>Desmarcar todo</button>` : '') : ''}</div>` : ''}`).join('') + `</div>`;
     return h + `<p class='pn-note'>${admin ? 'Cuenta las clases pagadas de lunes a domingo. Cada instructor gana según su tarifa (en Ajustes) y el tamaño de su grupo.' : 'Tus clases de lunes a domingo y lo que te toca por cada una. Storm te transfiere el domingo.'}</p>`;
   }
 
@@ -900,7 +905,12 @@
     $$('[data-psw]').forEach(b => b.onclick = () => { psLunes = sumar(PS.lunes, +b.dataset.psw); psAbierto = ''; cargarPagos(); });
     $$('[data-psa]').forEach(b => b.onclick = () => { psAbierto = psAbierto === b.dataset.psa ? '' : b.dataset.psa; pintar(); });
     $$('[data-psr]').forEach(b => b.onclick = () => { PS = null; cargarPagos(); });
-    $$('[data-psp]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = 'Guardando…'; cargarPagos({ marcar: { instructor: b.dataset.psp, monto: +b.dataset.pm, pagado: b.dataset.pv === '1' } }); });
+    $$('[data-psp]').forEach(b => b.onclick = () => {
+      if (b.dataset.pv === '0' && !b.dataset.ok) { b.dataset.ok = 1; b.textContent = '¿Desmarcar todas sus clases de la semana?'; return; }
+      b.disabled = true; b.textContent = 'Guardando…'; cargarPagos({ marcar: { instructor: b.dataset.psp, pagado: b.dataset.pv === '1' } }); });
+    $$('[data-psc]').forEach(b => b.onclick = () => {
+      if (b.dataset.pv === '0' && !b.dataset.ok) { b.dataset.ok = 1; b.textContent = '¿Desmarcar?'; b.classList.remove('ok'); return; }
+      b.disabled = true; b.textContent = '…'; cargarPagos({ marcarClase: { instructor: b.dataset.psi, ref: b.dataset.psc, pagado: b.dataset.pv === '1' } }); });
     const mc = pgN;
     if (mc) {
       const re = () => { const c = cotiza(mc.querySelector('[name=personas]').value, mc.querySelector('[name=menores]').value), t = mc.querySelector('[name=total]'), n = mc.querySelector('[name=nInstructores]');

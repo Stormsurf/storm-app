@@ -463,9 +463,9 @@
         <p class='pn-sub'>${det} = <b>${clp(p.total)}</b>${p.pagado ? ` · pagado ${clp(p.pagado)}` : ''}</p>
         ${p.fijo ? '' : (() => { const cl = clasesPagadas(p), nPag = cl.filter(c => c.pagada).length, nVal = cl.filter(c => !c.falto).length, sel = cl.find(c => gClase === p.nombre + '|' + c.fecha);
           return `<div class='pn-gcl'>${cl.map(c => `<button class='pn-gc${c.falto?' no':c.pagada?' pag':''}${sel === c ? ' sel' : ''}' data-gp='${pi}' data-gcl='${c.fecha}'>${c.pagada ? '✓ ' : ''}${esc(c.texto)}<small>${c.falto ? 'No vino' : c.pagada ? 'Pagada' : c.clase}</small></button>`).join('')}</div>
-          ${sel ? `<div class='pn-gbox pn-gcbox'><p><b>${esc(sel.clase)} ${esc(sel.texto)}</b> · ${sel.falto ? 'no vino' : sel.pagada ? 'pagada a ' + esc(p.nombre.split(' ')[0]) : 'por pagar'}</p>
-            <div class='pn-acts'>${sel.falto ? `<button class='pn-link' data-gcvino>Sí vino</button>` : `${sel.pagoFila ? `<button class='pn-link' data-gcdes='${sel.pagoFila}'>Desmarcar pago</button>` : ''}${sel.pagada ? '' : `<button class='pn-link' data-gcfalta>No vino</button><button class='pn-ntgo' data-gcpag>Le pagué esta clase (${clp(sel.valor)})</button>`}`}<button class='pn-link' data-gccer>Cerrar</button></div></div>`
-          : `<p class='pn-hint'>${nVal ? `${nPag} de ${nVal} clases pagadas. ` : ''}${cl.suelto > 0 ? `Además le pagaste ${clp(cl.suelto)} sin elegir clase (adelantos). ` : ''}Toca una clase para marcarla pagada o si no vino; tócala de nuevo para desmarcar.</p>`}`; })()}
+          ${sel ? `<div class='pn-gcbox'><p>${esc(sel.texto)} · ${esc(sel.clase)} · ${clp(sel.valor)}</p>
+            <div class='pn-gseg'>${sel.falto ? `<button data-gcvino>Sí vino</button>` : sel.pagoFila ? `<button data-gcdes='${sel.pagoFila}'>Desmarcar pago</button>` : sel.pagada ? '' : `<button data-gcfalta>No vino</button><button class='on' data-gcpag>✓ Pagada</button>`}</div></div>`
+          : `<p class='pn-hint'>${nVal ? `${nPag} de ${nVal} pagadas` : ''}${cl.suelto > 0 ? ` · ${clp(cl.suelto)} en adelantos` : ''}</p>`}`; })()}
         ${p.movs.length ? `<div class='pn-gmov'>${p.movs.map(m => `<div><span>${esc(m.tipo)} · ${esc(corta(m.fecha))}${m.detalle ? ' · ' + esc(m.detalle) : ''}</span><b>${clp(m.monto)}</b><button data-gdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : ''}
         ${abierto ? `<div class='pn-gbox'>
             <p>¿Cuánto le pagaste a <b>${esc(p.nombre.split(' ')[0])}</b>?</p>
@@ -502,7 +502,6 @@
     gcb('[data-gcdes]', (p, c, b) => gasto({tipo:'borrar', fila: c.pagoFila}, b));
     gcb('[data-gcfalta]', (p, c, b) => gasto({tipo:'falta', persona: p.nombre, clase: c.fecha}, b));
     gcb('[data-gcvino]', (p, c, b) => gasto({tipo:'borrar', fila: c.falto}, b));
-    const gcc = pane.querySelector('[data-gccer]'); if(gcc) gcc.onclick = () => { gClase = ''; pintarGastos(); };
     pane.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => {
       if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
       gasto({tipo:'borrar', fila: +b.dataset.gdel}, b);
