@@ -1159,6 +1159,7 @@ const TUU_API = 'https://integrations.payment.haulmer.com/Report/get-report';
 const TUU_CADA_MIN = 15;
 const TUU_DESDE = '2026-11-16'; // Isidora (15-11): Finanzas cuenta Tuu y Panel Storm desde el lunes 16 de noviembre; lo anterior está en la planilla 2026.
 const TUU_CATS = ['producto', 'renta', 'clase'];
+const TUU_DIAS_ANTES = 14; // una venta Tuu calza con una clase POS hasta 14 días después del pago
 async function tuuTablas(db) {
   await db.batch([
     db.prepare("CREATE TABLE IF NOT EXISTS tuu_ventas (id TEXT PRIMARY KEY, fecha TEXT NOT NULL, hora TEXT NOT NULL, monto INTEGER NOT NULL, comision INTEGER NOT NULL DEFAULT 0, tipo TEXT NOT NULL DEFAULT '', items TEXT NOT NULL DEFAULT '[]', estado TEXT NOT NULL DEFAULT '', categoria TEXT NOT NULL DEFAULT '', quien TEXT NOT NULL DEFAULT '')"),
@@ -1227,28 +1228,44 @@ async function tuuResumen(env, mes, forzar) {
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
     db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
-    db.prepare("SELECT ref, fecha, hora, total, nombre, medio, saldos FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).all().then(x => ({ results: x.results.flatMap(r => partesPago(r).filter(p => ['POS', 'Efectivo'].includes(p.medio)).map(p => ({ ref: r.ref + p.k, fecha: r.fecha, hora: r.hora, nombre: r.nombre + (p.k ? ' (diferencia)' : ''), total: p.monto, medio: p.medio }))) })),
+    db.prepare("SELECT ref, fecha, hora, total, nombre, medio, saldos FROM reservas WHERE fecha >= ? AND fecha <= ? AND estado = 'pagada'").bind(mes + '-01', sumarDias(mes + '-' + String(new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).getUTCDate()).padStart(2, '0'), TUU_DIAS_ANTES)).all().then(x => ({ results: x.results.flatMap(r => partesPago(r).filter(p => ['POS', 'Efectivo'].includes(p.medio)).map(p => ({ ref: r.ref + p.k, fecha: r.fecha, hora: r.hora, nombre: r.nombre + (p.k ? ' (diferencia)' : ''), total: p.monto, medio: p.medio }))) })),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
   ]);
   const r = { ok: true, mes, desde: TUU_DESDE, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
     comProductos: 0, comRentas: 0, comClases: 0, comSinNombre: 0, comAgenda: 0, efectivo: 0, tarjeta: 0, porRevisar: [], detalle: [],
     actualizado: est ? est.ms : 0, error: sync.ok ? '' : (est && est.error) || sync.error || '' };
-  const usadas = new Set();
   // Tarjeta en Tuu calza con clase anotada POS; efectivo en Tuu calza con clase anotada Efectivo (o POS).
-  const calzaAgenda = v => { const ef = tuuEfectivo(v.tipo); const a = agenda.find(x => !usadas.has(x.ref) && x.fecha === v.fecha && x.total === v.monto && (x.medio === 'POS' || (ef && x.medio === 'Efectivo'))); if (a) usadas.add(a.ref); return a; };
+  // Isidora (20-11): el pago en Tuu siempre es antes de la clase o el mismo día. Calza con una clase del mismo monto
+  // ese día o hasta TUU_DIAS_ANTES días después. Primero se juntan las del mismo día; después las demás, por la clase más cercana. Cada clase se usa una vez.
+  const usadas = new Set(), calces = new Map();
+  const vivas = ventas.filter(v => !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado));
+  const buscaClase = v => {
+    let items = []; try { items = JSON.parse(v.items || '[]'); } catch (_) {}
+    const conNombre = items.filter(i => i.nombre && i.precio);
+    return !conNombre.length || conNombre.every(i => tuuCatItem(i.nombre) === 'clase');
+  };
+  const sirve = (v, x) => { const ef = tuuEfectivo(v.tipo); return !usadas.has(x.ref) && x.total === v.monto && (x.medio === 'POS' || (ef && x.medio === 'Efectivo')); };
+  vivas.filter(buscaClase).forEach(v => { const a = agenda.find(x => x.fecha === v.fecha && sirve(v, x)); if (a) { usadas.add(a.ref); calces.set(v.id, a); } });
+  const tope = v => sumarDias(v.fecha, TUU_DIAS_ANTES);
+  vivas.filter(v => buscaClase(v) && !calces.has(v.id)).forEach(v => {
+    const a = agenda.filter(x => x.fecha > v.fecha && x.fecha <= tope(v) && sirve(v, x)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora))[0];
+    if (a) { usadas.add(a.ref); calces.set(v.id, a); }
+  });
+  const calzaAgenda = v => calces.get(v.id);
+  const nomClase = (v, a) => (a.fecha === v.fecha ? '' : a.fecha.slice(8, 10) + '-' + a.fecha.slice(5, 7) + ' ') + a.hora + ' · ' + a.nombre;
   const suma = (cat, monto, com) => {
     const k = { producto: 'productos', renta: 'rentas', clase: 'clases', revisar: 'sinNombre', agenda: 'agenda' }[cat];
     const c = { producto: 'comProductos', renta: 'comRentas', clase: 'comClases', revisar: 'comSinNombre', agenda: 'comAgenda' }[cat];
     r[k] += monto; r[c] += com;
   };
-  ventas.filter(v => !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado)).forEach(v => {
+  vivas.forEach(v => {
     r.ventas++; r.total += v.monto; if (tuuEfectivo(v.tipo)) r.efectivo += v.monto; else r.tarjeta += v.monto;
     let items = []; try { items = JSON.parse(v.items || '[]'); } catch (_) {}
     const base = { id: v.id, fecha: v.fecha, hora: v.hora, monto: v.monto, comision: v.comision, pago: tuuEfectivo(v.tipo) ? 'Efectivo' : 'Tarjeta', productos: items.map(i => (i.cantidad > 1 ? i.cantidad + ' × ' : '') + i.nombre).join(', ') };
     // Isidora (14-11): las clases siempre quedan anotadas en otro lado (Agenda, planilla). Las que pasan por Tuu no suman de nuevo: solo su comisión.
     // Isidora (15-11): la clase a veces se anota en el Panel después de cobrar en Tuu. El cruce se rehace cada vez que se lee,
     // así que una venta sin producto pasa sola a "clase ya anotada" cuando aparece la clase POS de ese día y monto (aunque antes se haya marcado renta o producto).
-    if (!items.some(i => i.nombre && i.precio)) { const a0 = calzaAgenda(v); if (a0) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: a0.hora + ' · ' + a0.nombre })); return; } }
+    if (!items.some(i => i.nombre && i.precio)) { const a0 = calzaAgenda(v); if (a0) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: nomClase(v, a0) })); return; } }
     if (v.categoria === 'clase') { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', aMano: true })); return; }
     if (TUU_CATS.includes(v.categoria)) { suma(v.categoria, v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: v.categoria, aMano: true })); return; }
     const conNombre = items.filter(i => i.nombre && i.precio);
@@ -1256,7 +1273,7 @@ async function tuuResumen(env, mes, forzar) {
     // Sin producto, o solo "clase": ¿es una clase de la Agenda pagada con POS?
     if (!conNombre.length || (cats.length === 1 && cats[0] === 'clase')) {
       const a = calzaAgenda(v);
-      if (a) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: a.hora + ' · ' + a.nombre })); return; }
+      if (a) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: nomClase(v, a) })); return; }
     }
     // Isidora (15-11): una venta sin producto es clase SOLO si calza con una clase POS del Panel (arriba). Si no calza, es renta o producto: queda "Por revisar".
     if (!conNombre.length) { suma('revisar', v.monto, v.comision); r.porRevisar.push(base); r.detalle.push(Object.assign(base, { categoria: 'revisar' })); return; }
