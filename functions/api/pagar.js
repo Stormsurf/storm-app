@@ -37,6 +37,8 @@ const REF_OK = /^(AA|AD|AV|ES|PRUEBA)-[\w-]+$/; // PRUEBA- solo en la vista prev
 
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 const fallo = m => json({ ok: false, error: m });
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => '&#' + ch.charCodeAt(0) + ';');
+const html = cuerpo => new Response('<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Storm · Pago de prueba</title><style>body{font-family:system-ui,sans-serif;max-width:420px;margin:40px auto;padding:0 20px;color:#0b2a3c}.b{display:inline-block;background:#0b2a3c;color:#fff;padding:14px 20px;border-radius:12px;text-decoration:none;border:0;font-size:16px}</style></head><body>' + cuerpo + '</body></html>', { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
 
 const MOTIVOS = {
   cc_rejected_insufficient_amount: 'La tarjeta no tiene saldo o cupo suficiente.',
@@ -172,15 +174,17 @@ export async function onRequest(context) {
     if (!tok || q.get('TBK_TOKEN')) return /\.storm-app\.pages\.dev$/.test(url.hostname) && q.get('TBK_TOKEN') ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(q.get('TBK_TOKEN')), 303) : vuelve('error');
     let c = await webpay(env, 'PUT', '/' + encodeURIComponent(tok));
     if (!c) c = await webpay(env, 'GET', '/' + encodeURIComponent(tok)); // si ya se había confirmado (recargó la página)
-    const o = c && c.session_id ? (await mp(env, '/v1/orders/' + encodeURIComponent(c.session_id))).body : null;
+    const p50 = !!(c && /^PRUEBA50-/.test(String(c.session_id || ''))); // producto de prueba $50 que pide Transbank
+    const o = c && c.session_id && !p50 ? (await mp(env, '/v1/orders/' + encodeURIComponent(c.session_id))).body : null;
     const ref = o && o.external_reference;
-    const ok = c && c.status === 'AUTHORIZED' && Number(c.response_code) === 0 && ref && REF_OK.test(ref) && Math.round(Number(c.amount)) >= Math.round(Number(o.total_amount));
+    const ok = c && c.status === 'AUTHORIZED' && Number(c.response_code) === 0 && (p50 ? Math.round(Number(c.amount)) === 50 : ref && REF_OK.test(ref) && Math.round(Number(c.amount)) >= Math.round(Number(o.total_amount)));
+    if (p50 && !ok) return html('<h1>Pago de prueba no aprobado</h1><p>Estado: ' + esc(c && c.status) + ' · código ' + esc(c && c.response_code) + '</p><p>Token: ' + esc(tok) + '</p><p><a href="/api/pagar?prueba50=1">Intentar de nuevo</a></p>');
     if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return /\.storm-app\.pages\.dev$/.test(url.hostname) ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(tok), 303) : vuelve('error'); }
-    await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok, ['VD', 'VP'].includes(c.payment_type_code) ? 'debito' : 'credito');
+    if (!p50) await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok, ['VD', 'VP'].includes(c.payment_type_code) ? 'debito' : 'credito');
     // Comprobante (lo pide Transbank): se muestra en /pagar y desde ahí sigue a la página de siempre
     const cp = new URLSearchParams({ o: oid, comprobante: '1', oc: c.buy_order || '', m: String(Math.round(Number(c.amount))), ac: c.authorization_code || '', d: (c.card_detail || {}).card_number || '',
       f: c.transaction_date || '', t: c.payment_type_code || '', n: String(c.installments_number || 0) });
-    if (/\.storm-app\.pages\.dev$/.test(url.hostname)) cp.set('tk', tok); // vista previa: token visible para la validación de Transbank
+    if (p50 || /\.storm-app\.pages\.dev$/.test(url.hostname)) cp.set('tk', tok); // vista previa: token visible para la validación de Transbank
     return Response.redirect(origen + '/pagar/?' + cp.toString(), 303);
   }
 
@@ -198,6 +202,13 @@ export async function onRequest(context) {
   }
 
   if (request.method === 'GET') {
+    // Producto de prueba de $50 (lo pide Transbank para pasar a producción): /api/pagar?prueba50=1
+    if (url.searchParams.get('prueba50') && webpayCfg(env)) {
+      if (!url.searchParams.get('ir')) return html('<h1>Producto de prueba Storm</h1><p>Pago de prueba de <b>$50</b> con Webpay (Transbank), para validar el medio de pago.</p><p><a class="b" href="/api/pagar?prueba50=1&ir=1">Pagar $50 con Webpay</a></p>');
+      const c = await webpay(env, 'POST', '', { buy_order: 'P' + Date.now().toString(36).toUpperCase(), session_id: 'PRUEBA50-' + Date.now(), amount: 50, return_url: origen + '/api/pagar?webpay=vuelta&o=' });
+      if (!c || !c.url || !c.token) return html('<h1>No pudimos conectar con Webpay</h1><p>Intenta de nuevo en un momento.</p>');
+      return html('<p>Te llevamos a Webpay…</p><form id="f" method="POST" action="' + esc(c.url) + '"><input type="hidden" name="token_ws" value="' + esc(c.token) + '"><button class="b">Continuar</button></form><script>document.getElementById("f").submit()</script>');
+    }
     // Vista previa: cobro de prueba de $1.000 para probar la tarjeta de verdad (después se devuelve en Mercado Pago)
     if (url.searchParams.get('prueba') && /\.storm-app\.pages\.dev$/.test(url.hostname)) {
       const ref = 'PRUEBA-' + Date.now(), vuelta = url.origin + '/pagar/?listo=1';
