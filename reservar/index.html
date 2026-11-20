@@ -98,6 +98,9 @@
 .rs-niv button b{display:block;font-size:1.55rem}.rs-niv button small{display:block;font-size:1.25rem;color:var(--mute);line-height:1.35;margin-top:2px}
 .rs-niv button.on{border-color:var(--ink);background:var(--ink);color:#fff}.rs-niv button.on small{color:rgba(255,255,255,.75)}
 .rs-wa{display:block;text-align:center;margin:18px 0 0;font-size:1.4rem;color:var(--mute)}
+.rs-lang{display:flex;justify-content:flex-end;gap:4px;margin:0 0 4px}
+.rs-lang button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;color:var(--ink)}
+.rs-lang button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -110,11 +113,23 @@
   const $ = s => document.querySelector(s);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clp = n => '$' + Math.round(n || 0).toLocaleString('es-CL');
+  // Idioma: el que eligió la persona (ES / EN) o, si no eligió, el de su celular
+  const q = new URLSearchParams(location.search);
+  let L = /^es\b/i.test(navigator.language || 'es') ? 'es' : 'en';
+  try{ L = localStorage.getItem('storm-lang') || L; }catch(_){}
+  if(/^(es|en)$/.test(q.get('l') || '')) L = q.get('l');
+  const t = (es, en) => L === 'en' ? en : es;
+  const pl = (n, es1, esN, en1, enN) => n + ' ' + (n === 1 ? t(es1, en1) : t(esN, enN));
   const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const fd = f => { const [y,m,d] = f.split('-').map(Number); const x = new Date(Date.UTC(y,m-1,d)); const t = DIAS[x.getUTCDay()] + ' ' + d + ' de ' + MESES[m-1]; return t[0].toUpperCase() + t.slice(1); };
-  const fin = h => { const [a,b] = h.split(':').map(Number), t = a*60 + b + (D ? D.duracion : 90); return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0'); };
-  async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.'); } if(!d.ok) throw new Error(d.error || 'Algo falló.'); return d; }
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const fd = f => { const [y,m,d] = f.split('-').map(Number); const x = new Date(Date.UTC(y,m-1,d)); if(L === 'en') return DAYS[x.getUTCDay()] + ', ' + MONTHS[m-1] + ' ' + d; const s = DIAS[x.getUTCDay()] + ' ' + d + ' de ' + MESES[m-1]; return s[0].toUpperCase() + s.slice(1); };
+  const fin = h => { const [a,b] = h.split(':').map(Number), m = a*60 + b + (D ? D.duracion : 90); return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0'); };
+  // Mensajes del servidor (vienen en español): en inglés se traducen los conocidos
+  const ERR_EN = [[/ocup/, 'That time was just taken. Please choose another one.'], [/ya no se puede/, 'That time can no longer be booked. Please choose another one.'], [/nombre/, 'Please write your name.'], [/tel[eé]fono/, 'Please check your phone number.'], [/correo/, 'Please check your email.'], [/condiciones/, 'To book, please accept the terms and conditions.'], [/WhatsApp/, 'Online booking is not available right now. Please message us on WhatsApp.'], [/Mercado Pago/, 'We could not connect to the payment system. Please try again in a moment.'], [/día y un horario/, 'Please choose a day and a time.'], [/conectarnos|internet/, 'We could not connect. Check your internet and try again.']];
+  const trErr = m => { if(L !== 'en') return m; const x = ERR_EN.find(e => e[0].test(m)); return x ? x[1] : 'Something went wrong. Please try again or message us on WhatsApp.'; };
+  async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error(trErr('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.')); } if(!d.ok){ const e = new Error(trErr(d.error || 'Algo falló.')); e.orig = d.error || ''; throw e; } return d; }
   const root = $('#rs');
   const S = { nivel: '', personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '' };
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
@@ -123,9 +138,13 @@
   // Igual que el servidor: los menores de 8 van de a 2 por instructor; si queda una sola persona suelta (niño o adulto), va con el último par
   const grupos = (p, k, c) => { c = c || 0; const g = []; const pr = Math.floor(k / 2); for(let i = 0; i < pr; i++) g.push({n: 2, k: 2, ninos: true}); let r = p - pr * 2, suelto = k - pr * 2; if(pr && r === 1){ g[g.length - 1].n += 1; g[g.length - 1].k += suelto; r = 0; } if(r > 0){ const n = Math.max(Math.ceil(r / 5), Math.ceil(c / 3), 1); for(let i = 0; i < n; i++) g.push({n: Math.floor(r / n) + (i < r % n ? 1 : 0), k: i === 0 ? suelto : 0, ninos: false}); } return g; };
   // Con niños se habla de adultos y niños ("Clase para 2 adultos y 1 niño"); sin niños, de personas
-  const quienes = g => { if(!S.menores) return g.n + (g.n===1?' persona':' personas'); const a = g.n - g.k, t = []; if(a) t.push(a + (a===1?' adulto':' adultos')); if(g.k) t.push(g.k + (g.k===1?' niño':' niños') + (a ? '' : ' menor' + (g.k===1?'':'es') + ' de 8')); return t.join(' y '); };
-  const totalDe = (p, k, c) => grupos(p, k, c).reduce((t, g) => t + precioDe(g.n), 0);
-  const waLink = t => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(t);
+  const quienes = g => { if(!S.menores) return pl(g.n, 'persona', 'personas', 'person', 'people'); const a = g.n - g.k, s = []; if(a) s.push(pl(a, 'adulto', 'adultos', 'adult', 'adults')); if(g.k) s.push(pl(g.k, 'niño', 'niños', 'child', 'children') + (a ? '' : t(' menor' + (g.k===1?'':'es') + ' de 8', ' under 8'))); return s.join(t(' y ', ' and ')); };
+  const totalDe = (p, k, c) => grupos(p, k, c).reduce((s, g) => s + precioDe(g.n), 0);
+  const waLink = s => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(s);
+  const idioma = () => `<div class='rs-lang' role='group' aria-label='Idioma / Language'><button data-l='es' class='${L==='es'?'on':''}'>ES</button><button data-l='en' class='${L==='en'?'on':''}'>EN</button></div>`;
+  const bindIdioma = fn => root.querySelectorAll('[data-l]').forEach(b => b.onclick = () => { if(L === b.dataset.l) return; L = b.dataset.l; try{ localStorage.setItem('storm-lang', L); localStorage.setItem('storm-ficha-lang', L); }catch(_){} document.documentElement.lang = L === 'en' ? 'en' : 'es-CL'; document.title = t('Reserva tu clase de surf · Storm', 'Book your surf lesson · Storm'); if(errCarga) errCarga = trErr(errCarga); fn(); });
+  document.documentElement.lang = L === 'en' ? 'en' : 'es-CL';
+  document.title = t('Reserva tu clase de surf · Storm', 'Book your surf lesson · Storm');
 
   async function cargar(){
     const id = ++pidiendo; cargando = true; errCarga = ''; pintar();
@@ -137,18 +156,45 @@
     pintar();
   }
 
+  const TERMINOS = {
+    es: [
+      ['1. La actividad.', 'El surf es un deporte al aire libre con riesgos propios que no se pueden eliminar del todo, aun con supervisión profesional. Incluye teoría en la arena, técnica, práctica supervisada en el mar y uso de tabla, leash y traje.'],
+      ['2. Riesgos.', 'Caídas, golpes con la tabla, choques con personas u objetos, corrientes, olas fuertes o cambios de clima, cansancio, cortes, moretones, hipotermia y lesiones leves o graves, aun con instructores presentes.'],
+      ['3. Participación voluntaria.', 'Participo por mi voluntad, entiendo los riesgos, asumo mi responsabilidad y sigo las instrucciones. No seguir las indicaciones de seguridad puede significar la suspensión inmediata.'],
+      ['4. Salud.', 'Declaro estar apto para actividades en el mar y aviso antes enfermedades, lesiones recientes, condiciones médicas o embarazo. Storm no responde por condiciones no informadas.'],
+      ['5. Equipo y seguridad.', 'Uso el equipo correctamente, sigo las reglas del instructor y actúo con responsabilidad.'],
+      ['6. Menores de edad.', 'En menores de 18, el padre, madre o tutor acepta esta declaración, autoriza la participación y es responsable de dejarlo y retirarlo.'],
+      ['7. Objetos personales.', 'Storm no responde por pérdida, robo o daño de objetos personales. Te recomendamos no traer cosas de valor.'],
+      ['8. Cambios o suspensión.', 'Storm puede cambiar, suspender o reagendar la clase por marejadas, cambios del mar, mal tiempo u otro riesgo natural. Por parte del cliente, la reserva no admite cambios de día ni de hora, salvo casos excepcionales que Storm evalúa.'],
+      ['9. Uso de imagen.', 'Storm puede tomar fotos o videos con fines educativos o de difusión. Si no quieres aparecer, avísanos antes.'],
+      ['10. Aceptación.', 'Al reservar y marcar la casilla, declaro haber leído esta declaración, entender y aceptar los riesgos y participar bajo mi responsabilidad (consentimiento informado, Decreto Supremo Nº19, turismo aventura).']
+    ],
+    en: [
+      ['1. The activity.', 'Surfing is an outdoor sport with its own risks that cannot be completely eliminated, even with professional supervision. It includes theory on the sand, technique, supervised practice in the ocean and the use of a board, leash and wetsuit.'],
+      ['2. Risks.', 'Falls, being hit by the board, collisions with people or objects, currents, strong waves or changes in the weather, fatigue, cuts, bruises, hypothermia and minor or serious injuries, even with instructors present.'],
+      ['3. Voluntary participation.', 'I take part of my own free will, I understand the risks, I take responsibility and I follow the instructions. Not following the safety instructions may result in immediate suspension.'],
+      ['4. Health.', 'I declare that I am fit for activities in the ocean and I report beforehand any illness, recent injury, medical condition or pregnancy. Storm is not responsible for conditions that were not reported.'],
+      ['5. Equipment and safety.', 'I use the equipment correctly, follow the instructor’s rules and act responsibly.'],
+      ['6. Minors.', 'For participants under 18, the parent or guardian accepts this declaration, authorizes their participation and is responsible for dropping them off and picking them up.'],
+      ['7. Personal belongings.', 'Storm is not responsible for the loss, theft or damage of personal belongings. We recommend not bringing valuables.'],
+      ['8. Changes or cancellation.', 'Storm may change, cancel or reschedule the lesson due to swells, ocean conditions, bad weather or any other natural risk. On the customer’s side, the booking cannot be changed to another day or time, except in exceptional cases evaluated by Storm.'],
+      ['9. Use of images.', 'Storm may take photos or videos for educational or promotional purposes. If you do not want to appear, let us know beforehand.'],
+      ['10. Acceptance.', 'By booking and ticking the box, I declare that I have read this declaration, understand and accept the risks and take part under my own responsibility (informed consent, Chilean Supreme Decree No. 19, adventure tourism).']
+    ]
+  };
+
   function calendario(){
     if(cargando && !D) return `<div class='rs-skel'></div>`;
-    if(errCarga && !D) return `<p class='rs-err'>${esc(errCarga)}</p><button class='rs-btn2' id='rs-retry'>Intentar de nuevo</button>`;
+    if(errCarga && !D) return `<p class='rs-err'>${esc(errCarga)}</p><button class='rs-btn2' id='rs-retry'>${t('Intentar de nuevo', 'Try again')}</button>`;
     const dias = Object.keys(D.dias).sort();
-    if(!dias.length) return `<p class='rs-empty'>No quedan horarios disponibles en los próximos días. <a href='${waLink('Hola Storm, quiero reservar una clase de surf')}' target='_blank' rel='noopener'>Escríbenos por WhatsApp</a>.</p>`;
+    if(!dias.length) return `<p class='rs-empty'>${t('No quedan horarios disponibles en los próximos días.', 'There are no times available in the coming days.')} <a href='${waLink(t('Hola Storm, quiero reservar una clase de surf', 'Hi Storm, I would like to book a surf lesson'))}' target='_blank' rel='noopener'>${t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</a>.</p>`;
     const primero = D.hoy.slice(0,7), ultimo = D.hasta.slice(0,7);
     if(!S.mes) S.mes = dias[0].slice(0,7);
     const [y, m] = S.mes.split('-').map(Number);
     const ini = new Date(Date.UTC(y, m-1, 1)).getUTCDay(), largo = new Date(Date.UTC(y, m, 0)).getUTCDate();
     const off = (ini + 6) % 7; // semana parte el lunes
-    let h = `<div class='rs-cal-h'><button id='rs-prev' aria-label='Mes anterior'${S.mes <= primero ? ' disabled' : ''}>‹</button><b>${MESES[m-1]} ${y}</b><button id='rs-next' aria-label='Mes siguiente'${S.mes >= ultimo ? ' disabled' : ''}>›</button></div><div class='rs-cal'>`;
-    h += ['L','M','M','J','V','S','D'].map(x => `<span class='wd'>${x}</span>`).join('');
+    let h = `<div class='rs-cal-h'><button id='rs-prev' aria-label='${t('Mes anterior', 'Previous month')}'${S.mes <= primero ? ' disabled' : ''}>‹</button><b>${t(MESES[m-1], MONTHS[m-1])} ${y}</b><button id='rs-next' aria-label='${t('Mes siguiente', 'Next month')}'${S.mes >= ultimo ? ' disabled' : ''}>›</button></div><div class='rs-cal'>`;
+    h += (L === 'en' ? ['M','T','W','T','F','S','S'] : ['L','M','M','J','V','S','D']).map(x => `<span class='wd'>${x}</span>`).join('');
     for(let i = 0; i < off; i++) h += '<span></span>';
     for(let d = 1; d <= largo; d++){
       const f = S.mes + '-' + String(d).padStart(2,'0'), si = !!D.dias[f];
@@ -157,59 +203,52 @@
     h += '</div>';
     if(S.fecha){
       const horas = D.dias[S.fecha] || [];
-      h += `<p class='rs-dia'>${fd(S.fecha)}</p>` + (horas.length ? `<div class='rs-horas'>${horas.map(x => `<button data-h='${x}' class='${S.hora===x?'on':''}'>${x}<small>a ${fin(x)}</small></button>`).join('')}</div>` : `<p class='rs-empty'>Ese día ya no quedan horarios.</p>`);
-    } else h += `<p class='rs-note'>Los días en azul tienen horarios libres. Toca uno para ver las horas.</p>`;
+      h += `<p class='rs-dia'>${fd(S.fecha)}</p>` + (horas.length ? `<div class='rs-horas'>${horas.map(x => `<button data-h='${x}' class='${S.hora===x?'on':''}'>${x}<small>${t('a', 'to')} ${fin(x)}</small></button>`).join('')}</div>` : `<p class='rs-empty'>${t('Ese día ya no quedan horarios.', 'There are no times left that day.')}</p>`);
+    } else h += `<p class='rs-note'>${t('Los días en azul tienen horarios libres. Toca uno para ver las horas.', 'Days in blue have free times. Tap one to see the times.')}</p>`;
     return h;
   }
 
   function pintar(){
     const p = S.personas, G = grupos(p, S.menores, S.ninos), precio = totalDe(p, S.menores, S.ninos), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
     const paso = (txt, sub, val, attr, max) => `<div class='rs-kids'><p>${txt}<small>${sub}</small></p>
-      <div class='rs-num'><button ${attr}='-1' aria-label='Menos'${val<=0?' disabled':''}>−</button><b>${val}</b><button ${attr}='1' aria-label='Más'${val>=max?' disabled':''}>+</button></div></div>`;
+      <div class='rs-num'><button ${attr}='-1' aria-label='${t('Menos', 'Fewer')}'${val<=0?' disabled':''}>−</button><b>${val}</b><button ${attr}='1' aria-label='${t('Más', 'More')}'${val>=max?' disabled':''}>+</button></div></div>`;
     const inter = S.nivel === 'intermedio';
-    const kids = p && !inter ? paso('¿Cuántos son menores de 8 años?', 'Según cuántos niños vengan, vemos cuántos instructores necesitan para que estén bien acompañados.', S.menores, 'data-k', p) + `<p class='rs-nota5'>* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).</p>` : '';
+    const kids = p && !inter ? paso(t('¿Cuántos son menores de 8 años?', 'How many are under 8 years old?'), t('Según cuántos niños vengan, vemos cuántos instructores necesitan para que estén bien acompañados.', 'Depending on how many children come, we work out how many instructors they need so they are well looked after.'), S.menores, 'data-k', p) + `<p class='rs-nota5'>${t('* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).', '* Children under 5 must take a private lesson (1 person).')}</p>` : '';
     const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
-    root.innerHTML = `
-      <div class='rs-hero'><h1>Reserva tu clase de surf</h1><p>Elige cuántos son, el día y la hora. Pagas en línea y listo.</p>
-        <div class='rs-inc'><span>1 hora y media</span><span>Tabla y traje incluidos</span><span>Todos los niveles</span><span>Instructor certificado</span></div></div>
-      <div class='rs-card'><div class='rs-step'><i>1</i><h2>¿Qué clase buscas?</h2></div>
-        <div class='rs-niv'><button data-niv='' class='${inter?'':'on'}'><b>Nivel Principiante</b><small>Desde cero o si estás empezando</small></button><button data-niv='intermedio' class='${inter?'on':''}'><b>Nivel Intermedio</b><small>Ya tomas olas solo</small></button></div>
-        <div class='rs-step'><h2>¿Cuántas personas son?</h2></div>
-        <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(p===n ? totalDe(n, S.menores, S.ninos) : precioDe(n)) : (n===1?'persona':'personas')}</small></button>`).join('')}</div>
-        <a class='rs-more' target='_blank' rel='noopener' href='${waLink('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas')}'>¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp</a>
+    root.innerHTML = idioma() + `
+      <div class='rs-hero'><h1>${t('Reserva tu clase de surf', 'Book your surf lesson')}</h1><p>${t('Elige cuántos son, el día y la hora. Pagas en línea y listo.', 'Choose how many you are, the day and the time. Pay online and you are all set.')}</p>
+        <div class='rs-inc'><span>${t('1 hora y media', '1 hour 30 minutes')}</span><span>${t('Tabla y traje incluidos', 'Board and wetsuit included')}</span><span>${t('Todos los niveles', 'All levels')}</span><span>${t('Instructor certificado', 'Certified instructor')}</span></div></div>
+      <div class='rs-card'><div class='rs-step'><i>1</i><h2>${t('¿Qué clase buscas?', 'Which lesson are you looking for?')}</h2></div>
+        <div class='rs-niv'><button data-niv='' class='${inter?'':'on'}'><b>${t('Nivel Principiante', 'Beginner')}</b><small>${t('Desde cero o si estás empezando', 'Starting from zero or just getting started')}</small></button><button data-niv='intermedio' class='${inter?'on':''}'><b>${t('Nivel Intermedio', 'Intermediate')}</b><small>${t('Ya tomas olas solo', 'You already catch waves on your own')}</small></button></div>
+        <div class='rs-step'><h2>${t('¿Cuántas personas son?', 'How many people?')}</h2></div>
+        <div class='rs-ppl'>${[1,2,3,4,5].map(n => `<button data-p='${n}' class='${p===n?'on':''}'><b>${n}</b><small>${D ? clp(p===n ? totalDe(n, S.menores, S.ninos) : precioDe(n)) : (n===1?t('persona', 'person'):t('personas', 'people'))}</small></button>`).join('')}</div>
+        <a class='rs-more' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, queremos una clase de surf para un grupo de más de 5 personas', 'Hi Storm, we would like a surf lesson for a group of more than 5 people'))}'>${t('¿Son 6 o más, una empresa o un grupo grande? Escríbenos por WhatsApp', '6 or more, a company or a large group? Message us on WhatsApp')}</a>
         ${kids}
-        ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>Clase para ${quienes(g)}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? 'Total · ' + G.length + ' instructores' : 'Clase para ' + (G[0] ? quienes(G[0]) : p + ' persona' + (p===1?'':'s'))}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
+        ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>${t('Clase para', 'Lesson for')} ${quienes(g)}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? t('Total · ' + G.length + ' instructores', 'Total · ' + G.length + ' instructors') : t('Clase para', 'Lesson for') + ' ' + (G[0] ? quienes(G[0]) : pl(p, 'persona', 'personas', 'person', 'people'))}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
+        ${p && L === 'en' ? `<p class='rs-note'>${t('', 'Prices in Chilean pesos (CLP).')}</p>` : ''}
       </div>
-      <div class='rs-card${listo1?'':' off'}' id='rs-paso2'><div class='rs-step'><i>2</i><h2>Elige el día y la hora</h2></div>${listo1 ? calendario() : `<p class='rs-note'>Primero elige cuántas personas son.</p>`}</div>
-      <div class='rs-card${listo2?'':' off'}' id='rs-paso3'><div class='rs-step'><i>3</i><h2>Tus datos</h2></div>
+      <div class='rs-card${listo1?'':' off'}' id='rs-paso2'><div class='rs-step'><i>2</i><h2>${t('Elige el día y la hora', 'Choose the day and time')}</h2></div>${listo1 ? calendario() : `<p class='rs-note'>${t('Primero elige cuántas personas son.', 'First choose how many people.')}</p>`}</div>
+      <div class='rs-card${listo2?'':' off'}' id='rs-paso3'><div class='rs-step'><i>3</i><h2>${t('Tus datos', 'Your details')}</h2></div>
         <div class='rs-f'>
-          <label for='rs-n'>Nombre y apellido</label><input id='rs-n' name='nombre' autocomplete='name' required>
-          <label for='rs-t'>Teléfono (WhatsApp)</label><input id='rs-t' name='telefono' type='tel' inputmode='tel' autocomplete='tel' placeholder='+56 9 …' required>
-          <label for='rs-c'>Correo (te llega el comprobante)</label><input id='rs-c' name='correo' type='email' inputmode='email' autocomplete='email' required>
-          <label for='rs-x'>¿Algo que debamos saber? <span style='font-weight:400;color:var(--mute)'>(opcional)</span></label><textarea id='rs-x' name='comentario' placeholder='Edades, si ya surfearon antes, alguna lesión…'></textarea>
-          <p class='rs-mar'>🌊 El surf es un deporte en el mar. Si el mar no está apto, te avisamos por WhatsApp para cambiar la hora.</p>
-          <details class='rs-ter'><summary>Leer términos y condiciones y Declaración de Aceptación de Riesgos</summary>
-            <p><b>1. La actividad.</b> El surf es un deporte al aire libre con riesgos propios que no se pueden eliminar del todo, aun con supervisión profesional. Incluye teoría en la arena, técnica, práctica supervisada en el mar y uso de tabla, leash y traje.</p>
-            <p><b>2. Riesgos.</b> Caídas, golpes con la tabla, choques con personas u objetos, corrientes, olas fuertes o cambios de clima, cansancio, cortes, moretones, hipotermia y lesiones leves o graves, aun con instructores presentes.</p>
-            <p><b>3. Participación voluntaria.</b> Participo por mi voluntad, entiendo los riesgos, asumo mi responsabilidad y sigo las instrucciones. No seguir las indicaciones de seguridad puede significar la suspensión inmediata.</p>
-            <p><b>4. Salud.</b> Declaro estar apto para actividades en el mar y aviso antes enfermedades, lesiones recientes, condiciones médicas o embarazo. Storm no responde por condiciones no informadas.</p>
-            <p><b>5. Equipo y seguridad.</b> Uso el equipo correctamente, sigo las reglas del instructor y actúo con responsabilidad.</p>
-            <p><b>6. Menores de edad.</b> En menores de 18, el padre, madre o tutor acepta esta declaración, autoriza la participación y es responsable de dejarlo y retirarlo.</p>
-            <p><b>7. Objetos personales.</b> Storm no responde por pérdida, robo o daño de objetos personales. Te recomendamos no traer cosas de valor.</p>
-            <p><b>8. Cambios o suspensión.</b> Storm puede cambiar, suspender o reagendar la clase por marejadas, cambios del mar, mal tiempo u otro riesgo natural. Por parte del cliente, la reserva no admite cambios de día ni de hora, salvo casos excepcionales que Storm evalúa.</p>
-            <p><b>9. Uso de imagen.</b> Storm puede tomar fotos o videos con fines educativos o de difusión. Si no quieres aparecer, avísanos antes.</p>
-            <p><b>10. Aceptación.</b> Al reservar y marcar la casilla, declaro haber leído esta declaración, entender y aceptar los riesgos y participar bajo mi responsabilidad (consentimiento informado, Decreto Supremo Nº19, turismo aventura).</p>
-            <p><a href='https://1139c283-d4d5-4df2-8ae3-00a213830c97.filesusr.com/ugd/983b34_40bbb7272f9e4feea7e2ccf77edd140d.pdf' target='_blank' rel='noopener'>Ver el documento completo (PDF)</a></p>
+          <label for='rs-n'>${t('Nombre y apellido', 'Full name')}</label><input id='rs-n' name='nombre' autocomplete='name' required>
+          <label for='rs-t'>${t('Teléfono (WhatsApp)', 'Phone (WhatsApp)')}</label><input id='rs-t' name='telefono' type='tel' inputmode='tel' autocomplete='tel' placeholder='${t('+56 9 …', '+ country code …')}' required>
+          <label for='rs-c'>${t('Correo (te llega el comprobante)', 'Email (we send your receipt here)')}</label><input id='rs-c' name='correo' type='email' inputmode='email' autocomplete='email' required>
+          <label for='rs-x'>${t('¿Algo que debamos saber?', 'Anything we should know?')} <span style='font-weight:400;color:var(--mute)'>(${t('opcional', 'optional')})</span></label><textarea id='rs-x' name='comentario' placeholder='${t('Edades, si ya surfearon antes, alguna lesión…', 'Ages, if you have surfed before, any injuries…')}'></textarea>
+          <p class='rs-mar'>🌊 ${t('El surf es un deporte en el mar. Si el mar no está apto, te avisamos por WhatsApp para cambiar la hora.', 'Surfing is an ocean sport. If the ocean is not safe, we will message you on WhatsApp to change the time.')}</p>
+          <details class='rs-ter'><summary>${t('Leer términos y condiciones y Declaración de Aceptación de Riesgos', 'Read the terms and conditions and the Risk Acceptance Declaration')}</summary>
+            ${TERMINOS[L].map(x => `<p><b>${x[0]}</b> ${x[1]}</p>`).join('')}
+            <p><a href='https://1139c283-d4d5-4df2-8ae3-00a213830c97.filesusr.com/ugd/983b34_40bbb7272f9e4feea7e2ccf77edd140d.pdf' target='_blank' rel='noopener'>${t('Ver el documento completo (PDF)', 'See the full document (PDF, in Spanish)')}</a></p>
           </details>
-          <label class='rs-chk'><input type='checkbox' name='acepta'> Acepto los términos y condiciones y la Declaración de Conocimiento y Aceptación de Riesgos.</label>
+          <label class='rs-chk'><input type='checkbox' name='acepta'> ${t('Acepto los términos y condiciones y la Declaración de Conocimiento y Aceptación de Riesgos.', 'I accept the terms and conditions and the Risk Awareness and Acceptance Declaration.')}</label>
         </div>
-        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, de ${S.hora} a ${fin(S.hora)}<br>${inter ? 'Clase intermedia · ' : ''}${p} persona${p===1?'':'s'}${S.menores ? ' · ' + S.menores + ' menor' + (S.menores===1?'':'es') + ' de 8' : ''}${S.ninos ? ' · ' + S.ninos + ' de 7 a 11' : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
-        <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? 'Pagar ' + clp(precio) : 'Pagar'}</button>
+        ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, ${t('de', 'from')} ${S.hora} ${t('a', 'to')} ${fin(S.hora)}<br>${inter ? t('Clase intermedia · ', 'Intermediate lesson · ') : ''}${pl(p, 'persona', 'personas', 'person', 'people')}${S.menores ? ' · ' + S.menores + t(' menor' + (S.menores===1?'':'es') + ' de 8', ' under 8') : ''}${S.ninos ? ' · ' + S.ninos + t(' de 7 a 11', ' aged 7 to 11') : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
+        <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? t('Pagar ', 'Pay ') + clp(precio) : t('Pagar', 'Pay')}</button>
         <p class='rs-err' id='rs-err' hidden></p>
-        <p class='rs-mp'>🔒 Pago seguro con Mercado Pago</p>
+        <p class='rs-mp'>🔒 ${t('Pago seguro en línea', 'Secure online payment')}</p>
       </div>
-      <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tengo una pregunta sobre las clases de surf')}'>¿Dudas? Escríbenos por WhatsApp</a>`;
+      <a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, tengo una pregunta sobre las clases de surf', 'Hi Storm, I have a question about the surf lessons'))}'>${t('¿Dudas? Escríbenos por WhatsApp', 'Questions? Message us on WhatsApp')}</a>`;
     root.querySelectorAll('.rs-f [name]').forEach(i => { if(i.name in guardado){ if(i.type === 'checkbox') i.checked = guardado[i.name]; else i.value = guardado[i.name]; } });
+    bindIdioma(pintar);
     root.querySelectorAll('[data-niv]').forEach(b => b.onclick = () => { if(S.nivel === b.dataset.niv) return; S.nivel = b.dataset.niv; S.menores = 0; S.ninos = 0; S.hora = ''; cargar(); });
     root.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const antes = necesita(); S.personas = +b.dataset.p; S.menores = Math.min(S.menores, S.personas); S.ninos = Math.min(S.ninos, S.personas - S.menores); if(!D || necesita() !== antes) cargar(); else pintar(); });
     root.querySelectorAll('[data-kn]').forEach(b => b.onclick = () => { const antes = necesita(); S.ninos = Math.max(0, Math.min(S.personas - S.menores, S.ninos + +b.dataset.kn)); if(necesita() !== antes) cargar(); else pintar(); });
@@ -222,55 +261,60 @@
     const go = $('#rs-go');
     if(go) go.onclick = async () => {
       const f = {}; root.querySelectorAll('.rs-f [name]').forEach(i => f[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
-      const e = $('#rs-err'), msg = t => { e.hidden = false; e.textContent = t; };
-      if(f.nombre.length < 2) return msg('Escribe tu nombre.');
-      if(f.telefono.replace(/\D/g,'').length < 8) return msg('Revisa tu teléfono.');
-      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.correo)) return msg('Revisa tu correo.');
-      if(!f.acepta) return msg('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.');
-      go.disabled = true; go.textContent = 'Conectando con Mercado Pago…'; e.hidden = true;
+      const e = $('#rs-err'), msg = s => { e.hidden = false; e.textContent = s; };
+      if(f.nombre.length < 2) return msg(t('Escribe tu nombre.', 'Please write your name.'));
+      if(f.telefono.replace(/\D/g,'').length < 8) return msg(t('Revisa tu teléfono.', 'Please check your phone number.'));
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.correo)) return msg(t('Revisa tu correo.', 'Please check your email.'));
+      if(!f.acepta) return msg(t('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.', 'To book, please accept the terms and conditions and the Risk Acceptance Declaration.'));
+      go.disabled = true; go.textContent = t('Conectando con el pago…', 'Connecting to payment…'); e.hidden = true;
       try{
-        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora}, f));
+        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora, idioma: L}, f));
         try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
-        location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] : u; })(r.url);
-      }catch(x){ go.disabled = false; go.textContent = 'Pagar ' + clp(totalDe(S.personas, S.menores, S.ninos)); msg(x.message); if(/ocup|ya no/.test(x.message)) { S.hora = ''; cargar(); } }
+        location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] + '&l=' + L : u; })(r.url);
+      }catch(x){ go.disabled = false; go.textContent = t('Pagar ', 'Pay ') + clp(totalDe(S.personas, S.menores, S.ninos)); msg(x.message); if(/ocup|ya no/.test(x.orig || '')) { S.hora = ''; cargar(); } }
     };
   }
 
-  // Vuelta desde Mercado Pago
+  // Vuelta desde el pago
   async function vuelta(ref, pago){
-    root.innerHTML = `<div class='rs-card rs-done'><div class='rs-skel' style='height:120px'></div><p>Revisando tu pago…</p></div>`;
+    root.innerHTML = `<div class='rs-card rs-done'><div class='rs-skel' style='height:120px'></div><p>${t('Revisando tu pago…', 'Checking your payment…')}</p></div>`;
     let r = null;
     for(let i = 0; i < 20; i++){
       try{ r = await post({accion:'estado', ref}); }catch(x){ r = {error: x.message}; }
       if(r.estado === 'pagada' || r.estado === 'revisar' || pago === 'error' || r.error) break;
       await new Promise(ok => setTimeout(ok, 3000));
     }
+    const pintarVuelta = () => {
     if(r && (r.estado === 'pagada' || r.estado === 'revisar')){
       const ini = r.fecha.replace(/-/g,'') + 'T' + r.hora.replace(':','') + '00', fn = r.fecha.replace(/-/g,'') + 'T' + fin(r.hora).replace(':','') + '00';
-      const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Clase de surf Storm') + '&dates=' + ini + '/' + fn + '&ctz=America/Santiago&location=' + encodeURIComponent('Playa de Matanzas') + '&details=' + encodeURIComponent('Llega 10 minutos antes. Trae traje de baño, toalla y bloqueador.');
-      root.innerHTML = `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>¡Clase reservada!</h2>
-        <p class='big'>${esc(fd(r.fecha))}, ${esc(r.hora)} hrs</p>
-        <p>${r.personas} persona${r.personas===1?'':'s'} · Playa de Matanzas<br>Te enviamos el comprobante a ${esc(r.correo)}.</p>
-        <div class='rs-traer'><b>🏄 ¿Qué debes traer?</b>
-          <ul><li>Traje de baño (para usar debajo del wetsuit)</li><li>Toalla</li><li>Bloqueador solar</li><li>Botella con agua</li><li>Ropa cómoda para después de la clase</li></ul>
-          <p>Nosotros te entregamos todo el equipamiento necesario 💙 Llega 10 minutos antes.</p></div>
-        <a class='rs-btn2' href='https://maps.app.goo.gl/xcFSTmgfwwKACqfb7' target='_blank' rel='noopener'>📍 Ver ubicación en el mapa</a>
-        ${r.ficha ? `<div style='margin:18px 0 4px;padding:16px;border-radius:16px;background:#FFF6DA;text-align:left'><b style='font-size:1.6rem'>Falta un paso: la ficha de cada participante</b>
-          <p style='margin:6px 0 0;color:#5c5b58'>Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona. Te dejamos el link también en el correo.</p>
-          <a class='rs-go' style='text-decoration:none;text-align:center;margin-top:12px' href='${esc(r.ficha)}'>Llenar la ficha ahora</a></div>` : ''}
-        <a class='rs-btn2' href='${gcal}' target='_blank' rel='noopener'>Agregar a mi calendario</a></div>
-        <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, reservé una clase (' + ref + ')')}'>¿Dudas? Escríbenos por WhatsApp</a>`;
+      const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(t('Clase de surf Storm', 'Storm surf lesson')) + '&dates=' + ini + '/' + fn + '&ctz=America/Santiago&location=' + encodeURIComponent('Playa de Matanzas') + '&details=' + encodeURIComponent(t('Llega 10 minutos antes. Trae traje de baño, toalla y bloqueador.', 'Arrive 10 minutes early. Bring a swimsuit, towel and sunscreen.'));
+      const ficha = r.ficha ? r.ficha + (L === 'en' && !/[?&]l=/.test(r.ficha) ? '&l=en' : '') : '';
+      root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>${t('¡Clase reservada!', 'Lesson booked!')}</h2>
+        <p class='big'>${esc(fd(r.fecha))}, ${esc(r.hora)} ${t('hrs', '')}</p>
+        <p>${pl(r.personas, 'persona', 'personas', 'person', 'people')} · Playa de Matanzas<br>${t('Te enviamos el comprobante a', 'We sent the receipt to')} ${esc(r.correo)}.</p>
+        <div class='rs-traer'><b>🏄 ${t('¿Qué debes traer?', 'What to bring')}</b>
+          <ul>${(L === 'en' ? ['Swimsuit (to wear under the wetsuit)', 'Towel', 'Sunscreen', 'Water bottle', 'Comfortable clothes for after the lesson'] : ['Traje de baño (para usar debajo del wetsuit)', 'Toalla', 'Bloqueador solar', 'Botella con agua', 'Ropa cómoda para después de la clase']).map(x => `<li>${x}</li>`).join('')}</ul>
+          <p>${t('Nosotros te entregamos todo el equipamiento necesario 💙 Llega 10 minutos antes.', 'We provide all the equipment you need 💙 Arrive 10 minutes early.')}</p></div>
+        <a class='rs-btn2' href='https://maps.app.goo.gl/xcFSTmgfwwKACqfb7' target='_blank' rel='noopener'>📍 ${t('Ver ubicación en el mapa', 'See location on the map')}</a>
+        ${ficha ? `<div style='margin:18px 0 4px;padding:16px;border-radius:16px;background:#FFF6DA;text-align:left'><b style='font-size:1.6rem'>${t('Falta un paso: la ficha de cada participante', 'One more step: a form for each participant')}</b>
+          <p style='margin:6px 0 0;color:#5c5b58'>${t('Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona. Te dejamos el link también en el correo.', 'It is required to go into the ocean (Sernatur, the Chilean tourism authority). It takes 2 minutes per person. The link is also in your email.')}</p>
+          <a class='rs-go' style='text-decoration:none;text-align:center;margin-top:12px' href='${esc(ficha)}'>${t('Llenar la ficha ahora', 'Fill in the form now')}</a></div>` : ''}
+        <a class='rs-btn2' href='${gcal}' target='_blank' rel='noopener'>${t('Agregar a mi calendario', 'Add to my calendar')}</a></div>
+        <a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, reservé una clase', 'Hi Storm, I booked a lesson') + ' (' + ref + ')')}'>${t('¿Dudas? Escríbenos por WhatsApp', 'Questions? Message us on WhatsApp')}</a>`;
+      bindIdioma(pintarVuelta);
       return;
     }
     const pendiente = r && r.estado === 'pendiente' && pago !== 'error';
-    root.innerHTML = `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>${pendiente ? '…' : '!'}</div>
-      <h2>${pendiente ? 'Tu pago está en revisión' : 'El pago no se completó'}</h2>
-      <p>${pendiente ? 'Apenas Mercado Pago lo confirme te llega el comprobante por correo. Guardamos tu horario por unos minutos.' : 'No se hizo ningún cobro. Puedes intentarlo de nuevo.'}</p>
-      <a class='rs-btn2' href='/reservar/'>${pendiente ? 'Volver' : 'Intentar de nuevo'}</a></div>
-      <a class='rs-wa' target='_blank' rel='noopener' href='${waLink('Hola Storm, tuve un problema al pagar mi clase (' + ref + ')')}'>¿Problemas? Escríbenos por WhatsApp</a>`;
+    root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>${pendiente ? '…' : '!'}</div>
+      <h2>${pendiente ? t('Tu pago está en revisión', 'Your payment is being processed') : t('El pago no se completó', 'The payment was not completed')}</h2>
+      <p>${pendiente ? t('Apenas se confirme el pago te llega el comprobante por correo. Guardamos tu horario por unos minutos.', 'As soon as the payment is confirmed you will get the receipt by email. We are holding your time for a few minutes.') : t('No se hizo ningún cobro. Puedes intentarlo de nuevo.', 'You were not charged. You can try again.')}</p>
+      <a class='rs-btn2' href='/reservar/'>${pendiente ? t('Volver', 'Back') : t('Intentar de nuevo', 'Try again')}</a></div>
+      <a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, tuve un problema al pagar mi clase', 'Hi Storm, I had a problem paying for my lesson') + ' (' + ref + ')')}'>${t('¿Problemas? Escríbenos por WhatsApp', 'Problems? Message us on WhatsApp')}</a>`;
+    bindIdioma(pintarVuelta);
+    };
+    pintarVuelta();
   }
 
-  const q = new URLSearchParams(location.search);
   if(q.get('ref')) vuelta(q.get('ref'), q.get('pago'));
   else { pintar(); cargar(); }
 })();

@@ -90,6 +90,13 @@ const sumarDias = (f, n) => new Date(diaUTC(f) + n * 86400000).toISOString().sli
 /** minutos "de reloj de Chile" desde 1970: sirven para comparar fechas y horas locales */
 const minLocal = (f, h) => diaUTC(f) / 60000 + aMin(h);
 const fechaLarga = f => { const d = new Date(diaUTC(f)); return DIAS[d.getUTCDay()] + ' ' + d.getUTCDate() + ' de ' + MESES[d.getUTCMonth()]; };
+// Clientes que reservaron en inglés: quedan marcados en la nota de la reserva (la ven Isidora y el instructor en Agenda Storm)
+const NOTA_EN = 'Cliente en inglés';
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const dateLong = f => { const d = new Date(diaUTC(f)); return DAYS[d.getUTCDay()] + ', ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate(); };
+const enIngles = r => !!r && /en ingl[eé]s/i.test(r.nota || '');
+const BRING = ['Swimsuit (to wear under the wetsuit)', 'Towel', 'Sunscreen', 'Water bottle', 'Comfortable clothes for after the lesson'];
 /** Duración de una reserva: la propia (anotadas a mano, ej. 1 hora) o la general */
 const durDe = (a, r) => Number(r && r.duracion) || a.duracion;
 const bloquesDe = (hora, duracion) => { const ini = Math.floor(aMin(hora) / BLOQUE) * BLOQUE, n = Math.ceil(duracion / BLOQUE); return Array.from({ length: n }, (_, k) => deMin(ini + k * BLOQUE)); };
@@ -134,7 +141,7 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
-const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago'];
+const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay', 'Webpay crédito', 'Webpay débito'];
 function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; }
@@ -269,7 +276,7 @@ async function disponibilidad(db, d) {
 
 // ---------- reservar y pagar ----------
 const nuevaClave = () => [...crypto.getRandomValues(new Uint8Array(9))].map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 14);
-const linkFicha = r => PAGINA + 'ficha/?r=' + encodeURIComponent(r.ref) + '&k=' + encodeURIComponent(r.clave || '');
+const linkFicha = r => PAGINA + 'ficha/?r=' + encodeURIComponent(r.ref) + '&k=' + encodeURIComponent(r.clave || '') + (enIngles(r) ? '&l=en' : '');
 const nuevaRef = () => { const t = ahoraChile(); return 'ES-' + t.fecha.slice(2).replace(/-/g, '') + '-' + t.hora.replace(':', '') + '-' + Math.floor(Math.random() * 9000 + 1000); };
 const shuffle = arr => { const x = arr.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 
@@ -348,7 +355,7 @@ async function reservar(env, d) {
   await limpiarRetenciones(db);
   const ref = nuevaRef(), t = ahoraChile();
   const base = { ref, creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pendiente', fecha, hora, personas, menores: c.menores, ninos: c.ninos, nombre, telefono, correo, comentario,
-    total: c.precio, pago_instructor: c.pagoInstructor, medio: 'Mercado Pago', nivel: c.nivel };
+    total: c.precio, pago_instructor: c.pagoInstructor, medio: 'Mercado Pago', nivel: c.nivel, ...(d.idioma === 'en' ? { nota: NOTA_EN } : {}) };
   // Instructor al azar entre los libres; si dos personas reservan a la vez, el segundo intenta con otro.
   let elegido = null;
   for (let intento = 0; intento < 3 && !elegido; intento++) {
@@ -377,7 +384,7 @@ async function crearOrden(env, r) {
   const orden = {
     type: 'online', processing_mode: 'manual', total_amount: String(r.total), external_reference: r.ref,
     description: 'Clase de surf Storm', ...(r.correo ? { payer: { email: r.correo } } : {}),
-    items: [{ title: 'Clase de surf Storm · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(r.fecha) + ' ' + r.hora, quantity: 1, unit_price: String(r.total) }],
+    items: [{ title: enIngles(r) ? 'Storm surf lesson · ' + r.personas + (r.personas === 1 ? ' person' : ' people') + ' · ' + dateLong(r.fecha) + ' ' + r.hora : 'Clase de surf Storm · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(r.fecha) + ' ' + r.hora, quantity: 1, unit_price: String(r.total) }],
     config: { online: { success_url: vuelta + 'ok', pending_url: vuelta + 'pendiente', failure_url: vuelta + 'error', auto_return: 'approved' } , payment_method: { max_installments: 1 } }
   };
   let res = {}, code = 0;
@@ -391,7 +398,38 @@ async function crearOrden(env, r) {
 }
 
 /** Consulta la orden en Mercado Pago y, si está pagada, confirma la reserva. */
+// Flow (tarjeta extranjera desde /pagar): el cobro se guarda en orden_mp como "flow:<token>". Estados: 1 pendiente, 2 pagada, 3 rechazada, 4 anulada.
+async function flowEstado(env, token) {
+  if (!env.FLOW_API_KEY || !env.FLOW_SECRET) return null;
+  const p = { apiKey: env.FLOW_API_KEY, token };
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.FLOW_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const s = [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(Object.keys(p).sort().map(x => x + p[x]).join(''))))].map(b => b.toString(16).padStart(2, '0')).join('');
+  try { const x = await fetch((env.FLOW_API || 'https://www.flow.cl/api') + '/payment/getStatus?' + new URLSearchParams(Object.assign({}, p, { s }))); return x.ok ? await x.json() : null; } catch (_) { return null; }
+}
+
+// Webpay Plus (Transbank) desde /pagar: orden_mp = "webpay:<token>". Se consulta el estado de la transacción (sirve hasta 7 días).
+async function webpayEstado(env, token) {
+  if (/\.storm-app\.pages\.dev\//.test(PAGINA) && !env.WEBPAY_CODIGO) env = Object.assign({}, env, { WEBPAY_PRUEBA: '1' }); // vista previa: modo prueba
+  const c = env.WEBPAY_CODIGO && env.WEBPAY_LLAVE ? [env.WEBPAY_API || 'https://webpay3g.transbank.cl', env.WEBPAY_CODIGO, env.WEBPAY_LLAVE]
+    : env.WEBPAY_PRUEBA ? ['https://webpay3gint.transbank.cl', '597055555532', '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C'] : null;
+  if (!c) return null;
+  try { const x = await fetch(c[0] + '/rswebpaytransaction/api/webpay/v1.2/transactions/' + encodeURIComponent(token), { headers: { 'Tbk-Api-Key-Id': c[1], 'Tbk-Api-Key-Secret': c[2] } }); return x.ok ? await x.json() : null; } catch (_) { return null; }
+}
+
 async function revisarPago(env, r, ctx) {
+  const om = String((r && r.orden_mp) || '');
+  if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && om.startsWith('flow:')) {
+    const o = await flowEstado(env, om.slice(5));
+    return o && Number(o.status) === 2 && String(o.commerceOrder || '').indexOf(r.ref) === 0 ? confirmar(env, r, Number(o.amount), ctx) : r.estado;
+  }
+  if (r && (r.estado === 'pendiente' || r.estado === 'vencida') && om.startsWith('webpay:')) {
+    const o = await webpayEstado(env, om.slice(7));
+    if (!(o && o.status === 'AUTHORIZED' && Number(o.response_code) === 0)) return r.estado;
+    // Débito o prepago vs crédito: Finanzas cobra distinta comisión
+    r.medio = ['VD', 'VP'].includes(o.payment_type_code) ? 'Webpay débito' : 'Webpay crédito';
+    await env.DB.prepare('UPDATE reservas SET medio = ? WHERE ref = ?').bind(r.medio, r.ref).run();
+    return confirmar(env, r, Number(o.amount), ctx);
+  }
   if (!r || r.estado !== 'pendiente' && r.estado !== 'vencida' || !r.orden_mp || !env.MP_TOKEN) return r && r.estado;
   let o = null;
   try {
@@ -410,7 +448,7 @@ async function revisarPago(env, r, ctx) {
 
 async function confirmar(env, r, monto, ctx) {
   const db = env.DB, a = await ajustes(db);
-  if (Math.round(monto) < r.total) { await db.prepare("UPDATE reservas SET estado = 'revisar', nota = ? WHERE ref = ?").bind('Monto pagado distinto: ' + clp(monto), r.ref).run(); return 'revisar'; }
+  if (Math.round(monto) < r.total) { await db.prepare("UPDATE reservas SET estado = 'revisar', nota = TRIM(COALESCE(nota, '') || ' · ' || ?, ' ·') WHERE ref = ?").bind('Monto pagado distinto: ' + clp(monto), r.ref).run(); return 'revisar'; }
   const ch = await db.prepare("UPDATE reservas SET estado = 'pagada' WHERE ref = ? AND estado IN ('pendiente', 'vencida')").bind(r.ref).run();
   if (!ch.meta || !ch.meta.changes) return (await db.prepare('SELECT estado FROM reservas WHERE ref = ?').bind(r.ref).first() || {}).estado;
   // Deja fijos los bloques; si se habían liberado (pagó muy tarde), los vuelve a tomar.
@@ -421,7 +459,7 @@ async function confirmar(env, r, monto, ctx) {
     try {
       await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref)].concat(ins.flatMap(i => bl.map(b => db.prepare('INSERT INTO bloques (instructor, fecha, hora, ref, hasta) VALUES (?, ?, ?, ?, 0)').bind(i, r.fecha, b, r.ref)))));
     } catch (_) {
-      await db.prepare("UPDATE reservas SET estado = 'revisar', nota = 'Pagó tarde y el instructor ya tenía otra clase: asígnale otro instructor' WHERE ref = ?").bind(r.ref).run();
+      await db.prepare("UPDATE reservas SET estado = 'revisar', nota = TRIM(COALESCE(nota, '') || ' · Pagó tarde y el instructor ya tenía otra clase: asígnale otro instructor', ' ·') WHERE ref = ?").bind(r.ref).run();
       tarea(ctx, correoStorm(env, 'Revisar reserva ' + r.ref, 'Llegó el pago de ' + r.nombre + ' (' + fechaLarga(r.fecha) + ' ' + r.hora + '), pero el instructor ya tenía otra clase. Asígnale otro instructor en Agenda Storm.'));
       return 'revisar';
     }
@@ -495,18 +533,20 @@ async function enviarCorreo(env, o) {
   return r.ok;
 }
 const correoStorm = (env, asunto, texto) => enviarCorreo(env, { to: CORREO_STORM, subject: asunto, body: texto });
-function cajaCorreo(titulo, filas, pie) {
+function cajaCorreo(titulo, filas, pie, despedida) {
   const F = 'font-family:Helvetica,Arial,sans-serif;';
   return ('<div style="background:#EFECE8;padding:28px 12px;' + F + 'color:#2C2C2B"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto">' +
     '<tr><td style="background:#fff;border-radius:18px;padding:28px 26px">' +
     '<h1 style="font-size:26px;line-height:1.15;margin:0 0 14px">' + titulo + '</h1>' + filas +
     '<p style="margin:22px 0 0;font-size:15px;line-height:1.55;color:#5c5b58">' + pie + '</p>' +
-    '<p style="margin:18px 0 0;font-size:16px">Nos vemos en el agua 🌊<br><b>Equipo Storm</b></p></td></tr>' +
+    '<p style="margin:18px 0 0;font-size:16px">' + (despedida || 'Nos vemos en el agua 🌊<br><b>Equipo Storm</b>') + '</p></td></tr>' +
     '<tr><td style="text-align:center;padding:18px 8px 0;font-size:12px;color:#8a8986">Storm Surf Academy · Playa de Matanzas · <a href="https://wa.me/' + WHATSAPP + '" style="color:#2d6e94">WhatsApp +56 9 7774 4306</a></td></tr></table></div>')
     .replace(/[^\x00-\x7F]/gu, c => '&#' + c.codePointAt(0) + ';');
 }
 const botonFicha = r => '<span style="display:block;margin:0 0 18px;padding:16px;border-radius:14px;background:#FFF6DA;color:#3B2610"><b style="font-size:16px">Falta un paso: la ficha de cada participante</b><br>' +
   'Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona.<br><a href="' + linkFicha(r) + '" style="display:inline-block;margin-top:10px;background:#2C2C2B;color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:999px">Llenar la ficha</a></span>';
+const botonFichaEN = r => '<span style="display:block;margin:0 0 18px;padding:16px;border-radius:14px;background:#FFF6DA;color:#3B2610"><b style="font-size:16px">One more step: a form for each participant</b><br>' +
+  'It is required to go into the ocean (Sernatur). It takes 2 minutes per person.<br><a href="' + linkFicha(r) + '" style="display:inline-block;margin-top:10px;background:#2C2C2B;color:#fff;text-decoration:none;font-weight:700;padding:11px 20px;border-radius:999px">Fill in the form</a></span>';
 const filaC = (k, v) => '<p style="margin:0 0 8px;font-size:16px;line-height:1.45"><span style="color:#8a8986">' + esc(k) + '</span><br><b>' + esc(v) + '</b></p>';
 /** Correo de confirmación para el cliente: todo lo que necesita saber para llegar a su clase. */
 function correoReservada(r, a, ins) {
@@ -535,11 +575,39 @@ function correoReservada(r, a, ins) {
     '<p style="text-align:center;margin:16px 0 0;font-size:12px;color:#8a8986">Storm Surf Academy · Playa de Matanzas, Navidad · <a href="https://www.stormsurf.cl" style="color:#2d6e94">stormsurf.cl</a></p></div>';
   return html.replace(/[^\x00-\x7F]/gu, c => '&#' + c.codePointAt(0) + ';');
 }
+const edadesEN = r => { const t = []; if (r.menores) t.push(r.menores + ' under 8'); if (r.ninos) t.push(r.ninos + ' aged 7 to 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · intermediate lesson' : ''); };
+function correoReservadaEN(r, a) {
+  const F = 'font-family:Helvetica,Arial,sans-serif;', fin = deMin(aMin(r.hora) + durDe(a, r));
+  const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Storm surf lesson') + '&dates=' + r.fecha.replace(/-/g, '') + 'T' + r.hora.replace(':', '') + '00/' + r.fecha.replace(/-/g, '') + 'T' + fin.replace(':', '') + '00&ctz=America/Santiago&location=' + encodeURIComponent(MAPA) + '&details=' + encodeURIComponent('Arrive 10 minutes early. Form: ' + linkFicha(r));
+  const boton = (href, txt, fondo, color) => '<a href="' + href + '" style="display:block;text-align:center;text-decoration:none;background:' + fondo + ';color:' + color + ';font-weight:700;font-size:16px;padding:14px 18px;border-radius:999px;margin:10px 0 0">' + txt + '</a>';
+  const seccion = (titulo, cuerpo) => '<tr><td style="padding:22px 26px 0"><p style="margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8a8986;font-weight:700">' + titulo + '</p>' + cuerpo + '</td></tr>';
+  const dato = (k, v) => '<td style="padding:6px 0;font-size:15px;color:#8a8986;width:42%">' + k + '</td><td style="padding:6px 0;font-size:15px;font-weight:700;text-align:right">' + v + '</td>';
+  const ficha = r.ref ? '<tr><td style="padding:22px 26px 0"><div style="padding:18px;border-radius:16px;background:#FFF6DA;color:#3B2610"><b style="font-size:17px">One more step: a form for each participant</b><p style="margin:6px 0 0;font-size:15px;line-height:1.5">It is required to go into the ocean (Sernatur, the Chilean tourism authority). It takes 2 minutes per person and you sign with your finger.</p>' + boton(linkFicha(r), 'Fill in the form', '#2C2C2B', '#ffffff') + '</div></td></tr>' : '';
+  const html = '<div style="background:#EFECE8;padding:28px 12px;' + F + 'color:#2C2C2B"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#fff;border-radius:22px;overflow:hidden">' +
+    '<tr><td style="padding:26px 26px 0;text-align:center"><img src="https://app.stormsurf.cl/img/storm-logo.png" alt="Storm" width="110" style="display:inline-block"></td></tr>' +
+    '<tr><td style="padding:18px 26px 0;text-align:center"><p style="margin:0;font-size:40px">🏄</p><h1 style="font-size:27px;line-height:1.15;margin:6px 0 8px">Your surf lesson is booked!</h1><p style="margin:0;font-size:16px;line-height:1.5;color:#5c5b58">Hi ' + esc(r.nombre.split(' ')[0]) + ', your spot in the ocean is saved. This email is your receipt.</p></td></tr>' +
+    '<tr><td style="padding:22px 26px 0"><div style="background:#E3F1F1;border-radius:18px;padding:20px;text-align:center"><p style="margin:0;font-size:14px;color:#0f6e74;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Your lesson</p><p style="margin:6px 0 2px;font-size:22px;font-weight:700">' + esc(dateLong(r.fecha)) + '</p><p style="margin:0;font-size:20px">' + esc(r.hora) + ' to ' + esc(fin) + '</p></div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px">' +
+    '<tr>' + dato('People', r.personas + edadesEN(r)) + '</tr>' +
+    '<tr>' + dato('Where', esc(a.lugar)) + '</tr>' +
+    '<tr>' + dato('Total paid', clp(r.total) + ' CLP') + '</tr>' +
+    '<tr>' + dato('Booking', esc(r.ref)) + '</tr></table></td></tr>' +
+    ficha +
+    seccion('📍 How to get there', '<p style="margin:0;font-size:15px;line-height:1.5">We meet at Storm, ' + esc(a.lugar) + '. Arrive 10 minutes early so you can put on your wetsuit calmly.</p>' + boton(MAPA, 'See location on the map', '#2C2C2B', '#ffffff')) +
+    seccion('🎒 What to bring', '<p style="margin:0;font-size:15px;line-height:1.9">' + BRING.map(t => '✅ ' + esc(t)).join('<br>') + '</p>') +
+    seccion('💙 We provide', '<p style="margin:0;font-size:15px;line-height:1.9">🏄 Surfboard and leash<br>🌊 Wetsuit<br>🤙 Certified instructor</p>') +
+    seccion('🌊 If the ocean is not safe', '<p style="margin:0;font-size:15px;line-height:1.5">Surfing is an ocean sport. If conditions are not safe, we will message you on WhatsApp to change the time at no cost.</p>') +
+    '<tr><td style="padding:16px 26px 0">' + boton(gcal, 'Add to my calendar', '#EFECE8', '#2C2C2B') + boton('https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Hi Storm, I booked a lesson (' + r.ref + ')'), 'Questions? Message us on WhatsApp', '#25D366', '#ffffff') + '</td></tr>' +
+    '<tr><td style="padding:24px 26px 28px;text-align:center"><p style="margin:0;font-size:17px">See you in the water! 🌊<br><b>The Storm team</b></p></td></tr></table>' +
+    '<p style="text-align:center;margin:16px 0 0;font-size:12px;color:#8a8986">Storm Surf Academy · Playa de Matanzas, Navidad · <a href="https://www.stormsurf.cl" style="color:#2d6e94">stormsurf.cl</a></p></div>';
+  return html.replace(/[^\x00-\x7F]/gu, c => '&#' + c.codePointAt(0) + ';');
+}
 async function avisarReserva(env, r, a) {
   const ins = parseLista(r.instructores);
   const cuando = fechaLarga(r.fecha) + ', ' + r.hora + ' hrs';
-  const html = correoReservada(r, a, ins);
-  const p = [enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: '¡Tu clase de surf está reservada! · ' + cuando, html,
+  const html = enIngles(r) ? correoReservadaEN(r, a) : correoReservada(r, a, ins);
+  const p = [enIngles(r) ? enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: 'Your surf lesson is booked! · ' + dateLong(r.fecha) + ', ' + r.hora, html,
+    body: 'Lesson booked!\n\n' + dateLong(r.fecha) + ', ' + r.hora + '\n' + r.personas + ' people · ' + a.lugar + '\nTotal paid: ' + clp(r.total) + ' CLP\n\nBefore the lesson, fill in the form for each participant: ' + linkFicha(r) + '\n\n📍 Location: ' + MAPA + '\n\n🏄 What to bring:\n' + BRING.map(t => '✅ ' + t).join('\n') + '\n\nWe provide all the equipment you need 💙\nBooking ' + r.ref }) : enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: '¡Tu clase de surf está reservada! · ' + cuando, html,
     body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\n📍 Nuestra ubicación: ' + MAPA + '\n\n🏄 ¿Qué debes traer?\n' + TRAER.map(t => '✅ ' + t).join('\n') + '\n\nNosotros te entregamos todo el equipamiento necesario 💙\nReferencia ' + r.ref })];
   const lista = await env.DB.prepare('SELECT nombre, correo FROM instructores').all();
   lista.results.filter(i => ins.includes(i.nombre) && i.correo).forEach(i => p.push(enviarCorreo(env, { to: i.correo, subject: 'Nueva clase particular · ' + cuando,
@@ -553,6 +621,14 @@ async function recordatorios(env, a) {
   const { results } = await env.DB.prepare("SELECT * FROM reservas WHERE fecha = ? AND estado = 'pagada' AND recordatorio = 0 AND correo != ''").bind(man).all();
   for (const r of results) {
     const cuando = 'mañana ' + fechaLarga(r.fecha) + ' a las ' + r.hora;
+    if (enIngles(r)) {
+      await enviarCorreo(env, { to: r.correo, subject: 'Your surf lesson is tomorrow · ' + r.hora,
+        html: cajaCorreo('Tomorrow we surf!', '<p style="margin:0 0 16px;font-size:16px">Hi ' + esc(r.nombre.split(' ')[0]) + ', a reminder of your lesson:</p>' + filaC('When', 'Tomorrow, ' + dateLong(r.fecha) + ' at ' + r.hora) + filaC('Where', a.lugar) + '<p style="margin:4px 0 0;font-size:16px">📍 <a href="' + MAPA + '" style="color:#2d6e94;font-weight:700">How to get there (map)</a></p>',
+          ((await fichasDe(env.DB, r.ref)).length < r.personas ? botonFichaEN(r) : '') + 'Bring a swimsuit, towel and sunscreen. Arrive 10 minutes early. If the ocean is not safe, we will message you on WhatsApp to change the time.', 'See you in the water 🌊<br><b>The Storm team</b>'),
+        body: 'Hi ' + r.nombre.split(' ')[0] + ', a reminder of your surf lesson tomorrow, ' + dateLong(r.fecha) + ' at ' + r.hora + ' at ' + a.lugar + '. Arrive 10 minutes early.\nHow to get there: ' + MAPA });
+      await env.DB.prepare('UPDATE reservas SET recordatorio = 1 WHERE ref = ?').bind(r.ref).run();
+      continue;
+    }
     await enviarCorreo(env, { to: r.correo, subject: 'Mañana es tu clase de surf · ' + r.hora + ' hrs',
       html: cajaCorreo('¡Mañana surfeamos!', '<p style="margin:0 0 16px;font-size:16px">Hola ' + esc(r.nombre.split(' ')[0]) + ', te recordamos tu clase:</p>' + filaC('Cuándo', cuando) + filaC('Dónde', a.lugar) + '<p style="margin:4px 0 0;font-size:16px">📍 <a href="' + MAPA + '" style="color:#2d6e94;font-weight:700">Cómo llegar (mapa)</a></p>',
         (!r.fichas_papel && (await fichasDe(env.DB, r.ref)).length < r.personas ? botonFicha(r) : '') + 'Trae traje de baño, toalla y bloqueador. Llega 10 minutos antes. Si el mar no está apto, te escribimos por WhatsApp para cambiar la hora.'),
@@ -1223,6 +1299,13 @@ export async function onRequest(context) {
       let id = url.searchParams.get('data.id') || url.searchParams.get('id');
       try { const b = await request.clone().json(); if (b && b.data && b.data.id) id = b.data.id; } catch (_) {}
       if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, context); }
+      return json({ ok: true });
+    }
+    // Pago con Flow o Webpay desde /pagar: se vuelve a revisar allá (no se confía en lo que llega)
+    if (url.searchParams.get('externo')) {
+      const b = await request.json().catch(() => ({}));
+      const r = b.ref ? await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(b.ref)).first() : null;
+      if (r && b.token && (r.orden_mp === 'flow:' + b.token || r.orden_mp === 'webpay:' + b.token)) await revisarPago(env, r, context);
       return json({ ok: true });
     }
     if (url.searchParams.get('tarea')) {

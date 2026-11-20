@@ -426,7 +426,7 @@
   }
 
   const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Por pagar', 'Aún no paga']];
-  const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m;
+  const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m === 'Flow' ? 'Reserva online (Flow)' : /^Webpay/.test(m) ? 'Reserva online (' + m + ')' : m;
   // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 5
   function cotiza(p, m) {
     const a = E.ajustes || {}, g = [];
