@@ -169,16 +169,18 @@ export async function onRequest(context) {
     let q = url.searchParams;
     if (request.method === 'POST') try { q = new URLSearchParams([...q, ...(await request.formData())]); } catch (_) {}
     const tok = q.get('token_ws') || '', oid = q.get('o') || '';
+    // Producto de prueba $50: cualquier resultado se muestra aquí mismo, con el detalle (para Transbank)
+    if (q.get('p50') && (!tok || q.get('TBK_TOKEN'))) return html('<h1>Pago de prueba no realizado</h1><p>' + (q.get('TBK_TOKEN') ? 'El pago se anuló en Webpay (o hubo un error en el formulario).' : 'Se acabó el tiempo en Webpay o no llegó el pago.') + '</p><p>Orden: ' + esc(q.get('TBK_ORDEN_COMPRA')) + '<br>Token: ' + esc(q.get('TBK_TOKEN') || tok) + '</p><p><a class="b" href="/api/pagar?prueba50=1">Intentar de nuevo</a></p>');
     const vuelve = est => Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=' + est, 303);
     // Error en el formulario + "intentar nuevamente": llegan token_ws y TBK_TOKEN juntos → no se confirma (igual que una anulación)
     if (!tok || q.get('TBK_TOKEN')) return /\.storm-app\.pages\.dev$/.test(url.hostname) && q.get('TBK_TOKEN') ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(q.get('TBK_TOKEN')), 303) : vuelve('error');
     let c = await webpay(env, 'PUT', '/' + encodeURIComponent(tok));
     if (!c) c = await webpay(env, 'GET', '/' + encodeURIComponent(tok)); // si ya se había confirmado (recargó la página)
-    const p50 = !!(c && /^PRUEBA50-/.test(String(c.session_id || ''))); // producto de prueba $50 que pide Transbank
+    const p50 = !!(q.get('p50') || (c && /^PRUEBA50-/.test(String(c.session_id || '')))); // producto de prueba $50 que pide Transbank
     const o = c && c.session_id && !p50 ? (await mp(env, '/v1/orders/' + encodeURIComponent(c.session_id))).body : null;
     const ref = o && o.external_reference;
     const ok = c && c.status === 'AUTHORIZED' && Number(c.response_code) === 0 && (p50 ? Math.round(Number(c.amount)) === 50 : ref && REF_OK.test(ref) && Math.round(Number(c.amount)) >= Math.round(Number(o.total_amount)));
-    if (p50 && !ok) return html('<h1>Pago de prueba no aprobado</h1><p>Estado: ' + esc(c && c.status) + ' · código ' + esc(c && c.response_code) + '</p><p>Token: ' + esc(tok) + '</p><p><a href="/api/pagar?prueba50=1">Intentar de nuevo</a></p>');
+    if (p50 && !ok) return html('<h1>Pago de prueba no aprobado</h1><p>' + (c ? 'Estado: ' + esc(c.status) + ' · código ' + esc(c.response_code) + ' · monto ' + esc(c.amount) : 'Transbank no respondió al confirmar: ' + esc(ultimoError)) + '</p><p>Token: ' + esc(tok) + '</p><p><a href="/api/pagar?prueba50=1">Intentar de nuevo</a></p>');
     if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return /\.storm-app\.pages\.dev$/.test(url.hostname) ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(tok), 303) : vuelve('error'); }
     if (!p50) await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok, ['VD', 'VP'].includes(c.payment_type_code) ? 'debito' : 'credito');
     // Comprobante (lo pide Transbank): se muestra en /pagar y desde ahí sigue a la página de siempre
@@ -205,7 +207,7 @@ export async function onRequest(context) {
     // Producto de prueba de $50 (lo pide Transbank para pasar a producción): /api/pagar?prueba50=1
     if (url.searchParams.get('prueba50') && webpayCfg(env)) {
       if (!url.searchParams.get('ir')) return html('<h1>Producto de prueba Storm</h1><p>Pago de prueba de <b>$50</b> con Webpay (Transbank), para validar el medio de pago.</p><p><a class="b" href="/api/pagar?prueba50=1&ir=1">Pagar $50 con Webpay</a></p>');
-      const c = await webpay(env, 'POST', '', { buy_order: 'P' + Date.now().toString(36).toUpperCase(), session_id: 'PRUEBA50-' + Date.now(), amount: 50, return_url: origen + '/api/pagar?webpay=vuelta&o=' });
+      const c = await webpay(env, 'POST', '', { buy_order: 'P' + Date.now().toString(36).toUpperCase(), session_id: 'PRUEBA50-' + Date.now(), amount: 50, return_url: origen + '/api/pagar?webpay=vuelta&p50=1&o=' });
       if (!c || !c.url || !c.token) return html('<h1>No pudimos conectar con Webpay</h1><p>Intenta de nuevo en un momento.</p>');
       return html('<p>Te llevamos a Webpay…</p><form id="f" method="POST" action="' + esc(c.url) + '"><input type="hidden" name="token_ws" value="' + esc(c.token) + '"><button class="b">Continuar</button></form><script>document.getElementById("f").submit()</script>');
     }
