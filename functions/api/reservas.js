@@ -1136,9 +1136,20 @@ async function fichaGuardar(env, d, request) {
   if (!d.acepta) throw err('Para seguir, acepta la declaración.');
   const firma = String(d.firma || '');
   if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(firma) || firma.length < 800 || firma.length > 400000) throw err('Falta la firma.');
+  // El número de participante lo elige la página al abrirse. Si se abre en dos celulares o pestañas, ambas eligen el mismo número
+  // y la segunda borraba la ficha de la primera. Ahora solo se reemplaza si es la misma persona (corrige su ficha);
+  // si ese número ya es de otra persona, la ficha se guarda en el primer número libre (o uno nuevo).
+  let slot = n;
+  const yaEstan = await fichasDe(env.DB, r.ref), mismo = s => norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const ocupada = yaEstan.find(x => x.n === slot);
+  if (ocupada && mismo(ocupada.nombre) !== mismo(datos.nombre)) {
+    const igual = yaEstan.find(x => mismo(x.nombre) === mismo(datos.nombre));
+    if (igual) slot = igual.n;
+    else { const usados = new Set(yaEstan.map(x => x.n)); slot = 1; while (usados.has(slot)) slot++; }
+  }
   const tt = ahoraChile();
   await env.DB.prepare('INSERT OR REPLACE INTO fichas (ref, n, nombre, datos, firma, creada, ip) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(r.ref, n, datos.nombre, JSON.stringify(datos), firma, tt.fecha + ' ' + tt.hora, (request && request.headers.get('CF-Connecting-IP')) || '').run();
+    .bind(r.ref, slot, datos.nombre, JSON.stringify(datos), firma, tt.fecha + ' ' + tt.hora, (request && request.headers.get('CF-Connecting-IP')) || '').run();
   return fichaVer(env, d);
 }
 async function fichasLeer(env, q, d) {
