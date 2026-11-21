@@ -85,7 +85,7 @@
       riesgo:['declaro conocer y entender los riesgos que envuelve la participación en este tipo de actividades, el cual no puede ser completamente eliminado, aun cuando exista el cumplimiento de estándares de seguridad acreditados por el prestador, los cuales tienen por finalidad disminuir los riesgos que el desarrollo de esta actividad involucra.','Será deber del prestador de servicios de turismo aventura informar de las condiciones y requisitos para el desarrollo de la actividad, como asimismo, es deber de los participantes informarse adecuadamente de las condiciones en que se presta el servicio, de las condiciones mínimas que el participante debe poseer antes de efectuar la actividad y acatar las instrucciones que la empresa y guía a cargo de la actividad indiquen.'],
       yo:'Yo', firmante:'Nombre de quien firma', rutF:'RUT o pasaporte de quien firma', acepto:'Leí y acepto la declaración.', firma:'Firma aquí con el dedo', borrar:'Borrar', enviar:'Guardar ficha', guardando:'Guardando…',
       listo:'¡Fichas listas!', listoTxt:'Ya tenemos la ficha de todos los participantes. ¡Nos vemos en el agua!', siguiente:'Ficha guardada. Sigue con el participante ', faltan:'Faltan fichas', red:'No pudimos conectarnos. Revisa tu internet.',
-      error:'Este link no es válido. Escríbenos por WhatsApp.', yn:'Responde sí o no en todas las preguntas.', faltaFirma:'Falta la firma.', hecha:'lista' },
+      error:'Este link no es válido. Escríbenos por WhatsApp.', yn:'Responde sí o no en todas las preguntas.', faltaFirma:'Falta la firma.', hecha:'lista', guardada:'¡Tu ficha quedó guardada!', guardadaDe:'Guardamos la ficha de ', estado:'Fichas de esta reserva', falta:'falta', otra:'Llenar la ficha del participante ' },
     en: { titulo:'Registration form and acceptance of activity risk', sub:'Required before entering the sea (Sernatur, Decree 19/2018). One per participant. Takes 2 minutes.',
       actividad:'Activity', clase:'Surf lesson', fecha:'Date', inicio:'Start time', termino:'End time', guia:'Guide in charge', rut:'ID', salida:'Departure and arrival',
       ruta:'The lesson begins at Storm Surf Academy, where surfboard, leash and wetsuit are provided. Participants walk along the beach to the "school zone", where a warm-up takes place, technique is practiced, and then participants enter the sea.',
@@ -97,21 +97,21 @@
       riesgo:['declare that I know and understand the risks involved in participating in this type of activity, which cannot be completely eliminated, even when safety standards accredited by the service provider are complied with, whose purpose is to reduce the risks involved in the development of this activity.','It shall be the duty of the adventure tourism service provider to inform participants of the conditions and requirements for carrying out the activity. Likewise, it is the duty of the participants to properly inform themselves of the conditions under which the service is provided, the minimum conditions that the participant must meet before carrying out the activity, and to follow the instructions indicated by the company and the guide in charge of the activity.'],
       yo:'I,', firmante:'Name of the person signing', rutF:'ID of the person signing', acepto:'I have read and accept the declaration.', firma:'Sign here with your finger', borrar:'Clear', enviar:'Save form', guardando:'Saving…',
       listo:'All forms done!', listoTxt:'We have the form for every participant. See you in the water!', siguiente:'Form saved. Continue with participant ', faltan:'Forms missing', red:'We could not connect. Check your internet.',
-      error:'This link is not valid. Please contact us on WhatsApp.', yn:'Answer yes or no to every question.', faltaFirma:'Signature missing.', hecha:'done' }
+      error:'This link is not valid. Please contact us on WhatsApp.', yn:'Answer yes or no to every question.', faltaFirma:'Signature missing.', hecha:'done', guardada:'Your form was saved!', guardadaDe:'We saved the form for ', estado:'Forms for this booking', falta:'missing', otra:'Fill in the form for participant ' }
   };
   let L = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
   try{ L = localStorage.getItem('storm-ficha-lang') || L; }catch(_){}
   { const l = new URLSearchParams(location.search).get('l'); if(l === 'es' || l === 'en') L = l; }
   const T = k => TX[L][k];
   const PREG = ['experiencia','seguro','alergias','medicamentos','regimen','operaciones','embarazada','otros'];
-  let D = null, n = 1, F = nuevo(), aviso = '', ultimoUrg = null;
+  let D = null, n = 1, F = nuevo(), aviso = '', ultimoUrg = null, guardada = '';
   function nuevo(){ return { nombre:'', nacionalidad: L==='es' ? 'Chilena' : '', documento:'', edad:'', peso:'', urgencia:[{nombre:'',telefono:'',correo:''},{nombre:'',telefono:'',correo:''}], declaracion:{}, firmante:'', rutFirmante:'', acepta:false }; }
   const hechas = () => new Set((D.hechas || []).map(h => h.n));
   const primeraLibre = () => { const h = hechas(); for(let i = 1; i <= D.personas; i++) if(!h.has(i)) return i; return 0; };
 
   async function cargar(){
     root.innerHTML = `<div class='fi-skel'></div>`;
-    try{ D = await post({accion:'ficha', r: REF, k: K}); n = primeraLibre() || 1; pintar(); }
+    try{ D = await post({accion:'ficha', r: REF, k: K}); n = primeraLibre() || 1; if(!primeraLibre() && (D.hechas || []).length) aviso = 'fin'; pintar(); }
     catch(x){ root.innerHTML = `<div class='fi-card fi-done'><h2>${esc(x.message)}</h2><p><a href='https://wa.me/56977744306'>WhatsApp +56 9 7774 4306</a></p></div>`; }
   }
   const leerForm = () => { root.querySelectorAll('[data-k]').forEach(i => { const path = i.dataset.k.split('.'); let o = F; while(path.length > 1){ const p = path.shift(); o = o[p] = o[p] || {}; } o[path[0]] = i.type === 'checkbox' ? i.checked : i.value; }); };
@@ -119,6 +119,17 @@
   function pintar(){
     const A = D.actividad, h = hechas(), menor = Number(F.edad) > 0 && Number(F.edad) < 18;
     if(!primeraLibre() && !h.has(n)) n = 1;
+    if(guardada){
+      // Pantalla de confirmación después de guardar: que quede claro que la ficha se guardó
+      const sig = primeraLibre(), lista = Array.from({length: D.personas}, (_, i) => i + 1).map(i => { const hh = (D.hechas || []).find(x => x.n === i);
+        return `<li style='margin:6px 0;${hh ? 'color:#2f7a4d;font-weight:600' : 'color:#9a5b12'}'>${hh ? '✓ ' + esc(hh.nombre) : '○ ' + T('part') + ' ' + i + ' · ' + T('falta')}</li>`; }).join('');
+      root.innerHTML = lang() + `<div class='fi-card fi-done'><div class='ic'>✓</div><h2>${sig ? T('guardada') : T('listo')}</h2>
+        <p>${sig ? T('guardadaDe') + '<b>' + esc(guardada) + '</b>.' : T('listoTxt')}</p>
+        ${D.personas > 1 ? `<p style='margin:18px 0 6px;font-weight:600'>${T('estado')}</p><ul style='list-style:none;padding:0;margin:0;text-align:left;display:inline-block'>${lista}</ul>` : ''}
+        ${sig ? `<button class='fi-go' id='fi-sig' style='margin-top:20px'>${T('otra')}${sig}</button>` : ''}</div>`;
+      bindLang(); const b = document.getElementById('fi-sig'); if(b) b.onclick = () => { guardada = ''; n = sig; pintar(); window.scrollTo({top:0}); };
+      return;
+    }
     if(!primeraLibre() && aviso === 'fin'){
       root.innerHTML = lang() + `<div class='fi-card fi-done'><div class='ic'>✓</div><h2>${T('listo')}</h2><p>${T('listoTxt')}</p></div>`;
       bindLang(); return;
@@ -195,7 +206,7 @@
       D = await post({accion:'ficha-guardar', r: REF, k: K, n, datos, firma: o.toDataURL('image/png'), acepta: F.acepta});
       ultimoUrg = JSON.parse(JSON.stringify(F.urgencia));
       const sig = primeraLibre();
-      aviso = sig ? T('siguiente') + sig + '.' : 'fin'; if(sig) n = sig; F = nuevo(); pintar(); window.scrollTo({top:0, behavior:'smooth'});
+      guardada = datos.nombre || ' '; aviso = sig ? '' : 'fin'; if(sig) n = sig; F = nuevo(); pintar(); window.scrollTo({top:0, behavior:'smooth'});
     }catch(x){ go.disabled = false; go.textContent = T('enviar'); msg(x.message); }
   }
   if(!REF || !K) root.innerHTML = `<div class='fi-card fi-done'><h2>${T('error')}</h2></div>`; else cargar();
