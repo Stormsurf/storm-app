@@ -576,7 +576,7 @@
 
   // ---------- Ventas de la máquina Tuu (recepción) ----------
   // Se leen solas desde Cloudflare (/api/reservas). Las que llegan sin producto quedan "Por revisar": un toque y quedan ordenadas.
-  const TUU = {}, TUU_CAT = {clase:'Clase', producto:'Producto (Surf Shop)', renta:'Renta'};
+  const TUU = {}, TUU_CAT = {clase:'Clase', producto:'Producto (Surf Shop)', renta:'Renta', anulada:'Anulada'};
   const mesIso = m => { const p = String(m || '').split(' '), i = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].indexOf(p[0]); return i < 0 ? '' : p[1] + '-' + String(i + 1).padStart(2, '0'); };
   async function postTuu(body){
     const r = await fetch('/api/reservas', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, auth, body))});
@@ -594,7 +594,7 @@
     // Solo se muestra cuando hay ventas de Tuu sin producto que no calzan con una clase POS del Panel: Isidora elige si fue renta o producto.
     const x = TUU[mesIso(mes)]; if(!x || x.error || !x.d || !x.d.porRevisar || !x.d.porRevisar.length) return '';
     const d = x.d;
-    return `<div class='pn-card'><h3>Ventas Tuu por revisar<span class='pn-count'>${d.porRevisar.length}</span></h3><p class='pn-sub'>Se vendieron en la máquina sin elegir producto y no calzan con ninguna clase POS del Panel (del mismo día o hasta 14 días después). Toca qué era cada una.</p>
+    return `<div class='pn-card'><h3>Ventas Tuu por revisar<span class='pn-count'>${d.porRevisar.length}</span></h3><p class='pn-sub'>Se vendieron en la máquina sin elegir producto y no calzan con ninguna clase POS del Panel (del mismo día o hasta 14 días después). Toca qué era cada una. Si la anulaste en la máquina, toca Anulada y no se cuenta.</p>
       ${d.porRevisar.map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-acts'>${Object.keys(TUU_CAT).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}</div>`;
   }
   function enlazarTuu(el, mes){

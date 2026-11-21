@@ -1215,7 +1215,7 @@ async function fichasLeer(env, q, d) {
 const TUU_API = 'https://integrations.payment.haulmer.com/Report/get-report';
 const TUU_CADA_MIN = 15;
 const TUU_DESDE = '2026-11-16'; // Isidora (15-11): Finanzas cuenta Tuu y Panel Storm desde el lunes 16 de noviembre; lo anterior está en la planilla 2026.
-const TUU_CATS = ['producto', 'renta', 'clase'];
+const TUU_CATS = ['producto', 'renta', 'clase', 'anulada']; // Isidora (21-11): 'anulada' = venta anulada en la máquina (Tuu la sigue mostrando como pagada): no cuenta en nada
 const TUU_DIAS_ANTES = 14; // una venta Tuu calza con una clase POS hasta 14 días después del pago
 async function tuuTablas(db) {
   await db.batch([
@@ -1295,7 +1295,7 @@ async function tuuResumen(env, mes, forzar) {
   // Isidora (20-11): el pago en Tuu siempre es antes de la clase o el mismo día. Calza con una clase del mismo monto
   // ese día o hasta TUU_DIAS_ANTES días después. Primero se juntan las del mismo día; después las demás, por la clase más cercana. Cada clase se usa una vez.
   const usadas = new Set(), calces = new Map();
-  const vivas = ventas.filter(v => !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado));
+  const vivas = ventas.filter(v => v.categoria !== 'anulada' && !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado));
   const buscaClase = v => {
     let items = []; try { items = JSON.parse(v.items || '[]'); } catch (_) {}
     const conNombre = items.filter(i => i.nombre && i.precio);
