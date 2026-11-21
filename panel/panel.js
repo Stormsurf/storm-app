@@ -166,7 +166,7 @@
       <h3>${esc(c.clase)} · ${esc(c.horario)}<span class='pn-count'>${c.van} de ${c.cupos}</span></h3>
       <p class='pn-sub'>${esc(c.texto)}${c.nota?' · '+esc(c.nota):''}</p>
       <div class='pn-bar'><span style='width:${pct}%'></span></div>
-      ${c.alumnos.length ? Object.keys(grupos).sort(primeroMio()).map(g => `<div class='pn-grp'>${grpHead(g, grupos[g].length, ACARGO)}<div class='pn-chips'>${grupos[g].map(a => `<span class='pn-chip${a.movido?' pn-chip--in':''}'>${a.movido?'↪ ':''}${esc(a.nombre)}</span>`).join('')}</div></div>`).join('')
+      ${c.alumnos.length ? Object.keys(grupos).sort(primeroMio()).map(g => `<div class='pn-grp'>${grpHead(g, grupos[g].length, ACARGO)}<div class='pn-chips'>${grupos[g].map(a => `<button class='pn-chip${a.movido?' pn-chip--in':''}' data-chn='${esc(a.nombre)}' title='Notas de ${esc(a.nombre)}'>${a.movido?'↪ ':''}${esc(a.nombre)}</button>`).join('')}</div></div>`).join('')
         : `<p class='pn-empty'>Todavía no hay alumnos en esta clase.</p>`}
       ${c.salen.length ? `<p class='pn-sub' style='margin-top:10px'>Se cambiaron a otro día: ${c.salen.map(x => esc(typeof x === 'string' ? x : (x && x.nombre) || '')).join(', ')}</p>` : ''}
     </div>`;
@@ -338,6 +338,8 @@
       show(app.querySelector(`.pn-tab[data-tab='${tab}']`) ? tab : 'clases');
       ponerSelector();
       bindLista(); bindExtras(); copiar(); bindMensajes(d);
+      // Tocar un alumno en una clase abre sus notas (para anotar cómo le fue).
+      app.querySelectorAll('[data-chn]').forEach(b => b.onclick = () => { show('alumnos'); abrirAlumno(b.dataset.chn, 'notas'); });
     };
     if(d.rol === 'instructor'){
       app.innerHTML = `<div class='pn-head'><div><h1>Clases Storm</h1><p>${esc(d.hoy)}</p></div><button class='pn-link' id='pn-out'>Salir</button></div>` + tabs(d) +
@@ -780,6 +782,7 @@
   }
   // ---------- Notas internas por alumno (solo el equipo; las familias no las ven) ----------
   let NOTAS = null, ntAbierta = '', aGrupo = '', aCambio = '', aNuevo = '', aMsg = '', ES_ADMIN = false;
+  let clAbierta = '', clMover = '', clHacia = '';
   // Cajita para elegir el nivel nuevo (Anual y Verano).
   function nivelBox(nombre, actual, niveles, nuevo, p){
     return `<div class='pn-nvbox'><p>¿A qué nivel pasa <b>${esc(nombre.split(' ')[0])}</b>?${actual ? ' Hoy está en ' + esc(actual) + '.' : ''}</p>
@@ -829,6 +832,70 @@
       };
     });
   }
+  // ---------- Clases de cada alumno: cuántas le quedan y mover una (v45 de la planilla) ----------
+  const clasesDe = nombre => { const c = NOTAS && NOTAS.clases; if(!c) return null; const k = Object.keys(c).find(x => nk(x) === nk(nombre)); return k ? c[k] : []; };
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const mesDeF = f => MESES[+String(f).slice(5,7) - 1] || '';
+  const tipoClase = c => /skate/i.test(c || '') ? 'skate' : 'surf';
+  function quedanTxt(nombre){
+    const cs = clasesDe(nombre); if(!cs) return '';
+    const fut = cs.filter(c => !c.pasada);
+    if(!fut.length) return `<span class='pn-qd pn-qd--0'>No le quedan clases</span>`;
+    const porMes = {}; fut.forEach(c => { const m = mesDeF(c.fecha); porMes[m] = (porMes[m] || 0) + 1; });
+    const det = Object.keys(porMes).length > 1 ? ' · ' + Object.keys(porMes).map(m => porMes[m] + ' en ' + m).join(', ') : ' en ' + Object.keys(porMes)[0];
+    return `<span class='pn-qd'>Le quedan <b>${fut.length}</b> clase${fut.length === 1 ? '' : 's'}${esc(det)}</span>`;
+  }
+  function claseBtn(nombre){
+    if(!clasesDe(nombre) || clAbierta === nombre) return '';
+    return `<button class='pn-nt' data-cl='${esc(nombre)}'>📅 Clases</button>`;
+  }
+  function claseBox(nombre){
+    if(clAbierta !== nombre) return '';
+    const cs = clasesDe(nombre) || [], pn = esc(nombre.split(' ')[0]);
+    const fila = c => {
+      const est = c.pasada ? (c.vino === true ? `<em class='pn-cle si'>Vino</em>` : c.vino === false ? `<em class='pn-cle no'>No vino</em>` : `<em class='pn-cle'>Pasó</em>`) : (c.movida ? `<em class='pn-cle mv'>Movida</em>` : '');
+      const puede = ES_ADMIN && c.vino !== true;
+      let h = `<div class='pn-clr${c.pasada ? ' pasada' : ''}'><div><b>${esc(cap(c.texto))}</b><small>${esc(c.clase)} · ${esc(c.horario)}</small></div><div>${est}${puede && clMover !== c.fecha ? `<button class='pn-clmv' data-clmv='${c.fecha}'>Mover</button>` : ''}</div></div>`;
+      if(puede && clMover === c.fecha){
+        const ops = (NOTAS.opciones || []).filter(o => tipoClase(o.clase) === tipoClase(c.clase) && !cs.some(x => x.fecha === o.fecha));
+        const meses = [...new Set(ops.map(o => mesDeF(o.fecha)))];
+        h += `<div class='pn-nvbox pn-clbox'><p>¿A qué día pasamos la clase de <b>${pn}</b> del ${esc(c.texto)}?</p>
+          ${ops.length ? meses.map(m => `<p class='pn-clmes'>${esc(cap(m))}</p><div class='pn-nvops'>${ops.filter(o => mesDeF(o.fecha) === m).map(o => `<button data-clh='${o.fecha}' class='${o.fecha === clHacia ? 'on' : ''}'>${esc(cap(o.texto))}<small>${esc(o.horario)}${o.libres ? '' : ' · llena'}</small></button>`).join('')}</div>`).join('') : `<p class='pn-empty'>No hay otras clases de ${tipoClase(c.clase)} cargadas en el Calendario.</p>`}
+          <label><input type='checkbox' id='pn-clav' checked> Avisar a la familia (correo y celular)</label>
+          <button class='pn-nvgo' id='pn-clgo'${clHacia ? '' : ' disabled'}>Guardar cambio</button><button class='pn-link' id='pn-clx'>Cancelar</button></div>`;
+      }
+      return h;
+    };
+    const fut = cs.filter(c => !c.pasada), pas = cs.filter(c => c.pasada);
+    return `<div class='pn-ntbox pn-clist'><p class='pn-sub'>Clases de <b>${pn}</b>${ES_ADMIN ? '. Toca Mover si avisan que no puede ir (también sirve para una clase que ya pasó).' : '.'}</p>
+      ${fut.length ? fut.map(fila).join('') : `<p class='pn-empty'>No le quedan clases agendadas.</p>`}
+      ${pas.length ? `<details${clMover && pas.some(c => c.fecha === clMover) ? ' open' : ''}><summary class='pn-sub' style='cursor:pointer;margin-top:8px'>Clases que ya pasaron este mes (${pas.length})</summary>${pas.slice().reverse().map(fila).join('')}</details>` : ''}
+      <button class='pn-link' data-clx style='margin-top:8px'>Cerrar</button></div>`;
+  }
+  function bindClases(root, repintar){
+    root.querySelectorAll('[data-cl]').forEach(b => b.onclick = () => { clAbierta = b.dataset.cl; clMover = ''; clHacia = ''; aMsg = ''; repintar(); });
+    root.querySelectorAll('[data-clx]').forEach(b => b.onclick = () => { clAbierta = ''; clMover = ''; clHacia = ''; repintar(); });
+    root.querySelectorAll('[data-clmv]').forEach(b => b.onclick = () => { clMover = b.dataset.clmv; clHacia = ''; repintar(); });
+    root.querySelectorAll('[data-clh]').forEach(b => b.onclick = () => { clHacia = b.dataset.clh; const av = root.querySelector('#pn-clav').checked; repintar(); const a2 = root.querySelector('#pn-clav'); if(a2) a2.checked = av; });
+    const x = root.querySelector('#pn-clx'); if(x) x.onclick = () => { clMover = ''; clHacia = ''; repintar(); };
+    const go = root.querySelector('#pn-clgo');
+    if(go) go.onclick = async () => {
+      go.disabled = true; go.textContent = 'Guardando…';
+      try{
+        const r = await post(Object.assign({}, auth, {accion:'mover-panel', alumno: clAbierta, desde: clMover, hacia: clHacia, avisar: root.querySelector('#pn-clav').checked}));
+        NOTAS = r; const m = r.movida || {};
+        aMsg = `Listo: la clase de ${m.alumno || clAbierta} del ${String(m.desde || clMover).toLowerCase()} quedó para el ${String(m.hacia || clHacia).toLowerCase()}.` + (m.avisado ? ' Le avisamos a la familia.' : '');
+        clMover = ''; clHacia = ''; repintar();
+        const p = app.querySelector("[data-pane='alumnos']"); if(p) p.scrollIntoView({behavior:'smooth', block:'start'});
+      }catch(e){ go.disabled = false; go.textContent = 'Guardar cambio'; go.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(/desconocida/i.test(e.message) ? 'Falta pegar el programa nuevo (v45) de la planilla Anual.' : e.message)}</p>`); }
+    };
+  }
+  async function abrirAlumno(nombre, que){
+    await cargarNotas(); aGrupo = ''; aMsg = '';
+    if(que === 'nivel'){ aCambio = nombre; aNuevo = ''; } else if(que === 'clases'){ clAbierta = nombre; clMover = ''; clHacia = ''; } else { ntAbierta = nombre; }
+    pintarAlumnos();
+    const row = [...app.querySelectorAll('[data-alumno]')].find(x => x.dataset.alumno === nombre); if(row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   // ---------- Informes de fin de mes (borradores que deja Claude en la pestaña Informes) ----------
   let INF = null;
   async function cargarInformes(){ try{ INF = (await post(Object.assign({}, auth, {accion:'informes'}))).informes || []; }catch(_){ INF = INF || []; } return INF; }
@@ -863,8 +930,8 @@
     pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + informesHTML() + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
       `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
       <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}${aGrupo && mio(aGrupo) ? `<span class='pn-tu'>Tu grupo</span>` : ''}<span class='pn-count'>${lista.length}</span></h3>${aGrupo && ACARGO[aGrupo] ? `<p class='pn-sub' style='margin-bottom:4px'>A cargo: ${esc(ACARGO[aGrupo])}</p>` : ''}
-      <p class='pn-sub'>Anota cómo va cada alumno. Las notas son solo para el equipo.</p>
-      ${lista.map(a => `<div class='pn-al' data-alumno='${esc(a.nombre)}'><div><b class='pn-alb'>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small></div><div>${notaBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
+      <p class='pn-sub'>${ES_ADMIN ? 'Mira cuántas clases le quedan a cada alumno y muévelas si te avisan. ' : ''}Anota cómo va cada alumno en 📝 Notas: son solo para el equipo, la familia no las ve.</p>
+      ${lista.map(a => `<div class='pn-al' data-alumno='${esc(a.nombre)}'><div><b class='pn-alb'>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small>${quedanTxt(a.nombre)}</div><div>${notaBtn(a.nombre)}${claseBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${claseBox(a.nombre)}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
     pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
     bindInformes(pane);
     pane.querySelectorAll('[data-acn]').forEach(b => b.onclick = () => { aCambio = b.dataset.acn; aNuevo = ''; aMsg = ''; pintarAlumnos(); });
@@ -881,6 +948,7 @@
       }catch(x){ ago.disabled = false; ago.textContent = 'Guardar'; ago.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(x.message)}</p>`); }
     };
     bindNotas(pane, pintarAlumnos);
+    bindClases(pane, pintarAlumnos);
   }
 
   // ---------- Academia de Verano ----------
@@ -1196,10 +1264,7 @@
       alumnos: () => NOTAS,
       async alumno(nombre, que){
         tab = 'alumnos'; const b = app && app.querySelector(".pn-tab[data-tab='alumnos']"); if(b) b.click();
-        await cargarNotas(); aGrupo = ''; aMsg = '';
-        if(que === 'nivel'){ aCambio = nombre; aNuevo = ''; } else { ntAbierta = nombre; }
-        pintarAlumnos();
-        const row = [...app.querySelectorAll('[data-alumno]')].find(x => x.dataset.alumno === nombre); if(row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await abrirAlumno(nombre, que);
       },
       fsub(x){ fSub = x; if(app && app.querySelector('.pn-finz')) mostrarFsub(); },
       anotar: b => anotarFondo(b), // vuelve al tiro; la promesa se cumple cuando la planilla lo guardó

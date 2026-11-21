@@ -60,6 +60,7 @@
 .pn-uso-link span:last-child{font-weight:600;white-space:nowrap}
 .pn-uso__h{font-size:1.3rem;font-weight:600;margin:16px 0 2px;opacity:.8}
 .pn-chip{font-size:1.35rem;padding:5px 11px;border-radius:999px;background:#f4f1ec}
+button.pn-chip{border:0;font:inherit;font-size:1.35rem;color:inherit;cursor:pointer}
 .pn-chip--in{background:var(--ok-soft);color:var(--ok)}
 .pn-cancel{opacity:.55}
 .pn-cancel h3{text-decoration:line-through}
@@ -262,3 +263,23 @@
 .pn-fsec .pn-fsub2{padding:2px 0 2px 14px;font-size:1.2rem}.pn-fsec .pn-fsub2 span,.pn-fsec .pn-fsub2 b{opacity:.55;font-weight:400}
 .pn-fmesv{font-size:1.45rem;font-weight:600;margin:16px 0 2px}.pn-fmesv small{font-weight:400;opacity:.55;font-size:1.15rem}
 .pn-fres .pn-fmesv:first-of-type{margin-top:4px}
+
+/* v45 · clases de cada alumno y mover desde el Panel */
+.pn-qd{display:block;font-size:1.2rem;margin-top:2px;color:#0f6e74}
+.pn-qd b{font-size:1.2rem;font-weight:700}
+.pn-qd--0{color:#b5662b}
+.pn-clist{background:#EEF5F8}
+.pn-clr{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#fff;border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.pn-clr.pasada{opacity:.75}
+.pn-clr b{display:block;font-size:1.35rem;font-weight:600}
+.pn-clr small{display:block;font-size:1.15rem;opacity:.65}
+.pn-clr > div:last-child{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.pn-cle{font-style:normal;font-size:1.1rem;font-weight:600;border-radius:999px;padding:3px 9px;background:#f4f1ec}
+.pn-cle.si{background:var(--ok-soft);color:var(--ok)}
+.pn-cle.no{background:#FBE9DD;color:#b5662b}
+.pn-cle.mv{background:#E6F1F8;color:#0f6e74}
+.pn-clmv{border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-size:1.2rem;font-weight:600;padding:6px 14px;cursor:pointer}
+.pn-clbox{margin:0 0 8px}
+.pn-clmes{font-weight:600;margin:10px 0 6px!important}
+.pn-clbox .pn-nvops button small{display:block;font-size:1.05rem;opacity:.65}
+.pn-clbox .pn-nvops button.on small{opacity:.85}

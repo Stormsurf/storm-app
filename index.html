@@ -335,7 +335,9 @@ body:has(.mc-hero--login) .ap-top{display:none}
 (()=>{
   const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
   const PAY = "https://www.stormsurf.cl/products/mensualidad-academia-anual";
-  const NOTA = "Puedes mover una clase avisando 3 d\u00edas antes. Solo aplica a surf en los planes B\u00e1sico y Medio.";
+  const NOTA = "Puedes mover una clase hasta el d\u00eda antes. Solo aplica a surf en los planes B\u00e1sico y Medio.";
+  // Cuánto aviso pide la planilla para mover (AVISO_DIAS). Con 1 se puede hasta el día antes.
+  const avisoTxt = n => +n <= 1 ? 'hasta el día antes de la clase' : 'avisando con ' + n + ' días de anticipación';
   const KEY = 'storm-mi-clase';
   // Academia de Verano: mismo ingreso (las dos planillas firman con la misma clave).
   const API_VERANO = "https://script.google.com/macros/s/AKfycbzSHDu8whWWNwq-EFwaWqwKOtyU5pnyPuixutUI8sd5twFaTjDibN11TA3bMH_UddTo/exec";
@@ -434,7 +436,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   function claseRow(c, ai, ci, aviso){
     let h = `<div class='mc-row'><div><b>${esc(cap(c.texto))}</b>${c.cambiada?"<span class='mc-tag'>movida</span>":''}<small>${esc(c.clase)} · ${esc(c.horario)}${c.nota?' · '+esc(c.nota):''}</small></div>`;
     if(c.recupera && c.movible) h += `<button class='mc-btn' data-open='${ai}-${ci}'>Mover</button>`;
-    else if(c.recupera) h += `<span class='mc-lock'>Faltan menos de ${aviso} días</span>`;
+    else if(c.recupera) h += `<span class='mc-lock'>${+aviso <= 1 ? 'Es hoy, ya no se puede mover' : 'Faltan menos de ' + aviso + ' días'}</span>`;
     if(c.recupera && c.movible){
       h += `<div class='mc-opts' id='o-${ai}-${ci}' hidden>`;
       if(c.opciones.length){
@@ -452,7 +454,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     let h = `<div class='mc-card'><div class='mc-kid2'>${ring}<div><h3>${esc(a.alumno)}</h3><div class='mc-tg'>${a.grupo?`<span>${esc(a.grupo)}</span>`:''}<span>Plan ${esc(a.plan)}</span><span class='ok'>${a.pagado ? 'Pagado' : a.beca ? 'Beca Storm' : 'Inscrito'}</span><span class='n'>${esc(cap(a.mes))}${a.dias?' · '+esc(cap(a.dias)):''}</span></div></div></div>`;
     if(as) h += `<p class='mc-note' style='text-align:left;margin:10px 0 0'>Asistencia: fue a ${as.vino} de ${as.total} clase${as.total===1?'':'s'} este mes.</p>`;
     if(a.clases.length) h += a.clases.some(c=>c.recupera)
-      ? `<p class='mc-note' style='text-align:left;margin:10px 0 0'>Si no puede ir a una clase de surf, puedes moverla a otro día avisando con ${aviso} días de anticipación.</p>`
+      ? `<p class='mc-note' style='text-align:left;margin:10px 0 0'>Si no puede ir a una clase de surf, puedes moverla a otro día ${avisoTxt(aviso)}.</p>`
       : `<p class='mc-note' style='text-align:left;margin:10px 0 0'>Las clases de este plan no se pueden mover a otro día.</p>`;
     h += a.clases.length ? `<div class='mc-list'>` + a.clases.map((c,ci)=>claseRow(c, ai, ci, aviso)).join('') + `</div>` : `<p class='mc-note' style='text-align:left;margin-top:12px'>Ya no quedan clases este mes.</p>`;
     return h + `</div>`;
