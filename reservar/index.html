@@ -148,6 +148,7 @@
   async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error(trErr('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.')); } if(!d.ok){ const e = new Error(trErr(d.error || 'Algo falló.')); e.orig = d.error || ''; throw e; } return d; }
   const root = $('#rs');
   const S = { nivel: '', personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '', pack: false };
+  if(q.get('nivel') === 'intermedio') S.nivel = 'intermedio'; // link desde la web: tarjeta Clases nivel intermedio (Isidora 21-11)
   // Pack de clases: P = el pack del cliente (link personal ?pack=…&k=…); S.pack = comprar un pack al reservar la 1ª clase
   let P = null;
   const PK = () => (D && D.pack) || { clases: 5, descuento: 10, meses: 1 };
