@@ -423,8 +423,8 @@
          <div class='pn-stat'><small>Queda para Storm</small><b>${clp((m.total || 0) - (m.pagoInstructores || 0))}</b><em>antes de comisión</em></div></div>
 `
       : `<div class='pn-stats'><div class='pn-stat pn-stat--main' style='background:#0f6e74'><small>Tus clases particulares en ${mesTxt}</small><b>${m.clases || 0}</b><em>${clp(m.pagoYo)} a pagarte</em></div></div>`;
-    const pks = (E.packs || []).filter(k => k.quedan > 0);
-    if (admin && pks.length && !verPasadas) h += grupo('Packs con clases', pks.map(k => `<button class='es-row' data-cliv='${esc(k.nombre)}'>${avatar(k.nombre)}<span class='es-rx'><b>${esc(k.nombre)}</b><small>${esc(packTxt(k))}${k.medio === 'Por pagar' ? ' · <span style="color:#b26a00">no ha pagado</span>' : ''}</small></span><span class='es-rc'>›</span></button>`));
+    const pks = (E.packs || []).filter(k => k.quedan > 0 && !k.vencido);
+    if (admin && pks.length && !verPasadas) h += grupo('Packs con clases', pks.map(k => `<button class='es-row' data-cliv='${esc(k.nombre)}'>${avatar(k.nombre)}<span class='es-rx'><b>${esc(k.nombre)}</b><small>${esc(packTxt(k))} · vence ${esc(fcorta(k.vence))}${k.medio === 'Por pagar' ? ' · <span style="color:#b26a00">no ha pagado</span>' : ''}</small></span><span class='es-rc'>›</span></button>`));
     const lista = E.reservas.filter(r => verPasadas ? r.fecha < E.hoy : r.fecha >= E.hoy).filter(r => !filtroIns || r.instructores.includes(filtroIns));
     if (verPasadas) lista.reverse();
     if (admin) {
@@ -453,9 +453,9 @@
   }
   const faltaCobrar = r => (r.saldos || []).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0);
   // ---------- packs de clases (5 clases con 10% de descuento, se pagan una vez) ----------
-  const PK = () => (E.ajustes || {}).pack || { clases: 5, descuento: 10 };
+  const PK = () => Object.assign({ clases: 5, descuento: 10, meses: 1 }, (E.ajustes || {}).pack || {});
   const precioPack = p => { const k = PK(), v = Number(((E.ajustes || {}).precios || {})[Math.min(5, Math.max(1, Math.floor(+p || 1)))]) || 0; return Math.round(v * k.clases * (100 - k.descuento) / 100 / 100) * 100; };
-  const packDe = c => { if (!c) return null; const t = wa(c.telefono), n = String(c.nombre || '').trim().toLowerCase(); return (E.packs || []).find(k => k.quedan > 0 && (k.nombre.trim().toLowerCase() === n || (t && wa(k.telefono) === t))) || null; };
+  const packDe = c => { if (!c) return null; const t = wa(c.telefono), n = String(c.nombre || '').trim().toLowerCase(); return (E.packs || []).find(k => k.quedan > 0 && !k.vencido && (k.nombre.trim().toLowerCase() === n || (t && wa(k.telefono) === t))) || null; };
   const packsDeCliente = c => { const t = wa(c.telefono), n = String(c.nombre || '').trim().toLowerCase(); return (E.packs || []).filter(k => k.nombre.trim().toLowerCase() === n || (t && wa(k.telefono) === t)); };
   const packTxt = k => (k.quedan === 1 ? 'Queda 1' : 'Quedan ' + k.quedan) + ' de ' + k.clases + ' clases';
   const packDeClase = r => r.pack ? (E.packs || []).find(k => k.id === r.pack) : null;
@@ -596,22 +596,22 @@
   // Pack en la página del cliente: cuántas le quedan, si pagó, y vender uno nuevo
   let packVender = false;
   function packGrupo(c) {
-    const l = packsDeCliente(c), act = l.filter(k => k.quedan > 0), k = PK();
+    const l = packsDeCliente(c), act = l.filter(k => k.quedan > 0 && !k.vencido), k = PK();
     let h = '';
     l.forEach(p => {
       const pagado = p.medio !== 'Por pagar';
       h += grupo(l.length > 1 ? 'Pack del ' + esc(fcorta(p.creada.slice(0, 10))) : 'Pack de clases', [
-        `<div class='es-row'><i class='es-ri ${p.quedan > 0 ? 'ok' : 'gris'}'>${p.clases}</i><span class='es-rx'><b>${esc(packTxt(p))}</b><small>${p.personas} persona${p.personas === 1 ? '' : 's'} · ${clp(p.total)} · ${pagado ? 'pagado con ' + esc(p.medio) : 'no ha pagado'}</small></span></div>
+        `<div class='es-row'><i class='es-ri ${p.quedan > 0 ? 'ok' : 'gris'}'>${p.clases}</i><span class='es-rx'><b>${esc(packTxt(p))}</b><small>${p.personas} persona${p.personas === 1 ? '' : 's'} · ${clp(p.total)} · ${pagado ? 'pagado con ' + esc(p.medio) : 'no ha pagado'}${p.vence ? `<br><span style='color:${p.vencido ? '#b5662b' : '#0f6e74'}'>${p.vencido ? 'Venció' : 'Vence'} el ${esc(fcorta(p.vence))}</span>` : ''}</small></span></div>
          <div class='es-pkb'>${Array.from({ length: p.clases }, (_, i) => `<i class='${i < p.usadas ? 'us' : ''}'></i>`).join('')}</div>`,
         !pagado ? `<div class='es-rpago'><span>¿Ya pagó el pack? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pkpago='${esc(p.id)}' data-m='${v}'>${t}</button>`).join('')}</div>` : '',
-        p.quedan > 0 && p.link && wa(p.telefono) ? fila(ICO_S.wa, 'Mandarle su link del pack', 'Con ese link agenda solo sus próximas clases', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(p.telefono)}?text=${encodeURIComponent('Hola ' + p.nombre.split(' ')[0] + ', con este link agendas tus próximas clases de tu pack Storm (te ' + (p.quedan === 1 ? 'queda 1' : 'quedan ' + p.quedan) + '): ' + p.link)}'`, ic: 'ok' }) : '',
-        p.quedan > 0 && p.link ? fila(ICO_S.link, 'Copiar link del pack', '', { tag: 'button', at: `data-lf='${esc(p.link)}'` }) : '',
+        p.quedan > 0 && !p.vencido && p.link && wa(p.telefono) ? fila(ICO_S.wa, 'Mandarle su link del pack', 'Con ese link agenda solo sus próximas clases', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(p.telefono)}?text=${encodeURIComponent('Hola ' + p.nombre.split(' ')[0] + ', con este link agendas tus próximas clases de tu pack Storm (te ' + (p.quedan === 1 ? 'queda 1' : 'quedan ' + p.quedan) + '): ' + p.link)}'`, ic: 'ok' }) : '',
+        p.quedan > 0 && !p.vencido && p.link ? fila(ICO_S.link, 'Copiar link del pack', '', { tag: 'button', at: `data-lf='${esc(p.link)}'` }) : '',
         p.usadas === 0 ? fila(ICO_S.borrar, 'Anular pack', 'Si fue un error', { tag: 'button', at: `data-pkanular='${esc(p.id)}'`, ic: 'mal', cl: 'rojo' }) : ''
       ]);
     });
     if (!act.length) {
       if (packVender) h += `<p class='es-gt'>Vender pack</p><div class='es-caja es-ed es-pkv'>
-          <p class='es-edp'>${k.clases} clases con ${k.descuento}% de descuento. Se paga una vez y cada clase que le anotes descuenta una.</p>
+          <p class='es-edp'>${k.clases} clases con ${k.descuento}% de descuento, para usar en ${k.meses === 1 ? '1 mes' : k.meses + ' meses'}. Se paga una vez y cada clase que le anotes descuenta una.</p>
           <div class='es-2'><label><span class='es-lb'>Personas por clase</span><input class='es-in' name='personas' type='number' min='1' max='5' value='1' inputmode='numeric'></label>
             <label><span class='es-lb'>Precio del pack</span><input class='es-in' name='total' inputmode='numeric' value='${precioPack(1)}' data-auto='1'></label></div>
           <label><span class='es-lb'>¿Cómo paga?</span><select class='es-in' name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}</select></label>
@@ -650,8 +650,8 @@
     const k = PK(), tiene = packDe(c), inp = pg.querySelector('[name=pack]'), tot = pg.querySelector('[name=total]');
     pg._cli = c;
     z.innerHTML = tiene
-      ? `<label class='es-pkz'><span class='es-rx'><b>Usar su pack</b><small>${esc(packTxt(tiene))}${tiene.medio === 'Por pagar' ? ' · el pack no está pagado' : ''}</small></span><span class='es-sw'><input type='checkbox' data-pku='${esc(tiene.id)}' checked><span class='es-tg'></span></span></label>`
-      : `<label class='es-pkz'><span class='es-rx'><b>Vender pack de ${k.clases} clases</b><small>${k.descuento}% de descuento · esta es su primera clase</small></span><span class='es-sw'><input type='checkbox' data-pkn><span class='es-tg'></span></span></label>`;
+      ? `<label class='es-pkz'><span class='es-rx'><b>Usar su pack</b><small>${esc(packTxt(tiene))} · vence el ${esc(fcorta(tiene.vence))}${tiene.medio === 'Por pagar' ? ' · el pack no está pagado' : ''}</small></span><span class='es-sw'><input type='checkbox' data-pku='${esc(tiene.id)}' checked><span class='es-tg'></span></span></label>`
+      : `<label class='es-pkz'><span class='es-rx'><b>Vender pack de ${k.clases} clases</b><small>${k.descuento}% de descuento · se usa en ${k.meses === 1 ? '1 mes' : k.meses + ' meses'} · esta es su 1ª clase</small></span><span class='es-sw'><input type='checkbox' data-pkn><span class='es-tg'></span></span></label>`;
     const aplicar = () => {
       const u = z.querySelector('[data-pku]'), n = z.querySelector('[data-pkn]'), usa = u && u.checked, vende = n && n.checked;
       inp.value = usa ? u.dataset.pku : vende ? 'nuevo' : '';
@@ -871,7 +871,7 @@
         <tr><td colspan='2'>Grupo grande o empresa</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
         ${nota('Con niños menores de 8 la app arma los grupos sola: 2 niños por instructor, y si sobra uno se suma al último par.')}
         <h3 style='margin-top:18px'>Pack de clases</h3><p class='pn-sub'>Se vende desde la página del cliente o al anotar una clase. El instructor recibe lo mismo de siempre por cada clase.</p>
-        <div class='es-f'><label>Clases del pack<input data-pk='clases' inputmode='numeric' value='${PK().clases}'></label><label>Descuento (%)<input data-pk='descuento' inputmode='numeric' value='${PK().descuento}'></label></div>
+        <div class='es-f'><label>Clases del pack<input data-pk='clases' inputmode='numeric' value='${PK().clases}'></label><label>Descuento (%)<input data-pk='descuento' inputmode='numeric' value='${PK().descuento}'></label><label>Se usa en… (meses)<input data-pk='meses' inputmode='numeric' value='${PK().meses}'></label></div>
         ${nota('Con 1 persona el pack queda en ' + clp(precioPack(1)) + ' (' + PK().clases + ' clases de ' + clp(a.precios[1]) + ' menos ' + PK().descuento + '%).')}
         <div class='es-acc'><button class='es-btn' data-aj='precios'>Guardar precios</button></div><p class='es-err vivo'></p></div>`;
     }

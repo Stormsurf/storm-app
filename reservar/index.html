@@ -98,6 +98,15 @@
 .rs-niv button b{display:block;font-size:1.55rem}.rs-niv button small{display:block;font-size:1.25rem;color:var(--mute);line-height:1.35;margin-top:2px}
 .rs-niv button.on{border-color:var(--ink);background:var(--ink);color:#fff}.rs-niv button.on small{color:rgba(255,255,255,.75)}
 .rs-wa{display:block;text-align:center;margin:18px 0 0;font-size:1.4rem;color:var(--mute)}
+.rs-tk{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:14px 16px;border-radius:16px;border:1.5px dashed #0f6e74;background:#fff;font:inherit;color:var(--ink);cursor:pointer;text-align:left;position:relative}
+.rs-tk b{flex:1;font-size:1.6rem;font-weight:600}.rs-tki{font-size:2rem;line-height:1}
+.rs-tkc{width:30px;height:30px;border-radius:50%;background:#E3F1F1;color:#0f6e74;display:grid;place-items:center;font-weight:700;font-size:1.7rem}
+.rs-tk.on{background:#0f6e74;border-style:solid;color:#fff}.rs-tk.on .rs-tkc{background:#fff}
+.rs-tkd{margin-top:8px;padding:14px 16px;border-radius:16px;background:#E3F1F1}
+.rs-tkp{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.rs-tkp span{font-size:1.6rem;font-weight:700;color:#0f6e74}
+.rs-tkp em{font-style:normal;font-weight:700;font-size:2.2rem;text-align:right}.rs-tkp em s{display:block;font-weight:500;font-size:1.2rem;color:var(--mute)}
+.rs-tkd ul{margin:8px 0 0;padding:0 0 0 18px;font-size:1.35rem;line-height:1.55}
+.rs-tkx{margin-top:8px;border:0;background:none;font:inherit;font-size:1.3rem;color:var(--mute);text-decoration:underline;cursor:pointer;padding:0}
 .rs-pack{display:flex;align-items:center;gap:12px;margin-top:12px;padding:14px 16px;border-radius:16px;border:1.5px solid var(--line);cursor:pointer;background:#fff}
 .rs-pack.on{border-color:#0f6e74;background:#E3F1F1}
 .rs-pack input{width:20px;height:20px;flex:none;accent-color:#0f6e74}
@@ -134,23 +143,35 @@
   const fd = f => { const [y,m,d] = f.split('-').map(Number); const x = new Date(Date.UTC(y,m-1,d)); if(L === 'en') return DAYS[x.getUTCDay()] + ', ' + MONTHS[m-1] + ' ' + d; const s = DIAS[x.getUTCDay()] + ' ' + d + ' de ' + MESES[m-1]; return s[0].toUpperCase() + s.slice(1); };
   const fin = h => { const [a,b] = h.split(':').map(Number), m = a*60 + b + (D ? D.duracion : 90); return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0'); };
   // Mensajes del servidor (vienen en español): en inglés se traducen los conocidos
-  const ERR_EN = [[/ocup/, 'That time was just taken. Please choose another one.'], [/ya no se puede/, 'That time can no longer be booked. Please choose another one.'], [/nombre/, 'Please write your name.'], [/tel[eé]fono/, 'Please check your phone number.'], [/correo/, 'Please check your email.'], [/condiciones/, 'To book, please accept the terms and conditions.'], [/WhatsApp/, 'Online booking is not available right now. Please message us on WhatsApp.'], [/Mercado Pago/, 'We could not connect to the payment system. Please try again in a moment.'], [/día y un horario/, 'Please choose a day and a time.'], [/conectarnos|internet/, 'We could not connect. Check your internet and try again.']];
+  const ERR_EN = [[/vence|dentro de 1 mes/, 'Your pack must be used within 1 month. Please choose an earlier day.'], [/ocup/, 'That time was just taken. Please choose another one.'], [/ya no se puede/, 'That time can no longer be booked. Please choose another one.'], [/nombre/, 'Please write your name.'], [/tel[eé]fono/, 'Please check your phone number.'], [/correo/, 'Please check your email.'], [/condiciones/, 'To book, please accept the terms and conditions.'], [/WhatsApp/, 'Online booking is not available right now. Please message us on WhatsApp.'], [/Mercado Pago/, 'We could not connect to the payment system. Please try again in a moment.'], [/día y un horario/, 'Please choose a day and a time.'], [/conectarnos|internet/, 'We could not connect. Check your internet and try again.']];
   const trErr = m => { if(L !== 'en') return m; const x = ERR_EN.find(e => e[0].test(m)); return x ? x[1] : 'Something went wrong. Please try again or message us on WhatsApp.'; };
   async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error(trErr('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.')); } if(!d.ok){ const e = new Error(trErr(d.error || 'Algo falló.')); e.orig = d.error || ''; throw e; } return d; }
   const root = $('#rs');
   const S = { nivel: '', personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '', pack: false };
   // Pack de clases: P = el pack del cliente (link personal ?pack=…&k=…); S.pack = comprar un pack al reservar la 1ª clase
   let P = null;
-  const PK = () => (D && D.pack) || { clases: 5, descuento: 10 };
+  const PK = () => (D && D.pack) || { clases: 5, descuento: 10, meses: 1 };
+  const mesesTxt = () => { const m = PK().meses || 1; return m === 1 ? t('1 mes', '1 month') : m + t(' meses', ' months'); };
+  // Último día en que se puede usar: el pack del link (P.vence) o, si lo compra ahora, hoy + 1 mes
+  const sumarMeses = (f, n) => { const [y, m, d] = f.split('-').map(Number), u = new Date(Date.UTC(y, m - 1 + n + 1, 0)).getUTCDate(); return new Date(Date.UTC(y, m - 1 + n, Math.min(d, u))).toISOString().slice(0, 10); };
+  const tope = () => P ? P.vence : S.pack && D ? sumarMeses(D.hoy, PK().meses || 1) : '';
   const precioPack = porClase => Math.round(porClase * PK().clases * (100 - PK().descuento) / 100 / 100) * 100;
-  const packOferta = (p, precio, inter) => !p || inter || !D || !precio ? '' : `<label class='rs-pack${S.pack ? ' on' : ''}'><input type='checkbox' id='rs-pack'${S.pack ? ' checked' : ''}>
-    <span><b>${t('Pack de', 'Pack of')} ${PK().clases} ${t('clases', 'lessons')} · ${PK().descuento}% ${t('de descuento', 'off')}</b><small>${t('Hoy agendas tu 1ª clase y las otras', 'Book your 1st lesson today and the other')} ${PK().clases - 1} ${t('cuando quieras, con tu link personal.', 'whenever you want, with your personal link.')}</small></span>
-    <em>${clp(precioPack(precio))}<s>${clp(precio * PK().clases)}</s></em></label>`;
+  // Ticket del pack (Isidora 21-11): cerrado solo dice "Pack de 5 clases"; al tocarlo se abre con el descuento, el precio y cómo se usa
+  const packOferta = (p, precio, inter) => !p || inter || !D || !precio ? '' : `<button type='button' class='rs-tk${S.pack ? ' on' : ''}' id='rs-pack' aria-pressed='${S.pack}'>
+    <span class='rs-tki'>🎟️</span><b>${t('Pack de', 'Pack of')} ${PK().clases} ${t('clases', 'lessons')}</b><span class='rs-tkc'>${S.pack ? '✓' : '+'}</span></button>
+    ${S.pack ? `<div class='rs-tkd'>
+      <div class='rs-tkp'><span>${PK().descuento}% ${t('de descuento', 'off')}</span><em>${clp(precioPack(precio))}<s>${clp(precio * PK().clases)}</s></em></div>
+      <ul><li>${PK().clases} ${t('clases de 1 hora y media para', 'lessons of 1 hour 30 minutes for')} ${pl(p, 'persona', 'personas', 'person', 'people')}</li>
+        <li><b>${t('Para usar en', 'To use within')} ${mesesTxt()}</b> ${t('desde hoy', 'from today')}</li>
+        <li>${t('Hoy agendas tu 1ª clase y las otras', 'Book your 1st lesson today and the other')} ${PK().clases - 1} ${t('cuando quieras, con tu link personal', 'whenever you want, with your personal link')}</li>
+        <li>${t('Pagas una sola vez', 'You pay only once')}</li></ul>
+      <button type='button' class='rs-tkx' id='rs-pack-no'>${t('Prefiero solo 1 clase', 'I prefer just 1 lesson')}</button></div>` : ''}`;
   const puntos = (usadas, total) => `<div class='rs-pkb'>${Array.from({length: total}, (_, i) => `<i class='${i < usadas ? 'us' : ''}'></i>`).join('')}</div>`;
   const packCab = () => `<div class='rs-hero'><h1>${t('Hola', 'Hi')} ${esc(P.nombre.split(' ')[0])} 🤙</h1><p>${t('Agenda tu próxima clase con tu pack.', 'Book your next lesson with your pack.')}</p></div>
       <div class='rs-card'><div class='rs-step'><h2>${t('Tu pack de', 'Your pack of')} ${P.clases} ${t('clases', 'lessons')}</h2></div>
         <p class='rs-pkq'>${P.quedan === 1 ? t('Te queda 1 clase', 'You have 1 lesson left') : t('Te quedan', 'You have') + ' ' + P.quedan + ' ' + t('clases', 'lessons left')}</p>${puntos(P.usadas, P.clases)}
         <p class='rs-note'>${t('Clase para', 'Lesson for')} ${pl(P.personas, 'persona', 'personas', 'person', 'people')}${P.menores ? ' · ' + P.menores + t(' menor' + (P.menores === 1 ? '' : 'es') + ' de 8', ' under 8') : ''} · ${t('ya está pagada', 'already paid')}.</p>
+        <p class='rs-note'><b>${t('Úsalas hasta el', 'Use them by')} ${esc(L === 'en' ? P.venceEN : P.venceLarga)}.</b></p>
         ${P.proximas.length ? `<p class='rs-note'><b>${t('Ya agendadas', 'Already booked')}:</b> ${P.proximas.map(x => esc(fd(x.fecha)) + ' ' + esc(x.hora)).join(' · ')}</p>` : ''}
       </div>`;
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
@@ -207,7 +228,7 @@
   function calendario(){
     if(cargando && !D) return `<div class='rs-skel'></div>`;
     if(errCarga && !D) return `<p class='rs-err'>${esc(errCarga)}</p><button class='rs-btn2' id='rs-retry'>${t('Intentar de nuevo', 'Try again')}</button>`;
-    const dias = Object.keys(D.dias).sort();
+    const dias = Object.keys(D.dias).sort().filter(f => !tope() || f <= tope());
     if(!dias.length) return `<p class='rs-empty'>${t('No quedan horarios disponibles en los próximos días.', 'There are no times available in the coming days.')} <a href='${waLink(t('Hola Storm, quiero reservar una clase de surf', 'Hi Storm, I would like to book a surf lesson'))}' target='_blank' rel='noopener'>${t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</a>.</p>`;
     const primero = D.hoy.slice(0,7), ultimo = D.hasta.slice(0,7);
     if(!S.mes) S.mes = dias[0].slice(0,7);
@@ -218,7 +239,7 @@
     h += (L === 'en' ? ['M','T','W','T','F','S','S'] : ['L','M','M','J','V','S','D']).map(x => `<span class='wd'>${x}</span>`).join('');
     for(let i = 0; i < off; i++) h += '<span></span>';
     for(let d = 1; d <= largo; d++){
-      const f = S.mes + '-' + String(d).padStart(2,'0'), si = !!D.dias[f];
+      const f = S.mes + '-' + String(d).padStart(2,'0'), si = !!D.dias[f] && !(tope() && f > tope());
       h += `<button ${si ? `class='si${S.fecha===f?' on':''}${f===D.hoy?' hoy':''}' data-f='${f}' aria-label='${fd(f)}'` : `class='${f===D.hoy?'hoy':''}' disabled`}>${d}</button>`;
     }
     h += '</div>';
@@ -282,7 +303,8 @@
     const mv = n => { const [y,m] = S.mes.split('-').map(Number), x = new Date(Date.UTC(y, m-1+n, 1)); S.mes = x.toISOString().slice(0,7); pintar(); };
     const pv = $('#rs-prev'), nx = $('#rs-next'), rt = $('#rs-retry');
     if(pv) pv.onclick = () => mv(-1); if(nx) nx.onclick = () => mv(1); if(rt) rt.onclick = cargar;
-    const pk = $('#rs-pack'); if(pk) pk.onchange = () => { S.pack = pk.checked; pintar(); };
+    const pkn = $('#rs-pack-no'); if(pkn) pkn.onclick = () => { S.pack = false; pintar(); };
+    const pk = $('#rs-pack'); if(pk) pk.onclick = () => { S.pack = !S.pack; if(S.fecha && tope() && S.fecha > tope()){ S.fecha = ''; S.hora = ''; } pintar(); };
     const go = $('#rs-go');
     if(go) go.onclick = async () => {
       const f = {}; root.querySelectorAll('.rs-f [name]').forEach(i => f[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
@@ -316,7 +338,7 @@
       const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(t('Clase de surf Storm', 'Storm surf lesson')) + '&dates=' + ini + '/' + fn + '&ctz=America/Santiago&location=' + encodeURIComponent('Playa de Matanzas') + '&details=' + encodeURIComponent(t('Llega 10 minutos antes. Trae traje de baño, toalla y bloqueador.', 'Arrive 10 minutes early. Bring a swimsuit, towel and sunscreen.'));
       const ficha = r.ficha ? r.ficha + (L === 'en' && !/[?&]l=/.test(r.ficha) ? '&l=en' : '') : '';
       const pkb = r.pack ? `<div style='margin:16px 0 4px;padding:16px;border-radius:16px;background:#E3F1F1;text-align:left'><b style='font-size:1.6rem'>🏄 ${t('Tu pack de', 'Your pack of')} ${r.pack.clases} ${t('clases', 'lessons')}</b>
-          <p style='margin:6px 0 0;color:#5c5b58'>${r.pack.quedan ? (r.pack.quedan === 1 ? t('Te queda 1 clase.', 'You have 1 lesson left.') : t('Te quedan', 'You have') + ' ' + r.pack.quedan + ' ' + t('clases.', 'lessons left.')) + ' ' + t('Agenda las próximas cuando quieras con tu link personal (también te llega por correo).', 'Book the next ones whenever you want with your personal link (also in your email).') : t('Esta es la última clase de tu pack.', 'This is the last lesson of your pack.')}</p>
+          <p style='margin:6px 0 0;color:#5c5b58'>${r.pack.quedan ? (r.pack.quedan === 1 ? t('Te queda 1 clase.', 'You have 1 lesson left.') : t('Te quedan', 'You have') + ' ' + r.pack.quedan + ' ' + t('clases.', 'lessons left.')) + ' ' + t('Úsalas hasta el', 'Use them by') + ' <b>' + esc(L === 'en' ? r.pack.venceEN : r.pack.venceLarga) + '</b>. ' + t('Agenda las próximas cuando quieras con tu link personal (también te llega por correo).', 'Book the next ones whenever you want with your personal link (also in your email).') : t('Esta es la última clase de tu pack.', 'This is the last lesson of your pack.')}</p>
           ${r.pack.quedan ? `<a class='rs-go' style='text-decoration:none;text-align:center;margin-top:12px;background:#0f6e74' href='${esc(r.pack.link + (L === 'en' ? '&l=en' : ''))}'>${t('Agendar otra clase', 'Book another lesson')}</a>` : ''}</div>` : '';
       root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>${t('¡Clase reservada!', 'Lesson booked!')}</h2>
         <p class='big'>${esc(fd(r.fecha))}, ${esc(r.hora)} ${t('hrs', '')}</p>
@@ -349,6 +371,7 @@
     root.innerHTML = `<div class='rs-card rs-done'><div class='rs-skel' style='height:120px'></div></div>`;
     try{ P = await post({accion:'pack-ver', pack: q.get('pack'), k: q.get('k')}); }
     catch(x){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>!</div><h2>${t('No encontramos tu pack', 'We could not find your pack')}</h2><p>${esc(x.message)}</p></div><a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, no puedo abrir el link de mi pack', 'Hi Storm, I cannot open my pack link'))}'>${t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</a>`; bindIdioma(iniciarPack); return; }
+    if(P.vencido){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>!</div><h2>${t('Tu pack venció', 'Your pack has expired')}</h2><p>${t('Se podía usar hasta el', 'It could be used until')} ${esc(L === 'en' ? P.venceEN : P.venceLarga)}.</p><a class='rs-btn2' href='/reservar/'>${t('Reservar una clase', 'Book a lesson')}</a></div><a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, mi pack de clases venció', 'Hi Storm, my lesson pack has expired'))}'>${t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</a>`; bindIdioma(iniciarPack); return; }
     if(P.quedan <= 0){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>${t('Ya usaste todas las clases de tu pack', 'You have used all the lessons in your pack')}</h2>${puntos(P.usadas, P.clases)}<p>${t('¡Gracias por surfear con Storm! Si quieres seguir, compra otro pack al reservar.', 'Thanks for surfing with Storm! To keep going, buy another pack when you book.')}</p><a class='rs-btn2' href='/reservar/'>${t('Reservar una clase', 'Book a lesson')}</a></div>`; bindIdioma(iniciarPack); return; }
     S.personas = P.personas; S.menores = P.menores || 0;
     cargar();
