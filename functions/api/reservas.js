@@ -53,6 +53,10 @@ const INSTRUCTORES_BASE = ['Diego', 'Iñaki', 'Francisco', 'Emerson'];
 const FIJOS_BASE = [['Francisco', 6, '09:00', '11:00', 'Taller municipal'], ['Francisco', 0, '12:00', '14:00', 'Taller municipal']];
 // Instructores que dan el Surfskate de la Academia Anual (solo a ellos se les bloquea la agenda en ese horario)
 const INST_SKATE = ['Emerson', 'Diego'];
+// Instructores que solo dan clases particulares (no son de la Academia Anual): la clase de Surf de la Anual no les bloquea la agenda
+const SOLO_PARTICULARES = ['Christopher'];
+/** ¿Esta ocupación le toca a este instructor? */
+const leToca = (o, inst) => o.instructor === inst || (o.instructor === '*' && !(o.origen === 'anual' && SOLO_PARTICULARES.includes(inst)));
 const ANUAL_API = 'https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec';
 
 // ---------- utilidades ----------
@@ -178,7 +182,7 @@ async function leerOcupaciones(db, desde, hasta) {
 /** ¿La clase (hora + duración) se cruza con algo que el instructor ya tiene ese día? Devuelve el motivo. */
 function cruce(ocu, inst, fecha, hora, duracion) {
   const ini = aMin(hora), fin = ini + duracion, dia = diaSemana(fecha);
-  const o = ocu.find(o => (o.instructor === '*' || o.instructor === inst) && (o.fecha ? o.fecha === fecha : o.dia === dia) && aMin(o.desde) < fin && aMin(o.hasta) > ini);
+  const o = ocu.find(o => leToca(o, inst) && (o.fecha ? o.fecha === fecha : o.dia === dia) && aMin(o.desde) < fin && aMin(o.hasta) > ini);
   return o ? o.motivo || 'Ocupado' : '';
 }
 /** Copia las clases de la Academia Anual desde el calendario Storm (planilla Anual). Si Google no responde, quedan las de la última vez. */
@@ -771,10 +775,12 @@ async function panel(env, q) {
   const out = { ok: true, rol: q.rol, yo: q.yo, hoy, duracion: a.duracion, horarios: a.horarios,
     instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono, rut: i.rut, tarifas: (() => { try { return JSON.parse(i.tarifas || 'null'); } catch (_) { return null; } })() } : {}) })),
     semana: sem.results.map(s => ({ instructor: s.instructor, dia: s.dia, horas: parseLista(s.horas) })).filter(s => todo || s.instructor === q.yo),
-    ocupaciones: ocu.filter(o => todo || o.instructor === '*' || o.instructor === q.yo).map(o => ({ id: o.id, origen: o.origen, instructor: o.instructor, fecha: o.fecha, dia: o.dia, desde: o.desde, hasta: o.hasta, motivo: o.motivo })),
+    soloParticulares: SOLO_PARTICULARES,
+    ocupaciones: ocu.filter(o => todo || leToca(o, q.yo)).map(o => ({ id: o.id, origen: o.origen, instructor: o.instructor, fecha: o.fecha, dia: o.dia, desde: o.desde, hasta: o.hasta, motivo: o.motivo })),
     anualSync: sync ? JSON.parse(sync.valor) : null,
     excepciones: exc.results.filter(e => todo || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
-    reservas: reservas.map(r => Object.assign(filaPanel(r, todo), { fichas: fichasPor[r.ref] || [], linkFicha: linkFicha(r) })), link: PAGINA };
+    reservas: reservas.map(r => Object.assign(filaPanel(r, todo), { fichas: fichasPor[r.ref] || [], linkFicha: linkFicha(r) })), link: PAGINA,
+    vacaciones: (await vacacionesLista(db, hoy)).filter(v => todo || v.instructor === q.yo) };
   if (admin) {
     out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins, recepcion: a.recepcion || [] };
     const mes = hoy.slice(0, 7);
@@ -1085,6 +1091,46 @@ async function guardarAjustes(env, q, d) {
   return panel(env, q);
 }
 
+/** Vacaciones (o días que no va a estar): el instructor las anota él mismo (o Isidora por él).
+ *  Se guardan como ocupaciones 'vacaciones' de todo el día, una por fecha, así la página para reservar ya no se las asigna. */
+async function vacaciones(env, q, d, ctx) {
+  const db = env.DB, inst = q.rol === 'admin' ? String(d.instructor || '') : q.yo;
+  const de = String(d.desde || ''), ha = String(d.hasta || d.desde || ''), hoy = ahoraChile().fecha;
+  if (!inst) throw err('Falta el instructor.');
+  if (!esFecha(de) || !esFecha(ha)) throw err('Elige desde y hasta qué día.');
+  if (ha < de) throw err('El día "hasta" tiene que ser después del "desde".');
+  if (d.borrar) {
+    await db.prepare("DELETE FROM ocupaciones WHERE origen = 'vacaciones' AND instructor = ? AND fecha BETWEEN ? AND ?").bind(inst, de, ha).run();
+    await anotar(db, q, 'vacaciones quitadas ' + inst + ' ' + de + ' a ' + ha);
+    return panel(env, q);
+  }
+  if (de < hoy) throw err('Elige desde hoy en adelante.');
+  const dias = []; for (let f = de; f <= ha && dias.length < 120; f = sumarDias(f, 1)) dias.push(f);
+  if (dias[dias.length - 1] !== ha) throw err('Anota máximo 120 días seguidos.');
+  // si ya tiene clases esos días, primero hay que cambiarlas a otro instructor
+  const { results } = await db.prepare("SELECT DISTINCT b.fecha, r.hora, r.nombre FROM bloques b JOIN reservas r ON r.ref = b.ref WHERE b.instructor = ? AND b.fecha BETWEEN ? AND ? AND (b.hasta = 0 OR b.hasta > ?) AND r.estado IN ('pagada', 'pendiente', 'revisar') ORDER BY b.fecha, r.hora").bind(inst, de, ha, Date.now()).all();
+  if (results.length) throw err((q.rol === 'admin' ? inst + ' tiene' : 'Tienes') + ' clase esos días (' + results.slice(0, 3).map(r => r.fecha.slice(8) + '/' + r.fecha.slice(5, 7) + ' ' + r.hora + ' ' + String(r.nombre || '').split(' ')[0]).join(', ') + (results.length > 3 ? '…' : '') + '). ' + (q.rol === 'admin' ? 'Primero cámbiala a otro instructor.' : 'Avísale a Isidora para que la cambie a otro instructor.'));
+  const st = [db.prepare("DELETE FROM ocupaciones WHERE origen = 'vacaciones' AND instructor = ? AND fecha BETWEEN ? AND ?").bind(inst, de, ha)];
+  dias.forEach(f => st.push(db.prepare("INSERT INTO ocupaciones (origen, instructor, fecha, desde, hasta, motivo) VALUES ('vacaciones', ?, ?, '00:00', '23:59', 'Vacaciones')").bind(inst, f)));
+  await db.batch(st);
+  await anotar(db, q, 'vacaciones ' + inst + ' ' + de + ' a ' + ha);
+  // aviso a los administradores cuando las anota el instructor
+  if (q.rol !== 'admin' && env.ONESIGNAL_KEY) {
+    const a = await ajustes(db), txt = inst + ' anotó vacaciones ' + (de === ha ? 'el ' + fechaLarga(de) : 'del ' + fechaLarga(de) + ' al ' + fechaLarga(ha)) + '.';
+    const p = enviarPush(env, a.admins || [], 'Vacaciones de ' + inst, txt).catch(() => {});
+    if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+  }
+  return panel(env, q);
+}
+/** Vacaciones guardadas de hoy en adelante, juntadas en rangos de días seguidos. */
+async function vacacionesLista(db, hoy) {
+  const { results } = await db.prepare("SELECT instructor, fecha FROM ocupaciones WHERE origen = 'vacaciones' AND fecha >= ? ORDER BY instructor, fecha").bind(hoy).all();
+  const out = [];
+  results.forEach(r => { const u = out[out.length - 1];
+    if (u && u.instructor === r.instructor && sumarDias(u.hasta, 1) === r.fecha) u.hasta = r.fecha;
+    else out.push({ instructor: r.instructor, desde: r.fecha, hasta: r.fecha }); });
+  return out;
+}
 async function guardarFijo(env, q, d) {
   const db = env.DB;
   if (d.borrar) await db.prepare("DELETE FROM ocupaciones WHERE id = ? AND origen = 'fijo'").bind(Number(d.borrar)).run();
@@ -1357,6 +1403,7 @@ export async function onRequest(context) {
     if (acc === 'disponible') return json(await disponible(env, q, d));
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
+    if (acc === 'vacaciones') return json(await vacaciones(env, q, d, context));
     if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));

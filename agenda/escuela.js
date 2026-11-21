@@ -294,7 +294,7 @@
   @media (max-width:999px){.sp-shell .es-toast,.es-toast{bottom:calc(150px + env(safe-area-inset-bottom))}}
   `;
 
-  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = '', vista = null, pila = [];
+  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], sumarIns = false, msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = '', vista = null, pila = [];
   const KEY = 'storm-agenda-datos';
 
   async function post(body) {
@@ -320,8 +320,17 @@
     return !!(s && s.horas.includes(hora));
   }
   const otraCosa = (inst, fecha, hora) => { const ini = aMin(hora), f = ini + E.duracion, d = dsem(fecha);
-    const o = (E.ocupaciones || []).find(o => (o.instructor === '*' || o.instructor === inst) && (o.fecha ? o.fecha === fecha : o.dia === d) && aMin(o.desde) < f && aMin(o.hasta) > ini);
+    const o = (E.ocupaciones || []).find(o => leToca(o, inst) && (o.fecha ? o.fecha === fecha : o.dia === d) && aMin(o.desde) < f && aMin(o.hasta) > ini);
     return o ? o.motivo || 'Ocupado' : ''; };
+  // igual que en el servidor: la clase de Surf de la Anual no bloquea a quienes solo dan particulares (ej. Christopher)
+  function leToca(o, inst) { return o.instructor === inst || (o.instructor === '*' && !(o.origen === 'anual' && (E.soloParticulares || []).includes(inst))); }
+  // Semana tipo: compromisos que se repiten ese día de la semana (horas fijas como Adultos o el taller municipal,
+  // y la Academia Anual de las próximas 2 semanas). Esas horas salen bloqueadas para que nadie se confunda.
+  const fijoSemana = (inst, d, hora) => { const ini = aMin(hora), f = ini + E.duracion, hasta = sumar(E.hoy, 13);
+    const o = (E.ocupaciones || []).find(o => o.origen !== 'vacaciones' && leToca(o, inst)
+      && (o.fecha ? o.fecha >= E.hoy && o.fecha <= hasta && dsem(o.fecha) === d : o.dia === d) && aMin(o.desde) < f && aMin(o.hasta) > ini);
+    return o ? o.motivo || 'Ocupado' : ''; };
+  const vacDe = inst => (E.vacaciones || []).filter(v => v.instructor === inst);
   const reservaEn = (inst, fecha, hora) => E.reservas.find(r => r.fecha === fecha && r.instructores.includes(inst) && Math.abs(aMin(r.hora) - aMin(hora)) < E.duracion);
 
   // A mano se puede anotar a cualquier hora (cada 30 min, 7:00 a 19:30), no solo los bloques de la web
@@ -464,10 +473,11 @@
     const pie = (go, txt, cl = '') => `<p class='es-err vivo'></p><button class='es-big${cl}' data-go='${go}'${go === 'ins' && !sel.length ? ' disabled' : ''}>${txt}</button><button class='es-no' data-cerrar>${go === 'cancelar' ? 'No, volver' : 'Cancelar'}</button>`;
     if (modo === 'ins') {
       const n = r.instructores.length;
-      return `<div class='es-caja es-ed'><p class='es-edp'>Elige ${n === 1 ? 'el instructor' : 'los ' + n + ' instructores'} de esta clase. Puedes sumar o quitar si hace falta.</p>
+      return `<div class='es-caja es-ed'><p class='es-edp'>Toca ${n === 1 ? 'al nuevo instructor' : 'a los nuevos instructores'} de esta clase. El que elijas reemplaza al anterior.</p>
         <div class='es-mchips'>${E.instructores.filter(i => i.activo).map(i => {
           const otra = reservaEn(i.nombre, r.fecha, r.hora), oc = otraCosa(i.nombre, r.fecha, r.hora), ocup = (otra && otra.ref !== r.ref) || !!oc;
           return `<button class='es-chip${sel.includes(i.nombre) ? ' on' : ''}' data-sel='${esc(i.nombre)}'${ocup ? ' disabled style="opacity:.4"' : ''}>${esc(i.nombre)}${ocup ? '<small>' + esc(oc || 'ocupado') + '</small>' : !dispo(i.nombre, r.fecha, r.hora) ? '<small>no marcó disponible</small>' : ''}</button>`; }).join('')}</div>
+        <p class='es-edp' style='margin-top:6px'>${sumarIns ? 'Toca a quienes quieras sumar.' : `<button class='pn-link' data-sumarins>Sumar otro instructor</button>`}</p>
         ${pie('ins', 'Guardar' + (sel.length && sel.length !== n ? ' (' + sel.length + ' instructor' + (sel.length === 1 ? '' : 'es') + ')' : ''))}</div>`;
     }
     if (modo === 'mover') return `<div class='es-caja es-ed'><div class='es-2'><label><span class='es-lb'>Nuevo día</span><input class='es-in' type='date' id='es-mf' value='${r.fecha}'></label>
@@ -628,8 +638,9 @@
   const basesDia = d => E.horarios.filter(x => d === 0 || x >= '09:00');
   const PRESETS = { todo: d => basesDia(d), manana: d => basesDia(d).filter(x => x < '13:00'), tarde: d => basesDia(d).filter(x => x >= '13:00'), no: () => [] };
   const igual = (a, b) => a.length === b.length && a.every(x => b.includes(x));
-  function preBtns(key, actuales, attr, dia) {
-    return `<div class='es-pre'>${[['todo', 'Todo'], ['manana', 'Mañana'], ['tarde', 'Tarde'], ['no', 'No']].map(([k, t]) => `<button ${attr}='${key}' data-p='${k}' class='${igual(actuales, PRESETS[k](dia)) ? 'on' : ''}'>${t}</button>`).join('')}</div>`;
+  function preBtns(key, actuales, attr, dia, sirve) {
+    const P = k => sirve ? PRESETS[k](dia).filter(sirve) : PRESETS[k](dia), act = sirve ? actuales.filter(sirve) : actuales;
+    return `<div class='es-pre'>${[['todo', 'Todo'], ['manana', 'Mañana'], ['tarde', 'Tarde'], ['no', 'No']].map(([k, t]) => `<button ${attr}='${key}' data-p='${k}' class='${igual(act, P(k)) ? 'on' : ''}'>${t}</button>`).join('')}</div>`;
   }
   // Guardado al instante: se cambia en pantalla y se manda en orden por detrás
   let cola = Promise.resolve();
@@ -663,11 +674,22 @@
     h += `</div></div>`;
     // Semana tipo
     h += `<div class='pn-card'><h3>Semana tipo${admin ? ' de ' + esc(inst) : ''}</h3><p class='pn-sub'>Las horas que ${admin ? 'puede' : 'puedes'} trabajar cada semana. Lo de arriba cambia solo un día puntual.</p>`;
+    h += `<div class='es-ley' style='margin-bottom:8px'><span><i style='background:#F3F1EC;border:1.5px solid #e3e0da'></i>Academia Anual, Adultos u otro compromiso: no se reservan particulares</span></div>`;
     [1, 2, 3, 4, 5, 6, 0].forEach(d => {
-      const s = E.semana.find(s => s.instructor === inst && s.dia === d), horas = s ? s.horas : [];
-      h += `<div class='es-cd'><div class='es-cdh'><span>${DIAS[d]}</span>${preBtns(d, horas, 'data-pd', d)}</div><div class='es-slots'>${E.horarios.filter(x => d === 0 || x >= '09:00' || horas.includes(x)).map(x => `<button class='es-s${horas.includes(x) ? '' : ' no'}' data-sd='${d}' data-sh='${x}'>${x}</button>`).join('')}</div></div>`;
+      const s = E.semana.find(s => s.instructor === inst && s.dia === d), horas = s ? s.horas : [], libre = x => !fijoSemana(inst, d, x);
+      h += `<div class='es-cd'><div class='es-cdh'><span>${DIAS[d]}</span>${preBtns(d, horas, 'data-pd', d, libre)}</div><div class='es-slots'>${E.horarios.filter(x => d === 0 || x >= '09:00' || horas.includes(x)).map(x => {
+        const oc = fijoSemana(inst, d, x);
+        return oc ? `<span class='es-s pas' style='background:#F3F1EC;border-color:#e3e0da;color:#6b6a67'>${x}<small>${esc(oc.replace('Academia Anual · ', 'Anual ').replace('Academia de Adultos', 'Adultos'))}</small></span>`
+          : `<button class='es-s${horas.includes(x) ? '' : ' no'}' data-sd='${d}' data-sh='${x}'>${x}</button>`; }).join('')}</div></div>`;
     });
-    return h + `</div></div>`;
+    h += `</div>`;
+    // Vacaciones
+    const vs = vacDe(inst), fv = f => { const [y, m, d] = f.split('-'); return DIAS[dsem(f)].slice(0, 3) + ' ' + (+d) + '/' + (+m); };
+    h += `<div class='pn-card'><h3>Vacaciones${admin ? ' de ' + esc(inst) : ''}</h3><p class='pn-sub'>Si ${admin ? 'va' : 'vas'} a salir de vacaciones o ${admin ? 'sabe' : 'sabes'} que ciertos días no ${admin ? 'va' : 'vas'} a estar, anótalo aquí. Esos días no ${admin ? 'le' : 'te'} llegan clases.</p>
+      ${vs.map(v => `<div class='es-cd'><div class='es-cdh'><span>${v.desde === v.hasta ? 'El ' + fv(v.desde) : 'Del ' + fv(v.desde) + ' al ' + fv(v.hasta)}</span><button data-vdel='${v.desde}|${v.hasta}'>Quitar</button></div></div>`).join('') || `<p class='es-nota'>No hay vacaciones anotadas.</p>`}
+      <div class='es-f'><label>Desde<input type='date' id='es-vd' min='${E.hoy}'></label><label>Hasta<input type='date' id='es-vh' min='${E.hoy}'></label></div>
+      <div class='es-acc'><button class='es-btn' data-vadd>Anotar vacaciones</button></div><p class='es-err vivo'></p></div>`;
+    return h + `</div>`;
   }
 
   // ---------- vista del día: una columna por instructor (como AgendaPro) ----------
@@ -703,7 +725,7 @@
         const ok = cubre.some(([a, b]) => m >= a && m < b);
         col += `<button class='es-dc${ok ? '' : ' no'}' style='top:${top(m)}px;height:${D_ROW}px' ${admin ? `data-dn='${esc(n)}' data-dh='${deMin(m)}'` : 'disabled'} aria-label='${esc(n)} ${deMin(m)}'></button>`;
       }
-      (E.ocupaciones || []).filter(o => (o.instructor === '*' || o.instructor === n) && (o.fecha ? o.fecha === f : o.dia === dsem(f))).forEach(o => {
+      (E.ocupaciones || []).filter(o => leToca(o, n) && (o.fecha ? o.fecha === f : o.dia === dsem(f))).forEach(o => {
         const a = Math.max(D_INI, aMin(o.desde)), b = Math.min(D_FIN, aMin(o.hasta)); if (b <= a) return;
         col += `<div class='es-db otra' style='top:${top(a)}px;height:${alto(b - a) - 2}px'><b>${esc(o.motivo || 'Ocupado')}</b><small>${esc(o.desde)} - ${esc(o.hasta)}</small></div>`;
       });
@@ -860,11 +882,15 @@
     $$('[data-nueva]').forEach(b => b.onclick = () => { manualOn = true; msg = ''; pintar(); });
     const fondo = $('[data-fondo]'); if (fondo) fondo.onclick = e => { if (e.target === fondo) { manualOn = false; pintar(); } };
     $$('[data-salir]').forEach(b => b.onclick = () => { const o = document.getElementById('pn-out'); if (o) o.click(); });
-    $$('[data-abre]').forEach(b => b.onclick = () => { abierta = b.dataset.abre; modo = b.dataset.modo; msg = ''; sel = (E.reservas.find(r => r.ref === abierta) || {}).instructores.slice(); pintar(); const ed = pane.querySelector('.es-ed'); if (ed) { const g = ed.previousElementSibling || ed; g.scrollIntoView({ block: 'start', behavior: 'smooth' }); } });
+    $$('[data-abre]').forEach(b => b.onclick = () => { abierta = b.dataset.abre; modo = b.dataset.modo; msg = ''; sel = (E.reservas.find(r => r.ref === abierta) || {}).instructores.slice(); sumarIns = false; pintar(); const ed = pane.querySelector('.es-ed'); if (ed) { const g = ed.previousElementSibling || ed; g.scrollIntoView({ block: 'start', behavior: 'smooth' }); } });
     $$('[data-cerrar]').forEach(b => b.onclick = () => { abierta = ''; modo = ''; pintar(); });
+    $$('[data-sumarins]').forEach(b => b.onclick = () => { sumarIns = true; pintar(); });
     $$('[data-sel]').forEach(b => b.onclick = () => {
-      const v = b.dataset.sel; // se pueden sumar o quitar instructores (casos especiales)
-      if (sel.includes(v)) sel = sel.filter(x => x !== v); else sel.push(v);
+      // Cambiar instructor: el nuevo reemplaza al anterior (la clase sigue con la misma cantidad de instructores).
+      // Solo con "Sumar otro instructor" se agregan más.
+      const v = b.dataset.sel, r = E.reservas.find(x => x.ref === abierta), n = Math.max(1, (r && r.instructores.length) || 1);
+      if (sel.includes(v)) sel = sel.filter(x => x !== v);
+      else { sel.push(v); if (!sumarIns) while (sel.length > n) sel.shift(); }
       pintar();
     });
     const go = $('[data-go]');
@@ -946,7 +972,7 @@
       pintar(); enviar({ accion: 'dia-horas', instructor: inst, fecha: f, horas, volver });
     });
     $$('[data-pd]').forEach(b => b.onclick = () => {
-      const d = +b.dataset.pd, horas = PRESETS[b.dataset.p](d);
+      const d = +b.dataset.pd, horas = PRESETS[b.dataset.p](d).filter(x => !fijoSemana(inst, d, x));
       const s = E.semana.find(s => s.instructor === inst && s.dia === d); if (s) s.horas = horas; else E.semana.push({ instructor: inst, dia: d, horas });
       pintar(); enviar({ accion: 'semana', instructor: inst, dia: d, horas });
     });
@@ -957,6 +983,9 @@
       if (s) s.horas = nuevas; else E.semana.push({ instructor: inst, dia: d, horas: nuevas });
       pintar(); enviar({ accion: 'semana', instructor: inst, dia: d, horas: nuevas });
     });
+    $$('[data-vadd]').forEach(b => b.onclick = () => { const de = $('#es-vd').value, ha = $('#es-vh').value || de;
+      accion({ accion: 'vacaciones', instructor: inst, desde: de, hasta: ha }, b).then(ok => { if (ok) { msg = 'Listo: vacaciones anotadas. Esos días no ' + (admin ? 'le' : 'te') + ' llegan clases.'; pintar(); } }); });
+    $$('[data-vdel]').forEach(b => b.onclick = () => { const [de, ha] = b.dataset.vdel.split('|'); accion({ accion: 'vacaciones', instructor: inst, desde: de, hasta: ha, borrar: true }, b); });
     $$('[data-semtodo]').forEach(b => b.onclick = () => accion({ accion: 'semana', instructor: inst, dia: +b.dataset.semtodo, horas: b.dataset.v === '1' ? E.horarios.filter(x => +b.dataset.semtodo === 0 || x >= '09:00') : [] }, b));
     // ajustes
     $$('[data-ia]').forEach(c => c.onchange = () => { c.parentElement.lastChild.textContent = c.checked ? 'Activo' : 'Inactivo'; });
