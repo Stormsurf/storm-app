@@ -154,14 +154,14 @@
   const mesesTxt = () => { const m = PK().meses || 1; return m === 1 ? t('1 mes', '1 month') : m + t(' meses', ' months'); };
   // Último día en que se puede usar: el pack del link (P.vence) o, si lo compra ahora, hoy + 1 mes
   const sumarMeses = (f, n) => { const [y, m, d] = f.split('-').map(Number), u = new Date(Date.UTC(y, m - 1 + n + 1, 0)).getUTCDate(); return new Date(Date.UTC(y, m - 1 + n, Math.min(d, u))).toISOString().slice(0, 10); };
-  const tope = () => P ? P.vence : S.pack && D ? sumarMeses(D.hoy, PK().meses || 1) : '';
+  const tope = () => P ? P.vence : S.pack && S.personas < 4 && D ? sumarMeses(D.hoy, PK().meses || 1) : '';
   const precioPack = porClase => Math.round(porClase * PK().clases * (100 - PK().descuento) / 100 / 100) * 100;
   // Ticket del pack (Isidora 21-11): cerrado solo dice "Pack de 5 clases"; al tocarlo se abre con el descuento, el precio y cómo se usa
-  const packOferta = (p, precio, inter) => !p || inter || !D || !precio ? '' : `<button type='button' class='rs-tk${S.pack ? ' on' : ''}' id='rs-pack' aria-pressed='${S.pack}'>
+  const packOferta = (p, precio, inter) => !p || p >= 4 || !D || !precio ? '' : `<button type='button' class='rs-tk${S.pack ? ' on' : ''}' id='rs-pack' aria-pressed='${S.pack}'>
     <span class='rs-tki'>🎟️</span><b>${t('Pack de', 'Pack of')} ${PK().clases} ${t('clases', 'lessons')}</b><span class='rs-tkc'>${S.pack ? '✓' : '+'}</span></button>
     ${S.pack ? `<div class='rs-tkd'>
       <div class='rs-tkp'><span>${PK().descuento}% ${t('de descuento', 'off')}</span><em>${clp(precioPack(precio))}<s>${clp(precio * PK().clases)}</s></em></div>
-      <ul><li>${PK().clases} ${t('clases de 1 hora y media para', 'lessons of 1 hour 30 minutes for')} ${pl(p, 'persona', 'personas', 'person', 'people')}</li>
+      <ul><li>${PK().clases} ${inter ? t('clases intermedias', 'intermediate lessons') : t('clases', 'lessons')} ${t('de 1 hora y media para', 'of 1 hour 30 minutes for')} ${pl(p, 'persona', 'personas', 'person', 'people')}</li>
         <li><b>${t('Para usar en', 'To use within')} ${mesesTxt()}</b> ${t('desde hoy', 'from today')}</li>
         <li>${t('Hoy agendas tu 1ª clase y las otras', 'Book your 1st lesson today and the other')} ${PK().clases - 1} ${t('cuando quieras, con tu link personal', 'whenever you want, with your personal link')}</li>
         <li>${t('Pagas una sola vez', 'You pay only once')}</li></ul>
@@ -170,7 +170,7 @@
   const packCab = () => `<div class='rs-hero'><h1>${t('Hola', 'Hi')} ${esc(P.nombre.split(' ')[0])} 🤙</h1><p>${t('Agenda tu próxima clase con tu pack.', 'Book your next lesson with your pack.')}</p></div>
       <div class='rs-card'><div class='rs-step'><h2>${t('Tu pack de', 'Your pack of')} ${P.clases} ${t('clases', 'lessons')}</h2></div>
         <p class='rs-pkq'>${P.quedan === 1 ? t('Te queda 1 clase', 'You have 1 lesson left') : t('Te quedan', 'You have') + ' ' + P.quedan + ' ' + t('clases', 'lessons left')}</p>${puntos(P.usadas, P.clases)}
-        <p class='rs-note'>${t('Clase para', 'Lesson for')} ${pl(P.personas, 'persona', 'personas', 'person', 'people')}${P.menores ? ' · ' + P.menores + t(' menor' + (P.menores === 1 ? '' : 'es') + ' de 8', ' under 8') : ''} · ${t('ya está pagada', 'already paid')}.</p>
+        <p class='rs-note'>${P.nivel === 'intermedio' ? t('Clase intermedia', 'Intermediate lesson') + ' · ' : ''}${t('Clase para', 'Lesson for')} ${pl(P.personas, 'persona', 'personas', 'person', 'people')}${P.menores ? ' · ' + P.menores + t(' menor' + (P.menores === 1 ? '' : 'es') + ' de 8', ' under 8') : ''} · ${t('ya está pagada', 'already paid')}.</p>
         <p class='rs-note'><b>${t('Úsalas hasta el', 'Use them by')} ${esc(L === 'en' ? P.venceEN : P.venceLarga)}.</b></p>
         ${P.proximas.length ? `<p class='rs-note'><b>${t('Ya agendadas', 'Already booked')}:</b> ${P.proximas.map(x => esc(fd(x.fecha)) + ' ' + esc(x.hora)).join(' · ')}</p>` : ''}
       </div>`;
@@ -250,7 +250,7 @@
     return h;
   }
 
-  const botonTxt = (listo, precio) => P ? t('Agendar mi clase', 'Book my lesson') : !listo ? t('Pagar', 'Pay') : S.pack ? t('Pagar pack ', 'Pay pack ') + clp(precioPack(precio)) : t('Pagar ', 'Pay ') + clp(precio);
+  const botonTxt = (listo, precio) => P ? t('Agendar mi clase', 'Book my lesson') : !listo ? t('Pagar', 'Pay') : S.pack && S.personas < 4 ? t('Pagar pack ', 'Pay pack ') + clp(precioPack(precio)) : t('Pagar ', 'Pay ') + clp(precio);
   function pintar(){
     const p = S.personas, G = grupos(p, S.menores, S.ninos), precio = totalDe(p, S.menores, S.ninos), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
     const paso = (txt, sub, val, attr, max) => `<div class='rs-kids'><p>${txt}<small>${sub}</small></p>
@@ -315,7 +315,7 @@
       if(!f.acepta) return msg(t('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.', 'To book, please accept the terms and conditions and the Risk Acceptance Declaration.'));
       go.disabled = true; go.textContent = P ? t('Agendando…', 'Booking…') : t('Conectando con el pago…', 'Connecting to payment…'); e.hidden = true;
       try{
-        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora, idioma: L, pack: P ? q.get('pack') : S.pack ? 'comprar' : '', k: P ? q.get('k') : ''}, f));
+        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora, idioma: L, pack: P ? q.get('pack') : S.pack && S.personas < 4 ? 'comprar' : '', k: P ? q.get('k') : ''}, f));
         try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
         if(r.pack){ try{ history.replaceState(null, '', '/reservar/?ref=' + encodeURIComponent(r.ref) + '&pago=ok'); }catch(_){} window.scrollTo(0, 0); return vuelta(r.ref, 'ok'); }
         location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] + '&l=' + L : u; })(r.url);
@@ -373,7 +373,7 @@
     catch(x){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>!</div><h2>${t('No encontramos tu pack', 'We could not find your pack')}</h2><p>${esc(x.message)}</p></div><a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, no puedo abrir el link de mi pack', 'Hi Storm, I cannot open my pack link'))}'>${t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</a>`; bindIdioma(iniciarPack); return; }
     if(P.vencido){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>!</div><h2>${t('Tu pack venció', 'Your pack has expired')}</h2><p>${t('Se podía usar hasta el', 'It could be used until')} ${esc(L === 'en' ? P.venceEN : P.venceLarga)}.</p><a class='rs-btn2' href='/reservar/'>${t('Reservar una clase', 'Book a lesson')}</a></div><a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, mi pack de clases venció', 'Hi Storm, my lesson pack has expired'))}'>${t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</a>`; bindIdioma(iniciarPack); return; }
     if(P.quedan <= 0){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>${t('Ya usaste todas las clases de tu pack', 'You have used all the lessons in your pack')}</h2>${puntos(P.usadas, P.clases)}<p>${t('¡Gracias por surfear con Storm! Si quieres seguir, compra otro pack al reservar.', 'Thanks for surfing with Storm! To keep going, buy another pack when you book.')}</p><a class='rs-btn2' href='/reservar/'>${t('Reservar una clase', 'Book a lesson')}</a></div>`; bindIdioma(iniciarPack); return; }
-    S.personas = P.personas; S.menores = P.menores || 0;
+    S.personas = P.personas; S.menores = P.menores || 0; S.nivel = P.nivel || '';
     cargar();
   }
   if(q.get('ref')) vuelta(q.get('ref'), q.get('pago'));

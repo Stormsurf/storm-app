@@ -611,8 +611,8 @@
     });
     if (!act.length) {
       if (packVender) h += `<p class='es-gt'>Vender pack</p><div class='es-caja es-ed es-pkv'>
-          <p class='es-edp'>${k.clases} clases con ${k.descuento}% de descuento, para usar en ${k.meses === 1 ? '1 mes' : k.meses + ' meses'}. Se paga una vez y cada clase que le anotes descuenta una.</p>
-          <div class='es-2'><label><span class='es-lb'>Personas por clase</span><input class='es-in' name='personas' type='number' min='1' max='5' value='1' inputmode='numeric'></label>
+          <p class='es-edp'>Para 1 a 3 personas. ${k.clases} clases con ${k.descuento}% de descuento, para usar en ${k.meses === 1 ? '1 mes' : k.meses + ' meses'}. Se paga una vez y cada clase que le anotes descuenta una.</p>
+          <div class='es-2'><label><span class='es-lb'>Personas por clase</span><input class='es-in' name='personas' type='number' min='1' max='3' value='1' inputmode='numeric'></label>
             <label><span class='es-lb'>Precio del pack</span><input class='es-in' name='total' inputmode='numeric' value='${precioPack(1)}' data-auto='1'></label></div>
           <label><span class='es-lb'>¿Cómo paga?</span><select class='es-in' name='medio'>${MEDIOS.filter(m => m[0] !== 'Mercado Pago').map(([v, t]) => `<option value='${v}'${v === 'Por pagar' ? ' selected' : ''}>${v === 'Por pagar' ? 'Aún no paga' : 'Ya pagó con ' + t}</option>`).join('')}</select></label>
           <p class='es-err vivo'></p><button class='es-big' data-pkgo='${esc(c.nombre)}' data-tel='${esc(c.telefono || '')}' data-mail='${esc(c.correo || '')}'>Vender pack</button><button class='es-no' data-pkno>Cancelar</button></div>`;
@@ -653,6 +653,8 @@
       ? `<label class='es-pkz'><span class='es-rx'><b>Usar su pack</b><small>${esc(packTxt(tiene))} · vence el ${esc(fcorta(tiene.vence))}${tiene.medio === 'Por pagar' ? ' · el pack no está pagado' : ''}</small></span><span class='es-sw'><input type='checkbox' data-pku='${esc(tiene.id)}' checked><span class='es-tg'></span></span></label>`
       : `<label class='es-pkz'><span class='es-rx'><b>Vender pack de ${k.clases} clases</b><small>${k.descuento}% de descuento · se usa en ${k.meses === 1 ? '1 mes' : k.meses + ' meses'} · esta es su 1ª clase</small></span><span class='es-sw'><input type='checkbox' data-pkn><span class='es-tg'></span></span></label>`;
     const aplicar = () => {
+      const n0 = z.querySelector('[data-pkn]'), grande = +pg.querySelector('[name=personas]').value >= 4; // pack solo de 1 a 3 personas (Isidora 21-11)
+      if (n0) { n0.closest('.es-pkz').style.display = grande ? 'none' : ''; if (grande) n0.checked = false; }
       const u = z.querySelector('[data-pku]'), n = z.querySelector('[data-pkn]'), usa = u && u.checked, vende = n && n.checked;
       inp.value = usa ? u.dataset.pku : vende ? 'nuevo' : '';
       pg.querySelector('[data-pkh]').style.display = usa ? 'none' : '';
@@ -664,6 +666,7 @@
       tot.value = vende ? precioPack(per) : (cotiza(per, pm).precio || ''); tot.dataset.auto = '1';
     };
     z.querySelectorAll('input').forEach(i => i.onchange = aplicar);
+    if (!pg._pkPer) { pg._pkPer = 1; pg.querySelector('[name=personas]').addEventListener('input', () => { const n = z.querySelector('[data-pkn]'); if (n && (+pg.querySelector('[name=personas]').value >= 4) !== (n.closest('.es-pkz').style.display === 'none')) aplicar(); }); }
     aplicar();
   }
   // hoja para buscar o crear el cliente (sin volver a pintar la página)

@@ -352,7 +352,7 @@ async function reservar(env, d, ctx) {
   if (!esFecha(fecha) || !hora || !horasDia(a, fecha).includes(hora)) throw err('Elige un día y un horario.');
   // Agendar con su pack (link personal): mismas personas del pack, sin pagar.
   const conPack = d.pack && d.pack !== 'comprar' ? await packDelLink(db, d.pack, d.k) : null;
-  if (conPack) { if (conPack.quedan <= 0) throw err('Ya usaste todas las clases de tu pack.'); if (fecha > conPack.vence) throw err('Tu pack vence el ' + fechaLarga(conPack.vence) + '. Elige un día hasta esa fecha.'); d.personas = conPack.personas; d.menores = conPack.menores || 0; d.ninos = 0; d.nivel = ''; }
+  if (conPack) { if (conPack.quedan <= 0) throw err('Ya usaste todas las clases de tu pack.'); if (fecha > conPack.vence) throw err('Tu pack vence el ' + fechaLarga(conPack.vence) + '. Elige un día hasta esa fecha.'); d.personas = conPack.personas; d.menores = conPack.menores || 0; d.ninos = 0; d.nivel = conPack.nivel || ''; }
   const personas = Math.floor(Number(d.personas));
   if (!(personas >= 1 && personas <= a.maxWeb)) throw err('Para más de ' + a.maxWeb + ' personas escríbenos por WhatsApp.');
   const c = cotizar(a, personas, d.menores, d.ninos, d.nivel), solo = soloNivel(a, c.nivel);
@@ -364,7 +364,7 @@ async function reservar(env, d, ctx) {
   if (!permitido(a, fecha, hora)) throw err('Ese horario ya no se puede reservar. Elige otro.');
   if (!conPack && !env.MP_TOKEN) throw err('Las reservas en línea no están activas en este momento. Escríbenos por WhatsApp.');
   const comprar = d.pack === 'comprar';
-  if (comprar && c.nivel === 'intermedio') throw err('El pack es para clases de nivel principiante.');
+  if (comprar && personas >= 4) throw err('El pack de clases es para 1 a 3 personas.'); // Isidora 21-11
   if (comprar && fecha > sumarMeses(ahoraChile().fecha, await packMeses(db))) throw err('El pack se usa dentro de 1 mes: elige un día hasta el ' + fechaLarga(sumarMeses(ahoraChile().fecha, await packMeses(db))) + '.');
   await limpiarRetenciones(db);
   const ref = nuevaRef(), t = ahoraChile();
@@ -374,7 +374,7 @@ async function reservar(env, d, ctx) {
   if (comprar) { // compra el pack: paga el pack completo y esta es su 1ª clase
     const k = a.pack || AJUSTES_BASE.pack;
     base.total = Math.round(c.precio * k.clases * (100 - k.descuento) / 100 / 100) * 100;
-    base.pack = (await crearPack(db, a, null, { web: true, nombre, telefono, correo, personas, menores: c.menores, total: base.total })).id;
+    base.pack = (await crearPack(db, a, null, { web: true, nombre, telefono, correo, personas, menores: c.menores, nivel: c.nivel, total: base.total })).id;
   }
   // Instructor al azar entre los libres; si dos personas reservan a la vez, el segundo intenta con otro.
   let elegido = null;
@@ -896,7 +896,7 @@ async function pagosSemana(env, q, d) {
 // ---------- Packs de clases (Isidora 16-11) ----------
 // Se paga una vez (5 clases con 10% de descuento) y cada clase anotada con el pack descuenta una. Cancelar una clase devuelve la clase al pack.
 async function packTabla(db) {
-  await db.prepare("CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, creada TEXT NOT NULL, creada_ms INTEGER NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', personas INTEGER NOT NULL DEFAULT 1, clases INTEGER NOT NULL DEFAULT 5, total INTEGER NOT NULL DEFAULT 0, medio TEXT NOT NULL DEFAULT 'Por pagar', fecha_pago TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activo', nota TEXT NOT NULL DEFAULT '', clave TEXT NOT NULL DEFAULT '', menores INTEGER NOT NULL DEFAULT 0)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, creada TEXT NOT NULL, creada_ms INTEGER NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', personas INTEGER NOT NULL DEFAULT 1, clases INTEGER NOT NULL DEFAULT 5, total INTEGER NOT NULL DEFAULT 0, medio TEXT NOT NULL DEFAULT 'Por pagar', fecha_pago TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activo', nota TEXT NOT NULL DEFAULT '', clave TEXT NOT NULL DEFAULT '', menores INTEGER NOT NULL DEFAULT 0, nivel TEXT NOT NULL DEFAULT '')").run();
 }
 /** Vence: 1 mes (ajuste pack.meses) desde que se pagó (o desde que se anotó, si aún no paga). Las clases deben ser hasta ese día. */
 const venceDe = (p, meses) => sumarMeses(p.fecha_pago || String(p.creada || '').slice(0, 10), meses || 1);
@@ -912,7 +912,7 @@ async function packsLista(db) {
   const sin = r.results.filter(p => !p.clave); // packs antiguos: se les crea su llave para el link
   if (sin.length) { sin.forEach(p => p.clave = nuevaClave()); try { await db.batch(sin.map(p => db.prepare('UPDATE packs SET clave = ? WHERE id = ?').bind(p.clave, p.id))); } catch (_) {} }
   const meses = await packMeses(db), hoy = ahoraChile().fecha;
-  return r.results.map(p => ({ vence: venceDe(p, meses), vencido: hoy > venceDe(p, meses), link: linkPack(p), menores: p.menores || 0, refs: orden.filter(x => x.pack === p.id).map(x => x.ref), id: p.id, creada: p.creada, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, clases: p.clases, total: p.total, medio: p.medio, fechaPago: p.fecha_pago, usadas: p.usadas, quedan: p.clases - p.usadas, nota: p.nota }));
+  return r.results.map(p => ({ nivel: p.nivel || '', vence: venceDe(p, meses), vencido: hoy > venceDe(p, meses), link: linkPack(p), menores: p.menores || 0, refs: orden.filter(x => x.pack === p.id).map(x => x.ref), id: p.id, creada: p.creada, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, clases: p.clases, total: p.total, medio: p.medio, fechaPago: p.fecha_pago, usadas: p.usadas, quedan: p.clases - p.usadas, nota: p.nota }));
 }
 async function packsDelMes(db, mes) {
   await packTabla(db);
@@ -926,8 +926,8 @@ async function crearPack(db, a, q, d) {
   const t = ahoraChile(), k = a.pack || AJUSTES_BASE.pack, medio = d.web ? 'Por pagar' : MEDIOS.includes(d.medio) && d.medio !== 'Mercado Pago' ? d.medio : 'Por pagar';
   const p = { id: 'PK-' + t.fecha.slice(2).replace(/-/g, '') + '-' + Math.floor(Math.random() * 90000 + 10000), nombre: d.nombre, telefono: d.telefono || '', correo: d.correo || '', personas: d.personas || 1, menores: d.menores || 0, clases: k.clases, total: d.total, medio, clave: nuevaClave() };
   // Comprado en la web: queda 'pendiente' hasta que llegue el pago (ahí pasa a 'activo').
-  await db.prepare('INSERT INTO packs (id, creada, creada_ms, nombre, telefono, correo, personas, clases, total, medio, fecha_pago, nota, clave, menores, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(p.id, t.fecha + ' ' + t.hora, Date.now(), p.nombre, p.telefono, p.correo, p.personas, p.clases, p.total, medio, medio === 'Por pagar' ? '' : t.fecha, d.web ? 'Comprado en la web' : 'Vendido por ' + q.email, p.clave, p.menores, d.web ? 'pendiente' : 'activo').run();
+  await db.prepare('INSERT INTO packs (id, creada, creada_ms, nombre, telefono, correo, personas, clases, total, medio, fecha_pago, nota, clave, menores, estado, nivel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(p.id, t.fecha + ' ' + t.hora, Date.now(), p.nombre, p.telefono, p.correo, p.personas, p.clases, p.total, medio, medio === 'Por pagar' ? '' : t.fecha, d.web ? 'Comprado en la web' : 'Vendido por ' + q.email, p.clave, p.menores, d.web ? 'pendiente' : 'activo', d.nivel === 'intermedio' ? 'intermedio' : '').run();
   if (q) await anotar(db, q, 'pack ' + p.id + ' ' + p.nombre + ' ' + p.total);
   return p;
 }
@@ -942,7 +942,7 @@ async function packDelLink(db, id, k) {
 async function packVer(env, d) {
   const db = env.DB, p = await packDelLink(db, d.pack, d.k), hoy = ahoraChile().fecha;
   const cl = p.refs.length ? (await db.prepare("SELECT fecha, hora FROM reservas WHERE pack = ? AND estado IN ('pagada', 'revisar') ORDER BY fecha, hora").bind(p.id).all()).results : [];
-  return { ok: true, vence: p.vence, venceLarga: fechaLarga(p.vence), venceEN: dateLong(p.vence), vencido: p.vencido, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, menores: p.menores || 0, clases: p.clases, quedan: p.quedan, usadas: p.usadas,
+  return { ok: true, nivel: p.nivel, vence: p.vence, venceLarga: fechaLarga(p.vence), venceEN: dateLong(p.vence), vencido: p.vencido, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, menores: p.menores || 0, clases: p.clases, quedan: p.quedan, usadas: p.usadas,
     proximas: cl.filter(x => x.fecha >= hoy), pasadas: cl.filter(x => x.fecha < hoy).length };
 }
 /** Llegó el pago de un pack comprado en la web: el pack queda activo (con la forma de pago real) y la 1ª clase pasa a ser "Pack" en $0. */
@@ -958,7 +958,7 @@ async function packAccion(env, q, d) {
   await packTabla(db);
   if (d.vender) {
     const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Elige el cliente.');
-    const personas = Math.max(1, Math.min(5, Math.floor(Number(d.personas) || 1)));
+    const personas = Math.max(1, Math.min(3, Math.floor(Number(d.personas) || 1))); // pack: 1 a 3 personas
     const total = d.total === '' || d.total == null ? precioPack(a, personas) : Math.round(Number(String(d.total).replace(/\D/g, '')) || 0);
     if (!(total > 0)) throw err('Escribe el precio del pack.');
     await crearPack(db, a, q, { nombre, telefono: String(d.telefono || '').trim(), correo: norm(d.correo), personas, total, medio: d.medio });
@@ -1134,6 +1134,7 @@ async function manual(env, q, d, ctx) {
   const pagoManual = d.pagoInstructor === '' || d.pagoInstructor == null ? null : Math.round(Number(String(d.pagoInstructor).replace(/\D/g, '')) || 0);
   // Pack (Isidora 16-11): 'nuevo' = vende un pack ahora y esta es su 1ª clase; o el id de un pack que ya tiene. La clase va en $0 con medio 'Pack'.
   let pack = null;
+  if (d.pack === 'nuevo' && personas >= 4) throw err('El pack de clases es para 1 a 3 personas.');
   if (d.pack === 'nuevo') { pack = { nuevo: true }; const v = sumarMeses(ahoraChile().fecha, await packMeses(db)); if (fecha > v) throw err('El pack se usa dentro de 1 mes: la clase tiene que ser hasta el ' + fechaLarga(v) + '.'); }
   else if (d.pack) { await packTabla(db); pack = (await packsLista(db)).find(k => k.id === String(d.pack)); if (!pack) throw err('No encontramos ese pack.'); if (pack.quedan <= 0) throw err('Ese pack ya no tiene clases.'); if (fecha > pack.vence) throw err('Ese pack vence el ' + fechaLarga(pack.vence) + ': la clase tiene que ser hasta ese día.'); }
   const conLink = !pack && d.medio === 'Link de pago';
