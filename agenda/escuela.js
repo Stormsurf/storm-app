@@ -604,6 +604,8 @@
         `<div class='es-row'><i class='es-ri ${p.quedan > 0 ? 'ok' : 'gris'}'>${p.clases}</i><span class='es-rx'><b>${esc(packTxt(p))}</b><small>${p.personas} persona${p.personas === 1 ? '' : 's'} · ${clp(p.total)} · ${pagado ? 'pagado con ' + esc(p.medio) : 'no ha pagado'}</small></span></div>
          <div class='es-pkb'>${Array.from({ length: p.clases }, (_, i) => `<i class='${i < p.usadas ? 'us' : ''}'></i>`).join('')}</div>`,
         !pagado ? `<div class='es-rpago'><span>¿Ya pagó el pack? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pkpago='${esc(p.id)}' data-m='${v}'>${t}</button>`).join('')}</div>` : '',
+        p.quedan > 0 && p.link && wa(p.telefono) ? fila(ICO_S.wa, 'Mandarle su link del pack', 'Con ese link agenda solo sus próximas clases', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(p.telefono)}?text=${encodeURIComponent('Hola ' + p.nombre.split(' ')[0] + ', con este link agendas tus próximas clases de tu pack Storm (te ' + (p.quedan === 1 ? 'queda 1' : 'quedan ' + p.quedan) + '): ' + p.link)}'`, ic: 'ok' }) : '',
+        p.quedan > 0 && p.link ? fila(ICO_S.link, 'Copiar link del pack', '', { tag: 'button', at: `data-lf='${esc(p.link)}'` }) : '',
         p.usadas === 0 ? fila(ICO_S.borrar, 'Anular pack', 'Si fue un error', { tag: 'button', at: `data-pkanular='${esc(p.id)}'`, ic: 'mal', cl: 'rojo' }) : ''
       ]);
     });

@@ -276,7 +276,7 @@ async function disponibilidad(db, d) {
     const horas = horasDia(a, f).filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
     if (horas.length) dias[f] = horas;
   }
-  return { ok: true, precios: a.precios, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
+  return { ok: true, pack: a.pack || AJUSTES_BASE.pack, precios: a.precios, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
 }
 
 // ---------- reservar y pagar ----------
@@ -344,10 +344,13 @@ async function guardarReserva(db, a, r, hastaMs) {
 }
 const limpiarRetenciones = db => db.prepare('DELETE FROM bloques WHERE hasta > 0 AND hasta < ?').bind(Date.now()).run();
 
-async function reservar(env, d) {
+async function reservar(env, d, ctx) {
   const db = env.DB, a = await ajustes(db);
   const fecha = String(d.fecha || ''), hora = normHora(d.hora);
   if (!esFecha(fecha) || !hora || !horasDia(a, fecha).includes(hora)) throw err('Elige un día y un horario.');
+  // Agendar con su pack (link personal): mismas personas del pack, sin pagar.
+  const conPack = d.pack && d.pack !== 'comprar' ? await packDelLink(db, d.pack, d.k) : null;
+  if (conPack) { if (conPack.quedan <= 0) throw err('Ya usaste todas las clases de tu pack.'); d.personas = conPack.personas; d.menores = conPack.menores || 0; d.ninos = 0; d.nivel = ''; }
   const personas = Math.floor(Number(d.personas));
   if (!(personas >= 1 && personas <= a.maxWeb)) throw err('Para más de ' + a.maxWeb + ' personas escríbenos por WhatsApp.');
   const c = cotizar(a, personas, d.menores, d.ninos, d.nivel), solo = soloNivel(a, c.nivel);
@@ -357,11 +360,19 @@ async function reservar(env, d) {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) throw err('Revisa tu correo.');
   if (!d.acepta) throw err('Para reservar, acepta las condiciones.');
   if (!permitido(a, fecha, hora)) throw err('Ese horario ya no se puede reservar. Elige otro.');
-  if (!env.MP_TOKEN) throw err('Las reservas en línea no están activas en este momento. Escríbenos por WhatsApp.');
+  if (!conPack && !env.MP_TOKEN) throw err('Las reservas en línea no están activas en este momento. Escríbenos por WhatsApp.');
+  const comprar = d.pack === 'comprar';
+  if (comprar && c.nivel === 'intermedio') throw err('El pack es para clases de nivel principiante.');
   await limpiarRetenciones(db);
   const ref = nuevaRef(), t = ahoraChile();
-  const base = { ref, creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: 'pendiente', fecha, hora, personas, menores: c.menores, ninos: c.ninos, nombre, telefono, correo, comentario,
-    total: c.precio, pago_instructor: c.pagoInstructor, medio: 'Mercado Pago', nivel: c.nivel, ...(d.idioma === 'en' ? { nota: NOTA_EN } : {}) };
+  const base = { ref, creada: t.fecha + ' ' + t.hora, creada_ms: Date.now(), estado: conPack ? 'pagada' : 'pendiente', fecha, hora, personas, menores: c.menores, ninos: c.ninos, nombre, telefono, correo, comentario,
+    total: conPack ? 0 : c.precio, pago_instructor: c.pagoInstructor, medio: conPack ? 'Pack' : 'Mercado Pago', nivel: c.nivel, ...(d.idioma === 'en' ? { nota: NOTA_EN } : {}) };
+  if (conPack) base.pack = conPack.id;
+  if (comprar) { // compra el pack: paga el pack completo y esta es su 1ª clase
+    const k = a.pack || AJUSTES_BASE.pack;
+    base.total = Math.round(c.precio * k.clases * (100 - k.descuento) / 100 / 100) * 100;
+    base.pack = (await crearPack(db, a, null, { web: true, nombre, telefono, correo, personas, menores: c.menores, total: base.total })).id;
+  }
   // Instructor al azar entre los libres; si dos personas reservan a la vez, el segundo intenta con otro.
   let elegido = null;
   for (let intento = 0; intento < 3 && !elegido; intento++) {
@@ -369,16 +380,21 @@ async function reservar(env, d) {
     const libres = topeVerano(a, ag, fecha, hora, elegir(ag, a, fecha, hora).filter(n => !solo || solo.includes(n)));
     if (libres.length < c.instructores) break;
     const r = Object.assign({}, base, { instructores: libres.slice(0, c.instructores) });
-    try { await guardarReserva(db, a, r, Date.now() + a.retencionMin * 60000); elegido = r; }
+    try { await guardarReserva(db, a, r, conPack ? 0 : Date.now() + a.retencionMin * 60000); elegido = r; }
     catch (x) { if (!/UNIQUE|constraint/i.test(String(x.message))) throw x; }
   }
   if (!elegido) throw err('Ese horario se acaba de ocupar. Elige otro.');
+  if (conPack) {
+    const fin = Object.assign({}, elegido, { instructores: JSON.stringify(elegido.instructores) });
+    tarea(ctx, avisarReserva(env, fin, a)); tarea(ctx, pushNueva(env, fin, a, true));
+    return { ok: true, ref, pack: true };
+  }
   const o = await crearOrden(env, elegido);
   if (!o) {
     await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = ? WHERE ref = ?").bind('Mercado Pago no respondió', ref)]);
     throw err('No pudimos conectar con Mercado Pago. Intenta de nuevo en un momento.');
   }
-  return { ok: true, url: o.url, ref, total: c.precio };
+  return { ok: true, url: o.url, ref, total: elegido.total };
 }
 
 /** Link de pago de Storm (/pagar/): ahí se elige tarjeta (sin salir a la app de Mercado Pago) o cuenta Mercado Pago. */
@@ -390,7 +406,7 @@ async function crearOrden(env, r) {
   const orden = {
     type: 'online', processing_mode: 'manual', total_amount: String(r.total), external_reference: r.ref,
     description: 'Clase de surf Storm', ...(r.correo ? { payer: { email: r.correo } } : {}),
-    items: [{ title: enIngles(r) ? 'Storm surf lesson · ' + r.personas + (r.personas === 1 ? ' person' : ' people') + ' · ' + dateLong(r.fecha) + ' ' + r.hora : 'Clase de surf Storm · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(r.fecha) + ' ' + r.hora, quantity: 1, unit_price: String(r.total) }],
+    items: [{ title: r.pack ? (enIngles(r) ? 'Storm pack of ' + ((r.packClases) || 5) + ' surf lessons · ' : 'Pack de ' + ((r.packClases) || 5) + ' clases de surf Storm · ') + r.personas + (enIngles(r) ? (r.personas === 1 ? ' person' : ' people') : (r.personas === 1 ? ' persona' : ' personas')) : enIngles(r) ? 'Storm surf lesson · ' + r.personas + (r.personas === 1 ? ' person' : ' people') + ' · ' + dateLong(r.fecha) + ' ' + r.hora : 'Clase de surf Storm · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + ' · ' + fechaLarga(r.fecha) + ' ' + r.hora, quantity: 1, unit_price: String(r.total) }],
     config: { online: { success_url: vuelta + 'ok', pending_url: vuelta + 'pendiente', failure_url: vuelta + 'error', auto_return: 'approved' } , payment_method: { max_installments: 1 } }
   };
   let res = {}, code = 0;
@@ -470,6 +486,7 @@ async function confirmar(env, r, monto, ctx) {
       return 'revisar';
     }
   }
+  if (r.pack) await activarPack(db, r);
   const final = Object.assign({}, r, { estado: 'pagada' });
   tarea(ctx, avisarReserva(env, final, a));
   tarea(ctx, pushNueva(env, final, a, true));
@@ -482,7 +499,7 @@ async function estado(env, d, ctx) {
   if (!r) throw err('No encontramos la reserva.');
   const est = await revisarPago(env, r, ctx);
   return { ok: true, estado: est, fecha: r.fecha, fechaLarga: fechaLarga(r.fecha), hora: r.hora, personas: r.personas, total: r.total, nombre: r.nombre.split(' ')[0], correo: r.correo,
-    ficha: est === 'pagada' || est === 'revisar' ? linkFicha(r) : '' };
+    ficha: est === 'pagada' || est === 'revisar' ? linkFicha(r) : '', ...(r.pack && (est === 'pagada' || est === 'revisar') ? await (async () => { try { const p = (await packsLista(env.DB)).find(x => x.id === r.pack); return p ? { pack: { link: p.link, quedan: p.quedan, clases: p.clases } } : {}; } catch (_) { return {}; } })() : {}) };
 }
 
 // ---------- notificaciones a la app (Panel Storm / Agenda Storm, OneSignal) ----------
@@ -569,9 +586,9 @@ function correoReservada(r, a, ins) {
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px">' +
     '<tr>' + dato('Personas', r.personas + edades(r)) + '</tr>' +
     '<tr>' + dato('Dónde', esc(a.lugar)) + '</tr>' +
-    '<tr>' + dato('Total pagado', clp(r.total)) + '</tr>' +
+    '<tr>' + (r.packInfo ? dato('Pack', 'Clase ' + r.packInfo.n + ' de ' + r.packInfo.clases) : dato('Total pagado', clp(r.total))) + '</tr>' +
     '<tr>' + dato('Reserva', esc(r.ref)) + '</tr></table></td></tr>' +
-    ficha +
+    ficha + (r.packInfo ? seccion('🏄 Tu pack de ' + r.packInfo.clases + ' clases', '<p style="margin:0;font-size:15px;line-height:1.5">' + (r.packInfo.quedan ? 'Te ' + (r.packInfo.quedan === 1 ? 'queda 1 clase' : 'quedan ' + r.packInfo.quedan + ' clases') + '. Agenda las próximas cuando quieras con este link (guárdalo):' : 'Esta es la última clase de tu pack.') + '</p>' + (r.packInfo.quedan ? boton(r.packInfo.link, 'Agendar mi próxima clase', '#0f6e74', '#ffffff') : '')) : '') +
     seccion('📍 Cómo llegar', '<p style="margin:0;font-size:15px;line-height:1.5">Nos encontramos en Storm, en ' + esc(a.lugar) + '. Llega 10 minutos antes para ponerte el traje con calma.</p>' + boton(MAPA, 'Ver ubicación en el mapa', '#2C2C2B', '#ffffff')) +
     seccion('🎒 Qué traer', '<p style="margin:0;font-size:15px;line-height:1.9">' + TRAER.map(t => '✅ ' + esc(t)).join('<br>') + '</p>') +
     seccion('💙 Nosotros ponemos', '<p style="margin:0;font-size:15px;line-height:1.9">🏄 Tabla de surf y leash<br>🌊 Traje de agua (wetsuit)<br>🤙 Instructor certificado</p>') +
@@ -596,9 +613,9 @@ function correoReservadaEN(r, a) {
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px">' +
     '<tr>' + dato('People', r.personas + edadesEN(r)) + '</tr>' +
     '<tr>' + dato('Where', esc(a.lugar)) + '</tr>' +
-    '<tr>' + dato('Total paid', clp(r.total) + ' CLP') + '</tr>' +
+    '<tr>' + (r.packInfo ? dato('Pack', 'Lesson ' + r.packInfo.n + ' of ' + r.packInfo.clases) : dato('Total paid', clp(r.total) + ' CLP')) + '</tr>' +
     '<tr>' + dato('Booking', esc(r.ref)) + '</tr></table></td></tr>' +
-    ficha +
+    ficha + (r.packInfo ? seccion('🏄 Your pack of ' + r.packInfo.clases + ' lessons', '<p style="margin:0;font-size:15px;line-height:1.5">' + (r.packInfo.quedan ? 'You have ' + r.packInfo.quedan + ' lesson' + (r.packInfo.quedan === 1 ? '' : 's') + ' left. Book the next ones whenever you want with this link (save it):' : 'This is the last lesson of your pack.') + '</p>' + (r.packInfo.quedan ? boton(r.packInfo.link + '&l=en', 'Book my next lesson', '#0f6e74', '#ffffff') : '')) : '') +
     seccion('📍 How to get there', '<p style="margin:0;font-size:15px;line-height:1.5">We meet at Storm, ' + esc(a.lugar) + '. Arrive 10 minutes early so you can put on your wetsuit calmly.</p>' + boton(MAPA, 'See location on the map', '#2C2C2B', '#ffffff')) +
     seccion('🎒 What to bring', '<p style="margin:0;font-size:15px;line-height:1.9">' + BRING.map(t => '✅ ' + esc(t)).join('<br>') + '</p>') +
     seccion('💙 We provide', '<p style="margin:0;font-size:15px;line-height:1.9">🏄 Surfboard and leash<br>🌊 Wetsuit<br>🤙 Certified instructor</p>') +
@@ -610,11 +627,12 @@ function correoReservadaEN(r, a) {
 }
 async function avisarReserva(env, r, a) {
   const ins = parseLista(r.instructores);
+  if (r.pack) try { const p = (await packsLista(env.DB)).find(x => x.id === r.pack); if (p) r = Object.assign({}, r, { packInfo: { clases: p.clases, quedan: p.quedan, n: Math.max(1, p.refs.indexOf(r.ref) + 1), link: p.link } }); } catch (x) { console.error(x); }
   const cuando = fechaLarga(r.fecha) + ', ' + r.hora + ' hrs';
   const html = enIngles(r) ? correoReservadaEN(r, a) : correoReservada(r, a, ins);
   const p = [enIngles(r) ? enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: 'Your surf lesson is booked! · ' + dateLong(r.fecha) + ', ' + r.hora, html,
-    body: 'Lesson booked!\n\n' + dateLong(r.fecha) + ', ' + r.hora + '\n' + r.personas + ' people · ' + a.lugar + '\nTotal paid: ' + clp(r.total) + ' CLP\n\nBefore the lesson, fill in the form for each participant: ' + linkFicha(r) + '\n\n📍 Location: ' + MAPA + '\n\n🏄 What to bring:\n' + BRING.map(t => '✅ ' + t).join('\n') + '\n\nWe provide all the equipment you need 💙\nBooking ' + r.ref }) : enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: '¡Tu clase de surf está reservada! · ' + cuando, html,
-    body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + '\nTotal pagado: ' + clp(r.total) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\n📍 Nuestra ubicación: ' + MAPA + '\n\n🏄 ¿Qué debes traer?\n' + TRAER.map(t => '✅ ' + t).join('\n') + '\n\nNosotros te entregamos todo el equipamiento necesario 💙\nReferencia ' + r.ref })];
+    body: 'Lesson booked!\n\n' + dateLong(r.fecha) + ', ' + r.hora + '\n' + r.personas + ' people · ' + a.lugar + (r.packInfo ? '\nPack: lesson ' + r.packInfo.n + ' of ' + r.packInfo.clases + (r.packInfo.quedan ? '. Book the next ones here: ' + r.packInfo.link + '&l=en' : '') : '\nTotal paid: ' + clp(r.total) + ' CLP') + '\n\nBefore the lesson, fill in the form for each participant: ' + linkFicha(r) + '\n\n📍 Location: ' + MAPA + '\n\n🏄 What to bring:\n' + BRING.map(t => '✅ ' + t).join('\n') + '\n\nWe provide all the equipment you need 💙\nBooking ' + r.ref }) : enviarCorreo(env, { to: r.correo, bcc: CORREO_STORM, subject: '¡Tu clase de surf está reservada! · ' + cuando, html,
+    body: '¡Clase reservada!\n\n' + cuando + '\n' + r.personas + ' persona(s) · ' + a.lugar + (r.packInfo ? '\nPack: clase ' + r.packInfo.n + ' de ' + r.packInfo.clases + (r.packInfo.quedan ? '. Agenda las próximas aquí: ' + r.packInfo.link : '') : '\nTotal pagado: ' + clp(r.total)) + '\n\nAntes de la clase, llena la ficha de cada participante: ' + linkFicha(r) + '\n\n📍 Nuestra ubicación: ' + MAPA + '\n\n🏄 ¿Qué debes traer?\n' + TRAER.map(t => '✅ ' + t).join('\n') + '\n\nNosotros te entregamos todo el equipamiento necesario 💙\nReferencia ' + r.ref })];
   const lista = await env.DB.prepare('SELECT nombre, correo FROM instructores').all();
   lista.results.filter(i => ins.includes(i.nombre) && i.correo).forEach(i => p.push(enviarCorreo(env, { to: i.correo, subject: 'Nueva clase particular · ' + cuando,
     body: 'Hola ' + i.nombre + ',\n\nTienes una clase particular:\n' + cuando + '\n' + r.personas + ' persona(s)' + edades(r) + '\nCliente: ' + r.nombre + ' · ' + r.telefono + (r.comentario ? '\nComentario: ' + r.comentario : '') + '\n\nLa ves en Agenda Storm: ' + PANEL + '\n\nEquipo Storm' })));
@@ -875,15 +893,19 @@ async function pagosSemana(env, q, d) {
 // ---------- Packs de clases (Isidora 16-11) ----------
 // Se paga una vez (5 clases con 10% de descuento) y cada clase anotada con el pack descuenta una. Cancelar una clase devuelve la clase al pack.
 async function packTabla(db) {
-  await db.prepare("CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, creada TEXT NOT NULL, creada_ms INTEGER NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', personas INTEGER NOT NULL DEFAULT 1, clases INTEGER NOT NULL DEFAULT 5, total INTEGER NOT NULL DEFAULT 0, medio TEXT NOT NULL DEFAULT 'Por pagar', fecha_pago TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activo', nota TEXT NOT NULL DEFAULT '')").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, creada TEXT NOT NULL, creada_ms INTEGER NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', personas INTEGER NOT NULL DEFAULT 1, clases INTEGER NOT NULL DEFAULT 5, total INTEGER NOT NULL DEFAULT 0, medio TEXT NOT NULL DEFAULT 'Por pagar', fecha_pago TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activo', nota TEXT NOT NULL DEFAULT '', clave TEXT NOT NULL DEFAULT '', menores INTEGER NOT NULL DEFAULT 0)").run();
 }
+/** Link personal del pack: con él, el cliente agenda sus próximas clases en /reservar sin pagar. */
+const linkPack = p => PAGINA + '?pack=' + encodeURIComponent(p.id) + '&k=' + encodeURIComponent(p.clave || '');
 async function packsLista(db) {
   await packTabla(db);
   let r;
   try { r = await db.prepare("SELECT p.*, (SELECT COUNT(*) FROM reservas x WHERE x.pack = p.id AND x.estado IN ('pagada', 'pendiente', 'revisar')) AS usadas FROM packs p WHERE p.estado = 'activo' ORDER BY p.creada_ms DESC").all(); }
   catch (_) { r = await db.prepare("SELECT p.*, 0 AS usadas FROM packs p WHERE p.estado = 'activo' ORDER BY p.creada_ms DESC").all(); } // antes de agregar la columna reservas.pack
   let orden = []; try { orden = (await db.prepare("SELECT ref, pack FROM reservas WHERE pack != '' AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").all()).results; } catch (_) {}
-  return r.results.map(p => ({ refs: orden.filter(x => x.pack === p.id).map(x => x.ref), id: p.id, creada: p.creada, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, clases: p.clases, total: p.total, medio: p.medio, fechaPago: p.fecha_pago, usadas: p.usadas, quedan: p.clases - p.usadas, nota: p.nota }));
+  const sin = r.results.filter(p => !p.clave); // packs antiguos: se les crea su llave para el link
+  if (sin.length) { sin.forEach(p => p.clave = nuevaClave()); try { await db.batch(sin.map(p => db.prepare('UPDATE packs SET clave = ? WHERE id = ?').bind(p.clave, p.id))); } catch (_) {} }
+  return r.results.map(p => ({ link: linkPack(p), menores: p.menores || 0, refs: orden.filter(x => x.pack === p.id).map(x => x.ref), id: p.id, creada: p.creada, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, clases: p.clases, total: p.total, medio: p.medio, fechaPago: p.fecha_pago, usadas: p.usadas, quedan: p.clases - p.usadas, nota: p.nota }));
 }
 async function packsDelMes(db, mes) {
   await packTabla(db);
@@ -894,13 +916,35 @@ const packsVendidos = async (db, mes) => (await packsDelMes(db, mes)).reduce((t,
 const precioPack = (a, personas) => { const k = a.pack || AJUSTES_BASE.pack, p = Number(a.precios[Math.min(5, Math.max(1, personas))]) || 0; return Math.round(p * k.clases * (100 - k.descuento) / 100 / 100) * 100; };
 async function crearPack(db, a, q, d) {
   await packTabla(db);
-  const t = ahoraChile(), k = a.pack || AJUSTES_BASE.pack, medio = MEDIOS.includes(d.medio) && d.medio !== 'Mercado Pago' ? d.medio : 'Por pagar';
-  const p = { id: 'PK-' + t.fecha.slice(2).replace(/-/g, '') + '-' + Math.floor(Math.random() * 90000 + 10000), nombre: d.nombre, telefono: d.telefono || '', correo: d.correo || '', personas: d.personas || 1, clases: k.clases, total: d.total, medio };
-  await db.prepare('INSERT INTO packs (id, creada, creada_ms, nombre, telefono, correo, personas, clases, total, medio, fecha_pago, nota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(p.id, t.fecha + ' ' + t.hora, Date.now(), p.nombre, p.telefono, p.correo, p.personas, p.clases, p.total, medio, medio === 'Por pagar' ? '' : t.fecha, 'Vendido por ' + q.email).run();
-  await anotar(db, q, 'pack ' + p.id + ' ' + p.nombre + ' ' + p.total);
+  const t = ahoraChile(), k = a.pack || AJUSTES_BASE.pack, medio = d.web ? 'Por pagar' : MEDIOS.includes(d.medio) && d.medio !== 'Mercado Pago' ? d.medio : 'Por pagar';
+  const p = { id: 'PK-' + t.fecha.slice(2).replace(/-/g, '') + '-' + Math.floor(Math.random() * 90000 + 10000), nombre: d.nombre, telefono: d.telefono || '', correo: d.correo || '', personas: d.personas || 1, menores: d.menores || 0, clases: k.clases, total: d.total, medio, clave: nuevaClave() };
+  // Comprado en la web: queda 'pendiente' hasta que llegue el pago (ahí pasa a 'activo').
+  await db.prepare('INSERT INTO packs (id, creada, creada_ms, nombre, telefono, correo, personas, clases, total, medio, fecha_pago, nota, clave, menores, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(p.id, t.fecha + ' ' + t.hora, Date.now(), p.nombre, p.telefono, p.correo, p.personas, p.clases, p.total, medio, medio === 'Por pagar' ? '' : t.fecha, d.web ? 'Comprado en la web' : 'Vendido por ' + q.email, p.clave, p.menores, d.web ? 'pendiente' : 'activo').run();
+  if (q) await anotar(db, q, 'pack ' + p.id + ' ' + p.nombre + ' ' + p.total);
   return p;
 }
+/** Pack del cliente (link personal): para agendar con su pack en /reservar. */
+async function packDelLink(db, id, k) {
+  await packTabla(db);
+  const p = (await packsLista(db)).find(x => x.id === String(id || ''));
+  const row = p && await db.prepare('SELECT clave FROM packs WHERE id = ?').bind(p.id).first();
+  if (!p || !row || !k || row.clave !== String(k)) throw err('Este link de pack no es válido. Escríbenos por WhatsApp.');
+  return p;
+}
+async function packVer(env, d) {
+  const db = env.DB, p = await packDelLink(db, d.pack, d.k), hoy = ahoraChile().fecha;
+  const cl = p.refs.length ? (await db.prepare("SELECT fecha, hora FROM reservas WHERE pack = ? AND estado IN ('pagada', 'revisar') ORDER BY fecha, hora").bind(p.id).all()).results : [];
+  return { ok: true, nombre: p.nombre, telefono: p.telefono, correo: p.correo, personas: p.personas, menores: p.menores || 0, clases: p.clases, quedan: p.quedan, usadas: p.usadas,
+    proximas: cl.filter(x => x.fecha >= hoy), pasadas: cl.filter(x => x.fecha < hoy).length };
+}
+/** Llegó el pago de un pack comprado en la web: el pack queda activo (con la forma de pago real) y la 1ª clase pasa a ser "Pack" en $0. */
+async function activarPack(db, r) {
+  const t = ahoraChile();
+  await db.batch([db.prepare("UPDATE packs SET estado = 'activo', medio = ?, fecha_pago = ? WHERE id = ? AND estado = 'pendiente'").bind(r.medio || 'Mercado Pago', t.fecha, r.pack),
+    db.prepare("UPDATE reservas SET total = 0, medio = 'Pack' WHERE ref = ?").bind(r.ref)]);
+}
+
 /** Vender un pack solo (sin clase), marcar que se pagó, o anularlo (sus clases quedan como estaban). */
 async function packAccion(env, q, d) {
   const db = env.DB, a = await ajustes(db);
@@ -1460,7 +1504,8 @@ export async function onRequest(context) {
     const d = await request.json().catch(() => ({}));
     const acc = d.accion;
     if (acc === 'disponibilidad') return json(await disponibilidad(env.DB, d));
-    if (acc === 'reservar') return json(await reservar(env, d));
+    if (acc === 'reservar') return json(await reservar(env, d, context));
+    if (acc === 'pack-ver') return json(await packVer(env, d));
     if (acc === 'estado') return json(await estado(env, d, context));
     if (acc === 'ficha') return json(await fichaVer(env, d));
     if (acc === 'ficha-guardar') return json(await fichaGuardar(env, d, request));

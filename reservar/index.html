@@ -98,6 +98,13 @@
 .rs-niv button b{display:block;font-size:1.55rem}.rs-niv button small{display:block;font-size:1.25rem;color:var(--mute);line-height:1.35;margin-top:2px}
 .rs-niv button.on{border-color:var(--ink);background:var(--ink);color:#fff}.rs-niv button.on small{color:rgba(255,255,255,.75)}
 .rs-wa{display:block;text-align:center;margin:18px 0 0;font-size:1.4rem;color:var(--mute)}
+.rs-pack{display:flex;align-items:center;gap:12px;margin-top:12px;padding:14px 16px;border-radius:16px;border:1.5px solid var(--line);cursor:pointer;background:#fff}
+.rs-pack.on{border-color:#0f6e74;background:#E3F1F1}
+.rs-pack input{width:20px;height:20px;flex:none;accent-color:#0f6e74}
+.rs-pack span{flex:1;font-size:1.4rem;line-height:1.35}.rs-pack small{display:block;color:var(--mute);font-size:1.25rem;margin-top:2px}
+.rs-pack em{font-style:normal;text-align:right;font-weight:700;font-size:1.7rem;color:#0f6e74}.rs-pack em s{display:block;font-weight:500;font-size:1.15rem;color:var(--mute)}
+.rs-pkq{margin:0;font-size:2.2rem;font-weight:700;color:#0f6e74}
+.rs-pkb{display:flex;gap:6px;margin:10px 0 4px}.rs-pkb i{flex:1;height:10px;border-radius:6px;background:#0f6e74}.rs-pkb i.us{background:#DCD8D0}
 .rs-lang{display:flex;justify-content:flex-end;gap:4px;margin:0 0 4px}
 .rs-lang button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:1.25rem;font-weight:600;cursor:pointer;color:var(--ink)}
 .rs-lang button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -131,7 +138,21 @@
   const trErr = m => { if(L !== 'en') return m; const x = ERR_EN.find(e => e[0].test(m)); return x ? x[1] : 'Something went wrong. Please try again or message us on WhatsApp.'; };
   async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error(trErr('No pudimos conectarnos. Revisa tu internet e intenta de nuevo.')); } if(!d.ok){ const e = new Error(trErr(d.error || 'Algo falló.')); e.orig = d.error || ''; throw e; } return d; }
   const root = $('#rs');
-  const S = { nivel: '', personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '' };
+  const S = { nivel: '', personas: 0, menores: 0, ninos: 0, fecha: '', hora: '', mes: '', pack: false };
+  // Pack de clases: P = el pack del cliente (link personal ?pack=…&k=…); S.pack = comprar un pack al reservar la 1ª clase
+  let P = null;
+  const PK = () => (D && D.pack) || { clases: 5, descuento: 10 };
+  const precioPack = porClase => Math.round(porClase * PK().clases * (100 - PK().descuento) / 100 / 100) * 100;
+  const packOferta = (p, precio, inter) => !p || inter || !D || !precio ? '' : `<label class='rs-pack${S.pack ? ' on' : ''}'><input type='checkbox' id='rs-pack'${S.pack ? ' checked' : ''}>
+    <span><b>${t('Pack de', 'Pack of')} ${PK().clases} ${t('clases', 'lessons')} · ${PK().descuento}% ${t('de descuento', 'off')}</b><small>${t('Hoy agendas tu 1ª clase y las otras', 'Book your 1st lesson today and the other')} ${PK().clases - 1} ${t('cuando quieras, con tu link personal.', 'whenever you want, with your personal link.')}</small></span>
+    <em>${clp(precioPack(precio))}<s>${clp(precio * PK().clases)}</s></em></label>`;
+  const puntos = (usadas, total) => `<div class='rs-pkb'>${Array.from({length: total}, (_, i) => `<i class='${i < usadas ? 'us' : ''}'></i>`).join('')}</div>`;
+  const packCab = () => `<div class='rs-hero'><h1>${t('Hola', 'Hi')} ${esc(P.nombre.split(' ')[0])} 🤙</h1><p>${t('Agenda tu próxima clase con tu pack.', 'Book your next lesson with your pack.')}</p></div>
+      <div class='rs-card'><div class='rs-step'><h2>${t('Tu pack de', 'Your pack of')} ${P.clases} ${t('clases', 'lessons')}</h2></div>
+        <p class='rs-pkq'>${P.quedan === 1 ? t('Te queda 1 clase', 'You have 1 lesson left') : t('Te quedan', 'You have') + ' ' + P.quedan + ' ' + t('clases', 'lessons left')}</p>${puntos(P.usadas, P.clases)}
+        <p class='rs-note'>${t('Clase para', 'Lesson for')} ${pl(P.personas, 'persona', 'personas', 'person', 'people')}${P.menores ? ' · ' + P.menores + t(' menor' + (P.menores === 1 ? '' : 'es') + ' de 8', ' under 8') : ''} · ${t('ya está pagada', 'already paid')}.</p>
+        ${P.proximas.length ? `<p class='rs-note'><b>${t('Ya agendadas', 'Already booked')}:</b> ${P.proximas.map(x => esc(fd(x.fecha)) + ' ' + esc(x.hora)).join(' · ')}</p>` : ''}
+      </div>`;
   let D = null, cargando = false, errCarga = '', pidiendo = 0;
   const precioDe = p => !D || !D.precios ? 0 : S.nivel === 'intermedio' && p === 1 && D.intermedio ? Number(D.intermedio) : Number(D.precios[p]);
   const necesita = () => grupos(S.personas, S.menores, S.ninos).length;
@@ -208,6 +229,7 @@
     return h;
   }
 
+  const botonTxt = (listo, precio) => P ? t('Agendar mi clase', 'Book my lesson') : !listo ? t('Pagar', 'Pay') : S.pack ? t('Pagar pack ', 'Pay pack ') + clp(precioPack(precio)) : t('Pagar ', 'Pay ') + clp(precio);
   function pintar(){
     const p = S.personas, G = grupos(p, S.menores, S.ninos), precio = totalDe(p, S.menores, S.ninos), listo1 = p > 0, listo2 = listo1 && S.fecha && S.hora;
     const paso = (txt, sub, val, attr, max) => `<div class='rs-kids'><p>${txt}<small>${sub}</small></p>
@@ -216,7 +238,7 @@
     const kids = p && !inter ? paso(t('¿Cuántos son menores de 8 años?', 'How many are under 8 years old?'), t('Según cuántos niños vengan, vemos cuántos instructores necesitan para que estén bien acompañados.', 'Depending on how many children come, we work out how many instructors they need so they are well looked after.'), S.menores, 'data-k', p) + `<p class='rs-nota5'>${t('* Si tu hijo tiene menos de 5 años, tiene que tomar una clase individual (1 persona).', '* Children under 5 must take a private lesson (1 person).')}</p>` : '';
     const guardado = {}; root.querySelectorAll('.rs-f [name]').forEach(i => guardado[i.name] = i.type === 'checkbox' ? i.checked : i.value);
     root.innerHTML = idioma() + `
-      <div class='rs-hero'><h1>${t('Reserva tu clase de surf', 'Book your surf lesson')}</h1><p>${t('Elige cuántos son, el día y la hora. Pagas en línea y listo.', 'Choose how many you are, the day and the time. Pay online and you are all set.')}</p>
+      ${P ? packCab() : `<div class='rs-hero'><h1>${t('Reserva tu clase de surf', 'Book your surf lesson')}</h1><p>${t('Elige cuántos son, el día y la hora. Pagas en línea y listo.', 'Choose how many you are, the day and the time. Pay online and you are all set.')}</p>
         <div class='rs-inc'><span>${t('1 hora y media', '1 hour 30 minutes')}</span><span>${t('Tabla y traje incluidos', 'Board and wetsuit included')}</span><span>${t('Todos los niveles', 'All levels')}</span><span>${t('Instructor certificado', 'Certified instructor')}</span></div></div>
       <div class='rs-card'><div class='rs-step'><i>1</i><h2>${t('¿Qué clase buscas?', 'Which lesson are you looking for?')}</h2></div>
         <div class='rs-niv'><button data-niv='' class='${inter?'':'on'}'><b>${t('Nivel Principiante', 'Beginner')}</b><small>${t('Desde cero o si estás empezando', 'Starting from zero or just getting started')}</small></button><button data-niv='intermedio' class='${inter?'on':''}'><b>${t('Nivel Intermedio', 'Intermediate')}</b><small>${t('Ya tomas olas solo', 'You already catch waves on your own')}</small></button></div>
@@ -226,7 +248,8 @@
         ${kids}
         ${p ? (G.length > 1 ? `<div class='rs-split'>${G.map(g => `<div><span>${t('Clase para', 'Lesson for')} ${quienes(g)}</span><b>${D ? clp(precioDe(g.n)) : '…'}</b></div>`).join('')}</div>` : '') + `<div class='rs-price'><span>${G.length > 1 ? t('Total · ' + G.length + ' instructores', 'Total · ' + G.length + ' instructors') : t('Clase para', 'Lesson for') + ' ' + (G[0] ? quienes(G[0]) : pl(p, 'persona', 'personas', 'person', 'people'))}</span><b>${precio ? clp(precio) : '…'}</b></div>` : ''}
         ${p && L === 'en' ? `<p class='rs-note'>${t('', 'Prices in Chilean pesos (CLP).')}</p>` : ''}
-      </div>
+        ${packOferta(p, precio, inter)}
+      </div>`}
       <div class='rs-card${listo1?'':' off'}' id='rs-paso2'><div class='rs-step'><i>2</i><h2>${t('Elige el día y la hora', 'Choose the day and time')}</h2></div>${listo1 ? calendario() : `<p class='rs-note'>${t('Primero elige cuántas personas son.', 'First choose how many people.')}</p>`}</div>
       <div class='rs-card${listo2?'':' off'}' id='rs-paso3'><div class='rs-step'><i>3</i><h2>${t('Tus datos', 'Your details')}</h2></div>
         <div class='rs-f'>
@@ -242,11 +265,12 @@
           <label class='rs-chk'><input type='checkbox' name='acepta'> ${t('Acepto los términos y condiciones y la Declaración de Conocimiento y Aceptación de Riesgos.', 'I accept the terms and conditions and the Risk Awareness and Acceptance Declaration.')}</label>
         </div>
         ${listo2 ? `<div class='rs-sum'><b>${fd(S.fecha)}</b>, ${t('de', 'from')} ${S.hora} ${t('a', 'to')} ${fin(S.hora)}<br>${inter ? t('Clase intermedia · ', 'Intermediate lesson · ') : ''}${pl(p, 'persona', 'personas', 'person', 'people')}${S.menores ? ' · ' + S.menores + t(' menor' + (S.menores===1?'':'es') + ' de 8', ' under 8') : ''}${S.ninos ? ' · ' + S.ninos + t(' de 7 a 11', ' aged 7 to 11') : ''} · ${esc(D.lugar || 'Playa de Matanzas')}</div>` : ''}
-        <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${listo2 ? t('Pagar ', 'Pay ') + clp(precio) : t('Pagar', 'Pay')}</button>
+        <button class='rs-go' id='rs-go'${listo2?'':' disabled'}>${botonTxt(listo2, precio)}</button>
         <p class='rs-err' id='rs-err' hidden></p>
-        <p class='rs-mp'>🔒 ${t('Pago seguro en línea', 'Secure online payment')}</p>
+        ${P ? '' : `<p class='rs-mp'>🔒 ${t('Pago seguro en línea', 'Secure online payment')}</p>`}
       </div>
       <a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, tengo una pregunta sobre las clases de surf', 'Hi Storm, I have a question about the surf lessons'))}'>${t('¿Dudas? Escríbenos por WhatsApp', 'Questions? Message us on WhatsApp')}</a>`;
+    if(P) ['nombre', 'telefono', 'correo'].forEach(k => { if(!guardado[k]) guardado[k] = P[k] || ''; });
     root.querySelectorAll('.rs-f [name]').forEach(i => { if(i.name in guardado){ if(i.type === 'checkbox') i.checked = guardado[i.name]; else i.value = guardado[i.name]; } });
     bindIdioma(pintar);
     root.querySelectorAll('[data-niv]').forEach(b => b.onclick = () => { if(S.nivel === b.dataset.niv) return; S.nivel = b.dataset.niv; S.menores = 0; S.ninos = 0; S.hora = ''; cargar(); });
@@ -258,6 +282,7 @@
     const mv = n => { const [y,m] = S.mes.split('-').map(Number), x = new Date(Date.UTC(y, m-1+n, 1)); S.mes = x.toISOString().slice(0,7); pintar(); };
     const pv = $('#rs-prev'), nx = $('#rs-next'), rt = $('#rs-retry');
     if(pv) pv.onclick = () => mv(-1); if(nx) nx.onclick = () => mv(1); if(rt) rt.onclick = cargar;
+    const pk = $('#rs-pack'); if(pk) pk.onchange = () => { S.pack = pk.checked; pintar(); };
     const go = $('#rs-go');
     if(go) go.onclick = async () => {
       const f = {}; root.querySelectorAll('.rs-f [name]').forEach(i => f[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
@@ -266,12 +291,13 @@
       if(f.telefono.replace(/\D/g,'').length < 8) return msg(t('Revisa tu teléfono.', 'Please check your phone number.'));
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.correo)) return msg(t('Revisa tu correo.', 'Please check your email.'));
       if(!f.acepta) return msg(t('Para reservar, acepta los términos y condiciones y la Declaración de Aceptación de Riesgos.', 'To book, please accept the terms and conditions and the Risk Acceptance Declaration.'));
-      go.disabled = true; go.textContent = t('Conectando con el pago…', 'Connecting to payment…'); e.hidden = true;
+      go.disabled = true; go.textContent = P ? t('Agendando…', 'Booking…') : t('Conectando con el pago…', 'Connecting to payment…'); e.hidden = true;
       try{
-        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora, idioma: L}, f));
+        const r = await post(Object.assign({accion:'reservar', nivel: S.nivel, personas: S.personas, menores: S.menores, ninos: S.ninos, fecha: S.fecha, hora: S.hora, idioma: L, pack: P ? q.get('pack') : S.pack ? 'comprar' : '', k: P ? q.get('k') : ''}, f));
         try{ sessionStorage.setItem('storm-reserva', JSON.stringify({ref: r.ref})); }catch(_){}
+        if(r.pack){ try{ history.replaceState(null, '', '/reservar/?ref=' + encodeURIComponent(r.ref) + '&pago=ok'); }catch(_){} window.scrollTo(0, 0); return vuelta(r.ref, 'ok'); }
         location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] + '&l=' + L : u; })(r.url);
-      }catch(x){ go.disabled = false; go.textContent = t('Pagar ', 'Pay ') + clp(totalDe(S.personas, S.menores, S.ninos)); msg(x.message); if(/ocup|ya no/.test(x.orig || '')) { S.hora = ''; cargar(); } }
+      }catch(x){ go.disabled = false; go.textContent = botonTxt(true, totalDe(S.personas, S.menores, S.ninos)); msg(x.message); if(/ocup|ya no/.test(x.orig || '')) { S.hora = ''; cargar(); } }
     };
   }
 
@@ -289,12 +315,16 @@
       const ini = r.fecha.replace(/-/g,'') + 'T' + r.hora.replace(':','') + '00', fn = r.fecha.replace(/-/g,'') + 'T' + fin(r.hora).replace(':','') + '00';
       const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(t('Clase de surf Storm', 'Storm surf lesson')) + '&dates=' + ini + '/' + fn + '&ctz=America/Santiago&location=' + encodeURIComponent('Playa de Matanzas') + '&details=' + encodeURIComponent(t('Llega 10 minutos antes. Trae traje de baño, toalla y bloqueador.', 'Arrive 10 minutes early. Bring a swimsuit, towel and sunscreen.'));
       const ficha = r.ficha ? r.ficha + (L === 'en' && !/[?&]l=/.test(r.ficha) ? '&l=en' : '') : '';
+      const pkb = r.pack ? `<div style='margin:16px 0 4px;padding:16px;border-radius:16px;background:#E3F1F1;text-align:left'><b style='font-size:1.6rem'>🏄 ${t('Tu pack de', 'Your pack of')} ${r.pack.clases} ${t('clases', 'lessons')}</b>
+          <p style='margin:6px 0 0;color:#5c5b58'>${r.pack.quedan ? (r.pack.quedan === 1 ? t('Te queda 1 clase.', 'You have 1 lesson left.') : t('Te quedan', 'You have') + ' ' + r.pack.quedan + ' ' + t('clases.', 'lessons left.')) + ' ' + t('Agenda las próximas cuando quieras con tu link personal (también te llega por correo).', 'Book the next ones whenever you want with your personal link (also in your email).') : t('Esta es la última clase de tu pack.', 'This is the last lesson of your pack.')}</p>
+          ${r.pack.quedan ? `<a class='rs-go' style='text-decoration:none;text-align:center;margin-top:12px;background:#0f6e74' href='${esc(r.pack.link + (L === 'en' ? '&l=en' : ''))}'>${t('Agendar otra clase', 'Book another lesson')}</a>` : ''}</div>` : '';
       root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>${t('¡Clase reservada!', 'Lesson booked!')}</h2>
         <p class='big'>${esc(fd(r.fecha))}, ${esc(r.hora)} ${t('hrs', '')}</p>
         <p>${pl(r.personas, 'persona', 'personas', 'person', 'people')} · Playa de Matanzas<br>${t('Te enviamos el comprobante a', 'We sent the receipt to')} ${esc(r.correo)}.</p>
         <div class='rs-traer'><b>🏄 ${t('¿Qué debes traer?', 'What to bring')}</b>
           <ul>${(L === 'en' ? ['Swimsuit (to wear under the wetsuit)', 'Towel', 'Sunscreen', 'Water bottle', 'Comfortable clothes for after the lesson'] : ['Traje de baño (para usar debajo del wetsuit)', 'Toalla', 'Bloqueador solar', 'Botella con agua', 'Ropa cómoda para después de la clase']).map(x => `<li>${x}</li>`).join('')}</ul>
           <p>${t('Nosotros te entregamos todo el equipamiento necesario 💙 Llega 10 minutos antes.', 'We provide all the equipment you need 💙 Arrive 10 minutes early.')}</p></div>
+        ${pkb}
         <a class='rs-btn2' href='https://maps.app.goo.gl/xcFSTmgfwwKACqfb7' target='_blank' rel='noopener'>📍 ${t('Ver ubicación en el mapa', 'See location on the map')}</a>
         ${ficha ? `<div style='margin:18px 0 4px;padding:16px;border-radius:16px;background:#FFF6DA;text-align:left'><b style='font-size:1.6rem'>${t('Falta un paso: la ficha de cada participante', 'One more step: a form for each participant')}</b>
           <p style='margin:6px 0 0;color:#5c5b58'>${t('Es obligatoria para entrar al mar (Sernatur). Toma 2 minutos por persona. Te dejamos el link también en el correo.', 'It is required to go into the ocean (Sernatur, the Chilean tourism authority). It takes 2 minutes per person. The link is also in your email.')}</p>
@@ -315,7 +345,16 @@
     pintarVuelta();
   }
 
+  async function iniciarPack(){
+    root.innerHTML = `<div class='rs-card rs-done'><div class='rs-skel' style='height:120px'></div></div>`;
+    try{ P = await post({accion:'pack-ver', pack: q.get('pack'), k: q.get('k')}); }
+    catch(x){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic' style='background:#fbeee2;color:#b5662b'>!</div><h2>${t('No encontramos tu pack', 'We could not find your pack')}</h2><p>${esc(x.message)}</p></div><a class='rs-wa' target='_blank' rel='noopener' href='${waLink(t('Hola Storm, no puedo abrir el link de mi pack', 'Hi Storm, I cannot open my pack link'))}'>${t('Escríbenos por WhatsApp', 'Message us on WhatsApp')}</a>`; bindIdioma(iniciarPack); return; }
+    if(P.quedan <= 0){ root.innerHTML = idioma() + `<div class='rs-card rs-done'><div class='ic'>✓</div><h2>${t('Ya usaste todas las clases de tu pack', 'You have used all the lessons in your pack')}</h2>${puntos(P.usadas, P.clases)}<p>${t('¡Gracias por surfear con Storm! Si quieres seguir, compra otro pack al reservar.', 'Thanks for surfing with Storm! To keep going, buy another pack when you book.')}</p><a class='rs-btn2' href='/reservar/'>${t('Reservar una clase', 'Book a lesson')}</a></div>`; bindIdioma(iniciarPack); return; }
+    S.personas = P.personas; S.menores = P.menores || 0;
+    cargar();
+  }
   if(q.get('ref')) vuelta(q.get('ref'), q.get('pago'));
+  else if(q.get('pack')) iniciarPack();
   else { pintar(); cargar(); }
 })();
 </script>
