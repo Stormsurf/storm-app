@@ -1429,8 +1429,26 @@ async function tuuResumen(env, mes, forzar) {
     const a = agenda.filter(x => x.fecha > v.fecha && x.fecha <= tope(v) && sirve(v, x)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora))[0];
     if (a) { usadas.add(a.ref); calces.set(v.id, a); }
   });
+  // Isidora (22-11): clase grupal anotada por el total (ej. 9 personas $180.000) donde cada uno pagó su parte en Tuu (9 × $20.000).
+  // Varias ventas sin producto del MISMO día que suman justo el monto de una clase POS (ese día o hasta 14 días después) son esa clase.
+  // No se toman las que ya marcaste Producto, Renta o Anulada.
+  const libres = vivas.filter(v => buscaClase(v) && !calces.has(v.id) && !['producto', 'renta'].includes(v.categoria));
+  const grupo = (cands, meta) => { // busca ventas que sumen justo 'meta' (2 o más); corta si es demasiado largo
+    let pasos = 0; const sel = [];
+    const ir = (i, falta) => { if (falta === 0) return sel.length >= 2; if (falta < 0 || i >= cands.length || ++pasos > 20000) return false;
+      sel.push(cands[i]); if (ir(i + 1, falta - cands[i].monto)) return true; sel.pop(); return ir(i + 1, falta); };
+    return ir(0, meta) ? sel.slice() : null;
+  };
+  agenda.filter(x => !usadas.has(x.ref)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora)).forEach(a => {
+    const dias = [...new Set(libres.filter(v => !calces.has(v.id) && v.fecha <= a.fecha && tope(v) >= a.fecha).map(v => v.fecha))].sort((p, q) => q.localeCompare(p)); // el mismo día primero
+    for (const dia of dias) {
+      const cands = libres.filter(v => !calces.has(v.id) && v.fecha === dia && v.monto < a.total && (a.medio === 'POS' || tuuEfectivo(v.tipo))).slice(0, 30);
+      const g = cands.length >= 2 && grupo(cands, a.total);
+      if (g) { usadas.add(a.ref); g.forEach(v => calces.set(v.id, Object.assign({}, a, { grupo: g.length }))); break; }
+    }
+  });
   const calzaAgenda = v => calces.get(v.id);
-  const nomClase = (v, a) => (a.fecha === v.fecha ? '' : a.fecha.slice(8, 10) + '-' + a.fecha.slice(5, 7) + ' ') + a.hora + ' · ' + a.nombre;
+  const nomClase = (v, a) => (a.fecha === v.fecha ? '' : a.fecha.slice(8, 10) + '-' + a.fecha.slice(5, 7) + ' ') + a.hora + ' · ' + a.nombre + (a.grupo ? ' (' + a.grupo + ' pagos)' : '');
   const suma = (cat, monto, com) => {
     const k = { producto: 'productos', renta: 'rentas', clase: 'clases', revisar: 'sinNombre', agenda: 'agenda' }[cat];
     const c = { producto: 'comProductos', renta: 'comRentas', clase: 'comClases', revisar: 'comSinNombre', agenda: 'comAgenda' }[cat];
@@ -1468,6 +1486,21 @@ async function tuuResumen(env, mes, forzar) {
     r.detalle.push(Object.assign(base, { categoria: cats.length === 1 ? cats[0] : 'mixta' }));
   });
   r.comision = r.comProductos + r.comRentas + r.comClases + r.comSinNombre + r.comAgenda;
+  // Isidora (22-11): "¿cómo sé que nada está duplicado?". Cuadre entre las clases POS del Panel y las ventas Tuu.
+  // Una clase POS del Panel suma en Escuela; su venta en Tuu NO suma (solo la comisión). Lo que puede fallar:
+  //  - Por revisar: suman como "Sin nombre"; si eran clases ya anotadas, están contadas dos veces hasta que las marques.
+  //  - Marcadas "Clase" sin clase POS en el Panel: no suman en ninguna parte (falta anotar la clase).
+  //  - Clase POS del Panel sin venta en Tuu: suma, pero no se ve el pago en la máquina (¿se cobró?).
+  const hoy = ahoraChile().fecha;
+  const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha <= hoy);
+  const claseAMano = r.detalle.filter(x => x.categoria === 'agenda' && x.aMano);
+  r.cuadre = {
+    posPanel: posMes.reduce((t, x) => t + x.total, 0), posPanelN: posMes.length,
+    calzadas: posMes.filter(x => usadas.has(x.ref)).reduce((t, x) => t + x.total, 0),
+    sinTuu: posMes.filter(x => !usadas.has(x.ref)).map(x => ({ fecha: x.fecha, hora: x.hora, nombre: x.nombre, monto: x.total })),
+    claseSinPanel: claseAMano.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, monto: x.monto, pago: x.pago })),
+    porRevisar: r.porRevisar.reduce((t, x) => t + x.monto, 0)
+  };
   return r;
 }
 async function tuuAsignar(env, q, d) {
