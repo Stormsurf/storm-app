@@ -973,6 +973,87 @@ async function packAccion(env, q, d) {
   return panel(env, q);
 }
 
+// ---------- Rentas y Notas (Isidora 22-11): para la recepcionista y los administradores ----------
+// Rentas: qué se arrendó (tablas / trajes), medio día o día completo, y si ya volvió. El cobro sigue pasando por Tuu
+// (Finanzas ya suma las ventas "Renta …" de Tuu), así que aquí no se suma plata: es el control de lo que está afuera.
+// Notas: avisos para el equipo (se marcan como listos) e información fija que hay que saber.
+const RENTA_PAGOS = ['POS', 'Efectivo', 'Transferencia', 'Falta pagar'];
+async function rnTablas(db) {
+  await db.batch([
+    db.prepare("CREATE TABLE IF NOT EXISTS rentas (id TEXT PRIMARY KEY, creada_ms INTEGER NOT NULL, fecha TEXT NOT NULL, hora TEXT NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', tablas INTEGER NOT NULL DEFAULT 0, trajes INTEGER NOT NULL DEFAULT 0, tiempo TEXT NOT NULL DEFAULT 'medio', pago TEXT NOT NULL DEFAULT '', nota TEXT NOT NULL DEFAULT '', por TEXT NOT NULL DEFAULT '', devuelta_ms INTEGER NOT NULL DEFAULT 0, devuelta_hora TEXT NOT NULL DEFAULT '', devuelta_por TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activa')"),
+    db.prepare("CREATE TABLE IF NOT EXISTS notas (id TEXT PRIMARY KEY, creada_ms INTEGER NOT NULL, por TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT 'aviso', texto TEXT NOT NULL, importante INTEGER NOT NULL DEFAULT 0, lista_ms INTEGER NOT NULL DEFAULT 0, lista_por TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activa')")
+  ]);
+}
+/** Nombre corto para mostrar quién anotó algo. */
+async function quienNombre(env, email) {
+  const e = norm(email), a = await ajustes(env.DB);
+  const ins = (await instructores(env.DB)).find(i => norm(i.correo) === e);
+  if (ins) return ins.nombre;
+  if ((a.recepcion || []).map(norm).includes(e)) return 'Recepción';
+  if (/isidora|contacto@stormsurf/.test(e)) return 'Isidora';
+  const l = e.split('@')[0].replace(/[._\d-]+/g, ' ').trim();
+  return l ? l[0].toUpperCase() + l.slice(1) : 'Storm';
+}
+const nuevoId = (p, t) => p + '-' + t.fecha.slice(2).replace(/-/g, '') + '-' + Math.floor(Math.random() * 900000 + 100000);
+async function rentasLista(env) {
+  const db = env.DB, desde = Date.now() - 35 * 86400000;
+  const r = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND (devuelta_ms = 0 OR devuelta_ms > ?) ORDER BY creada_ms DESC LIMIT 300").bind(desde).all()).results;
+  return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, trajes: x.trajes, tiempo: x.tiempo, pago: x.pago, nota: x.nota, por: x.por,
+    devuelta: !!x.devuelta_ms, devueltaHora: x.devuelta_hora, devueltaPor: x.devuelta_por }));
+}
+async function rentasAccion(env, q, d) {
+  if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores ven las rentas.');
+  const db = env.DB; await rnTablas(db);
+  const t = ahoraChile(), op = d.op || 'ver', yo = op === 'ver' ? '' : await quienNombre(env, q.email);
+  if (op === 'nueva') {
+    const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Escribe el nombre de quien arrienda.');
+    const tablas = Math.max(0, Math.min(20, Math.floor(Number(d.tablas) || 0))), trajes = Math.max(0, Math.min(20, Math.floor(Number(d.trajes) || 0)));
+    if (!tablas && !trajes) throw err('Elige si es tabla, traje o las dos.');
+    const tiempo = d.tiempo === 'dia' ? 'dia' : d.tiempo === 'medio' ? 'medio' : ''; if (!tiempo) throw err('Elige medio día o día completo.');
+    const pago = RENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
+    const hora = normHora(d.hora) || t.hora;
+    await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, trajes, tiempo, pago, nota, por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(nuevoId('R', t), Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo).run();
+    await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'T ' + trajes + 'J ' + tiempo);
+  } else if (op !== 'ver') {
+    const x = await db.prepare('SELECT * FROM rentas WHERE id = ?').bind(String(d.id || '')).first();
+    if (!x) throw err('No encontramos esa renta.');
+    if (op === 'devuelta') await db.prepare('UPDATE rentas SET devuelta_ms = ?, devuelta_hora = ?, devuelta_por = ? WHERE id = ?').bind(Date.now(), t.fecha === x.fecha ? t.hora : t.fecha.slice(8) + '/' + t.fecha.slice(5, 7) + ' ' + t.hora, yo, x.id).run();
+    else if (op === 'deshacer') await db.prepare("UPDATE rentas SET devuelta_ms = 0, devuelta_hora = '', devuelta_por = '' WHERE id = ?").bind(x.id).run();
+    else if (op === 'pago') { const p = RENTA_PAGOS.includes(d.pago) && d.pago !== 'Falta pagar' ? d.pago : ''; if (!p) throw err('¿Cómo pagó?'); await db.prepare('UPDATE rentas SET pago = ? WHERE id = ?').bind(p, x.id).run(); }
+    else if (op === 'borrar') await db.prepare("UPDATE rentas SET estado = 'borrada' WHERE id = ?").bind(x.id).run();
+    else throw err('Acción desconocida');
+    await anotar(db, q, 'renta ' + x.id + ' ' + op);
+  }
+  return { ok: true, hoy: t.fecha, rentas: await rentasLista(env) };
+}
+async function notasLista(env) {
+  const desde = Date.now() - 30 * 86400000;
+  const r = (await env.DB.prepare("SELECT * FROM notas WHERE estado = 'activa' AND (lista_ms = 0 OR lista_ms > ?) ORDER BY importante DESC, creada_ms DESC LIMIT 300").bind(desde).all()).results;
+  return r.map(x => ({ id: x.id, ms: x.creada_ms, fecha: ahoraChile(x.creada_ms).fecha, hora: ahoraChile(x.creada_ms).hora, por: x.por, tipo: x.tipo, texto: x.texto, importante: !!x.importante, lista: !!x.lista_ms, listaPor: x.lista_por, listaFecha: x.lista_ms ? ahoraChile(x.lista_ms).fecha : '' }));
+}
+async function notasAccion(env, q, d) {
+  if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores ven las notas.');
+  const db = env.DB; await rnTablas(db);
+  const t = ahoraChile(), op = d.op || 'ver', yo = op === 'ver' ? '' : await quienNombre(env, q.email);
+  if (op === 'nueva') {
+    const texto = String(d.texto || '').trim().slice(0, 2000); if (texto.length < 2) throw err('Escribe la nota.');
+    await db.prepare('INSERT INTO notas (id, creada_ms, por, tipo, texto, importante) VALUES (?, ?, ?, ?, ?, ?)').bind(nuevoId('N', t), Date.now(), yo, d.tipo === 'info' ? 'info' : 'aviso', texto, d.importante ? 1 : 0).run();
+    await anotar(db, q, 'nota nueva');
+  } else if (op !== 'ver') {
+    const x = await db.prepare('SELECT * FROM notas WHERE id = ?').bind(String(d.id || '')).first();
+    if (!x) throw err('No encontramos esa nota.');
+    if (op === 'lista') await db.prepare('UPDATE notas SET lista_ms = ?, lista_por = ? WHERE id = ?').bind(Date.now(), yo, x.id).run();
+    else if (op === 'reabrir') await db.prepare("UPDATE notas SET lista_ms = 0, lista_por = '' WHERE id = ?").bind(x.id).run();
+    else if (op === 'importante') await db.prepare('UPDATE notas SET importante = ? WHERE id = ?').bind(d.importante ? 1 : 0, x.id).run();
+    else if (op === 'editar') { const texto = String(d.texto || '').trim().slice(0, 2000); if (texto.length < 2) throw err('Escribe la nota.'); await db.prepare('UPDATE notas SET texto = ? WHERE id = ?').bind(texto, x.id).run(); }
+    else if (op === 'borrar') await db.prepare("UPDATE notas SET estado = 'borrada' WHERE id = ?").bind(x.id).run();
+    else throw err('Acción desconocida');
+    await anotar(db, q, 'nota ' + x.id + ' ' + op);
+  }
+  return { ok: true, hoy: t.fecha, notas: await notasLista(env) };
+}
+
 /** Para Finanzas (programa de la planilla Anual): ventas del mes, por medio de pago, y lo que se paga a instructores. mes = 'AAAA-MM'. */
 async function finanzasMes(env, d) {
   const mes = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7);
@@ -1526,6 +1607,8 @@ export async function onRequest(context) {
     if (acc === 'semana') return json(await semanaTipo(env, q, d));
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
     if (acc === 'vacaciones') return json(await vacaciones(env, q, d, context));
+    if (acc === 'rentas') return json(await rentasAccion(env, q, d));
+    if (acc === 'notas') return json(await notasAccion(env, q, d));
     if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo', 'pack'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));

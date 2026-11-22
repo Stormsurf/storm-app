@@ -30,6 +30,9 @@ main .pn{max-width:1440px}
 .sp-ni span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .sp-ni svg{width:24px;height:24px}
 .sp-ni.on{color:#0f6e74}
+.sp-ni{position:relative}.sp-badge{position:absolute;top:2px;left:calc(50% + 6px);font-style:normal;background:#c0503a;color:#fff;border-radius:999px;font-size:1rem;font-weight:700;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
+@media (min-width:1000px){.sp-badge{position:static;margin-left:auto}}
+.sp-line.nota{border-left-color:#c0503a;background:#fffaf8}.sp-line.nota .tag{background:#fbe3dd;color:#a6402c}
 .sp-main{padding-bottom:100px;min-width:0}
 .sp-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 14px}
 .sp-top h1{margin:0;font-size:2.4rem;font-weight:600;line-height:1.15}
@@ -101,7 +104,6 @@ main .pn{max-width:1440px}
 .sp-ri em{margin-left:auto;flex:none;font-style:normal;font-size:1.1rem;font-weight:700;border-radius:999px;padding:3px 10px;background:#E3F1F1;color:#0f6e74}.sp-ri em.a{background:#E6F1F8;color:#2d6e94}
 .sp-wa{flex:none;width:38px;height:38px;border-radius:50%;background:#25D366;color:#fff;display:grid;place-items:center}.sp-wa svg{width:20px;height:20px}
 .sp-tap,.sp-panel .pn-alb{cursor:pointer}.sp-panel .pn-alb:hover{text-decoration:underline}
-@media (max-width:999px){.sp-nav--recep{display:none}}
 .sp-panel .pn-card{box-shadow:none;border:1px solid #e3e0da;border-radius:18px;padding:18px}
 .sp-panel .pn-card h3{font-size:1.7rem;font-weight:600}
 .sp-panel .pn-cancel{box-shadow:none;opacity:.6}
@@ -217,6 +219,7 @@ main .pn{max-width:1440px}
   <div class='storm-wrap pn'><div id='st'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
 </section>
 <script src="/panel/panel.js?v=20"></script>
+<script src="/storm/rentas-notas.js?v=1"></script>
 <script>
 (()=>{
   const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
@@ -247,9 +250,11 @@ main .pn{max-width:1440px}
     flecha: sv("<path d='m9 6 6 6-6 6'/>"),
     ok: sv("<path d='m5 12.5 4.5 4.5L19 7.5'/>"),
     lupa: sv("<circle cx='11' cy='11' r='6.5'/><path d='m20 20-4-4'/>"),
+    renta: sv("<path d='M9 3h6l1 3 3 2-1 5-2-1v9H8v-9l-2 1-1-5 3-2 1-3Z'/>"),
+    nota: sv("<path d='M5 4h14v12l-4 4H5z'/><path d='M15 20v-4h4M8.5 9h7M8.5 12.5h5'/>"),
     grupo: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M17 11v6M14 14h6'/>")
   };
-  const TIT = { hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academias', verano: 'Academias', adultos: 'Academias', finanzas: 'Plata', sueldos: 'Plata' };
+  const TIT = { rentas: 'Rentas', notas: 'Notas', hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academias', verano: 'Academias', adultos: 'Academias', finanzas: 'Plata', sueldos: 'Plata' };
   const GRUPO = { anual: 'academias', verano: 'academias', adultos: 'academias', finanzas: 'plata', sueldos: 'plata' };
   const SEG = { academias: [['anual', 'Anual'], ['verano', 'Verano'], ['adultos', 'Adultos']], plata: [['finanzas', 'Este mes'], ['sueldos', 'Sueldos'], ['particulares:pagos', 'Pagos particulares']] };
   let ultimo = (() => { try{ return JSON.parse(sessionStorage.getItem('storm-ultimo') || 'null') || {}; }catch(_){ return {}; } })();
@@ -305,6 +310,7 @@ main .pn{max-width:1440px}
   const esAdmin = () => { const E = StormEscuela.datos(); if(E) return E.rol === 'admin'; const d = StormPanel.datos(); return d ? d.rol !== 'instructor' : true; };
 
   const esRecep = () => (StormEscuela.datos() || {}).rol === 'recepcion';
+  const RECEP = ['particulares', 'rentas', 'notas']; // lo que ve la recepción
   // Academia de Adultos: solo la ven los administradores y el instructor que la da
   const INST_ADULTOS = ['Emerson'];
   const adultosVisible = () => { if(esAdmin()) return true; const E = StormEscuela.datos(); return !!(E && INST_ADULTOS.includes(E.yo)); };
@@ -312,7 +318,8 @@ main .pn{max-width:1440px}
   const soloPart = () => { if(esAdmin()) return false; const E = StormEscuela.datos(); return !!(E && (E.soloParticulares || []).includes(E.yo)); };
   function nav(){
     const adm = esAdmin(), ac = '<div class="sp-sep">';
-    if(esRecep()) return `<nav class='sp-nav sp-nav--recep'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div><button class='sp-ni' data-area='particulares'>${I.particulares}<span>Agenda</span></button><div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
+    const nAv = StormRN.avisos(), bAv = nAv ? `<em class='sp-badge'>${nAv}</em>` : '';
+    if(esRecep()) return `<nav class='sp-nav sp-nav--recep'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div><button class='sp-ni' data-area='particulares'>${I.particulares}<span>Agenda</span></button><button class='sp-ni' data-area='rentas'>${I.renta}<span>Rentas</span></button><button class='sp-ni' data-area='notas'>${I.nota}<span>Notas</span>${bAv}</button><div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
     const b = (k, t, ico, extra) => `<button class='sp-ni' data-area='${k}'${extra || ''}>${ico}<span>${t}</span></button>`;
     return `<nav class='sp-nav'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div>
       ${adm ? `<button class='sp-mas-pc' data-anotar>${I.mas2}<span>Anotar</span></button>` : ''}
@@ -323,6 +330,7 @@ main .pn{max-width:1440px}
       ${soloPart() ? '' : `${b('academias', 'Academias', I.anual, ' data-solo-cel')}
       ${ac}Academias</div>${b('anual', 'Academia Anual', I.anual, ' data-solo-pc')}${veranoVisible() ? b('verano', 'Academia de Verano', I.verano, ' data-solo-pc') : ''}${adultosVisible() ? b('adultos', 'Academia de Adultos', I.adultos, ' data-solo-pc') : ''}`}
       ${adm ? `${ac}Plata</div>${b('finanzas', 'Este mes', I.finanzas, ' data-solo-pc')}${b('sueldos', 'Sueldos', I.pago, ' data-solo-pc')}` : ''}
+      ${adm ? `${ac}Recepción</div>${b('rentas', 'Rentas', I.renta, ' data-solo-pc')}<button class='sp-ni' data-area='notas' data-solo-pc>${I.nota}<span>Notas</span>${bAv}</button>` : ''}
       <div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
   }
 
@@ -334,9 +342,15 @@ main .pn{max-width:1440px}
       <div class='sp-area' data-a='hoy'></div>
       <div class='sp-area' data-a='particulares' hidden><div class='pn-escuela'></div></div>
       <div class='sp-area sp-panel' data-a='panel' hidden><div class='sp-pn'></div></div>
+      <div class='sp-area' data-a='rentas' hidden></div>
+      <div class='sp-area' data-a='notas' hidden></div>
     </div></div>`;
     StormEscuela.cargar(root.querySelector('.pn-escuela'), auth, salir);
     const pn = root.querySelector('.sp-pn'); StormPanel.montar(pn, auth);
+    StormRN.montar(root.querySelector('[data-a="rentas"]'), root.querySelector('[data-a="notas"]'), auth, () => { const n = root.querySelector('.sp-nav'); if(n){ n.outerHTML = nav(); bindNav(); marcar(); } if(area === 'hoy') pintarHoy(); });
+    let rnPedido = false;
+    const rnCargar = () => { const E = StormEscuela.datos(); if(E && (E.rol === 'admin' || E.rol === 'recepcion')){ rnPedido = true; StormRN.cargar(); } };
+    setInterval(() => { if(!rnPedido || ['rentas', 'notas', 'hoy'].includes(area)) rnCargar(); }, 60000);
     pn.addEventListener('click', e => {
       if(!['anual'].includes(area)) return;
       let c = e.target.closest('.pn-chip[data-nombre], .pn-alb');
@@ -352,7 +366,8 @@ main .pn{max-width:1440px}
       const f = JSON.stringify([!!StormEscuela.datos(), !!StormPanel.datos(), esAdmin(), adultosVisible(), soloPart(), (StormEscuela.datos() || {}).reservas && StormEscuela.datos().reservas.length]);
       if(f === firma) return; firma = f;
       const n = root.querySelector('.sp-nav'); if(n){ n.outerHTML = nav(); bindNav(); marcar(); }
-      if(esRecep() && area !== 'particulares') ir('particulares');
+      if(!rnPedido) rnCargar();
+      if(esRecep() && !RECEP.includes(area)) ir('particulares');
       if(area === 'hoy') pintarHoy();
     }, 1200);
   }
@@ -365,9 +380,9 @@ main .pn{max-width:1440px}
   function marcar(){ root.querySelectorAll('.sp-nav [data-area]').forEach(b => b.classList.toggle('on', b.dataset.area === area || b.dataset.area === GRUPO[area])); }
   function cuenta(){
     const w = document.createElement('div'); w.className = 'sp-mas';
-    w.innerHTML = `<div><button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
+    w.innerHTML = `<div>${esAdmin() ? `<button data-ira='rentas'>${I.renta}<span>Rentas<small>Tablas y trajes afuera</small></span></button><button data-ira='notas'>${I.nota}<span>Notas<small>Avisos para el equipo</small></span></button>` : ''}<button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
     document.body.appendChild(w);
-    w.onclick = e => { const b = e.target.closest('button'); if(e.target === w || b) w.remove(); if(b && b.dataset.fuera !== undefined) salir(); };
+    w.onclick = e => { const b = e.target.closest('button'); if(e.target === w || b) w.remove(); if(b && b.dataset.fuera !== undefined) salir(); if(b && b.dataset.ira) ir(b.dataset.ira); };
   }
   function ir(a){
     if(a === 'academias' || a === 'plata'){ a = ultimo[a]; }
@@ -375,7 +390,9 @@ main .pn{max-width:1440px}
     if(a === 'verano' && !veranoVisible()) a = 'anual';
     if(a === 'adultos' && !adultosVisible()) a = 'anual';
     if(soloPart() && GRUPO[a] === 'academias') a = 'hoy';
-    if(esRecep()) a = 'particulares';
+    if((a === 'rentas' || a === 'notas') && !esAdmin() && !esRecep()) a = 'hoy';
+    if(esRecep() && !RECEP.includes(a)) a = 'particulares';
+    if(a === 'rentas' || a === 'notas') StormRN.cargar();
     area = a; try{ sessionStorage.setItem('storm-area', a); }catch(_){}
     const g = GRUPO[a]; if(g){ ultimo[g] = a; try{ sessionStorage.setItem('storm-ultimo', JSON.stringify(ultimo)); }catch(_){} }
     bindNav(); marcar();
@@ -481,8 +498,12 @@ main .pn{max-width:1440px}
       ${adm ? tile(faltan ? 'warn' : 'ok', I.pago, faltan, 'faltan por pagar', 'Academia Anual', 'anual:pagos') : ''}
       ${adm ? tile(espera.length + atras.length ? 'warn' : 'ok', I.pago, espera.length + atras.length, 'particulares sin pagar', atras.length ? atras.length + (atras.length === 1 ? ' ya pasó' : ' ya pasaron') : '', atras.length ? 'sin-pagar' : 'particulares:reservas') : ''}
       ${adm && avisos ? tile('warn', I.grupo, avisos, 'avisos de la Anual', 'alumnos sin grupo o pagos', 'anual:avisos') : ''}
+      ${adm && StormRN.listo() ? tile(StormRN.tarde() ? 'warn' : '', I.renta, StormRN.afuera(), StormRN.afuera() === 1 ? 'renta afuera' : 'rentas afuera', StormRN.tarde() ? StormRN.tarde() + ' no ha vuelto de otro día' : 'tablas y trajes', 'rentas') : ''}
+      ${adm && StormRN.listo() ? tile(StormRN.avisos() ? 'warn' : 'ok', I.nota, StormRN.avisos(), StormRN.avisos() === 1 ? 'aviso del equipo' : 'avisos del equipo', StormRN.importantes().length ? StormRN.importantes().length + ' importante' + (StormRN.importantes().length === 1 ? '' : 's') : '', 'notas') : ''}
       ${(() => { const d0 = new Date(), fm = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate() - d0.getDate() < 3; return adm && (fm || [5, 6, 0].includes(d0.getDay())) ? tile('', I.pago, '$', fm ? 'revisar sueldos del mes' : 'revisar sueldos de la semana', 'instructores', fm ? 'sueldos' : 'particulares:pagos') : ''; })()}
     </div>`;
+    // avisos importantes del equipo, arriba de todo
+    if(adm && StormRN.listo() && StormRN.importantes().length) h = StormRN.importantes().map(x => `<button class='sp-line nota' data-go='notas'><span><b>${esc(x.texto.length > 120 ? x.texto.slice(0, 120) + '…' : x.texto)}</b><small>${esc(x.por || 'Storm')}</small></span><span class='tag'>Importante</span></button>`).join('') + `<div style='height:12px'></div>` + h;
     // línea de tiempo del día
     const lineas = [];
     partHoy.forEach(r => lineas.push({ h: r.hora, html: `<button class='sp-line' data-go='particulares:dia'><span class='h'>${esc(r.hora)}</span><span><b>${esc(r.nombre)}</b><small>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}</small></span><span class='tag'>Particular</span></button>` }));
