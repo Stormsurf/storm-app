@@ -508,11 +508,11 @@ async function estado(env, d, ctx) {
 // ---------- notificaciones a la app (Panel Storm / Agenda Storm, OneSignal) ----------
 // Llegan a quien tenga la app con notificaciones activadas y haya entrado con ese correo. Requiere ONESIGNAL_KEY (secreto en Cloudflare).
 const ONESIGNAL_APP = 'be18352b-5820-4912-aa46-d851890394a3';
-async function enviarPush(env, correos, titulo, texto, ref) {
+async function enviarPush(env, correos, titulo, texto, ref, url) {
   const a = [...new Set((correos || []).map(norm).filter(Boolean))];
   if (!env.ONESIGNAL_KEY || !a.length) return false;
   const r = await fetch('https://api.onesignal.com/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: (/^os_v2_/.test(env.ONESIGNAL_KEY) ? 'Key ' : 'Basic ') + env.ONESIGNAL_KEY }, // llaves nuevas (os_v2_) o antiguas
-    body: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: 'push', include_aliases: { external_id: a }, headings: { en: titulo, es: titulo }, contents: { en: texto, es: texto }, url: PANEL + (ref ? '?clase=' + encodeURIComponent(ref) : '') }) }); // tocar el aviso abre esa clase
+    body: JSON.stringify({ app_id: ONESIGNAL_APP, target_channel: 'push', include_aliases: { external_id: a }, headings: { en: titulo, es: titulo }, contents: { en: texto, es: texto }, url: url || PANEL + (ref ? '?clase=' + encodeURIComponent(ref) : '') }) }); // tocar el aviso abre esa clase
   const t = await r.text(); if (!r.ok) console.error('push', r.status, t);
   let j = {}; try { j = JSON.parse(t); } catch (_) {}
   // true = llegó a alguien; si no, el detalle de OneSignal (ej. ese correo no tiene la app con notificaciones)
@@ -1032,20 +1032,27 @@ async function notasLista(env) {
   const r = (await env.DB.prepare("SELECT * FROM notas WHERE estado = 'activa' AND (lista_ms = 0 OR lista_ms > ?) ORDER BY importante DESC, creada_ms DESC LIMIT 300").bind(desde).all()).results;
   return r.map(x => ({ id: x.id, ms: x.creada_ms, fecha: ahoraChile(x.creada_ms).fecha, hora: ahoraChile(x.creada_ms).hora, por: x.por, tipo: x.tipo, texto: x.texto, importante: !!x.importante, lista: !!x.lista_ms, listaPor: x.lista_por, listaFecha: x.lista_ms ? ahoraChile(x.lista_ms).fecha : '' }));
 }
-async function notasAccion(env, q, d) {
+/** Nota importante: aviso al celular de la otra parte (recepción ↔ administradoras), menos a quien la escribió. */
+async function pushNota(env, q, por, texto) {
+  const a = await ajustes(env.DB), yo = norm(q.email);
+  const a2 = [...(a.admins || []), ...(a.recepcion || [])].map(norm).filter(c => c && c !== yo);
+  return enviarPush(env, a2, '⚠️ Nota importante de ' + por, texto.length > 140 ? texto.slice(0, 140) + '…' : texto, '', PANEL.replace(/agenda\/$/, 'storm/') + '?ir=notas');
+}
+async function notasAccion(env, q, d, ctx) {
   if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores ven las notas.');
   const db = env.DB; await rnTablas(db);
   const t = ahoraChile(), op = d.op || 'ver', yo = op === 'ver' ? '' : await quienNombre(env, q.email);
   if (op === 'nueva') {
     const texto = String(d.texto || '').trim().slice(0, 2000); if (texto.length < 2) throw err('Escribe la nota.');
     await db.prepare('INSERT INTO notas (id, creada_ms, por, tipo, texto, importante) VALUES (?, ?, ?, ?, ?, ?)').bind(nuevoId('N', t), Date.now(), yo, d.tipo === 'info' ? 'info' : 'aviso', texto, d.importante ? 1 : 0).run();
+    if (d.importante && d.tipo !== 'info') tarea(ctx, pushNota(env, q, yo, texto));
     await anotar(db, q, 'nota nueva');
   } else if (op !== 'ver') {
     const x = await db.prepare('SELECT * FROM notas WHERE id = ?').bind(String(d.id || '')).first();
     if (!x) throw err('No encontramos esa nota.');
     if (op === 'lista') await db.prepare('UPDATE notas SET lista_ms = ?, lista_por = ? WHERE id = ?').bind(Date.now(), yo, x.id).run();
     else if (op === 'reabrir') await db.prepare("UPDATE notas SET lista_ms = 0, lista_por = '' WHERE id = ?").bind(x.id).run();
-    else if (op === 'importante') await db.prepare('UPDATE notas SET importante = ? WHERE id = ?').bind(d.importante ? 1 : 0, x.id).run();
+    else if (op === 'importante') { await db.prepare('UPDATE notas SET importante = ? WHERE id = ?').bind(d.importante ? 1 : 0, x.id).run(); if (d.importante && !x.importante) tarea(ctx, pushNota(env, q, yo, x.texto)); }
     else if (op === 'editar') { const texto = String(d.texto || '').trim().slice(0, 2000); if (texto.length < 2) throw err('Escribe la nota.'); await db.prepare('UPDATE notas SET texto = ? WHERE id = ?').bind(texto, x.id).run(); }
     else if (op === 'borrar') await db.prepare("UPDATE notas SET estado = 'borrada' WHERE id = ?").bind(x.id).run();
     else throw err('Acción desconocida');
@@ -1659,7 +1666,7 @@ export async function onRequest(context) {
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
     if (acc === 'vacaciones') return json(await vacaciones(env, q, d, context));
     if (acc === 'rentas') return json(await rentasAccion(env, q, d));
-    if (acc === 'notas') return json(await notasAccion(env, q, d));
+    if (acc === 'notas') return json(await notasAccion(env, q, d, context));
     if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo', 'pack'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));
