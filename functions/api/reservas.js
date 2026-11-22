@@ -1480,9 +1480,9 @@ async function tuuSincronizar(env, mes, forzar) {
   }
 }
 /** Suma del mes por categoría, con la lista de ventas por revisar. */
-async function tuuResumen(env, mes, forzar) {
+async function tuuResumen(env, mes, forzar, soloCalces) {
   if (!env.TUU_KEY) return { ok: false, error: 'Falta la clave de Tuu' };
-  const sync = await tuuSincronizar(env, mes, forzar);
+  const sync = soloCalces ? { ok: true } : await tuuSincronizar(env, mes, forzar);
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
     db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
@@ -1522,12 +1522,25 @@ async function tuuResumen(env, mes, forzar) {
   };
   agenda.filter(x => !usadas.has(x.ref)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora)).forEach(a => {
     const dias = [...new Set(libres.filter(v => !calces.has(v.id) && v.fecha <= a.fecha && tope(v) >= a.fecha).map(v => v.fecha))].sort((p, q) => q.localeCompare(p)); // el mismo día primero
-    for (const dia of dias) {
-      const cands = libres.filter(v => !calces.has(v.id) && v.fecha === dia && v.monto < a.total && (a.medio === 'POS' || tuuEfectivo(v.tipo))).slice(0, 30);
-      const g = cands.length >= 2 && grupo(cands, a.total);
-      if (g) { usadas.add(a.ref); g.forEach(v => calces.set(v.id, Object.assign({}, a, { grupo: g.length }))); break; }
-    }
+    const okV = v => !calces.has(v.id) && v.monto < a.total && (a.medio === 'POS' || tuuEfectivo(v.tipo));
+    let g = null;
+    for (const dia of dias) { const cands = libres.filter(v => okV(v) && v.fecha === dia).slice(0, 30); g = cands.length >= 2 && grupo(cands, a.total); if (g) break; }
+    // Si no calza en un solo día (algunos pagaron antes), se prueba con las ventas de los días antes de la clase, las más cercanas primero.
+    if (!g) { const cands = libres.filter(v => okV(v) && v.fecha <= a.fecha && tope(v) >= a.fecha).sort((p, q) => (q.fecha + q.hora).localeCompare(p.fecha + p.hora)).slice(0, 25); g = cands.length >= 2 && grupo(cands, a.total); }
+    if (g) { usadas.add(a.ref); g.forEach(v => calces.set(v.id, Object.assign({}, a, { grupo: g.length }))); }
   });
+  if (soloCalces) return usadas;
+  // Isidora (22-11): "que todo se cuadre solo". Una venta sin producto que no es clase se ordena sola si su monto es el precio
+  // de algo que ya se vendió con nombre en Tuu (ej. "Renta Softboard" $15.000) o de una venta que ya marcaste antes,
+  // siempre que ese monto sea de una sola cosa (solo renta o solo producto). Si el monto calza con las dos, o con ninguna, queda por revisar.
+  const precios = new Map(); // monto → Set(categoría)
+  const anota = (m, cat) => { if (m > 0 && (cat === 'renta' || cat === 'producto')) (precios.get(m) || precios.set(m, new Set()).get(m)).add(cat); };
+  (await db.prepare("SELECT monto, items, categoria FROM tuu_ventas WHERE fecha >= ?").bind(sumarDias(mes + '-01', -120)).all()).results.forEach(v => {
+    if (v.categoria) return anota(v.monto, v.categoria);
+    let it = []; try { it = JSON.parse(v.items || '[]'); } catch (_) {}
+    it.filter(i => i.nombre && i.precio).forEach(i => anota(i.precio, tuuCatItem(i.nombre)));
+  });
+  const porPrecio = m => { const c = precios.get(m); return c && c.size === 1 ? [...c][0] : ''; };
   const calzaAgenda = v => calces.get(v.id);
   const nomClase = (v, a) => (a.fecha === v.fecha ? '' : a.fecha.slice(8, 10) + '-' + a.fecha.slice(5, 7) + ' ') + a.hora + ' · ' + a.nombre + (a.grupo ? ' (' + a.grupo + ' pagos)' : '');
   const suma = (cat, monto, com) => {
@@ -1553,6 +1566,7 @@ async function tuuResumen(env, mes, forzar) {
       if (a) { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', clase: nomClase(v, a) })); return; }
     }
     // Isidora (15-11): una venta sin producto es clase SOLO si calza con una clase POS del Panel (arriba). Si no calza, es renta o producto: queda "Por revisar".
+    if (!conNombre.length && porPrecio(v.monto)) { const cat = porPrecio(v.monto); suma(cat, v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: cat, solo: true })); r.ordenadasSolas = (r.ordenadasSolas || 0) + 1; return; }
     if (!conNombre.length) { suma('revisar', v.monto, v.comision); r.porRevisar.push(base); r.detalle.push(Object.assign(base, { categoria: 'revisar' })); return; }
     // Con nombre de clase ("Clase 2 Personas"): es una clase ya anotada. No se suma de nuevo; solo su comisión.
     if (cats.length === 1 && cats[0] === 'clase') { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda' })); return; }
@@ -1573,14 +1587,18 @@ async function tuuResumen(env, mes, forzar) {
   //  - Marcadas "Clase" sin clase POS en el Panel: no suman en ninguna parte (falta anotar la clase).
   //  - Clase POS del Panel sin venta en Tuu: suma, pero no se ve el pago en la máquina (¿se cobró?).
   const hoy = ahoraChile().fecha;
-  const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha <= hoy);
+  // Clases de los primeros días del mes que se pagaron en Tuu el mes anterior: ya calzaron allá.
+  const mesAntes = sumarDias(mes + '-01', -1).slice(0, 7);
+  let antes = new Set(); if (mesAntes >= TUU_DESDE.slice(0, 7)) try { antes = await tuuResumen(env, mesAntes, false, true); } catch (_) {}
+  const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha <= hoy && !antes.has(x.ref));
   const claseAMano = r.detalle.filter(x => x.categoria === 'agenda' && x.aMano);
   r.cuadre = {
     posPanel: posMes.reduce((t, x) => t + x.total, 0), posPanelN: posMes.length,
     calzadas: posMes.filter(x => usadas.has(x.ref)).reduce((t, x) => t + x.total, 0),
     sinTuu: posMes.filter(x => !usadas.has(x.ref)).map(x => ({ fecha: x.fecha, hora: x.hora, nombre: x.nombre, monto: x.total })),
     claseSinPanel: claseAMano.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, monto: x.monto, pago: x.pago })),
-    porRevisar: r.porRevisar.reduce((t, x) => t + x.monto, 0)
+    porRevisar: r.porRevisar.reduce((t, x) => t + x.monto, 0),
+    grupos: r.detalle.filter(x => / pagos\)$/.test(x.clase || '')).length, solas: r.ordenadasSolas || 0
   };
   return r;
 }

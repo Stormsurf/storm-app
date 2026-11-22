@@ -594,7 +594,7 @@
     const x = TUU[mesIso(mes)]; if(!x || x.error || !x.d) return '';
     const d = x.d, pr = d.porRevisar || [], c = d.cuadre;
     // Ventas sin producto que no calzan con una clase POS del Panel: Isidora elige qué eran. Botones abajo, 2 por fila (en el iPhone no caben 4 al lado).
-    const revisar = !pr.length ? '' : `<div class='pn-card'><h3>Ventas Tuu por revisar<span class='pn-count'>${pr.length}</span></h3><p class='pn-sub'>Se vendieron en la máquina sin elegir producto y no calzan con ninguna clase POS del Panel. Mientras no las toques suman como "Sin nombre". Si era una clase que ya está en el Panel, toca Clase y deja de sumar (no se cuenta dos veces). Si la anulaste en la máquina, toca Anulada.</p>
+    const revisar = !pr.length ? '' : `<div class='pn-card'><h3>Ventas Tuu por revisar<span class='pn-count'>${pr.length}</span></h3><p class='pn-sub'>La app ya ordenó sola todo lo que pudo (clases del Panel, clases grupales pagadas por persona y montos de rentas o productos conocidos). Estas no calzan con nada: toca qué eran. Mientras no las toques suman como "Sin nombre". Cuando marcas Renta o Producto, la app aprende ese monto y la próxima venta igual se ordena sola.</p>
       ${pr.map(v => `<div class='pn-tuuv'><div class='pn-tuuh'><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-tuub'>${Object.keys(TUU_CAT).map(k => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${k}'>${TUU_CAT[k]}</button>`).join('')}</div></div>`).join('')}</div>`;
     if(!c) return revisar;
     // Cuadre (Isidora 22-11): ¿algo está contado dos veces o falta? Compara clases POS del Panel con ventas Tuu.
@@ -607,6 +607,7 @@
         ${fila(`Clases POS en el Panel hasta hoy (${c.posPanelN})`, c.posPanel)}
         ${fila('Ya calzadas con ventas Tuu', c.calzadas, 'pn-tuuokl')}
       </div>
+      ${c.grupos || c.solas ? `<p class='pn-sub' style='margin-top:6px'>La app ordenó sola ${[c.grupos ? c.grupos + (c.grupos === 1 ? ' pago' : ' pagos') + ' de clases grupales (cada persona pagó su parte)' : '', c.solas ? c.solas + (c.solas === 1 ? ' venta' : ' ventas') + ' sin nombre por su precio (renta o producto que ya se vendió a ese precio)' : ''].filter(Boolean).join(' y ')}.</p>` : ''}
       ${c.porRevisar ? `<div class='pn-tuup'><b>Por revisar: ${clp(c.porRevisar)}</b><span>Hoy suman como "Sin nombre". Si alguna era una clase que ya anotaste, está contada dos veces hasta que toques Clase arriba.</span></div>` : ''}
       ${c.claseSinPanel.length ? `<div class='pn-tuup'><b>Marcadas Clase sin clase POS en el Panel: ${clp(c.claseSinPanel.reduce((t, v) => t + v.monto, 0))}</b><span>No suman en ninguna parte. Anota esa clase en el Panel con pago POS, o si te equivocaste toca Desmarcar.</span>
         ${lista(c.claseSinPanel, v => `<div><span>${clp(v.monto)} · ${esc(corta(v.fecha))} ${esc(v.hora)} · ${esc(v.pago)}</span><button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat=''>Desmarcar</button></div>`)}</div>` : ''}
