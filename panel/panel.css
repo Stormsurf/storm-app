@@ -283,3 +283,25 @@ button.pn-chip{border:0;font:inherit;font-size:1.35rem;color:inherit;cursor:poin
 .pn-clmes{font-weight:600;margin:10px 0 6px!important}
 .pn-clbox .pn-nvops button small{display:block;font-size:1.05rem;opacity:.65}
 .pn-clbox .pn-nvops button.on small{opacity:.85}
+
+/* Ventas Tuu por revisar + cuadre (22-11): botones abajo en 2 columnas para que nada se salga en el celular */
+.pn-tuuv{padding:12px 0;border-bottom:1px solid var(--line)}
+.pn-tuuv:last-child{border-bottom:0}
+.pn-tuuh{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pn-tuuh b{font-size:1.6rem;font-weight:600}
+.pn-tuuh small{font-size:1.25rem;opacity:.65}
+.pn-tuub{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.pn-tuub .pn-gbtn{width:100%;min-width:0;padding:9px 6px;white-space:normal}
+@media (min-width:700px){.pn-tuub{grid-template-columns:repeat(4,1fr)}}
+.pn-tuuc .pn-count.pn-tuuok{background:var(--ok-soft);color:var(--ok)}
+.pn-tuuc .pn-count.pn-tuuwarn{background:var(--warn-soft);color:var(--warn)}
+.pn-tuuc .pn-tuuokl b{color:var(--ok)}
+.pn-tuup{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--warn-soft)}
+.pn-tuup--suave{background:#f4f1ec}
+.pn-tuup>b{display:block;font-size:1.35rem;font-weight:600}
+.pn-tuup>span{display:block;font-size:1.25rem;opacity:.75;margin-top:2px}
+.pn-tuul{margin-top:6px}
+.pn-tuul>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:1.25rem;border-top:1px solid rgba(0,0,0,.06)}
+.pn-tuul>div span{min-width:0;overflow-wrap:anywhere}
+.pn-tuul>div b{flex:none;font-weight:600}
+.pn-tuul .pn-gbtn{flex:none;font-size:1.2rem;padding:5px 10px}

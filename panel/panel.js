@@ -591,11 +591,30 @@
   }
   function pintarTuu(mes){ const el = app && app.querySelector('#pn-tuu'); if(el) { el.innerHTML = tuuHtml(mes); enlazarTuu(el, mes); } }
   function tuuHtml(mes){
-    // Solo se muestra cuando hay ventas de Tuu sin producto que no calzan con una clase POS del Panel: Isidora elige si fue renta o producto.
-    const x = TUU[mesIso(mes)]; if(!x || x.error || !x.d || !x.d.porRevisar || !x.d.porRevisar.length) return '';
-    const d = x.d;
-    return `<div class='pn-card'><h3>Ventas Tuu por revisar<span class='pn-count'>${d.porRevisar.length}</span></h3><p class='pn-sub'>Se vendieron en la máquina sin elegir producto y no calzan con ninguna clase POS del Panel (del mismo día o hasta 14 días después). Toca qué era cada una. Si la anulaste en la máquina, toca Anulada y no se cuenta.</p>
-      ${d.porRevisar.map(v => `<div class='pn-row pn-row--wrap'><div><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-acts'>${Object.keys(TUU_CAT).map(c => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${c}'>${TUU_CAT[c]}</button>`).join('')}</div></div>`).join('')}</div>`;
+    const x = TUU[mesIso(mes)]; if(!x || x.error || !x.d) return '';
+    const d = x.d, pr = d.porRevisar || [], c = d.cuadre;
+    // Ventas sin producto que no calzan con una clase POS del Panel: Isidora elige qué eran. Botones abajo, 2 por fila (en el iPhone no caben 4 al lado).
+    const revisar = !pr.length ? '' : `<div class='pn-card'><h3>Ventas Tuu por revisar<span class='pn-count'>${pr.length}</span></h3><p class='pn-sub'>Se vendieron en la máquina sin elegir producto y no calzan con ninguna clase POS del Panel. Mientras no las toques suman como "Sin nombre". Si era una clase que ya está en el Panel, toca Clase y deja de sumar (no se cuenta dos veces). Si la anulaste en la máquina, toca Anulada.</p>
+      ${pr.map(v => `<div class='pn-tuuv'><div class='pn-tuuh'><b>${clp(v.monto)}</b><small>${esc(corta(v.fecha))} · ${esc(v.hora)} · ${esc(v.pago)}</small></div><div class='pn-tuub'>${Object.keys(TUU_CAT).map(k => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${k}'>${TUU_CAT[k]}</button>`).join('')}</div></div>`).join('')}</div>`;
+    if(!c) return revisar;
+    // Cuadre (Isidora 22-11): ¿algo está contado dos veces o falta? Compara clases POS del Panel con ventas Tuu.
+    const malos = (c.porRevisar ? 1 : 0) + (c.claseSinPanel.length ? 1 : 0) + (c.sinTuu.length ? 1 : 0);
+    const fila = (txt, monto, cls) => `<div class='${cls||''}'><span>${txt}</span><b>${clp(monto)}</b></div>`;
+    const lista = (arr, f) => arr.length ? `<div class='pn-tuul'>${arr.map(f).join('')}</div>` : '';
+    const cuadre = `<div class='pn-card pn-tuuc'><h3>¿Está todo cuadrado?<span class='pn-count ${malos ? 'pn-tuuwarn' : 'pn-tuuok'}'>${malos ? 'Revisar' : '✓ Cuadra'}</span></h3>
+      <p class='pn-sub'>Las clases pagadas con POS suman en Escuela por lo que anotaste en el Panel. Sus ventas en Tuu no suman de nuevo (solo se descuenta la comisión).</p>
+      <div class='pn-fsec'>
+        ${fila(`Clases POS en el Panel hasta hoy (${c.posPanelN})`, c.posPanel)}
+        ${fila('Ya calzadas con ventas Tuu', c.calzadas, 'pn-tuuokl')}
+      </div>
+      ${c.porRevisar ? `<div class='pn-tuup'><b>Por revisar: ${clp(c.porRevisar)}</b><span>Hoy suman como "Sin nombre". Si alguna era una clase que ya anotaste, está contada dos veces hasta que toques Clase arriba.</span></div>` : ''}
+      ${c.claseSinPanel.length ? `<div class='pn-tuup'><b>Marcadas Clase sin clase POS en el Panel: ${clp(c.claseSinPanel.reduce((t, v) => t + v.monto, 0))}</b><span>No suman en ninguna parte. Anota esa clase en el Panel con pago POS, o si te equivocaste toca Desmarcar.</span>
+        ${lista(c.claseSinPanel, v => `<div><span>${clp(v.monto)} · ${esc(corta(v.fecha))} ${esc(v.hora)} · ${esc(v.pago)}</span><button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat=''>Desmarcar</button></div>`)}</div>` : ''}
+      ${c.sinTuu.length ? `<div class='pn-tuup pn-tuup--suave'><b>Clases POS del Panel sin venta en Tuu: ${clp(c.sinTuu.reduce((t, v) => t + v.monto, 0))}</b><span>Sí suman en Escuela. Revisa que de verdad se cobraron en la máquina (o cambia la forma de pago en la clase).</span>
+        ${lista(c.sinTuu, v => `<div><span>${esc(corta(v.fecha))} ${esc(v.hora)} · ${esc(v.nombre)}</span><b>${clp(v.monto)}</b></div>`)}</div>` : ''}
+      ${!malos ? `<p class='pn-sub' style='margin-top:8px'>Todo cuadra: cada clase POS tiene su pago en Tuu y no hay ventas sin ordenar.</p>` : ''}
+    </div>`;
+    return revisar + cuadre;
   }
   function enlazarTuu(el, mes){
     el.querySelectorAll('[data-tuu]').forEach(b => b.onclick = async () => {
