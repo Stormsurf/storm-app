@@ -1121,6 +1121,9 @@ async function finanzasMes(env, d) {
   const totalPacks = packs.reduce((t, k) => t + (k.total || 0), 0);
   let tuu = null; try { tuu = await tuuResumen(env, mes); if (tuu) { delete tuu.detalle; tuu.porRevisar = tuu.porRevisar.length; } } catch (x) { console.error(x); tuu = { ok: false, error: x.message }; }
   let panelV = null; try { panelV = await ventasPanel(env, mes); } catch (x) { console.error(x); }
+  // Rentas, tienda y comisión de clases con tarjeta anotadas en el Panel (desde PANEL_DESDE) van dentro de los mismos totales que el programa
+  // de la planilla ya suma (tuu.rentas, tuu.productos, tuu.comAgenda): así Finanzas funciona igual aunque no se haya pegado una versión nueva.
+  if (panelV && tuu && tuu.ok !== false) { tuu.rentas += panelV.rentas; tuu.comRentas += panelV.comRentas; tuu.productos += panelV.tienda; tuu.comProductos += panelV.comTienda; tuu.comAgenda += panelV.comClasesPOS; tuu.comision += panelV.comRentas + panelV.comTienda + panelV.comClasesPOS; }
   return { ok: true, mes, panel: panelV, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0) + totalPacks, packs: packs.length, totalPacks, mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
     instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor, tuu };
 }
