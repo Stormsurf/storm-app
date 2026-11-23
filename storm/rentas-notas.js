@@ -258,10 +258,14 @@
     const guarda = () => { ['#rn-od', '#rn-om'].forEach(k => { const e = w.querySelector(k); if (e) v[k] = e.value; }); };
     const num = t => Number(String(t || '').replace(/\D/g, '')) || 0;
     const total = () => (R.productos || []).reduce((t, p) => t + p.precio * (v.cant[p.id] || 0), 0) + (v.otro ? num(v['#rn-om']) : 0);
+    const sinT = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const lista = () => { const q = sinT(v.q).trim(), l = (R.productos || []).filter(x => !q || v.cant[x.id] || sinT(x.nombre).includes(q));
+      return l.length ? l.map(x => `<div class='${v.cant[x.id] ? 'on' : ''}'><span>${esc(x.nombre)}<small>${clp(x.precio)}</small></span><button data-m='${esc(x.id)}' aria-label='Menos'>−</button><b>${v.cant[x.id] || 0}</b><button data-p='${esc(x.id)}' aria-label='Más'>+</button></div>`).join('') : `<div class='rn-vacio' style='border:0'>No hay productos con ese nombre. Usa Otro.</div>`; };
     const p = () => {
       w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>Venta tienda</h2>
         <p class='rn-q'>¿Qué se vendió?</p>
-        <div class='rn-pr'>${(R.productos || []).map(x => `<div class='${v.cant[x.id] ? 'on' : ''}'><span>${esc(x.nombre)}<small>${clp(x.precio)}</small></span><button data-m='${esc(x.id)}' aria-label='Menos'>−</button><b>${v.cant[x.id] || 0}</b><button data-p='${esc(x.id)}' aria-label='Más'>+</button></div>`).join('')}</div>
+        ${(R.productos || []).length > 8 ? `<input id='rn-bq' class='rn-in' type='search' placeholder='Buscar producto' autocomplete='off' value='${esc(v.q || '')}' style='margin:0 0 10px'>` : ''}
+        <div class='rn-pr'>${lista()}</div>
         <div class='rn-ch' style='margin-top:10px'><button class='${v.otro ? 'on' : ''}' data-otro>Otro</button></div>
         ${v.otro ? `<input id='rn-od' class='rn-in' placeholder='${v.dano ? '¿Qué se rompió? (ej: tabla 8’0 quebrada)' : '¿Qué se vendió?'}' value='${esc(v['#rn-od'] || '')}'><input id='rn-om' class='rn-in' inputmode='numeric' placeholder='Monto' value='${esc(v['#rn-om'] || '')}'>
           <button class='rn-lk' data-dano>${v.dano ? '☑' : '☐'} Es un cobro por daño de algo arrendado</button>` : ''}
@@ -270,6 +274,7 @@
         <div class='rn-ch dos'>${PAGOS.map(([k, t]) => `<button class='${v.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
         <button class='rn-go' data-guardar style='margin-top:18px'>Guardar venta</button><p class='rn-err'></p>
         ${R.admin ? `<button class='rn-lk' data-editar style='display:block;margin:8px auto 0'>Editar productos y precios</button>` : ''}</div>`;
+      const bq = w.querySelector('#rn-bq'); if (bq) bq.oninput = () => { v.q = bq.value; w.querySelector('.rn-pr').innerHTML = lista(); };
       w.querySelectorAll('#rn-om').forEach(e => e.oninput = () => { guarda(); w.querySelector('.rn-tot b').textContent = clp(total()); });
     };
     p();

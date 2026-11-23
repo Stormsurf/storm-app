@@ -1075,7 +1075,7 @@ async function tiendaAccion(env, q, d) {
       const nombre = String(d.nombre || '').trim().slice(0, 60), precio = num(d.precio);
       if (nombre.length < 2) throw err('Escribe el nombre del producto.'); if (!precio) throw err('Escribe el precio.');
       if (d.id) await db.prepare('UPDATE productos SET nombre = ?, precio = ? WHERE id = ?').bind(nombre, precio, String(d.id)).run();
-      else await db.prepare('INSERT INTO productos (id, nombre, precio, orden) VALUES (?, ?, ?, 999)').bind('P' + Date.now().toString(36), nombre, precio).run();
+      else await db.prepare('INSERT INTO productos (id, nombre, precio, orden) VALUES (?, ?, ?, 0)').bind('P' + Date.now().toString(36), nombre, precio).run();
     }
     await anotar(db, q, 'producto ' + op + ' ' + (d.nombre || d.id));
   } else if (op !== 'ver') throw err('Acción desconocida');
