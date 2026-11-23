@@ -401,6 +401,7 @@
     tarde: () => afuera().filter(tarde).length,
     avisos: () => avisosAbiertos().length,
     importantes: () => avisosAbiertos().filter(x => x.importante),
-    nueva: abrirNueva
+    nueva: abrirNueva,
+    tienda: () => (R ? Promise.resolve() : cargar()).then(() => { if (R) abrirTienda(); })
   };
 })();

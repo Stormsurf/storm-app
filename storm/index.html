@@ -219,7 +219,7 @@ main .pn{max-width:1440px}
   <div class='storm-wrap pn'><div id='st'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
 </section>
 <script src="/panel/panel.js?v=26"></script>
-<script src="/storm/rentas-notas.js?v=4"></script>
+<script src="/storm/rentas-notas.js?v=5"></script>
 <script>
 (()=>{
   const API = "https://script.google.com/macros/s/AKfycbyFZiJBhEoWR3-mekjXfea3O0BbDItazLHQRUkCpWOUZOwJ4612kgiGsg4ocWpGBgO3/exec";
@@ -254,7 +254,7 @@ main .pn{max-width:1440px}
     nota: sv("<path d='M5 4h14v12l-4 4H5z'/><path d='M15 20v-4h4M8.5 9h7M8.5 12.5h5'/>"),
     grupo: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M17 11v6M14 14h6'/>")
   };
-  const TIT = { rentas: 'Rentas', notas: 'Notas', hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academias', verano: 'Academias', adultos: 'Academias', finanzas: 'Plata', sueldos: 'Plata' };
+  const TIT = { rentas: 'Tienda', notas: 'Notas', hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academias', verano: 'Academias', adultos: 'Academias', finanzas: 'Plata', sueldos: 'Plata' };
   const GRUPO = { anual: 'academias', verano: 'academias', adultos: 'academias', finanzas: 'plata', sueldos: 'plata' };
   const SEG = { academias: [['anual', 'Anual'], ['verano', 'Verano'], ['adultos', 'Adultos']], plata: [['finanzas', 'Este mes'], ['sueldos', 'Sueldos'], ['particulares:pagos', 'Pagos particulares']] };
   let ultimo = (() => { try{ return JSON.parse(sessionStorage.getItem('storm-ultimo') || 'null') || {}; }catch(_){ return {}; } })();
@@ -319,7 +319,7 @@ main .pn{max-width:1440px}
   function nav(){
     const adm = esAdmin(), ac = '<div class="sp-sep">';
     const nAv = StormRN.avisos(), bAv = nAv ? `<em class='sp-badge'>${nAv}</em>` : '';
-    if(esRecep()) return `<nav class='sp-nav sp-nav--recep'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div><button class='sp-ni' data-area='particulares'>${I.particulares}<span>Agenda</span></button><button class='sp-ni' data-area='rentas'>${I.renta}<span>Rentas</span></button><button class='sp-ni' data-area='notas'>${I.nota}<span>Notas</span>${bAv}</button><div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
+    if(esRecep()) return `<nav class='sp-nav sp-nav--recep'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div><button class='sp-ni' data-area='particulares'>${I.particulares}<span>Agenda</span></button><button class='sp-ni' data-area='rentas'>${I.tienda}<span>Tienda</span></button><button class='sp-ni' data-area='notas'>${I.nota}<span>Notas</span>${bAv}</button><div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
     const b = (k, t, ico, extra) => `<button class='sp-ni' data-area='${k}'${extra || ''}>${ico}<span>${t}</span></button>`;
     return `<nav class='sp-nav'><div class='sp-brand'><img src='/img/storm-logo.png' alt='Storm'></div>
       ${adm ? `<button class='sp-mas-pc' data-anotar>${I.mas2}<span>Anotar</span></button>` : ''}
@@ -330,7 +330,7 @@ main .pn{max-width:1440px}
       ${soloPart() ? '' : `${b('academias', 'Academias', I.anual, ' data-solo-cel')}
       ${ac}Academias</div>${b('anual', 'Academia Anual', I.anual, ' data-solo-pc')}${veranoVisible() ? b('verano', 'Academia de Verano', I.verano, ' data-solo-pc') : ''}${adultosVisible() ? b('adultos', 'Academia de Adultos', I.adultos, ' data-solo-pc') : ''}`}
       ${adm ? `${ac}Plata</div>${b('finanzas', 'Este mes', I.finanzas, ' data-solo-pc')}${b('sueldos', 'Sueldos', I.pago, ' data-solo-pc')}` : ''}
-      ${adm ? `${ac}Recepción</div>${b('rentas', 'Rentas', I.renta, ' data-solo-pc')}<button class='sp-ni' data-area='notas' data-solo-pc>${I.nota}<span>Notas</span>${bAv}</button>` : ''}
+      ${adm ? `${ac}Recepción</div>${b('rentas', 'Tienda', I.tienda)}<button class='sp-ni' data-area='notas' data-solo-pc>${I.nota}<span>Notas</span>${bAv}</button>` : ''}
       <div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
   }
 
@@ -380,7 +380,7 @@ main .pn{max-width:1440px}
   function marcar(){ root.querySelectorAll('.sp-nav [data-area]').forEach(b => b.classList.toggle('on', b.dataset.area === area || b.dataset.area === GRUPO[area])); }
   function cuenta(){
     const w = document.createElement('div'); w.className = 'sp-mas';
-    w.innerHTML = `<div>${esAdmin() ? `<button data-ira='rentas'>${I.renta}<span>Rentas<small>Tablas y trajes afuera</small></span></button><button data-ira='notas'>${I.nota}<span>Notas<small>Avisos para el equipo</small></span></button>` : ''}<button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
+    w.innerHTML = `<div>${esAdmin() ? `<button data-ira='notas'>${I.nota}<span>Notas<small>Avisos para el equipo</small></span></button>` : ''}<button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
     document.body.appendChild(w);
     w.onclick = e => { const b = e.target.closest('button'); if(e.target === w || b) w.remove(); if(b && b.dataset.fuera !== undefined) salir(); if(b && b.dataset.ira) ir(b.dataset.ira); };
   }
@@ -415,7 +415,8 @@ main .pn{max-width:1440px}
   // ---------- Anotar en 3 toques: monto, en qué, área ----------
   const AREAS = [['Verano', 'Verano', 'verano'], ['Anual', 'Anual', 'anual'], ['Adultos', 'Adultos', 'adultos'], ['Escuela', 'Particulares', 'particulares'], ['Rentas', 'Rentas', 'tabla'], ['Surfshop', 'Surf Shop', 'tienda'], ['Casa', 'Casa Storm', 'casa']];
   const ATAJOS = { gasto: { Verano: ['Comida', 'Premios', 'Sala de yoga', 'Materiales', 'Bencina'], Casa: ['Mantención oficina', 'Crecimiento', 'Marketing'], _: ['Bencina', 'Comida', 'Parafina', 'Materiales', 'Hielo', 'Reparación'] },
-                   ingreso: { Rentas: ['Arriendo tabla', 'Arriendo traje'], Surfshop: ['Venta tienda'], Escuela: ['Clase particular'], _: ['Clase particular', 'Arriendo tabla', 'Venta tienda', 'Auspicio'] } };
+                   ingreso: { Escuela: ['Clase particular'], _: ['Clase particular', 'Auspicio'] } };
+  const EN_TIENDA = ['Rentas', 'Surfshop']; // sus ventas se anotan en Tienda (el Panel es la única fuente): no se anotan aquí como ingreso
   const GASTA = ['Verano', 'Anual', 'Surfshop', 'Casa']; // Adultos, particulares y rentas no tienen gastos propios (solo sueldos, que se calculan solos)
   const anioVer = (() => { const d = new Date(); return d.getFullYear() + (d.getMonth() >= 2 ? 1 : 0); })();
   let AN = null;
@@ -437,17 +438,18 @@ main .pn{max-width:1440px}
       <div class='an-chips'>${at.map(x => `<button class='${AN.detalle === x ? 'on' : ''}' data-det='${esc(x)}'>${esc(x)}</button>`).join('')}</div>
       <input id='an-det' class='an-det' placeholder='O escribe aquí' value='${at.includes(AN.detalle) ? '' : esc(AN.detalle)}'>
       <p class='an-q'>¿De qué área?</p>
-      <div class='an-areas'>${AREAS.filter(x => AN.tipo === 'ingreso' || GASTA.includes(x[0])).map(([k, t, ic]) => `<button class='${AN.area === k ? 'on' : ''}' data-ar='${k}'>${I[ic] || ''}<span>${t}</span></button>`).join('')}</div>
+      <div class='an-areas'>${AREAS.filter(x => AN.tipo === 'ingreso' ? !EN_TIENDA.includes(x[0]) : GASTA.includes(x[0])).map(([k, t, ic]) => `<button class='${AN.area === k ? 'on' : ''}' data-ar='${k}'>${I[ic] || ''}<span>${t}</span></button>`).join('')}</div>
       ${AN.area === 'Verano' ? `<p class='an-q'>¿A qué mes del Verano?</p><div class='an-chips'>${['enero', 'febrero', 'ambos'].map(c => `<button class='${AN.corr === c ? 'on' : ''}' data-corr='${c}'>${c === 'ambos' ? 'Enero y febrero' : c[0].toUpperCase() + c.slice(1)}</button>`).join('')}</div>` : ''}
       <button class='an-go' data-go>Guardar ${AN.tipo}</button><p class='an-err'></p>
-      <div class='an-otros'><button data-tipo='${AN.tipo === 'gasto' ? 'ingreso' : 'gasto'}'>${AN.tipo === 'gasto' ? 'Es un ingreso' : 'Es un gasto'}</button><button data-clase>Agendar clase particular</button></div></div>`;
+      <div class='an-otros'><button data-tipo='${AN.tipo === 'gasto' ? 'ingreso' : 'gasto'}'>${AN.tipo === 'gasto' ? 'Es un ingreso' : 'Es un gasto'}</button><button data-clase>Agendar clase</button><button data-vtienda>Venta tienda</button></div></div>`;
     const leerCampos = () => { AN.monto = String(w.querySelector('#an-monto').value).replace(/\D/g, ''); const d = w.querySelector('#an-det').value.trim(); if(d) AN.detalle = d; };
     const mi = w.querySelector('#an-monto'); mi.oninput = () => { const v = mi.value.replace(/\D/g, ''); mi.value = fmt(v); AN.monto = v; };
     w.onclick = async e => {
       if(e.target === w || e.target.closest('.sp-fx')) return w.remove();
       const t = e.target.closest('button'); if(!t) return;
       if(t.dataset.clase !== undefined){ w.remove(); ir('particulares'); return StormEscuela.nueva(); }
-      if(t.dataset.tipo){ leerCampos(); AN.tipo = t.dataset.tipo; AN.detalle = ''; if(AN.tipo === 'gasto' && !GASTA.includes(AN.area)) AN.area = 'Casa'; return pintarAnotar(w); }
+      if(t.dataset.vtienda !== undefined){ w.remove(); ir('rentas'); return StormRN.tienda(); }
+      if(t.dataset.tipo){ leerCampos(); AN.tipo = t.dataset.tipo; AN.detalle = ''; if(AN.tipo === 'gasto' && !GASTA.includes(AN.area)) AN.area = 'Casa'; if(AN.tipo === 'ingreso' && EN_TIENDA.includes(AN.area)) AN.area = 'Escuela'; return pintarAnotar(w); }
       if(t.dataset.det){ leerCampos(); AN.detalle = AN.detalle === t.dataset.det ? '' : t.dataset.det; return pintarAnotar(w); }
       if(t.dataset.ar){ leerCampos(); AN.area = t.dataset.ar; return pintarAnotar(w); }
       if(t.dataset.corr){ leerCampos(); AN.corr = t.dataset.corr; return pintarAnotar(w); }
