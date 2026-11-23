@@ -627,6 +627,7 @@
       <div class='pn-gm'>${AREAS.map(a => `<button class='pn-gbtn${a===fArea?' on':''}' data-farea='${a}'>${AREA_TXT[a]||a}</button>`).join('')}</div>
       ${fArea==='Verano' ? `<p class='pn-sub' style='margin:10px 0 4px'>¿A qué corresponde?</p><div class='pn-fsw'>${['enero','febrero','ambos'].map(c => `<button data-fcorr='${c}' class='${fCorr===c?'on':''}'>${c==='ambos'?'Enero y febrero':cap(c)+' '+anioVer}</button>`).join('')}</div>` : ''}
       ${fArea==='Casa' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['IVA','Mantención oficina','Crecimiento','Marketing'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
+      ${['Escuela','Anual','Adultos'].includes(fArea) && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'><button data-fqk='Ayudante'>Ayudante</button></div><p class='pn-sub' style='margin:6px 2px 0'>Escribe su nombre y la clase, ej: Ayudante: Ale · clase Jacqueline 22-11.</p>` : ''}
       ${fArea==='Verano' && fTipo==='gasto' ? `<div class='pn-gpre' style='margin-top:10px'>${['Comida','Premios','Sala de yoga','Materiales'].map(x => `<button data-fqk='${x}'>${x}</button>`).join('')}</div>` : ''}
       <div class='pn-acts'><span id='pn-fmsg'></span><button class='pn-ntgo' id='pn-fgo'>Anotar ${fTipo}</button></div>
     </div>
