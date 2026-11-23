@@ -1584,7 +1584,8 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
     if (!conNombre.length && porPrecio(v.monto)) { const cat = porPrecio(v.monto); suma(cat, v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: cat, solo: true })); r.ordenadasSolas = (r.ordenadasSolas || 0) + 1; return; }
     if (!conNombre.length) { suma('revisar', v.monto, v.comision); r.porRevisar.push(base); r.detalle.push(Object.assign(base, { categoria: 'revisar' })); return; }
     // Con nombre de clase ("Clase 2 Personas"): es una clase ya anotada. No se suma de nuevo; solo su comisión.
-    if (cats.length === 1 && cats[0] === 'clase') { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda' })); return; }
+    // Isidora (23-11): si no calza con ninguna clase POS del Panel, no suma en ninguna parte: sale en el cuadre como "falta anotar la clase".
+    if (cats.length === 1 && cats[0] === 'clase') { suma('agenda', v.monto, v.comision); r.detalle.push(Object.assign(base, { categoria: 'agenda', catalogo: true })); return; }
     // Una venta puede traer productos y rentas juntos: se reparte según el precio de cada uno.
     const bruto = conNombre.reduce((t, i) => t + i.precio * i.cantidad, 0) || 1;
     let restoM = v.monto, restoC = v.comision;
@@ -1607,12 +1608,12 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
   let antes = new Set(); if (mesAntes >= TUU_DESDE.slice(0, 7)) try { antes = await tuuResumen(env, mesAntes, false, true); } catch (_) {}
   // Clases antes del 16-11, o anotadas antes del 16-11 (se cobraron antes de que la app leyera Tuu): no se revisan.
   const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha >= TUU_DESDE && x.fecha <= hoy && !antes.has(x.ref) && !(x.creada && x.creada.slice(0, 10) < TUU_DESDE));
-  const claseAMano = r.detalle.filter(x => x.categoria === 'agenda' && x.aMano);
+  const claseAMano = r.detalle.filter(x => x.categoria === 'agenda' && (x.aMano || x.catalogo));
   r.cuadre = {
     posPanel: posMes.reduce((t, x) => t + x.total, 0), posPanelN: posMes.length,
     calzadas: posMes.filter(x => usadas.has(x.ref)).reduce((t, x) => t + x.total, 0),
     sinTuu: posMes.filter(x => !usadas.has(x.ref)).map(x => ({ fecha: x.fecha, hora: x.hora, nombre: x.nombre, monto: x.total })),
-    claseSinPanel: claseAMano.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, monto: x.monto, pago: x.pago })),
+    claseSinPanel: claseAMano.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, monto: x.monto, pago: x.pago, producto: x.catalogo ? x.productos : '' })),
     porRevisar: r.porRevisar.reduce((t, x) => t + x.monto, 0),
     grupos: r.detalle.filter(x => / pagos\)$/.test(x.clase || '')).length, solas: r.ordenadasSolas || 0
   };
