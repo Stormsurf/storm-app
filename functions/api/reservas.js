@@ -981,9 +981,22 @@ const RENTA_PAGOS = ['POS', 'Efectivo', 'Transferencia', 'Falta pagar'];
 async function rnTablas(db) {
   await db.batch([
     db.prepare("CREATE TABLE IF NOT EXISTS rentas (id TEXT PRIMARY KEY, creada_ms INTEGER NOT NULL, fecha TEXT NOT NULL, hora TEXT NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', tablas INTEGER NOT NULL DEFAULT 0, trajes INTEGER NOT NULL DEFAULT 0, tiempo TEXT NOT NULL DEFAULT 'medio', pago TEXT NOT NULL DEFAULT '', nota TEXT NOT NULL DEFAULT '', por TEXT NOT NULL DEFAULT '', devuelta_ms INTEGER NOT NULL DEFAULT 0, devuelta_hora TEXT NOT NULL DEFAULT '', devuelta_por TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activa')"),
+    db.prepare("CREATE TABLE IF NOT EXISTS ventas (id TEXT PRIMARY KEY, creada_ms INTEGER NOT NULL, fecha TEXT NOT NULL, hora TEXT NOT NULL, detalle TEXT NOT NULL, area TEXT NOT NULL DEFAULT 'tienda', monto INTEGER NOT NULL DEFAULT 0, pago TEXT NOT NULL DEFAULT '', por TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activa')"),
+    db.prepare("CREATE TABLE IF NOT EXISTS productos (id TEXT PRIMARY KEY, nombre TEXT NOT NULL, precio INTEGER NOT NULL DEFAULT 0, orden INTEGER NOT NULL DEFAULT 0, activo INTEGER NOT NULL DEFAULT 1)"),
     db.prepare("CREATE TABLE IF NOT EXISTS notas (id TEXT PRIMARY KEY, creada_ms INTEGER NOT NULL, por TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT 'aviso', texto TEXT NOT NULL, importante INTEGER NOT NULL DEFAULT 0, lista_ms INTEGER NOT NULL DEFAULT 0, lista_por TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activa')")
   ]);
+  // Isidora (23-11): la renta guarda cuánto pagó (Finanzas suma desde el Panel, no desde Tuu).
+  try { await db.prepare('ALTER TABLE rentas ADD COLUMN monto INTEGER NOT NULL DEFAULT 0').run(); } catch (_) {}
+  const n = await db.prepare('SELECT COUNT(*) n FROM productos').first();
+  if (!n.n) await db.batch(PRODUCTOS_BASE.map((x, i) => db.prepare('INSERT INTO productos (id, nombre, precio, orden) VALUES (?, ?, ?, ?)').bind('P' + (i + 1), x[0], x[1], i)));
 }
+// Productos de la tienda (los que se vendían en Tuu). Isidora los cambia en el Panel (Rentas y tienda > Editar productos).
+const PRODUCTOS_BASE = [['Cera', 4000], ['Solarez Azul', 17000], ['Surfmud 125gr', 22000]];
+// Precio de renta por tabla o traje (se puede cambiar al anotar).
+const PRECIO_RENTA = { medio: 10000, dia: 20000 };
+const VENTA_PAGOS = ['POS', 'Efectivo', 'Transferencia'];
+// Isidora (23-11): desde este día cada renta y venta de tienda se anota en el Panel al cobrar. Tuu ya no se clasifica: solo control del día y comisión.
+const PANEL_DESDE = '2026-11-24';
 /** Nombre corto para mostrar quién anotó algo. */
 async function quienNombre(env, email) {
   const e = norm(email), a = await ajustes(env.DB);
@@ -998,7 +1011,7 @@ const nuevoId = (p, t) => p + '-' + t.fecha.slice(2).replace(/-/g, '') + '-' + M
 async function rentasLista(env) {
   const db = env.DB, desde = Date.now() - 35 * 86400000;
   const r = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND (devuelta_ms = 0 OR devuelta_ms > ?) ORDER BY creada_ms DESC LIMIT 300").bind(desde).all()).results;
-  return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, trajes: x.trajes, tiempo: x.tiempo, pago: x.pago, nota: x.nota, por: x.por,
+  return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, trajes: x.trajes, tiempo: x.tiempo, pago: x.pago, monto: x.monto || 0, nota: x.nota, por: x.por,
     devuelta: !!x.devuelta_ms, devueltaHora: x.devuelta_hora, devueltaPor: x.devuelta_por }));
 }
 async function rentasAccion(env, q, d) {
@@ -1012,8 +1025,9 @@ async function rentasAccion(env, q, d) {
     const tiempo = d.tiempo === 'dia' ? 'dia' : d.tiempo === 'medio' ? 'medio' : ''; if (!tiempo) throw err('Elige medio día o día completo.');
     const pago = RENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
     const hora = normHora(d.hora) || t.hora;
-    await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, trajes, tiempo, pago, nota, por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(nuevoId('R', t), Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo).run();
+    const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : (tablas + trajes) * PRECIO_RENTA[tiempo];
+    await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, trajes, tiempo, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(nuevoId('R', t), Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
     await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'T ' + trajes + 'J ' + tiempo);
   } else if (op !== 'ver') {
     const x = await db.prepare('SELECT * FROM rentas WHERE id = ?').bind(String(d.id || '')).first();
@@ -1025,7 +1039,45 @@ async function rentasAccion(env, q, d) {
     else throw err('Acción desconocida');
     await anotar(db, q, 'renta ' + x.id + ' ' + op);
   }
-  return { ok: true, hoy: t.fecha, rentas: await rentasLista(env) };
+  return Object.assign({ ok: true, hoy: t.fecha, rentas: await rentasLista(env) }, await tiendaLista(env, q));
+}
+async function tiendaLista(env, q) {
+  const db = env.DB, desde = ahoraChile(Date.now() - 30 * 86400000).fecha;
+  const ventas = (await db.prepare("SELECT * FROM ventas WHERE estado = 'activa' AND fecha >= ? ORDER BY creada_ms DESC LIMIT 500").bind(desde).all()).results
+    .map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, detalle: x.detalle, area: x.area, monto: x.monto, pago: x.pago, por: x.por }));
+  const productos = (await db.prepare('SELECT * FROM productos WHERE activo = 1 ORDER BY orden, nombre').all()).results.map(x => ({ id: x.id, nombre: x.nombre, precio: x.precio }));
+  return { ventas, productos, admin: q.rol === 'admin' };
+}
+/** Venta de tienda o cobro por daño, anotada al cobrar. Productos: solo administradores los cambian. */
+async function tiendaAccion(env, q, d) {
+  if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores anotan ventas.');
+  const db = env.DB; await rnTablas(db);
+  const t = ahoraChile(), op = d.op || 'ver', num = v => Math.max(0, Math.round(Number(String(v == null ? '' : v).replace(/\D/g, '')) || 0));
+  if (op === 'venta') {
+    const pago = VENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
+    const prods = (await db.prepare('SELECT * FROM productos').all()).results, lineas = [];
+    (Array.isArray(d.items) ? d.items : []).forEach(i => { const p = prods.find(x => x.id === String(i.id)), n = Math.min(50, Math.floor(Number(i.cant) || 0)); if (p && n > 0) lineas.push({ detalle: (n > 1 ? n + ' × ' : '') + p.nombre, monto: p.precio * n, area: 'tienda' }); });
+    const otro = num(d.otroMonto); if (otro) lineas.push({ detalle: String(d.otroDetalle || '').trim().slice(0, 80) || 'Otro producto', monto: otro, area: 'tienda' });
+    const dano = num(d.danoMonto); if (dano) lineas.push({ detalle: 'Cobro por daño' + (String(d.danoDetalle || '').trim() ? ': ' + String(d.danoDetalle).trim().slice(0, 80) : ''), monto: dano, area: 'renta' });
+    if (!lineas.length) throw err('Elige qué se vendió.');
+    const yo = await quienNombre(env, q.email);
+    await db.batch(lineas.map(l => db.prepare('INSERT INTO ventas (id, creada_ms, fecha, hora, detalle, area, monto, pago, por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(nuevoId('V', t), Date.now(), t.fecha, t.hora, l.detalle, l.area, l.monto, pago, yo)));
+    await anotar(db, q, 'venta ' + lineas.map(l => l.detalle).join(', '));
+  } else if (op === 'borrar') {
+    await db.prepare("UPDATE ventas SET estado = 'borrada' WHERE id = ?").bind(String(d.id || '')).run();
+    await anotar(db, q, 'venta borrada ' + d.id);
+  } else if (op === 'producto' || op === 'quitar') {
+    if (q.rol !== 'admin') throw err('Solo un administrador cambia los productos.');
+    if (op === 'quitar') await db.prepare('UPDATE productos SET activo = 0 WHERE id = ?').bind(String(d.id || '')).run();
+    else {
+      const nombre = String(d.nombre || '').trim().slice(0, 60), precio = num(d.precio);
+      if (nombre.length < 2) throw err('Escribe el nombre del producto.'); if (!precio) throw err('Escribe el precio.');
+      if (d.id) await db.prepare('UPDATE productos SET nombre = ?, precio = ? WHERE id = ?').bind(nombre, precio, String(d.id)).run();
+      else await db.prepare('INSERT INTO productos (id, nombre, precio, orden) VALUES (?, ?, ?, 999)').bind('P' + Date.now().toString(36), nombre, precio).run();
+    }
+    await anotar(db, q, 'producto ' + op + ' ' + (d.nombre || d.id));
+  } else if (op !== 'ver') throw err('Acción desconocida');
+  return Object.assign({ ok: true, hoy: t.fecha, rentas: await rentasLista(env) }, await tiendaLista(env, q));
 }
 async function notasLista(env) {
   const desde = Date.now() - 30 * 86400000;
@@ -1066,8 +1118,90 @@ async function finanzasMes(env, d) {
   packs.forEach(k => { porMedio[k.medio] = (porMedio[k.medio] || 0) + (k.total || 0); });
   const totalPacks = packs.reduce((t, k) => t + (k.total || 0), 0);
   let tuu = null; try { tuu = await tuuResumen(env, mes); if (tuu) { delete tuu.detalle; tuu.porRevisar = tuu.porRevisar.length; } } catch (x) { console.error(x); tuu = { ok: false, error: x.message }; }
-  return { ok: true, mes, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0) + totalPacks, packs: packs.length, totalPacks, mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
+  let panelV = null; try { panelV = await ventasPanel(env, mes); } catch (x) { console.error(x); }
+  return { ok: true, mes, panel: panelV, clases: results.length, total: results.reduce((t, r) => t + (r.total || 0), 0) + totalPacks, packs: packs.length, totalPacks, mercadoPago: porMedio['Mercado Pago'] || 0, porMedio,
     instructores: results.reduce((t, r) => t + (r.pago_instructor || 0), 0), porInstructor, tuu };
+}
+
+/** Isidora (23-11): desde PANEL_DESDE las rentas y la tienda se anotan en el Panel al cobrar. Aquí se suman para Finanzas,
+ *  con la comisión real de Tuu de ese mes (lo que cobró ÷ lo vendido con tarjeta) sobre lo pagado con tarjeta (POS). */
+async function tasaTuu(db, mes) {
+  const r = await db.prepare("SELECT SUM(monto) m, SUM(comision) c FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND categoria != 'anulada' AND tipo NOT LIKE '%CASH%' AND monto > 1000").bind(mes).first().catch(() => null);
+  return r && r.m > 0 ? r.c / r.m : 0.0177; // sin datos: 1,49% + IVA
+}
+async function ventasPanel(env, mes) {
+  const db = env.DB; await rnTablas(db);
+  const tasa = await tasaTuu(db, mes), desde = PANEL_DESDE;
+  const rentas = (await db.prepare("SELECT monto, pago FROM rentas WHERE estado = 'activa' AND substr(fecha,1,7) = ? AND fecha >= ? AND pago != 'Falta pagar'").bind(mes, desde).all()).results;
+  const ventas = (await db.prepare("SELECT monto, pago, area FROM ventas WHERE estado = 'activa' AND substr(fecha,1,7) = ? AND fecha >= ?").bind(mes, desde).all()).results;
+  const o = { desde, tasa, rentas: 0, comRentas: 0, tienda: 0, comTienda: 0, comClasesPOS: 0 };
+  rentas.concat(ventas.filter(v => v.area === 'renta')).forEach(x => { o.rentas += x.monto; if (x.pago === 'POS') o.comRentas += x.monto * tasa; });
+  ventas.filter(v => v.area === 'tienda').forEach(x => { o.tienda += x.monto; if (x.pago === 'POS') o.comTienda += x.monto * tasa; });
+  // Clases con tarjeta anotadas desde PANEL_DESDE: su comisión con la misma tasa (las anteriores ya la sacan del cruce con Tuu).
+  const cl = (await db.prepare("SELECT * FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND substr(creada,1,10) >= ?").bind(mes, desde).all()).results;
+  cl.forEach(r => partesPago(r).forEach(x => { if (x.medio === 'POS') o.comClasesPOS += x.monto * tasa; }));
+  ['comRentas', 'comTienda', 'comClasesPOS'].forEach(k => o[k] = Math.round(o[k]));
+  return o;
+}
+/** Lo cobrado según el Panel (desde PANEL_DESDE), por día de cobro y forma de pago: clases (día en que se anotaron), diferencias, packs, rentas y tienda. */
+async function cobrosPanel(db, desde, hasta) {
+  await rnTablas(db); await packTabla(db);
+  const dias = {}, en = f => f && f >= desde && f <= hasta && f >= PANEL_DESDE;
+  const sum = (f, medio, m) => { if (!en(f) || !m) return; const k = medio === 'POS' ? 'tarjeta' : medio === 'Efectivo' ? 'efectivo' : medio === 'Transferencia' ? 'transferencia' : ''; if (!k) return; const x = dias[f] = dias[f] || { tarjeta: 0, efectivo: 0, transferencia: 0 }; x[k] += m; };
+  (await db.prepare("SELECT * FROM reservas WHERE estado = 'pagada' AND substr(creada,1,10) >= ?").bind(PANEL_DESDE).all()).results.forEach(r => {
+    const sl = saldosDe(r); sum(String(r.creada || '').slice(0, 10), r.medio, (r.total || 0) - sl.reduce((t, x) => t + (x.monto || 0), 0));
+    sl.forEach(x => sum(x.pagado, x.medio, x.monto || 0));
+  });
+  (await db.prepare("SELECT fecha_pago, total, medio FROM packs WHERE estado = 'activo'").all()).results.forEach(k => sum(k.fecha_pago, k.medio, k.total || 0));
+  (await db.prepare("SELECT fecha, monto, pago FROM rentas WHERE estado = 'activa' AND fecha >= ?").bind(desde).all()).results.forEach(x => sum(x.fecha, x.pago, x.monto || 0));
+  (await db.prepare("SELECT fecha, monto, pago FROM ventas WHERE estado = 'activa' AND fecha >= ?").bind(desde).all()).results.forEach(x => sum(x.fecha, x.pago, x.monto || 0));
+  return dias;
+}
+/** Lo pasado con tarjeta en la máquina Tuu, por día. */
+async function tuuTarjetaDias(db, desde, hasta) {
+  await tuuTablas(db); const dias = {};
+  (await db.prepare("SELECT fecha, monto, tipo, estado, categoria FROM tuu_ventas WHERE fecha >= ? AND fecha <= ?").bind(desde, hasta).all()).results
+    .filter(v => v.categoria !== 'anulada' && !tuuEfectivo(v.tipo) && !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado)).forEach(v => dias[v.fecha] = (dias[v.fecha] || 0) + v.monto);
+  return dias;
+}
+/** Control simple del mes (desde PANEL_DESDE): tarjeta en la máquina Tuu vs tarjeta anotada en el Panel, día por día, y los cierres de caja. */
+async function tuuControl(env, mes) {
+  const db = env.DB, hoy = ahoraChile().fecha, desde = mes + '-01', hasta = mes + '-31' < hoy ? mes + '-31' : hoy;
+  const [p, t] = await Promise.all([cobrosPanel(db, desde, hasta), tuuTarjetaDias(db, desde, hasta)]);
+  const cierres = await cierresDe(db, desde, hasta);
+  const dias = [...new Set(Object.keys(p).concat(Object.keys(t)))].filter(f => f >= PANEL_DESDE).sort().reverse()
+    .map(f => ({ fecha: f, tuu: t[f] || 0, panel: (p[f] || {}).tarjeta || 0, cierre: cierres[f] || null }));
+  return { desde: PANEL_DESDE, dias, malos: dias.filter(x => x.tuu !== x.panel || (x.cierre && x.cierre.diferencia)) };
+}
+// ---------- Cierre del día (Isidora 23-11): la recepción cuenta la caja y confirma que todo está anotado ----------
+async function cierreTabla(db) { await db.prepare("CREATE TABLE IF NOT EXISTS cierres (fecha TEXT PRIMARY KEY, ms INTEGER NOT NULL, por TEXT NOT NULL DEFAULT '', tarjeta INTEGER NOT NULL DEFAULT 0, tuu INTEGER NOT NULL DEFAULT 0, efectivo INTEGER NOT NULL DEFAULT 0, contado INTEGER NOT NULL DEFAULT 0, transferencia INTEGER NOT NULL DEFAULT 0, nota TEXT NOT NULL DEFAULT '')").run(); }
+async function cierresDe(db, desde, hasta) {
+  await cierreTabla(db); const o = {};
+  (await db.prepare('SELECT * FROM cierres WHERE fecha >= ? AND fecha <= ?').bind(desde, hasta).all()).results.forEach(c => o[c.fecha] = { por: c.por, tarjeta: c.tarjeta, tuu: c.tuu, efectivo: c.efectivo, contado: c.contado, nota: c.nota, diferencia: (c.tuu - c.tarjeta) + (c.contado - c.efectivo) });
+  return o;
+}
+async function cierreAccion(env, q, d) {
+  if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores cierran el día.');
+  const db = env.DB, t = ahoraChile(), fecha = esFecha(String(d.fecha || '')) ? d.fecha : t.fecha;
+  const p = (await cobrosPanel(db, fecha, fecha))[fecha] || { tarjeta: 0, efectivo: 0, transferencia: 0 };
+  const tuu = (await tuuTarjetaDias(db, fecha, fecha))[fecha] || 0;
+  await cierreTabla(db);
+  if (d.op === 'cerrar') {
+    const contado = Math.max(0, Math.round(Number(String(d.contado == null ? '' : d.contado).replace(/\D/g, '')) || 0));
+    if (d.contado == null || String(d.contado).trim() === '') throw err('Escribe cuánta plata en efectivo hay en la caja (lo de hoy).');
+    const yo = await quienNombre(env, q.email), nota = String(d.nota || '').trim().slice(0, 300);
+    await db.prepare('INSERT OR REPLACE INTO cierres (fecha, ms, por, tarjeta, tuu, efectivo, contado, transferencia, nota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(fecha, Date.now(), yo, p.tarjeta, tuu, p.efectivo, contado, p.transferencia, nota).run();
+    const dt = tuu - p.tarjeta, de = contado - p.efectivo;
+    if (dt || de) { // no calza: queda un aviso importante en Notas para Isidora
+      const clp = n => (n < 0 ? '−' : '') + '$' + Math.abs(n).toLocaleString('es-CL');
+      const txt = 'Cierre del ' + fecha.slice(8) + '/' + fecha.slice(5, 7) + ' no calza (' + yo + '):' + (dt ? '\n· Tarjeta: máquina ' + clp(tuu) + ', anotado ' + clp(p.tarjeta) + ' (' + (dt > 0 ? 'falta anotar ' + clp(dt) : 'anotado de más ' + clp(-dt)) + ')' : '') + (de ? '\n· Efectivo: en caja ' + clp(contado) + ', anotado ' + clp(p.efectivo) + ' (' + (de > 0 ? 'sobran ' + clp(de) : 'faltan ' + clp(-de)) + ')' : '') + (nota ? '\n· Nota: ' + nota : '');
+      await rnTablas(db);
+      await db.prepare("INSERT INTO notas (id, creada_ms, por, tipo, texto, importante) VALUES (?, ?, ?, 'aviso', ?, 1)").bind(nuevoId('N', t), Date.now(), yo, txt).run();
+    }
+    await anotar(db, q, 'cierre ' + fecha + (dt || de ? ' no calza' : ' ok'));
+  }
+  const c = (await cierresDe(db, fecha, fecha))[fecha] || null;
+  return { ok: true, fecha, tarjeta: p.tarjeta, efectivo: p.efectivo, transferencia: p.transferencia, tuu, cierre: c };
 }
 
 /** Anota cómo pagaron una diferencia pendiente (POS, transferencia, efectivo, factura). */
@@ -1487,7 +1621,7 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
   const sync = soloCalces ? { ok: true } : await tuuSincronizar(env, mes, forzar);
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
-    db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
+    db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? AND fecha < ? ORDER BY fecha, hora").bind(mes, TUU_DESDE, PANEL_DESDE).all(),
     db.prepare("SELECT ref, fecha, hora, total, nombre, medio, saldos, creada FROM reservas WHERE fecha >= ? AND fecha <= ? AND estado = 'pagada'").bind(mes + '-01', sumarDias(mes + '-' + String(new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).getUTCDate()).padStart(2, '0'), TUU_DIAS_ANTES)).all().then(x => ({ results: x.results.flatMap(r => partesPago(r).filter(p => ['POS', 'Efectivo'].includes(p.medio)).map(p => ({ ref: r.ref + p.k, fecha: r.fecha, hora: r.hora, nombre: r.nombre + (p.k ? ' (diferencia)' : ''), total: p.monto, medio: p.medio, creada: p.k ? '' : String(r.creada || '') }))) }))
       .then(async x => { const k = (await packsDelMes(db, mes)).filter(p => p.medio === 'POS' || p.medio === 'Efectivo'); x.results = x.results.concat(k.map(p => ({ ref: p.id, fecha: p.fecha_pago, hora: '', total: p.total, nombre: 'Pack ' + p.nombre, medio: p.medio }))); return x; }),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
@@ -1609,7 +1743,7 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
   const mesAntes = sumarDias(mes + '-01', -1).slice(0, 7);
   let antes = new Set(); if (mesAntes >= TUU_DESDE.slice(0, 7)) try { antes = await tuuResumen(env, mesAntes, false, true); } catch (_) {}
   // Clases antes del 16-11, o anotadas antes del 16-11 (se cobraron antes de que la app leyera Tuu): no se revisan.
-  const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha >= TUU_DESDE && x.fecha <= hoy && !antes.has(x.ref) && !(x.creada && x.creada.slice(0, 10) < TUU_DESDE));
+  const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha >= TUU_DESDE && x.fecha <= hoy && x.fecha < PANEL_DESDE && !(x.creada && x.creada.slice(0, 10) >= PANEL_DESDE) && !antes.has(x.ref) && !(x.creada && x.creada.slice(0, 10) < TUU_DESDE));
   const claseAMano = r.detalle.filter(x => x.categoria === 'agenda' && (x.aMano || x.catalogo));
   r.cuadre = {
     posPanel: posMes.reduce((t, x) => t + x.total, 0), posPanelN: posMes.length,
@@ -1678,10 +1812,13 @@ export async function onRequest(context) {
     if (acc === 'dia-horas') return json(await diaHoras(env, q, d));
     if (acc === 'vacaciones') return json(await vacaciones(env, q, d, context));
     if (acc === 'rentas') return json(await rentasAccion(env, q, d));
+    if (acc === 'tienda') return json(await tiendaAccion(env, q, d));
+    if (acc === 'cierre') return json(await cierreAccion(env, q, d));
+    if (acc === 'tuu-control') { if (q.rol !== 'admin') throw err('Solo administradores.'); return json(Object.assign({ ok: true }, await tuuControl(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7)))); }
     if (acc === 'notas') return json(await notasAccion(env, q, d));
     if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo', 'pack'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
-    if (acc === 'tuu-mes') return json(await tuuResumen(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), !!d.forzar));
+    if (acc === 'tuu-mes') { const m = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), r = await tuuResumen(env, m, !!d.forzar); try { r.control = await tuuControl(env, m); } catch (x) { console.error(x); } return json(r); }
     if (acc === 'tuu-asignar') return json(await tuuAsignar(env, q, d));
     if (acc === 'resena-prueba') { const a = await ajustes(env.DB); if (!googleResena(a)) throw err('Primero pega el link de Google.'); await enviarCorreo(env, { to: q.email, subject: '¿Cómo estuvo tu clase de surf?', html: correoResena({ ref: 'PRUEBA', clave: 'prueba', nombre: 'Camila Prueba' }), body: 'Prueba' }); return json({ ok: true }); }
     if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }
