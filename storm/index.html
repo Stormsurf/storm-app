@@ -331,11 +331,11 @@ main .pn{max-width:1440px}
       ${b('hoy', 'Hoy', I.hoy)}
       ${b('particulares', adm ? 'Clases' : 'Mis clases', I.particulares)}
       ${adm ? `<button class='sp-plus' data-anotar aria-label='Anotar'>${I.mas2}</button>` : ''}
-      ${adm ? b('plata', 'Plata', I.finanzas, ' data-solo-cel') : ''}
       ${soloPart() ? '' : `${b('academias', 'Academias', I.anual, ' data-solo-cel')}
       ${ac}Academias</div>${b('anual', 'Academia Anual', I.anual, ' data-solo-pc')}${veranoVisible() ? b('verano', 'Academia de Verano', I.verano, ' data-solo-pc') : ''}${adultosVisible() ? b('adultos', 'Academia de Adultos', I.adultos, ' data-solo-pc') : ''}`}
-      ${adm ? `${ac}Plata</div>${b('finanzas', 'Este mes', I.finanzas, ' data-solo-pc')}${b('sueldos', 'Sueldos', I.pago, ' data-solo-pc')}` : ''}
       ${adm ? `${ac}Recepción</div>${b('rentas', 'Tienda', I.tienda)}<button class='sp-ni' data-area='notas' data-solo-pc>${I.nota}<span>Notas</span>${bAv}</button>` : ''}
+      ${adm ? b('plata', 'Plata', I.finanzas, ' data-solo-cel') : ''}
+      ${adm ? `${ac}Plata</div>${b('finanzas', 'Este mes', I.finanzas, ' data-solo-pc')}${b('sueldos', 'Sueldos', I.pago, ' data-solo-pc')}` : ''}
       <div class='sp-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>`;
   }
 
