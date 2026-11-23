@@ -987,13 +987,15 @@ async function rnTablas(db) {
   ]);
   // Isidora (23-11): la renta guarda cuánto pagó (Finanzas suma desde el Panel, no desde Tuu).
   try { await db.prepare('ALTER TABLE rentas ADD COLUMN monto INTEGER NOT NULL DEFAULT 0').run(); } catch (_) {}
+  try { await db.prepare('ALTER TABLE rentas ADD COLUMN fibras INTEGER NOT NULL DEFAULT 0').run(); } catch (_) {} // Isidora (23-11): tabla soft (tablas) y tabla de fibra (fibras)
   const n = await db.prepare('SELECT COUNT(*) n FROM productos').first();
   if (!n.n) await db.batch(PRODUCTOS_BASE.map((x, i) => db.prepare('INSERT INTO productos (id, nombre, precio, orden) VALUES (?, ?, ?, ?)').bind('P' + (i + 1), x[0], x[1], i)));
 }
 // Productos de la tienda (los que se vendían en Tuu). Isidora los cambia en el Panel (Rentas y tienda > Editar productos).
 const PRODUCTOS_BASE = [['Cera', 4000], ['Solarez Azul', 17000], ['Surfmud 125gr', 22000]];
 // Precio de renta por tabla o traje (se puede cambiar al anotar).
-const PRECIO_RENTA = { medio: 10000, dia: 20000 };
+// Isidora (23-11): tabla soft y traje $10.000 medio día / $20.000 día completo; tabla de fibra $20.000 medio día / $40.000 día completo.
+const PRECIO_RENTA = { tablas: { medio: 10000, dia: 20000 }, fibras: { medio: 20000, dia: 40000 }, trajes: { medio: 10000, dia: 20000 } };
 const VENTA_PAGOS = ['POS', 'Efectivo', 'Transferencia'];
 // Isidora (23-11): desde este día cada renta y venta de tienda se anota en el Panel al cobrar. Tuu ya no se clasifica: solo control del día y comisión.
 const PANEL_DESDE = '2026-11-24';
@@ -1011,7 +1013,7 @@ const nuevoId = (p, t) => p + '-' + t.fecha.slice(2).replace(/-/g, '') + '-' + M
 async function rentasLista(env) {
   const db = env.DB, desde = Date.now() - 35 * 86400000;
   const r = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND (devuelta_ms = 0 OR devuelta_ms > ?) ORDER BY creada_ms DESC LIMIT 300").bind(desde).all()).results;
-  return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, trajes: x.trajes, tiempo: x.tiempo, pago: x.pago, monto: x.monto || 0, nota: x.nota, por: x.por,
+  return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, fibras: x.fibras || 0, trajes: x.trajes, tiempo: x.tiempo, pago: x.pago, monto: x.monto || 0, nota: x.nota, por: x.por,
     devuelta: !!x.devuelta_ms, devueltaHora: x.devuelta_hora, devueltaPor: x.devuelta_por }));
 }
 async function rentasAccion(env, q, d) {
@@ -1020,15 +1022,15 @@ async function rentasAccion(env, q, d) {
   const t = ahoraChile(), op = d.op || 'ver', yo = op === 'ver' ? '' : await quienNombre(env, q.email);
   if (op === 'nueva') {
     const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Escribe el nombre de quien arrienda.');
-    const tablas = Math.max(0, Math.min(20, Math.floor(Number(d.tablas) || 0))), trajes = Math.max(0, Math.min(20, Math.floor(Number(d.trajes) || 0)));
-    if (!tablas && !trajes) throw err('Elige si es tabla, traje o las dos.');
+    const n20 = v => Math.max(0, Math.min(20, Math.floor(Number(v) || 0))), tablas = n20(d.tablas), fibras = n20(d.fibras), trajes = n20(d.trajes);
+    if (!tablas && !fibras && !trajes) throw err('Elige tabla soft, tabla de fibra o traje.');
     const tiempo = d.tiempo === 'dia' ? 'dia' : d.tiempo === 'medio' ? 'medio' : ''; if (!tiempo) throw err('Elige medio día o día completo.');
     const pago = RENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
     const hora = normHora(d.hora) || t.hora;
-    const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : (tablas + trajes) * PRECIO_RENTA[tiempo];
-    await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, trajes, tiempo, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(nuevoId('R', t), Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
-    await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'T ' + trajes + 'J ' + tiempo);
+    const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : tablas * PRECIO_RENTA.tablas[tiempo] + fibras * PRECIO_RENTA.fibras[tiempo] + trajes * PRECIO_RENTA.trajes[tiempo];
+    await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, fibras, trajes, tiempo, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(nuevoId('R', t), Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, fibras, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
+    await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'S ' + fibras + 'F ' + trajes + 'J ' + tiempo);
   } else if (op !== 'ver') {
     const x = await db.prepare('SELECT * FROM rentas WHERE id = ?').bind(String(d.id || '')).first();
     if (!x) throw err('No encontramos esa renta.');
@@ -1046,7 +1048,7 @@ async function tiendaLista(env, q) {
   const ventas = (await db.prepare("SELECT * FROM ventas WHERE estado = 'activa' AND fecha >= ? ORDER BY creada_ms DESC LIMIT 500").bind(desde).all()).results
     .map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, detalle: x.detalle, area: x.area, monto: x.monto, pago: x.pago, por: x.por }));
   const productos = (await db.prepare('SELECT * FROM productos WHERE activo = 1 ORDER BY orden, nombre').all()).results.map(x => ({ id: x.id, nombre: x.nombre, precio: x.precio }));
-  return { ventas, productos, admin: q.rol === 'admin' };
+  return { ventas, productos, precios: PRECIO_RENTA, admin: q.rol === 'admin' };
 }
 /** Venta de tienda o cobro por daño, anotada al cobrar. Productos: solo administradores los cambian. */
 async function tiendaAccion(env, q, d) {

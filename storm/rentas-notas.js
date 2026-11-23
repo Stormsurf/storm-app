@@ -28,6 +28,7 @@
   .rn-top{display:flex;align-items:flex-start;gap:12px}
   .rn-ic{flex:none;display:flex;gap:4px}.rn-ic i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#E3F1F1;color:#0f6e74;font-style:normal;position:relative}
   .rn-ic i svg{width:24px;height:24px}.rn-ic i b{position:absolute;right:-5px;top:-5px;background:#2C2C2B;color:#fff;border-radius:999px;font-size:1.05rem;min-width:19px;height:19px;display:grid;place-items:center;padding:0 4px}
+  .rn-ic i.fib{background:#fdf0d8;color:#b5662b}
   .rn-c.vuelta .rn-ic i{background:#eeece8;color:#8a8986}
   .rn-tx{flex:1;min-width:0}.rn-tx b{display:block;font-size:1.6rem;font-weight:600}.rn-tx small{display:block;font-size:1.3rem;color:#6d6c68;margin-top:2px}
   .rn-tx .rn-nt{color:#2C2C2B;font-style:italic}
@@ -143,16 +144,16 @@
   // ---------- Rentas ----------
   const hoy = () => (R && R.hoy) || (N && N.hoy) || new Date().toISOString().slice(0, 10);
   const fechaC = f => { const [y, m, d] = f.split('-'); return DIAS[new Date(+y, m - 1, +d).getDay()] + ' ' + (+d) + '/' + (+m); };
-  const queEs = x => [x.tablas ? x.tablas + (x.tablas === 1 ? ' tabla' : ' tablas') : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' y ');
+  const queEs = x => [x.tablas ? x.tablas + (x.tablas === 1 ? ' tabla soft' : ' tablas soft') : '', x.fibras ? x.fibras + (x.fibras === 1 ? ' tabla de fibra' : ' tablas de fibra') : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' y ');
   const tiempoT = t => t === 'dia' ? 'Día completo' : 'Medio día';
   const hace = (f, h) => { if (f !== hoy()) return ''; const [a, b] = h.split(':').map(Number), d = new Date(), m = d.getHours() * 60 + d.getMinutes() - (a * 60 + b); return m < 60 ? ' (hace ' + Math.max(0, m) + ' min)' : ' (hace ' + Math.floor(m / 60) + ' h' + (m % 60 >= 30 ? ' y media' : '') + ')'; };
   const afuera = () => R ? R.rentas.filter(x => !x.devuelta) : [];
   const tarde = x => !x.devuelta && x.fecha < hoy();
   function tarjeta(x) {
     const t = tarde(x), wl = wa(x.telefono);
-    const msg = encodeURIComponent('Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Storm por ' + (x.tablas && x.trajes ? 'el equipo' : x.tablas ? (x.tablas > 1 ? 'las tablas' : 'la tabla') : (x.trajes > 1 ? 'los trajes' : 'el traje')) + ' que arrendaste. ¿A qué hora lo traes? 🌊');
+    const msg = encodeURIComponent('Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Storm por ' + ((x.tablas || x.fibras) && x.trajes || (x.tablas && x.fibras) ? 'el equipo' : (x.tablas || x.fibras) ? ((x.tablas || x.fibras) > 1 ? 'las tablas' : 'la tabla') : (x.trajes > 1 ? 'los trajes' : 'el traje')) + ' que arrendaste. ¿A qué hora lo traes? 🌊');
     return `<div class='rn-c${t ? ' tarde' : ''}${x.devuelta ? ' vuelta' : ''}'>
-      <div class='rn-top'><div class='rn-ic'>${x.tablas ? `<i>${ICO.tabla}${x.tablas > 1 ? `<b>${x.tablas}</b>` : ''}</i>` : ''}${x.trajes ? `<i>${ICO.traje}${x.trajes > 1 ? `<b>${x.trajes}</b>` : ''}</i>` : ''}</div>
+      <div class='rn-top'><div class='rn-ic'>${x.tablas ? `<i>${ICO.tabla}${x.tablas > 1 ? `<b>${x.tablas}</b>` : ''}</i>` : ''}${x.fibras ? `<i class='fib'>${ICO.tabla}${x.fibras > 1 ? `<b>${x.fibras}</b>` : ''}</i>` : ''}${x.trajes ? `<i>${ICO.traje}${x.trajes > 1 ? `<b>${x.trajes}</b>` : ''}</i>` : ''}</div>
         <div class='rn-tx'><b>${esc(x.nombre)}</b><small>${esc(queEs(x))} · ${tiempoT(x.tiempo)}</small>
           <small>${x.devuelta ? 'Salió ' + esc(x.hora) + ' · volvió ' + esc(x.devueltaHora) : (x.fecha === hoy() ? 'Salió hoy ' + esc(x.hora) + hace(x.fecha, x.hora) : 'Salió ' + fechaC(x.fecha) + ' ' + esc(x.hora))}${x.por ? ' · anotó ' + esc(x.por) : ''}</small>
           ${x.nota ? `<small class='rn-nt'>${esc(x.nota)}</small>` : ''}</div>
@@ -170,7 +171,7 @@
     const devHoy = dev.filter(x => x.fecha === hoy());
     const mes = R.rentas.filter(x => x.fecha.slice(0, 7) === hoy().slice(0, 7));
     const sum = (l, k, t) => l.filter(x => !t || x.tiempo === t).reduce((s, x) => s + (x[k] || 0), 0);
-    const nT = af.reduce((s, x) => s + x.tablas, 0), nJ = af.reduce((s, x) => s + x.trajes, 0);
+    const nT = af.reduce((s, x) => s + x.tablas + (x.fibras || 0), 0), nJ = af.reduce((s, x) => s + x.trajes, 0);
     const vHoy = (R.ventas || []).filter(v => v.fecha === hoy());
     let h = `<div class='rn'><div class='rn-2'><button class='rn-go' data-rnnueva>${sv("<path d='M12 5v14M5 12h14'/>")}Nueva renta</button><button class='rn-go sec' data-tienda>${sv("<path d='M12 5v14M5 12h14'/>")}Venta tienda</button></div>
       <p class='rn-h'>Afuera ahora ${af.length ? `<em>${[nT ? nT + (nT === 1 ? ' tabla' : ' tablas') : '', nJ ? nJ + (nJ === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ')}</em>` : ''}</p>
@@ -179,7 +180,7 @@
     h += `<p class='rn-h gris'>${verDev ? 'Volvieron (últimos 30 días)' : 'Volvieron hoy'}</p>` + (otras.length ? otras.map(tarjeta).join('') : `<div class='rn-vacio'>Todavía nada.</div>`)
       + (dev.length > devHoy.length || verDev ? `<button class='rn-lk' data-verdev>${verDev ? 'Ver solo las de hoy' : 'Ver días anteriores'}</button>` : '');
     h += `<p class='rn-h gris'>Este mes</p><div class='rn-res'>
-      <div><b>${sum(mes, 'tablas', 'medio')}</b><span>tablas medio día</span></div><div><b>${sum(mes, 'tablas', 'dia')}</b><span>tablas día completo</span></div>
+      <div><b>${sum(mes, 'tablas', 'medio') + sum(mes, 'fibras', 'medio')}</b><span>tablas medio día</span></div><div><b>${sum(mes, 'tablas', 'dia') + sum(mes, 'fibras', 'dia')}</b><span>tablas día completo</span></div>
       <div><b>${sum(mes, 'trajes', 'medio')}</b><span>trajes medio día</span></div><div><b>${sum(mes, 'trajes', 'dia')}</b><span>trajes día completo</span></div></div>
       <p class='rn-h'>Vendido hoy en tienda y daños ${vHoy.length ? `<em>${clp(vHoy.reduce((a, v) => a + v.monto, 0))}</em>` : ''}</p>
       ${vHoy.length ? vHoy.map(v => `<div class='rn-v'><span>${esc(v.detalle)}<small>${esc(v.hora)} · ${esc(pagoT(v.pago))}${v.por ? ' · ' + esc(v.por) : ''}</small></span><b>${clp(v.monto)}</b></div>`).join('') + `<button class='rn-lk rojo' data-vborrar>Borrar una venta (me equivoqué)</button>` : `<div class='rn-vacio'>Todavía nada.</div>`}
@@ -205,20 +206,21 @@
     w.onclick = async e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); const b = e.target.closest('[data-p]'); if (b && await hacer('rentas', { op: 'pago', id, pago: b.dataset.p }, b)) w.remove(); };
   }
   function abrirNueva() {
-    nueva = { tablas: 0, trajes: 0, tiempo: '', pago: '', nombre: '', telefono: '', nota: '', monto: '', montoAMano: false };
-    const precio = () => (nueva.tablas + nueva.trajes) * (nueva.tiempo === 'dia' ? 20000 : 10000);
+    nueva = { tablas: 0, fibras: 0, trajes: 0, tiempo: '', pago: '', nombre: '', telefono: '', nota: '', monto: '', montoAMano: false };
+    const PR = (R && R.precios) || { tablas: { medio: 10000, dia: 20000 }, fibras: { medio: 20000, dia: 40000 }, trajes: { medio: 10000, dia: 20000 } };
+    const precio = () => ['tablas', 'fibras', 'trajes'].reduce((t, k) => t + nueva[k] * (PR[k][nueva.tiempo] || 0), 0);
     const w = document.createElement('div'); w.className = 'rn-f'; document.body.appendChild(w);
     const leer = () => { const mm = w.querySelector('#rn-monto'); if (mm && mm.value.replace(/\D/g, '') !== String(nueva.mostrado)) { nueva.monto = mm.value.replace(/\D/g, ''); nueva.montoAMano = true; } nueva.nombre = w.querySelector('#rn-nom').value; nueva.telefono = w.querySelector('#rn-tel').value; nueva.nota = w.querySelector('#rn-nota').value; };
     const p = () => {
       w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>Nueva renta</h2>
         <p class='rn-q'>¿Qué se lleva?</p>
-        <div class='rn-st'>${[['tablas', 'Tabla', ICO.tabla], ['trajes', 'Traje', ICO.traje]].map(([k, t, ic]) => `<div class='${nueva[k] ? 'on' : ''}'><i>${ic}</i><span>${t}</span><button data-m='${k}' aria-label='Menos'>−</button><b>${nueva[k]}</b><button data-p='${k}' aria-label='Más'>+</button></div>`).join('')}</div>
+        <div class='rn-st'>${[['tablas', 'Tabla soft', ICO.tabla], ['fibras', 'Tabla de fibra', ICO.tabla], ['trajes', 'Traje', ICO.traje]].map(([k, t, ic]) => `<div class='${nueva[k] ? 'on' : ''}'><i>${ic}</i><span>${t}</span><button data-m='${k}' aria-label='Menos'>−</button><b>${nueva[k]}</b><button data-p='${k}' aria-label='Más'>+</button></div>`).join('')}</div>
         <p class='rn-q'>¿Cuánto tiempo?</p>
         <div class='rn-ch dos'>${[['medio', 'Medio día'], ['dia', 'Día completo']].map(([k, t]) => `<button class='${nueva.tiempo === k ? 'on' : ''}' data-t='${k}'>${t}</button>`).join('')}</div>
         <p class='rn-q'>¿Cómo pagó?</p>
         <div class='rn-ch'>${PAGOS.concat([['Falta pagar', 'Falta pagar']]).map(([k, t]) => `<button class='${nueva.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
         <p class='rn-q'>¿Cuánto pagó?</p>
-        <input id='rn-monto' class='rn-in' inputmode='numeric' placeholder='Monto' value='${nueva.mostrado = nueva.montoAMano ? nueva.monto : (nueva.tiempo && (nueva.tablas + nueva.trajes) ? precio() : '')}'>
+        <input id='rn-monto' class='rn-in' inputmode='numeric' placeholder='Monto' value='${nueva.mostrado = nueva.montoAMano ? nueva.monto : (nueva.tiempo && (nueva.tablas + nueva.fibras + nueva.trajes) ? precio() : '')}'>
         <p class='rn-q'>¿Quién arrienda?</p>
         <input id='rn-nom' class='rn-in' placeholder='Nombre' autocomplete='off' value='${esc(nueva.nombre)}'>
         <input id='rn-tel' class='rn-in' placeholder='Teléfono (para avisarle si no vuelve)' inputmode='tel' autocomplete='off' value='${esc(nueva.telefono)}'>
@@ -234,7 +236,7 @@
       if (b.dataset.pg) { leer(); nueva.pago = b.dataset.pg; return p(); }
       if (b.dataset.guardar !== undefined) {
         leer(); const er = w.querySelector('.rn-err');
-        if (!nueva.tablas && !nueva.trajes) return er.textContent = 'Toca + en tabla o traje.';
+        if (!nueva.tablas && !nueva.fibras && !nueva.trajes) return er.textContent = 'Toca + en tabla soft, tabla de fibra o traje.';
         if (!nueva.tiempo) return er.textContent = 'Elige medio día o día completo.';
         if (!nueva.pago) return er.textContent = 'Elige cómo pagó.';
         const mt = w.querySelector('#rn-monto').value.replace(/\D/g, ''); if (!mt && nueva.pago !== 'Falta pagar') return er.textContent = 'Escribe cuánto pagó.';
@@ -253,22 +255,22 @@
     const v = { cant: {}, pago: '', otro: false, dano: false };
     const w = document.createElement('div'); w.className = 'rn-f'; document.body.appendChild(w);
     const val = id => { const e = w.querySelector(id); return e ? e.value : ''; };
-    const guarda = () => { ['#rn-od', '#rn-om', '#rn-dd', '#rn-dm'].forEach(k => { const e = w.querySelector(k); if (e) v[k] = e.value; }); };
+    const guarda = () => { ['#rn-od', '#rn-om'].forEach(k => { const e = w.querySelector(k); if (e) v[k] = e.value; }); };
     const num = t => Number(String(t || '').replace(/\D/g, '')) || 0;
-    const total = () => (R.productos || []).reduce((t, p) => t + p.precio * (v.cant[p.id] || 0), 0) + (v.otro ? num(v['#rn-om']) : 0) + (v.dano ? num(v['#rn-dm']) : 0);
+    const total = () => (R.productos || []).reduce((t, p) => t + p.precio * (v.cant[p.id] || 0), 0) + (v.otro ? num(v['#rn-om']) : 0);
     const p = () => {
       w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>Venta tienda</h2>
         <p class='rn-q'>¿Qué se vendió?</p>
         <div class='rn-pr'>${(R.productos || []).map(x => `<div class='${v.cant[x.id] ? 'on' : ''}'><span>${esc(x.nombre)}<small>${clp(x.precio)}</small></span><button data-m='${esc(x.id)}' aria-label='Menos'>−</button><b>${v.cant[x.id] || 0}</b><button data-p='${esc(x.id)}' aria-label='Más'>+</button></div>`).join('')}</div>
-        <div class='rn-ch' style='margin-top:10px'><button class='${v.otro ? 'on' : ''}' data-otro>Otro producto</button><button class='${v.dano ? 'on' : ''}' data-dano>Cobro por daño</button></div>
-        ${v.otro ? `<input id='rn-od' class='rn-in' placeholder='¿Qué producto?' value='${esc(v['#rn-od'] || '')}'><input id='rn-om' class='rn-in' inputmode='numeric' placeholder='Precio' value='${esc(v['#rn-om'] || '')}'>` : ''}
-        ${v.dano ? `<input id='rn-dd' class='rn-in' placeholder='¿Qué se rompió? (ej: tabla 8’0 quebrada)' value='${esc(v['#rn-dd'] || '')}'><input id='rn-dm' class='rn-in' inputmode='numeric' placeholder='Monto cobrado' value='${esc(v['#rn-dm'] || '')}'>` : ''}
+        <div class='rn-ch' style='margin-top:10px'><button class='${v.otro ? 'on' : ''}' data-otro>Otro</button></div>
+        ${v.otro ? `<input id='rn-od' class='rn-in' placeholder='${v.dano ? '¿Qué se rompió? (ej: tabla 8’0 quebrada)' : '¿Qué se vendió?'}' value='${esc(v['#rn-od'] || '')}'><input id='rn-om' class='rn-in' inputmode='numeric' placeholder='Monto' value='${esc(v['#rn-om'] || '')}'>
+          <button class='rn-lk' data-dano>${v.dano ? '☑' : '☐'} Es un cobro por daño de algo arrendado</button>` : ''}
         <div class='rn-tot'><span>Total</span><b>${clp(total())}</b></div>
         <p class='rn-q'>¿Cómo pagó?</p>
         <div class='rn-ch dos'>${PAGOS.map(([k, t]) => `<button class='${v.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
         <button class='rn-go' data-guardar style='margin-top:18px'>Guardar venta</button><p class='rn-err'></p>
         ${R.admin ? `<button class='rn-lk' data-editar style='display:block;margin:8px auto 0'>Editar productos y precios</button>` : ''}</div>`;
-      w.querySelectorAll('#rn-om, #rn-dm').forEach(e => e.oninput = () => { guarda(); w.querySelector('.rn-tot b').textContent = clp(total()); });
+      w.querySelectorAll('#rn-om').forEach(e => e.oninput = () => { guarda(); w.querySelector('.rn-tot b').textContent = clp(total()); });
     };
     p();
     w.onclick = async e => {
@@ -284,7 +286,7 @@
         if (!total()) return er.textContent = 'Toca + en lo que se vendió.';
         if (!v.pago) return er.textContent = 'Elige cómo pagó.';
         b.disabled = true; b.textContent = 'Guardando…';
-        try { R = await post({ accion: 'tienda', op: 'venta', pago: v.pago, items: Object.keys(v.cant).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro ? v['#rn-od'] : '', otroMonto: v.otro ? v['#rn-om'] : '', danoDetalle: v.dano ? v['#rn-dd'] : '', danoMonto: v.dano ? v['#rn-dm'] : '' }); guardarCache(); w.remove(); pintar(); alCambiar(); }
+        try { R = await post({ accion: 'tienda', op: 'venta', pago: v.pago, items: Object.keys(v.cant).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v['#rn-od'] : '', otroMonto: v.otro && !v.dano ? v['#rn-om'] : '', danoDetalle: v.otro && v.dano ? v['#rn-od'] : '', danoMonto: v.otro && v.dano ? v['#rn-om'] : '' }); guardarCache(); w.remove(); pintar(); alCambiar(); }
         catch (x) { b.disabled = false; b.textContent = 'Guardar venta'; er.textContent = x.message; }
       }
     };
