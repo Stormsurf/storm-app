@@ -33,7 +33,7 @@ main .pn{max-width:1440px}
 .sp-ni{position:relative}.sp-badge{position:absolute;top:2px;left:calc(50% + 6px);font-style:normal;background:#c0503a;color:#fff;border-radius:999px;font-size:1rem;font-weight:700;min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px}
 @media (min-width:1000px){.sp-badge{position:static;margin-left:auto}}
 .sp-line.nota{border-left-color:#c0503a;background:#fffaf8}.sp-line.nota .tag{background:#fbe3dd;color:#a6402c}
-.sp-main{padding-bottom:100px;min-width:0}
+.sp-main{padding-bottom:170px;min-width:0}
 .sp-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 14px}
 .sp-top h1{margin:0;font-size:2.4rem;font-weight:600;line-height:1.15}
 .sp-top p{margin:2px 0 0;font-size:1.3rem;color:#8a8986}
@@ -52,6 +52,11 @@ main .pn{max-width:1440px}
 .sp-tile i{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#E3F1F1;color:#0f6e74;margin-bottom:4px}.sp-tile i svg{width:22px;height:22px}
 .sp-tile b{font-size:2.6rem;line-height:1}.sp-tile span{font-size:1.3rem;color:#55544f}.sp-tile small{font-size:1.15rem;color:#8a8986}
 .sp-tile.warn i{background:#fbeee2;color:#b5662b}.sp-tile.ok i{background:#e5f2ea;color:#2f7a4d}
+.sp-tiles>.sp-tile:last-child:nth-child(odd){grid-column:1/-1}
+@media (min-width:640px){.sp-tiles>.sp-tile:last-child:nth-child(odd){grid-column:auto}}
+.sp-strip{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;font:inherit;font-size:1.35rem;font-weight:600;color:var(--ink);text-align:left;cursor:pointer}
+.sp-strip i{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#fbeee2;color:#b5662b}.sp-strip i svg{width:18px;height:18px}
+.sp-strip span{flex:1;min-width:0}.sp-strip small{color:#8a8986;font-weight:500}.sp-strip>svg{flex:none;width:18px;height:18px;color:#a9a6a0}
 .sp-h3{font-size:1.25rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0f6e74;margin:22px 0 8px}
 .sp-line{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-left:5px solid #0f6e74;border-radius:14px;padding:12px 14px;margin-top:8px;cursor:pointer;width:100%;font:inherit;text-align:left;color:var(--ink)}
 .sp-line .h{font-size:1.7rem;font-weight:700;min-width:58px}
@@ -148,7 +153,7 @@ main .pn{max-width:1440px}
 .sp-panel .pn-farea small{opacity:.75}
 .sp-panel .pn-fsub,.sp-panel .pn-fadd{display:none!important}
 .sp-yo-cel{width:40px;height:40px;border-radius:50%;border:0;background:#0f6e74;color:#fff;font:inherit;font-weight:700;font-size:1.5rem;cursor:pointer;flex:none}
-.sp-plus{flex:none;align-self:center;width:58px;height:58px;margin:-22px 4px 0;border-radius:50%;border:0;background:#0f6e74;color:#fff;display:grid;place-items:center;box-shadow:0 8px 22px rgba(15,110,116,.4);cursor:pointer}
+.sp-plus{position:fixed;right:18px;bottom:calc(86px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;border:0;background:#0f6e74;color:#fff;display:grid;place-items:center;box-shadow:0 8px 22px rgba(15,110,116,.35);cursor:pointer}
 .sp-plus svg{width:28px;height:28px;stroke-width:2.4}
 .sp-mas-pc{display:none}
 .sp-seg{display:flex;gap:4px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:999px;margin:0 0 14px;overflow-x:auto;scrollbar-width:none}
@@ -501,9 +506,11 @@ main .pn{max-width:1440px}
       ${adm ? tile(espera.length + atras.length ? 'warn' : 'ok', I.pago, espera.length + atras.length, 'particulares sin pagar', atras.length ? atras.length + (atras.length === 1 ? ' ya pasó' : ' ya pasaron') : '', atras.length ? 'sin-pagar' : 'particulares:reservas') : ''}
       ${adm && avisos ? tile('warn', I.grupo, avisos, 'avisos de la Anual', 'alumnos sin grupo o pagos', 'anual:avisos') : ''}
       ${adm && StormRN.listo() ? tile(StormRN.tarde() ? 'warn' : '', I.renta, StormRN.afuera(), StormRN.afuera() === 1 ? 'renta afuera' : 'rentas afuera', StormRN.tarde() ? StormRN.tarde() + ' no ha vuelto de otro día' : 'tablas y trajes', 'rentas') : ''}
-      ${adm && StormRN.listo() ? tile(StormRN.avisos() ? 'warn' : 'ok', I.nota, StormRN.avisos(), StormRN.avisos() === 1 ? 'aviso del equipo' : 'avisos del equipo', StormRN.importantes().length ? StormRN.importantes().length + ' importante' + (StormRN.importantes().length === 1 ? '' : 's') : '', 'notas') : ''}
       ${(() => { const d0 = new Date(), fm = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate() - d0.getDate() < 3; return adm && (fm || [5, 6, 0].includes(d0.getDay())) ? tile('', I.pago, '$', fm ? 'revisar sueldos del mes' : 'revisar sueldos de la semana', 'instructores', fm ? 'sueldos' : 'particulares:pagos') : ''; })()}
     </div>`;
+    // avisos del equipo: una franja delgada, solo si hay
+    const nAv = adm && StormRN.listo() ? StormRN.avisos() : 0;
+    if(nAv) h += `<button class='sp-strip' data-go='notas'><i>${I.nota}</i><span>${nAv} ${nAv === 1 ? 'aviso' : 'avisos'} del equipo${StormRN.importantes().length ? ` <small>· ${StormRN.importantes().length} importante${StormRN.importantes().length === 1 ? '' : 's'}</small>` : ''}</span>${I.flecha}</button>`;
     // avisos importantes del equipo, arriba de todo
     if(adm && StormRN.listo() && StormRN.importantes().length) h = StormRN.importantes().map(x => `<button class='sp-line nota' data-go='notas'><span><b>${esc(x.texto.length > 120 ? x.texto.slice(0, 120) + '…' : x.texto)}</b><small>${esc(x.por || 'Storm')}</small></span><span class='tag'>Importante</span></button>`).join('') + `<div style='height:12px'></div>` + h;
     // línea de tiempo del día
