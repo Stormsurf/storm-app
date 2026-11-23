@@ -651,7 +651,7 @@
       const card = a => { const t = a.ingresos - a.gastos, Ls = a.lineas || {ingresos: [], gastos: []};
         let h = `<div class='pn-card pn-fres'><h3>${esc(AREA_TXT[a.area]||a.area)}</h3>`;
         if (a.area !== 'Casa') h += sec('Ingresos', a.ingresos, Ls.ingresos);
-        if (a.area !== 'Rentas' && (a.gastos || a.area === 'Casa' || a.area === 'Escuela')) h += sec('Gastos', a.gastos, Ls.gastos, true);
+        if (a.gastos || a.area === 'Casa' || a.area === 'Escuela') h += sec('Gastos', a.gastos, Ls.gastos, true);
         h += tot(t, a.area === 'Casa' ? 'Total gastos' : 'Total');
         if (a.area === 'Surfshop' && a.inversion != null) { const queda = a.inversion - t; h += `<div class='pn-fsec'><div><span>Inversión acumulada (meses anteriores)</span><b>−${clp(a.inversion)}</b></div><div class='pn-fsh'><b>Queda por recuperar</b><b>${queda>0?'−':''}${clp(Math.abs(queda))}</b></div></div>`; }
         return h + `</div>`; };
