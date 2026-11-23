@@ -1416,7 +1416,7 @@ async function fichasLeer(env, q, d) {
 const TUU_API = 'https://integrations.payment.haulmer.com/Report/get-report';
 const TUU_CADA_MIN = 15;
 const TUU_DESDE = '2026-11-16'; // Isidora (15-11): Finanzas cuenta Tuu y Panel Storm desde el lunes 16 de noviembre; lo anterior está en la planilla 2026.
-const TUU_CATS = ['producto', 'renta', 'clase', 'anulada']; // Isidora (21-11): 'anulada' = venta anulada en la máquina (Tuu la sigue mostrando como pagada): no cuenta en nada
+const TUU_CATS = ['producto', 'renta', 'clase', 'academia', 'anulada']; // Isidora (21-11): 'anulada' = venta anulada en la máquina (Tuu la sigue mostrando como pagada): no cuenta en nada
 const TUU_DIAS_ANTES = 14; // una venta Tuu calza con una clase POS hasta 14 días después del pago
 async function tuuTablas(db) {
   await db.batch([
@@ -1425,7 +1425,9 @@ async function tuuTablas(db) {
     db.prepare("CREATE TABLE IF NOT EXISTS tuu_sync (mes TEXT PRIMARY KEY, ms INTEGER NOT NULL, error TEXT NOT NULL DEFAULT '')")
   ]);
 }
-const tuuCatItem = n => /\b(renta|rentas|arriendo|arriendos|arrienda|alquiler)\b/i.test(n) ? 'renta' : /\b(clase|clases|grupal|curso|lecci[oó]n)\b/i.test(n) ? 'clase' : 'producto';
+// Isidora (23-11): en verano habrá miles de ventas → catálogo Tuu cerrado; el nombre del producto dice a qué área va.
+// 'academia' = pago en persona de Verano, Anual o Adultos: ya está anotado en su planilla, así que no suma de nuevo (solo su comisión).
+const tuuCatItem = n => /\b(verano|anual|adultos|academia|mensualidad|inscripci[oó]n)\b/i.test(n) ? 'academia' : /\b(renta|rentas|arriendo|arriendos|arrienda|alquiler|da[ñn]o|da[ñn]os|reposici[oó]n|rotura)\b/i.test(n) ? 'renta' : /\b(clase|clases|grupal|curso|lecci[oó]n)\b/i.test(n) ? 'clase' : 'producto';
 // Venta por monto libre: Tuu manda un producto genérico "Nombre ítem 1" (con un carácter invisible). Se trata como sin nombre.
 const tuuNombre = n => { const t = String(n || '').replace(/[\u0000-\u001f\u007f]/g, '').trim(); return /^(nombre\s+)?[ií]tem\s*\d*$/i.test(t) ? '' : t; };
 // Id de la venta: algunas llegan con saleId "N/A"; ahí se arma uno con la máquina, la hora y el monto.
@@ -1490,8 +1492,8 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
       .then(async x => { const k = (await packsDelMes(db, mes)).filter(p => p.medio === 'POS' || p.medio === 'Efectivo'); x.results = x.results.concat(k.map(p => ({ ref: p.id, fecha: p.fecha_pago, hora: '', total: p.total, nombre: 'Pack ' + p.nombre, medio: p.medio }))); return x; }),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
   ]);
-  const r = { ok: true, mes, desde: TUU_DESDE, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0,
-    comProductos: 0, comRentas: 0, comClases: 0, comSinNombre: 0, comAgenda: 0, efectivo: 0, tarjeta: 0, porRevisar: [], detalle: [],
+  const r = { ok: true, mes, desde: TUU_DESDE, ventas: 0, total: 0, productos: 0, rentas: 0, clases: 0, sinNombre: 0, agenda: 0, academia: 0,
+    comProductos: 0, comRentas: 0, comClases: 0, comSinNombre: 0, comAgenda: 0, comAcademia: 0, efectivo: 0, tarjeta: 0, porRevisar: [], detalle: [],
     actualizado: est ? est.ms : 0, error: sync.ok ? '' : (est && est.error) || sync.error || '' };
   // Tarjeta en Tuu calza con clase anotada POS; efectivo en Tuu calza con clase anotada Efectivo (o POS).
   // Isidora (20-11): el pago en Tuu siempre es antes de la clase o el mismo día. Calza con una clase del mismo monto
@@ -1559,8 +1561,8 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
   const calzaAgenda = v => calces.get(v.id);
   const nomClase = (v, a) => (a.fecha === v.fecha ? '' : a.fecha.slice(8, 10) + '-' + a.fecha.slice(5, 7) + ' ') + a.hora + ' · ' + a.nombre + (a.grupo ? ' (' + a.grupo + ' pagos)' : '');
   const suma = (cat, monto, com) => {
-    const k = { producto: 'productos', renta: 'rentas', clase: 'clases', revisar: 'sinNombre', agenda: 'agenda' }[cat];
-    const c = { producto: 'comProductos', renta: 'comRentas', clase: 'comClases', revisar: 'comSinNombre', agenda: 'comAgenda' }[cat];
+    const k = { producto: 'productos', renta: 'rentas', clase: 'clases', revisar: 'sinNombre', agenda: 'agenda', academia: 'academia' }[cat];
+    const c = { producto: 'comProductos', renta: 'comRentas', clase: 'comClases', revisar: 'comSinNombre', agenda: 'comAgenda', academia: 'comAcademia' }[cat];
     r[k] += monto; r[c] += com;
   };
   vivas.forEach(v => {
@@ -1596,7 +1598,7 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
     });
     r.detalle.push(Object.assign(base, { categoria: cats.length === 1 ? cats[0] : 'mixta' }));
   });
-  r.comision = r.comProductos + r.comRentas + r.comClases + r.comSinNombre + r.comAgenda;
+  r.comision = r.comProductos + r.comRentas + r.comClases + r.comSinNombre + r.comAgenda + r.comAcademia;
   // Isidora (22-11): "¿cómo sé que nada está duplicado?". Cuadre entre las clases POS del Panel y las ventas Tuu.
   // Una clase POS del Panel suma en Escuela; su venta en Tuu NO suma (solo la comisión). Lo que puede fallar:
   //  - Por revisar: suman como "Sin nombre"; si eran clases ya anotadas, están contadas dos veces hasta que las marques.

@@ -287,6 +287,8 @@ button.pn-chip{border:0;font:inherit;font-size:1.35rem;color:inherit;cursor:poin
 /* Ventas Tuu por revisar + cuadre (22-11): botones abajo en 2 columnas para que nada se salga en el celular */
 .pn-tuuv{padding:12px 0;border-bottom:1px solid var(--line)}
 .pn-tuuv:last-child{border-bottom:0}
+.pn-tuuq{margin:4px 0 0;font-size:1.35rem;line-height:1.35}
+.pn-tuub a.pn-gbtn{display:block;text-align:center;text-decoration:none;box-sizing:border-box}
 .pn-tuuh{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .pn-tuuh b{font-size:1.6rem;font-weight:600}
 .pn-tuuh small{font-size:1.25rem;opacity:.65}
