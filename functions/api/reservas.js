@@ -1486,7 +1486,7 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
   const db = env.DB;
   const [{ results: ventas }, { results: agenda }, est] = await Promise.all([
     db.prepare("SELECT * FROM tuu_ventas WHERE substr(fecha,1,7) = ? AND fecha >= ? ORDER BY fecha, hora").bind(mes, TUU_DESDE).all(),
-    db.prepare("SELECT ref, fecha, hora, total, nombre, medio, saldos FROM reservas WHERE fecha >= ? AND fecha <= ? AND estado = 'pagada'").bind(mes + '-01', sumarDias(mes + '-' + String(new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).getUTCDate()).padStart(2, '0'), TUU_DIAS_ANTES)).all().then(x => ({ results: x.results.flatMap(r => partesPago(r).filter(p => ['POS', 'Efectivo'].includes(p.medio)).map(p => ({ ref: r.ref + p.k, fecha: r.fecha, hora: r.hora, nombre: r.nombre + (p.k ? ' (diferencia)' : ''), total: p.monto, medio: p.medio }))) }))
+    db.prepare("SELECT ref, fecha, hora, total, nombre, medio, saldos, creada FROM reservas WHERE fecha >= ? AND fecha <= ? AND estado = 'pagada'").bind(mes + '-01', sumarDias(mes + '-' + String(new Date(Date.UTC(+mes.slice(0, 4), +mes.slice(5, 7), 0)).getUTCDate()).padStart(2, '0'), TUU_DIAS_ANTES)).all().then(x => ({ results: x.results.flatMap(r => partesPago(r).filter(p => ['POS', 'Efectivo'].includes(p.medio)).map(p => ({ ref: r.ref + p.k, fecha: r.fecha, hora: r.hora, nombre: r.nombre + (p.k ? ' (diferencia)' : ''), total: p.monto, medio: p.medio, creada: p.k ? '' : String(r.creada || '') }))) }))
       .then(async x => { const k = (await packsDelMes(db, mes)).filter(p => p.medio === 'POS' || p.medio === 'Efectivo'); x.results = x.results.concat(k.map(p => ({ ref: p.id, fecha: p.fecha_pago, hora: '', total: p.total, nombre: 'Pack ' + p.nombre, medio: p.medio }))); return x; }),
     db.prepare('SELECT ms, error FROM tuu_sync WHERE mes = ?').bind(mes).first()
   ]);
@@ -1504,31 +1504,46 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
     return !conNombre.length || conNombre.every(i => tuuCatItem(i.nombre) === 'clase');
   };
   const sirve = (v, x) => { const ef = tuuEfectivo(v.tipo); return !usadas.has(x.ref) && x.total === v.monto && (x.medio === 'POS' || (ef && x.medio === 'Efectivo')); };
-  vivas.filter(buscaClase).forEach(v => { const a = agenda.find(x => x.fecha === v.fecha && sirve(v, x)); if (a) { usadas.add(a.ref); calces.set(v.id, a); } });
   const tope = v => sumarDias(v.fecha, TUU_DIAS_ANTES);
-  vivas.filter(v => buscaClase(v) && !calces.has(v.id)).forEach(v => {
-    const a = agenda.filter(x => x.fecha > v.fecha && x.fecha <= tope(v) && sirve(v, x)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora))[0];
+  const minutos = t => { const m = String(t || '').match(/(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/); return m ? diaUTC(m[1]) / 60000 + +m[2] * 60 + +m[3] : NaN; };
+  // Isidora (22-11): "que todo se cuadre solo". Orden del cruce (cada clase y cada venta se usan una vez):
+  //  1) Venta Tuu hecha justo al anotar la clase en el Panel (desde 5 min antes hasta 3 h después), mismo monto: es esa clase.
+  //  2) Misma fecha y mismo monto.
+  //  3) Clase grupal: varias ventas sin producto del mismo día que suman justo el total de una clase (ej. 9 personas: 6 con tarjeta + 3 en efectivo).
+  //  4) Mismo monto, clase hasta 14 días después (la más cercana).
+  //  5) Clase grupal con pagos de varios días antes de la clase.
+  const libre = v => !calces.has(v.id);
+  vivas.filter(buscaClase).forEach(v => {
+    const t = minutos(v.fecha + ' ' + v.hora);
+    const a = agenda.filter(x => x.creada && sirve(v, x) && x.fecha >= v.fecha && x.fecha <= tope(v) && t - minutos(x.creada) >= -5 && t - minutos(x.creada) <= 180)
+      .sort((p, q) => Math.abs(t - minutos(p.creada)) - Math.abs(t - minutos(q.creada)))[0];
     if (a) { usadas.add(a.ref); calces.set(v.id, a); }
   });
-  // Isidora (22-11): clase grupal anotada por el total (ej. 9 personas $180.000) donde cada uno pagó su parte en Tuu (9 × $20.000).
-  // Varias ventas sin producto del MISMO día que suman justo el monto de una clase POS (ese día o hasta 14 días después) son esa clase.
-  // No se toman las que ya marcaste Producto, Renta o Anulada.
-  const libres = vivas.filter(v => buscaClase(v) && !calces.has(v.id) && !['producto', 'renta'].includes(v.categoria));
+  vivas.filter(v => buscaClase(v) && libre(v)).forEach(v => { const a = agenda.find(x => x.fecha === v.fecha && sirve(v, x)); if (a) { usadas.add(a.ref); calces.set(v.id, a); } });
+  const libres = vivas.filter(v => buscaClase(v) && !['producto', 'renta'].includes(v.categoria)); // no se toman las que marcaste Producto o Renta
   const grupo = (cands, meta) => { // busca ventas que sumen justo 'meta' (2 o más); corta si es demasiado largo
     let pasos = 0; const sel = [];
     const ir = (i, falta) => { if (falta === 0) return sel.length >= 2; if (falta < 0 || i >= cands.length || ++pasos > 20000) return false;
       sel.push(cands[i]); if (ir(i + 1, falta - cands[i].monto)) return true; sel.pop(); return ir(i + 1, falta); };
     return ir(0, meta) ? sel.slice() : null;
   };
-  agenda.filter(x => !usadas.has(x.ref)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora)).forEach(a => {
-    const dias = [...new Set(libres.filter(v => !calces.has(v.id) && v.fecha <= a.fecha && tope(v) >= a.fecha).map(v => v.fecha))].sort((p, q) => q.localeCompare(p)); // el mismo día primero
-    const okV = v => !calces.has(v.id) && v.monto < a.total && (a.medio === 'POS' || tuuEfectivo(v.tipo));
+  const grupos = mismoDia => agenda.filter(x => !usadas.has(x.ref)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora)).forEach(a => {
+    const okV = v => libre(v) && v.monto < a.total && (a.medio === 'POS' || tuuEfectivo(v.tipo));
     let g = null;
-    for (const dia of dias) { const cands = libres.filter(v => okV(v) && v.fecha === dia).slice(0, 30); g = cands.length >= 2 && grupo(cands, a.total); if (g) break; }
-    // Si no calza en un solo día (algunos pagaron antes), se prueba con las ventas de los días antes de la clase, las más cercanas primero.
-    if (!g) { const cands = libres.filter(v => okV(v) && v.fecha <= a.fecha && tope(v) >= a.fecha).sort((p, q) => (q.fecha + q.hora).localeCompare(p.fecha + p.hora)).slice(0, 25); g = cands.length >= 2 && grupo(cands, a.total); }
+    if (mismoDia) { const cands = libres.filter(v => okV(v) && v.fecha === a.fecha).slice(0, 30); g = cands.length >= 2 && grupo(cands, a.total); }
+    else {
+      const dias = [...new Set(libres.filter(v => okV(v) && v.fecha < a.fecha && tope(v) >= a.fecha).map(v => v.fecha))].sort((p, q) => q.localeCompare(p));
+      for (const dia of dias) { const cands = libres.filter(v => okV(v) && v.fecha === dia).slice(0, 30); g = cands.length >= 2 && grupo(cands, a.total); if (g) break; }
+      if (!g) { const cands = libres.filter(v => okV(v) && v.fecha <= a.fecha && tope(v) >= a.fecha).sort((p, q) => (q.fecha + q.hora).localeCompare(p.fecha + p.hora)).slice(0, 25); g = cands.length >= 2 && grupo(cands, a.total); }
+    }
     if (g) { usadas.add(a.ref); g.forEach(v => calces.set(v.id, Object.assign({}, a, { grupo: g.length }))); }
   });
+  grupos(true);
+  vivas.filter(v => buscaClase(v) && libre(v)).forEach(v => {
+    const a = agenda.filter(x => x.fecha > v.fecha && x.fecha <= tope(v) && sirve(v, x)).sort((p, q) => (p.fecha + p.hora).localeCompare(q.fecha + q.hora))[0];
+    if (a) { usadas.add(a.ref); calces.set(v.id, a); }
+  });
+  grupos(false);
   if (soloCalces) return usadas;
   // Isidora (22-11): "que todo se cuadre solo". Una venta sin producto que no es clase se ordena sola si su monto es el precio
   // de algo que ya se vendió con nombre en Tuu (ej. "Renta Softboard" $15.000) o de una venta que ya marcaste antes,
@@ -1590,7 +1605,8 @@ async function tuuResumen(env, mes, forzar, soloCalces) {
   // Clases de los primeros días del mes que se pagaron en Tuu el mes anterior: ya calzaron allá.
   const mesAntes = sumarDias(mes + '-01', -1).slice(0, 7);
   let antes = new Set(); if (mesAntes >= TUU_DESDE.slice(0, 7)) try { antes = await tuuResumen(env, mesAntes, false, true); } catch (_) {}
-  const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha <= hoy && !antes.has(x.ref));
+  // Clases antes del 16-11, o anotadas antes del 16-11 (se cobraron antes de que la app leyera Tuu): no se revisan.
+  const posMes = agenda.filter(x => x.medio === 'POS' && x.fecha.slice(0, 7) === mes && x.fecha >= TUU_DESDE && x.fecha <= hoy && !antes.has(x.ref) && !(x.creada && x.creada.slice(0, 10) < TUU_DESDE));
   const claseAMano = r.detalle.filter(x => x.categoria === 'agenda' && x.aMano);
   r.cuadre = {
     posPanel: posMes.reduce((t, x) => t + x.total, 0), posPanelN: posMes.length,
