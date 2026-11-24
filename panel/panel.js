@@ -607,7 +607,11 @@
         const que = [dt > 0 ? `Se pasaron ${clp(dt)} por la máquina que no están anotados en el Panel.` : dt < 0 ? `Hay ${clp(-dt)} anotados con POS que no aparecen en la máquina. ¿Se cobraron?` : '', de ? (de > 0 ? `En la caja sobraron ${clp(de)} en efectivo.` : `En la caja faltaron ${clp(-de)} en efectivo.`) : '', ci && ci.nota ? 'Nota: ' + esc(ci.nota) : ''].filter(Boolean).join(' ');
         return fila(Math.abs(dt) + Math.abs(de), corta(x.fecha) + (ci ? ' · cerró ' + ci.por : ' · sin cierre'), que, ''); })
     ];
-    return `<div class='pn-card pn-tuuc'><h3>Ventas de la máquina Tuu<span class='pn-count ${filas.length ? 'pn-tuuwarn' : 'pn-tuuok'}'>${filas.length ? filas.length + ' por resolver' : '✓ Todo cuadra'}</span></h3>${filas.join('')}</div>`;
+    // Boletas exentas de los pagos con Webpay (Isidora 24-11: desde el 1-12 se emiten solas en SimpleFactura)
+    const bl = d.boletas, malas = bl ? bl.lista.filter(b => b.estado !== 'emitida') : [];
+    const bh = bl && bl.lista.length ? `<div class='pn-card pn-tuuc'><h3>Boletas exentas (Webpay)<span class='pn-count ${malas.length ? 'pn-tuuwarn' : 'pn-tuuok'}'>${malas.length ? malas.length + ' sin emitir' : '✓ ' + bl.emitidas + ' emitidas · ' + clp(bl.total)}</span></h3>
+      ${bl.lista.map(b => `<div class='pn-row'><div><b>${b.folio ? 'N° ' + b.folio : 'Sin emitir'} · ${clp(b.monto)}</b><small>${esc(corta(b.fecha))} · ${esc(b.detalle)}${b.estado !== 'emitida' ? ' · se reintenta sola' : ''}</small></div>${b.link ? `<a class='pn-gbtn' href='${esc(b.link)}' target='_blank' rel='noopener'>Ver</a>` : ''}</div>`).join('')}</div>` : '';
+    return bh + `<div class='pn-card pn-tuuc'><h3>Ventas de la máquina Tuu<span class='pn-count ${filas.length ? 'pn-tuuwarn' : 'pn-tuuok'}'>${filas.length ? filas.length + ' por resolver' : '✓ Todo cuadra'}</span></h3>${filas.join('')}</div>`;
   }
   function enlazarTuu(el, mes){
     el.querySelectorAll('[data-tuu]').forEach(b => b.onclick = async () => {

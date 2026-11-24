@@ -75,7 +75,7 @@ async function sfBoleta(env, b) {
 }
 /** Emite (una sola vez por pago) la boleta exenta de un pago Webpay. pago = 'webpay:<token>'. */
 export async function emitirBoleta(env, pago, ref, monto, fecha) {
-  if (!env.DB || !env.SIMPLEFACTURA_TOKEN || !/^(AA|AD|AV|ES|LK)-/.test(String(ref || '')) || fecha < BOLETA_DESDE) return null;
+  if (!env.DB || !env.SIMPLEFACTURA_TOKEN || !(env.BOLETA_PRUEBA ? /^(AA|AD|AV|ES|LK|PRUEBA)-/ : /^(AA|AD|AV|ES|LK)-/).test(String(ref || '')) || (fecha < BOLETA_DESDE && !env.BOLETA_PRUEBA)) return null;
   await boletaTabla(env.DB);
   await env.DB.prepare('INSERT OR IGNORE INTO boletas (pago, ref, monto, detalle, fecha, creada_ms) VALUES (?, ?, ?, ?, ?, ?)').bind(pago, ref, Math.round(Number(monto)), NOMBRE_REF(ref), fecha, Date.now()).run();
   const b = await env.DB.prepare("SELECT * FROM boletas WHERE pago = ? AND estado != 'emitida'").bind(pago).first();
@@ -83,6 +83,21 @@ export async function emitirBoleta(env, pago, ref, monto, fecha) {
   const r = await sfBoleta(env, b);
   await env.DB.prepare('UPDATE boletas SET estado = ?, folio = ?, error = ?, intentos = intentos + 1 WHERE pago = ?').bind(r.folio ? 'emitida' : 'error', r.folio || null, r.error || '', pago).run();
   return r;
+}
+const sfAmbiente = env => env.SF_AMBIENTE === '1' ? 1 : 0; // 0 = pruebas (certificación), 1 = oficial (producción)
+/** PDF de una boleta (lo ve la familia en su comprobante y el equipo en el Panel). */
+async function boletaPdf(env, folio) {
+  const x = await fetch((env.SF_API || SF_API) + '/dte/pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + env.SIMPLEFACTURA_TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credenciales: { rutEmisor: EMISOR.RUTEmisor, nombreSucursal: env.SF_SUCURSAL || 'Casa Matriz' }, dteReferenciadoExterno: { folio: Number(folio), codigoTipoDte: 41, ambiente: sfAmbiente(env) } }) });
+  return x.status === 200 ? x.arrayBuffer() : null;
+}
+/** Boletas del mes para el Panel (Finanzas). */
+export async function boletasMes(env, mes) {
+  if (!env.DB) return null;
+  await boletaTabla(env.DB);
+  const l = (await env.DB.prepare('SELECT * FROM boletas WHERE substr(fecha, 1, 7) = ? ORDER BY creada_ms DESC').bind(mes).all()).results;
+  return { emitidas: l.filter(b => b.estado === 'emitida').length, total: l.filter(b => b.estado === 'emitida').reduce((t, b) => t + b.monto, 0),
+    lista: l.map(b => ({ fecha: b.fecha, ref: b.ref, monto: b.monto, detalle: b.detalle, folio: b.folio, estado: b.estado, link: b.estado === 'emitida' ? '/api/pagar?boleta=' + encodeURIComponent(String(b.pago).replace(/^webpay:/, '')) : '' })) };
 }
 /** Reintenta las boletas que fallaron (lo llama la revisión automática cada 5 min; máx. 10 intentos). */
 export async function reintentarBoletas(env) {
@@ -226,7 +241,8 @@ export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
   // Vista previa (*.storm-app.pages.dev) sin llaves de Transbank: Webpay en modo prueba (datos públicos de prueba, no cobra de verdad)
-  const env = /\.storm-app\.pages\.dev$/.test(url.hostname) && !context.env.WEBPAY_CODIGO ? Object.assign({}, context.env, { WEBPAY_PRUEBA: '1' }) : context.env;
+  // Vista previa también: boletas en el ambiente de pruebas de SimpleFactura, sin esperar el 1-12
+  const env = /\.storm-app\.pages\.dev$/.test(url.hostname) ? Object.assign({}, context.env, context.env.WEBPAY_CODIGO ? {} : { WEBPAY_PRUEBA: '1' }, { BOLETA_PRUEBA: '1', SF_AMBIENTE: '0' }) : context.env;
   if (!env.MP_TOKEN) return fallo('El pago en línea no está activo en este momento. Escríbenos por WhatsApp.');
 
   const origen = /(^|\.)storm-app\.pages\.dev$/.test(url.hostname) ? url.origin : 'https://app.stormsurf.cl';
@@ -250,10 +266,11 @@ export async function onRequest(context) {
     if (p50 && !ok) return html('<h1>Pago de prueba no aprobado</h1><p>' + (c ? 'Estado: ' + esc(c.status) + ' · código ' + esc(c.response_code) + ' · monto ' + esc(c.amount) : 'Transbank no respondió al confirmar: ' + esc(ultimoError)) + '</p><p>Token: ' + esc(tok) + '</p><p><a href="/api/pagar?prueba50=1">Intentar de nuevo</a></p>');
     if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return /\.storm-app\.pages\.dev$/.test(url.hostname) ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(tok), 303) : vuelve('error'); }
     if (!p50) await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok, ['VD', 'VP'].includes(c.payment_type_code) ? 'debito' : 'credito');
-    if (!p50) context.waitUntil(emitirBoleta(env, 'webpay:' + tok, ref, c.amount, hoyChile()).catch(e => console.error(e)));
+    const bo = p50 ? null : await Promise.race([emitirBoleta(env, 'webpay:' + tok, ref, c.amount, hoyChile()).catch(() => null), new Promise(r => setTimeout(() => r(null), 8000))]);
     // Comprobante (lo pide Transbank): se muestra en /pagar y desde ahí sigue a la página de siempre
     const cp = new URLSearchParams({ o: oid, comprobante: '1', oc: c.buy_order || '', m: String(Math.round(Number(c.amount))), ac: c.authorization_code || '', d: (c.card_detail || {}).card_number || '',
       f: c.transaction_date || '', t: c.payment_type_code || '', n: String(c.installments_number || 0) });
+    if (bo && bo.folio) { cp.set('bo', String(bo.folio)); cp.set('bk', tok); } // boleta exenta: la familia la ve y descarga en su comprobante
     if (p50 || /\.storm-app\.pages\.dev$/.test(url.hostname)) cp.set('tk', tok); // vista previa: token visible para la validación de Transbank
     return Response.redirect(origen + '/pagar/?' + cp.toString(), 303);
   }
@@ -276,8 +293,16 @@ export async function onRequest(context) {
     if (!env.SIMPLEFACTURA_TOKEN) return json({ ok: false, error: 'Falta SIMPLEFACTURA_TOKEN' });
     const h = { Authorization: 'Bearer ' + env.SIMPLEFACTURA_TOKEN, 'Content-Type': 'application/json' }, out = {};
     for (const amb of [0, 1]) { try { const x = await fetch(SF_API + '/folios/consultar', { method: 'POST', headers: h, body: JSON.stringify({ credenciales: { rutEmisor: EMISOR.RUTEmisor, nombreSucursal: 'Casa Matriz' }, ambiente: amb }) }); out['folios' + amb] = x.status + ' ' + (await x.text()).slice(0, 800); } catch (e) { out['folios' + amb] = String(e); } }
-    if (url.searchParams.get('emitir')) out.boleta = await sfBoleta(env, { ref: 'PRUEBA-' + Date.now(), monto: Number(url.searchParams.get('monto')) || 1000, detalle: 'Clase de surf (prueba)', fecha: hoyChile() });
+    if (url.searchParams.get('pdf')) { const pdf = await boletaPdf(env, url.searchParams.get('pdf')); return pdf ? new Response(pdf, { headers: { 'Content-Type': 'application/pdf' } }) : json({ ok: false, error: 'sin PDF' }); }
+    if (url.searchParams.get('emitir')) { const k = 'PRUEBA' + Date.now(); out.boleta = await emitirBoleta(env, 'webpay:' + k, 'PRUEBA-' + k, Number(url.searchParams.get('monto')) || 1000, hoyChile()); out.recibo = '/pagar/?comprobante=1&o=&oc=O' + k + '&m=' + (Number(url.searchParams.get('monto')) || 1000) + '&ac=123456&d=6623&t=VD&bo=' + ((out.boleta && out.boleta.folio) || '') + '&bk=' + k; }
     return json(out);
+  }
+  if (request.method === 'GET' && url.searchParams.get('boleta') && env.DB) {
+    await boletaTabla(env.DB);
+    const b = await env.DB.prepare("SELECT * FROM boletas WHERE pago = ? AND estado = 'emitida'").bind('webpay:' + url.searchParams.get('boleta')).first();
+    const pdf = b && await boletaPdf(env, b.folio).catch(() => null);
+    if (!pdf) return html('<h1>Boleta no disponible</h1><p>Intenta de nuevo en unos minutos.</p>');
+    return new Response(pdf, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="Boleta Storm ' + b.folio + '.pdf"', 'Cache-Control': 'private, no-store' } });
   }
   if (request.method === 'GET' && url.searchParams.get('comprobante') && env.DB) {
     await compTabla(env.DB);

@@ -252,6 +252,7 @@
     if(Q.get('tk')) filas.push(['Token', Q.get('tk')]);
     pg.innerHTML = `<div class="pg-hero"><small>Webpay</small><h1>${EN ? 'Payment approved' : 'Pago aprobado'}</h1><p>${EN ? 'Save this receipt.' : 'Guarda este comprobante.'}</p></div>
       <div class="pg-fl" id="detalle">${filas.map(([a, b]) => `<p style="display:flex;justify-content:space-between;gap:12px;opacity:1;margin:6px 0"><span style="opacity:.6">${a}</span><b style="text-align:right;overflow-wrap:anywhere;min-width:0">${esc(b)}</b></p>`).join('')}</div>
+      ${Q.get('bo') && Q.get('bk') ? `<a class="pg-opt" href="/api/pagar?boleta=${encodeURIComponent(Q.get('bk'))}" target="_blank" rel="noopener"><i>🧾</i><span><b>${EN ? 'Tax receipt' : 'Boleta exenta'} N° ${esc(Q.get('bo'))}</b><small>${EN ? 'Download PDF' : 'Descargar PDF'}</small></span></a>` : ''}
       <a class="pg-opt" id="seguir" href="/"><i>✓</i><span><b>${EN ? 'Continue' : 'Continuar'}</b></span></a>
       <p class="pg-note">${EN ? 'Payment processed by Webpay (Transbank).' : 'Pago procesado por Webpay (Transbank).'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
     fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {

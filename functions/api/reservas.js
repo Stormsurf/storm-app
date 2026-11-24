@@ -12,7 +12,7 @@
  *   CLAVE_CORREO  Clave del programa de correos de contacto@stormsurf.cl
  *   TAREA_CLAVE   Clave para la revisión automática
  */
-import { reintentarBoletas } from './pagar.js';
+import { reintentarBoletas, boletasMes } from './pagar.js';
 
 const TZ = 'America/Santiago';
 const MP_API = 'https://api.mercadopago.com';
@@ -2005,7 +2005,7 @@ export async function onRequest(context) {
     if (acc === 'notas') return json(await notasAccion(env, q, d));
     if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo', 'pack'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
-    if (acc === 'tuu-mes') { const m = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), r = await tuuResumen(env, m, !!d.forzar); try { r.control = await tuuControl(env, m); } catch (x) { console.error(x); } return json(r); }
+    if (acc === 'tuu-mes') { const m = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), r = await tuuResumen(env, m, !!d.forzar); try { r.control = await tuuControl(env, m); } catch (x) { console.error(x); } try { r.boletas = await boletasMes(env, m); } catch (x) { console.error(x); } return json(r); }
     if (acc === 'tuu-asignar') return json(await tuuAsignar(env, q, d));
     if (acc === 'resena-prueba') { const a = await ajustes(env.DB); if (!googleResena(a)) throw err('Primero pega el link de Google.'); await enviarCorreo(env, { to: q.email, subject: '¿Cómo estuvo tu clase de surf?', html: correoResena({ ref: 'PRUEBA', clave: 'prueba', nombre: 'Camila Prueba' }), body: 'Prueba' }); return json({ ok: true }); }
     if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }
