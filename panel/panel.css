@@ -307,3 +307,32 @@ button.pn-chip{border:0;font:inherit;font-size:1.35rem;color:inherit;cursor:poin
 .pn-tuul>div span{min-width:0;overflow-wrap:anywhere}
 .pn-tuul>div b{flex:none;font-weight:600}
 .pn-tuul .pn-gbtn{flex:none;font-size:1.2rem;padding:5px 10px}
+/* Guía del instructor */
+.pn-sw button[data-acad='guia'].on{background:var(--aa-dk);color:#fff}
+.pn-guia[hidden]{display:none}
+.pn-gui{background:var(--aa-soft);border-color:transparent}
+.pn-gui b{display:block;font-size:1.7rem;font-weight:600}
+.pn-gui p{margin:6px 0 0;font-size:1.4rem;line-height:1.5}
+.pn-gur small{display:block;font-size:1.15rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--aa-dk)}
+.pn-gur b{display:block;font-size:1.8rem;font-weight:600;line-height:1.3;margin:6px 0 8px}
+.pn-gul{padding:4px 18px}
+.pn-gut{border-bottom:1px solid var(--line)}
+.pn-gut:last-child{border-bottom:0}
+.pn-guh{display:flex;align-items:center;gap:12px;width:100%;padding:14px 0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.pn-guh span:nth-child(2){flex:1;min-width:0}
+.pn-guh b{display:block;font-size:1.5rem;font-weight:600}
+.pn-guh small{display:block;font-size:1.25rem;opacity:.6;margin-top:2px;line-height:1.35}
+.pn-guh i{font-style:normal;font-size:2rem;opacity:.35;transition:transform .2s}
+.pn-gut.on .pn-guh i{transform:rotate(90deg)}
+.pn-gun{flex:none;width:30px;height:30px;border-radius:999px;background:var(--aa-soft);color:var(--aa-dk);font-size:1.2rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.pn-gut.on .pn-gun{background:var(--aa-dk);color:#fff}
+.pn-gub{padding:0 0 16px 42px}
+.pn-gub ul{margin:0;padding:0 0 0 16px}
+.pn-gub li{font-size:1.4rem;line-height:1.5;margin:0 0 7px}
+.pn-gub p{margin:10px 0 0;font-size:1.35rem;line-height:1.45;padding:10px 12px;border-radius:12px}
+.pn-gub p b{display:block;font-size:1.1rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.pn-guno{background:var(--warn-soft)}.pn-guno b{color:var(--warn)}
+.pn-gure{background:var(--ok-soft)}.pn-gure b{color:var(--ok)}
+.pn-guc{text-align:center;padding:22px 12px 8px}
+.pn-guc p{margin:0;font-size:1.5rem;line-height:1.5;font-style:italic}
+.pn-guc small{display:block;margin-top:8px;font-size:1.25rem;opacity:.6}

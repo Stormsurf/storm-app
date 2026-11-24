@@ -971,21 +971,80 @@
   function ponerSelector(){
     if(!API_VERANO) return;
     const head = app.querySelector('.pn-head'); if(!head || app.querySelector('.pn-sw')) return;
-    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button>${ES_ADMIN || (() => { const d = new Date(), m = d.getMonth(); return m === 0 || m === 1 || (m === 11 && d.getDate() >= 15); })() ? `<button data-acad='verano'>Verano</button>` : ''}<button data-acad='adultos'>Adultos</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}</div>`);
+    head.insertAdjacentHTML('afterend', `<div class='pn-sw' role='tablist'><button data-acad='anual'>Anual</button>${ES_ADMIN || (() => { const d = new Date(), m = d.getMonth(); return m === 0 || m === 1 || (m === 11 && d.getDate() >= 15); })() ? `<button data-acad='verano'>Verano</button>` : ''}<button data-acad='adultos'>Adultos</button>${ES_ADMIN ? `<button data-acad='finanzas'>Finanzas</button>` : ''}<button data-acad='guia'>Guía</button></div>`);
     if(!app.querySelector('.pn-adultos')) app.insertAdjacentHTML('beforeend', `<div class='pn-adultos' hidden></div>`);
+    if(!app.querySelector('.pn-guia')) app.insertAdjacentHTML('beforeend', `<div class='pn-guia' hidden></div>`);
     app.querySelectorAll('[data-acad]').forEach(b => b.onclick = () => { acad = b.dataset.acad; try{ sessionStorage.setItem(KEY + '-acad', acad); }catch(_){} mostrarAcad(); });
     mostrarAcad();
+  }
+  // ---------- Guía del instructor: ser mejor instructor de Storm más allá de la técnica ----------
+  const GUIA = [
+    {t:'Puntualidad y compromiso', s:'Llegar a tiempo es la primera forma de respeto.',
+     si:['Llega 20 minutos antes: revisa el mar, saca el equipo y recibe a tus alumnos con calma.','A la hora de la clase ya estás cambiado y con la polera celeste.','Si no puedes venir o vas a llegar tarde, avisa a Isidora o Diego con tiempo, nunca a última hora.','No te vas apenas termina: te quedas hasta que todo queda ordenado.'],
+     no:'Llegar justo o cambiarte mientras los alumnos esperan.',
+     reto:'Llega 20 minutos antes a todas tus clases.'},
+    {t:'Tu rol: instructor, no par', s:'Cuando te pones la polera celeste, estás trabajando.',
+     si:['Puedes ser cercano y divertido, pero eres el adulto a cargo de su seguridad.','Tu atención está en tu grupo: no en el celular, en tus olas ni conversando con otros adultos.','Llegas aseado, limpio y ordenado. Tu imagen es la imagen de Storm.','Muchos niños sueñan con usar la polera celeste. Lo que haces les enseña más que lo que dices.'],
+     no:'Juegos bruscos, tratos de “amigo” o usar el celular en clase.',
+     reto:'Guarda el celular desde que llegas hasta que te vas.'},
+    {t:'Trato con los alumnos', s:'Cada alumno tiene que sentirse visto.',
+     si:['Saluda a cada uno por su nombre, al llegar y al despedirte.','Háblales a su altura, mirándolos a los ojos y con calma.','Habla siempre en positivo: “¡Sí puedes!”, nunca “todavía no puedes”.','Corrige la conducta, nunca a la persona. Si alguien se porta mal, háblale aparte y con cariño.','Trata a todos por igual: sin favoritos y sin dejar a nadie de lado.'],
+     no:'Garabatos, gritos o burlas, aunque sean “en buena”. Comparar a un alumno con otro.',
+     reto:'Usa el nombre de cada alumno en cada clase.'},
+    {t:'Motivar y dar confianza', s:'Creer en ellos es lo que los hace avanzar.',
+     si:['Felicita logros concretos: “¡Qué buena remada, metiste el brazo profundo!” vale más que “bien”.','Propón a cada uno un desafío que pueda lograr.','Si a alguien le cuesta, busca otra forma de explicarle. No te rindes.','El miedo es normal: escúchalo, valida lo que siente y quédate cerca.','Llega con buena energía, aunque haga frío o el mar esté difícil.'],
+     no:'Apurar a quien tiene miedo o dejar de insistir con quien le cuesta.',
+     reto:'Felicita a cada alumno por algo concreto que hizo bien.'},
+    {t:'Una buena clase', s:'Una clase planificada se nota.',
+     si:['Llega sabiendo qué vas a trabajar con tu grupo.','Tu grupo calienta separado, según su nivel, nunca todos juntos.','En la arena: muestras, cada uno lo hace y corriges uno por uno.','Antes de entrar explicas el plan: objetivo, zona y señales.','Cierras en grupo: felicitas y adelantas el próximo desafío.'],
+     no:'Improvisar la clase o calentar todos los grupos juntos.',
+     reto:'Antes de cada clase, define en una frase qué va a aprender tu grupo.'},
+    {t:'Seguridad', s:'Lo primero, siempre.',
+     si:['Revisa el mar antes de entrar y define la zona.','Cuenta a tu grupo al llegar, varias veces en el agua, al salir y al entregarlo.','Ubícate donde ves a todos. No surfeas tus propias olas mientras estás a cargo.','Tus alumnos conocen las señales: puño extendido es “¿estás bien?”, mano en la cabeza es “estoy bien”, brazo moviéndose es “ayuda”.','Llevas siempre tu silbato.'],
+     no:'Perder de vista a un alumno, aunque sea un momento.',
+     reto:'Cuenta a tu grupo cada vez que entra un set.'},
+    {t:'Familias y apoderados', s:'Storm habla con las familias.',
+     si:['Saluda y sé amable con las familias. Los temas importantes (progreso, conducta, salud, pagos o cambio de grupo) los ve Storm.','No des tu WhatsApp personal ni escribas a las familias por tu cuenta.','Si alguien reclama, escucha sin discutir y dile: “Gracias por contarme, se lo paso altiro a Isidora y Diego”.','Avisa el mismo día cualquier golpe, conducta difícil o algo que te preocupó.','Ningún niño se va solo ni con alguien que no conoces sin que Storm lo sepa.'],
+     no:'Defenderte frente a un reclamo o prometer algo en nombre de Storm.',
+     reto:'Cuéntanos el mismo día cualquier cosa que te haya preocupado.'},
+    {t:'Trabajo en equipo', s:'Sumar, no restar.',
+     si:['Ves lo que falta y lo haces sin que te lo pidan: sacar tablas, ayudar con un traje, apoyar otro grupo.','Celebras las olas de todos, no solo las de tu grupo.','Aceptas correcciones de Isidora, Diego u otro instructor sin ponerte a la defensiva.','Compartes lo que sabes y propones ideas para mejorar.'],
+     no:'Decir “no es mi parte” o hablar mal de un compañero.',
+     reto:'Ayuda a otro instructor sin que te lo pida.'},
+    {t:'Orden y cuidado del equipo', s:'La escuela queda mejor de como la encontramos.',
+     si:['Tablas sin arena y guardadas en su lugar, nunca tiradas al sol.','Trajes enjuagados y colgados en su talla.','Escuela barrida y ordenada al terminar tu día.','Si una tabla o algún equipo se daña, avisas.'],
+     no:'Irte dejando tablas, trajes o tus cosas tiradas.',
+     reto:'Antes de irte, revisa que todo quede en su lugar.'},
+    {t:'Seguir creciendo', s:'Siempre hay algo nuevo que aprender del mar y de los demás.',
+     si:['Después de cada clase piensa: ¿qué salió bien? ¿qué haría distinto?','Deja notas de tus alumnos en la app: qué lograron y en qué están.','Pide consejos a Isidora, Diego u otro instructor.','Sigue formándote. Si quieres certificarte en primeros auxilios, rescate o como instructor, cuéntanos y te acompañamos.'],
+     no:'Creer que ya lo sabes todo.',
+     reto:'Pídele a Isidora o Diego un consejo para tu próxima clase.'}
+  ];
+  let guiaAbierta = -1;
+  function pintarGuia(pane){
+    // Reto de la semana: cambia solo cada lunes y recorre los 10 temas.
+    const sem = Math.floor((Date.now() / 864e5 + 3) / 7), r = sem % GUIA.length;
+    pane.innerHTML = `<div class='pn-card pn-gui'><b>Ser mejor instructor de Storm</b><p>Más allá de la técnica: lo que hace que un alumno se sienta seguro, aprenda y quiera volver. Lee un tema a la vez y vuelve cuando tengas una duda.</p></div>
+      <div class='pn-card pn-gur'><small>Reto de esta semana</small><b>${esc(GUIA[r].reto)}</b><button class='pn-link' data-gir='${r}'>${esc(GUIA[r].t)} ›</button></div>
+      <div class='pn-card pn-gul'>${GUIA.map((g, i) => `<div class='pn-gut${guiaAbierta === i ? ' on' : ''}' data-gt='${i}'>
+        <button class='pn-guh' aria-expanded='${guiaAbierta === i}'><span class='pn-gun'>${String(i + 1).padStart(2, '0')}</span><span><b>${esc(g.t)}</b><small>${esc(g.s)}</small></span><i>›</i></button>
+        ${guiaAbierta === i ? `<div class='pn-gub'><ul>${g.si.map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class='pn-guno'><b>Evita</b>${esc(g.no)}</p><p class='pn-gure'><b>Reto</b>${esc(g.reto)}</p></div>` : ''}</div>`).join('')}</div>
+      <div class='pn-guc'><p>“Confíen en sus capacidades: son buenos instructores y tienen mucho por enseñar e inspirar a las nuevas generaciones.”</p><small>Isidora y Diego</small></div>`;
+    const abrir = i => { guiaAbierta = guiaAbierta === i ? -1 : i; pintarGuia(pane); const el = pane.querySelector(`[data-gt='${i}']`); if(el && guiaAbierta === i) el.scrollIntoView({block:'nearest', behavior:'smooth'}); };
+    pane.querySelectorAll('[data-gt] .pn-guh').forEach(b => b.onclick = () => abrir(+b.parentNode.dataset.gt));
+    const ir = pane.querySelector('[data-gir]'); if(ir) ir.onclick = () => { guiaAbierta = -1; abrir(+ir.dataset.gir); };
   }
   let fSub = (() => { try{ return sessionStorage.getItem(KEY + '-fsub'); }catch(_){ return null; } })() || 'finanzas';
   function mostrarAcad(){
     if(acad === 'finanzas' && !app.querySelector('.pn-finz')) acad = 'anual';
-    const ver = acad === 'verano', fin = acad === 'finanzas', adu = acad === 'adultos';
+    const ver = acad === 'verano', fin = acad === 'finanzas', adu = acad === 'adultos', gui = acad === 'guia';
     app.querySelectorAll('[data-acad]').forEach(b => b.classList.toggle('on', b.dataset.acad === acad));
-    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano,.pn-finz,.pn-adultos')) el.style.display = (ver || fin || adu) ? 'none' : ''; });
+    [...app.children].forEach(el => { if(!el.matches('.pn-head,.pn-sw,.pn-verano,.pn-finz,.pn-adultos,.pn-guia')) el.style.display = (ver || fin || adu || gui) ? 'none' : ''; });
     const pa = app.querySelector('.pn-adultos'); if(pa) pa.hidden = !adu;
+    const pg = app.querySelector('.pn-guia'); if(pg){ pg.hidden = !gui; if(gui) pintarGuia(pg); }
     const pv = app.querySelector('.pn-verano'); pv.hidden = !ver;
     const pf = app.querySelector('.pn-finz'); if(pf) pf.hidden = !fin;
-    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : fin ? 'Finanzas Storm' : adu ? 'Academia de Adultos' : h1.dataset.t; }
+    const h1 = app.querySelector('.pn-head h1'); if(h1){ h1.dataset.t = h1.dataset.t || h1.textContent; h1.textContent = ver ? 'Verano 2027' : fin ? 'Finanzas Storm' : adu ? 'Academia de Adultos' : gui ? 'Guía del instructor' : h1.dataset.t; }
     if(ver) loadVerano();
     if(adu) loadAdultos();
     if(fin) mostrarFsub();
