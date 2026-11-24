@@ -604,7 +604,7 @@
       ...(c.sinTuu || []).map(v => fila(v.monto, corta(v.fecha) + ' · ' + v.hora + ' · ' + v.nombre, 'Clase con pago POS que no aparece en la máquina. ¿Se cobró? Si pagó de otra forma, cámbiala en la clase.', agenda.replace('Anotar clase', 'Ver clase'))),
       // Isidora (23-11): desde el 24-11 todo se anota en el Panel al cobrar. Solo se compara el total con tarjeta de cada día y el cierre de caja.
       ...((d.control && d.control.malos) || []).map(x => { const dt = x.tuu - x.panel, ci = x.cierre, de = ci ? ci.contado - ci.efectivo : 0;
-        const que = [dt > 0 ? `Se pasaron ${clp(dt)} por la máquina que no están anotados en el Panel.` : dt < 0 ? `Hay ${clp(-dt)} anotados con tarjeta que no aparecen en la máquina. ¿Se cobraron?` : '', de ? (de > 0 ? `En la caja sobraron ${clp(de)} en efectivo.` : `En la caja faltaron ${clp(-de)} en efectivo.`) : '', ci && ci.nota ? 'Nota: ' + esc(ci.nota) : ''].filter(Boolean).join(' ');
+        const que = [dt > 0 ? `Se pasaron ${clp(dt)} por la máquina que no están anotados en el Panel.` : dt < 0 ? `Hay ${clp(-dt)} anotados con POS que no aparecen en la máquina. ¿Se cobraron?` : '', de ? (de > 0 ? `En la caja sobraron ${clp(de)} en efectivo.` : `En la caja faltaron ${clp(-de)} en efectivo.`) : '', ci && ci.nota ? 'Nota: ' + esc(ci.nota) : ''].filter(Boolean).join(' ');
         return fila(Math.abs(dt) + Math.abs(de), corta(x.fecha) + (ci ? ' · cerró ' + ci.por : ' · sin cierre'), que, ''); })
     ];
     return `<div class='pn-card pn-tuuc'><h3>Ventas de la máquina Tuu<span class='pn-count ${filas.length ? 'pn-tuuwarn' : 'pn-tuuok'}'>${filas.length ? filas.length + ' por resolver' : '✓ Todo cuadra'}</span></h3>${filas.join('')}</div>`;

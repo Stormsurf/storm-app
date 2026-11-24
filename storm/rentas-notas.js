@@ -12,6 +12,11 @@
     tabla: sv("<path d='M12 2.5c3.5 3 4.5 9 3 14.5-.6 2.2-1.6 3.8-3 4.5-1.4-.7-2.4-2.3-3-4.5-1.5-5.5-.5-11.5 3-14.5Z'/><path d='M12 7v10'/>"),
     traje: sv("<path d='M9 3h6l1 3 3 2-1 5-2-1v9H8v-9l-2 1-1-5 3-2 1-3Z'/><path d='M12 6v6'/>"),
     ok: sv("<path d='m5 12.5 4.5 4.5L19 7.5'/>"),
+    tarjeta: sv("<rect x='3' y='5.5' width='18' height='13' rx='2.5'/><path d='M3 10h18M7 15h3'/>"),
+    billete: sv("<rect x='2.5' y='6' width='19' height='12' rx='2'/><circle cx='12' cy='12' r='2.6'/><path d='M6 9.5v5M18 9.5v5'/>"),
+    banco: sv("<path d='M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18'/>"),
+    carro: sv("<path d='M3 4h2l2.4 11h10.2L20 7.5H6.3'/><circle cx='9.5' cy='19' r='1.4'/><circle cx='17' cy='19' r='1.4'/>"),
+    reloj: sv("<circle cx='12' cy='12' r='8.5'/><path d='M12 7.5V12l3 2'/>"),
     link: sv("<path d='M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1'/><path d='M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'/>"),
     wa: `<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.6 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5-4.5-.2-.2-1.2-1.6-1.2-3s.7-2.2 1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.3.5-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2.1 1.1 1 2.1 1.3 2.4 1.4.3.2.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.4Z'/></svg>`,
     alerta: sv("<path d='M12 3 2.5 20h19L12 3Z'/><path d='M12 10v4.5M12 17.5v.01'/>"),
@@ -93,6 +98,39 @@
   /* tienda y cierre (23-11) */
   .rn-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .rn-go.sec{background:#fff;color:#0f6e74;border:2px solid #0f6e74}
+  .rn-f>div.rn-cart{display:flex;flex-direction:column;padding:0;height:92vh;overflow:hidden}
+  .rn-ch2{position:relative;padding:18px 16px 10px;border-bottom:1px solid var(--line)}.rn-ch2 h2{margin:0 44px 10px 0;font-size:2.2rem}.rn-ch2 .rn-in{margin:0}
+  .rn-back{position:absolute;left:10px;top:12px;width:38px;height:38px;border-radius:50%;border:0;background:#f3f1ec;font-size:2.2rem;line-height:1;cursor:pointer;color:var(--ink)}
+  .rn-back~h2{margin-left:44px}.rn-res{margin:0;font-size:1.3rem;color:#6d6c68}.rn-back~.rn-res{margin-left:44px}
+  .rn-cb{flex:1;overflow:auto;padding:6px 16px 16px;-webkit-overflow-scrolling:touch}
+  .rn-cf{flex:none;display:flex;align-items:center;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff}.rn-cf:empty{display:none}
+  .rn-cf .rn-go{width:auto;flex:1;max-width:220px;margin-left:auto}.rn-cf .rn-go[disabled]{opacity:.35}
+  .rn-tt{display:flex;flex-direction:column}.rn-tt small{font-size:1.2rem;color:#8a8986}.rn-tt b{font-size:2.4rem;line-height:1.1}
+  .rn-cl{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .rn-ci2{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}.rn-ci2:first-child{border-top:0}
+  .rn-ci2 span{flex:1;min-width:0;font-weight:600;font-size:1.4rem}.rn-ci2 small{display:block;font-weight:400;color:#6d6c68;font-size:1.15rem}
+  .rn-ci2 button{flex:none;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;font:inherit;font-size:1.6rem;line-height:1;color:#0f6e74;cursor:pointer;display:grid;place-items:center;padding:0}
+  .rn-ci2 b{min-width:16px;text-align:center;font-size:1.45rem}.rn-ci2 em{font-style:normal;font-weight:700;font-size:1.4rem;min-width:74px;text-align:right}
+  .rn-sp{display:grid;gap:6px}
+  .rn-sp button{display:flex;align-items:center;gap:10px;width:100%;border:1.5px dashed rgba(15,110,116,.4);background:#f6fbfb;border-radius:14px;padding:10px 12px;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+  .rn-sp span{flex:1;min-width:0;font-weight:600;font-size:1.35rem}.rn-sp small{display:block;font-weight:400;color:#6d6c68;font-size:1.15rem}.rn-sp b{font-size:1.35rem}
+  .rn-sp i{flex:none;width:28px;height:28px;border-radius:50%;background:#0f6e74;color:#fff;font-style:normal;display:grid;place-items:center;font-size:1.7rem}
+  .rn-pg2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .rn-pg2 button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:64px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+  .rn-pg2 button span{font-weight:600;font-size:1.35rem;line-height:1.25;padding-right:22px}.rn-pg2 button small{font-size:1.2rem;color:#6d6c68}
+  .rn-pg2 button.on{border-color:#0f6e74;background:#E3F1F1}
+  .rn-pg2 i{position:absolute;top:8px;right:8px;min-width:22px;height:22px;border-radius:999px;background:#0f6e74;color:#fff;font-style:normal;font-weight:700;font-size:1.2rem;display:grid;place-items:center;padding:0 5px}
+  .rn-otro{margin-top:10px}
+  .rn-pm{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .rn-pm button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:96px;border:1.5px solid var(--line);background:#fff;border-radius:18px;font:inherit;font-weight:700;font-size:1.45rem;color:var(--ink);cursor:pointer}
+  .rn-pm button svg{width:28px;height:28px;color:#0f6e74}.rn-pm button:active{background:#E3F1F1;border-color:#0f6e74}
+  .rn-pm.chico button{flex-direction:row;justify-content:flex-start;height:56px;padding:0 14px;gap:10px;text-align:left}.rn-pm.chico button svg{width:22px;height:22px;flex:none}
+  .rn-pm.chico button.ancho{grid-column:1/-1}.rn-pm button small{display:block;font-weight:500;font-size:1.15rem;color:#8a8986}
+  .rn-pm button.on{background:#0f6e74;border-color:#0f6e74;color:#fff}.rn-pm button.on svg,.rn-pm button.on small{color:#fff}
+  .rn-ch2.solo h2{margin-bottom:0}
+  .rn-ok2 .rn-cb{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.rn-ok2 h2{margin:12px 0 4px;font-size:2.2rem}.rn-ok2 p{margin:0;font-size:1.5rem;color:#55544f}
+  .rn-ok2 .rn-big{width:72px;height:72px;border-radius:50%;background:#2f9a6a;color:#fff;display:grid;place-items:center;font-size:3.4rem;font-weight:700;margin:0}
+  .rn-ok2 .rn-cf .rn-go{max-width:none}
   .rn-go.ter{background:none;color:#0f6e74;border:1.5px dashed rgba(15,110,116,.45);margin-top:8px;padding:11px;font-size:1.4rem}
   .rn-ops{display:grid;gap:8px}
   .rn-op{display:flex;align-items:center;gap:10px;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:16px;padding:12px 14px;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
@@ -150,9 +188,9 @@
   }
   const pintar = () => { pintarRentas(); pintarNotas(); };
   const clp = n => (n < 0 ? '−' : '') + '$' + Math.abs(Math.round(n || 0)).toLocaleString('es-CL');
-  const pagoT = p => p === 'POS' ? 'Tarjeta' : p === 'Link de pago' ? 'Esperando link' : p;
+  const pagoT = p => p === 'Link de pago' ? 'Esperando link' : p;
   const debe = x => x.pago === 'Falta pagar' || x.pago === 'Link de pago';
-  const PAGOS = [['POS', 'Tarjeta'], ['Efectivo', 'Efectivo'], ['Transferencia', 'Transferencia']];
+  const PAGOS = [['POS', 'POS'], ['Efectivo', 'Efectivo'], ['Transferencia', 'Transferencia']];
 
   // ---------- Rentas ----------
   const hoy = () => (R && R.hoy) || (N && N.hoy) || new Date().toISOString().slice(0, 10);
@@ -203,8 +241,7 @@
     const sum = (l, k, t) => l.filter(x => !t || x.tiempo === t).reduce((s, x) => s + (x[k] || 0), 0);
     const nT = af.reduce((s, x) => s + x.tablas + (x.fibras || 0), 0), nJ = af.reduce((s, x) => s + x.trajes, 0);
     const vHoy = (R.ventas || []).filter(v => v.fecha === hoy());
-    let h = `<div class='rn'><div class='rn-2'><button class='rn-go' data-rnnueva>${sv("<path d='M12 5v14M5 12h14'/>")}Nueva renta</button><button class='rn-go sec' data-tienda>${sv("<path d='M12 5v14M5 12h14'/>")}Venta tienda</button></div>
-      <button class='rn-go ter' data-nlink>${ICO.link}Link de pago</button>
+    let h = `<div class='rn'><div class='rn-2'><button class='rn-go' data-rnnueva>${sv("<path d='M12 5v14M5 12h14'/>")}Nueva renta</button><button class='rn-go sec' data-tienda>${ICO.carro}Cobrar</button></div>
       ${linksH()}
       <p class='rn-h'>Afuera ahora ${af.length ? `<em>${[nT ? nT + (nT === 1 ? ' tabla' : ' tablas') : '', nJ ? nJ + (nJ === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ')}</em>` : ''}</p>
       ${af.length ? af.map(tarjeta).join('') : `<div class='rn-vacio'>No hay tablas ni trajes afuera. 🌊</div>`}`;
@@ -222,7 +259,6 @@
     elR.innerHTML = h;
     elR.querySelector('[data-rnnueva]').onclick = () => abrirNueva();
     elR.querySelector('[data-tienda]').onclick = () => abrirTienda();
-    elR.querySelector('[data-nlink]').onclick = () => abrirTienda({ link: true });
     elR.querySelectorAll('[data-lk]').forEach(b => b.onclick = () => accionLink(b.dataset.lk, b.dataset.r, b));
     elR.querySelector('[data-cierre]').onclick = () => abrirCierre();
     const vb = elR.querySelector('[data-vborrar]'); if (vb) vb.onclick = () => borrarVenta();
@@ -235,115 +271,178 @@
   }
   function elegirPago(id) {
     const w = document.createElement('div'); w.className = 'rn-f';
-    w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>¿Cómo pagó?</h2><div class='rn-ch dos' style='margin-top:14px'>${PAGOS.map(([p, t]) => `<button data-p='${p}'>${t}</button>`).join('')}</div><button class='rn-go sec' data-link style='margin-top:14px'>Mandar link de pago</button></div>`;
+    w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>¿Cómo pagó?</h2><div class='rn-pm chico' style='margin-top:14px'>${[['POS', ICO.tarjeta], ['Efectivo', ICO.billete], ['Transferencia', ICO.banco], ['Link de pago', ICO.link]].map(([p, ic]) => `<button data-${p === 'Link de pago' ? 'link' : 'p'}='${p}'>${ic}<span>${p}</span></button>`).join('')}</div></div>`;
     document.body.appendChild(w);
-    w.onclick = async e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); if (e.target.closest('[data-link]')) { w.remove(); return abrirTienda({ link: true, sel: [id] }); } const b = e.target.closest('[data-p]'); if (b && await hacer('rentas', { op: 'pago', id, pago: b.dataset.p }, b)) w.remove(); };
+    w.onclick = async e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); if (e.target.closest('[data-link]')) { w.remove(); return abrirTienda({ sel: [id] }); } const b = e.target.closest('[data-p]'); if (b && await hacer('rentas', { op: 'pago', id, pago: b.dataset.p }, b)) w.remove(); };
   }
+  // Nueva renta (Isidora 24-11): misma forma que Cobrar. El monto sale solo según lo elegido, los botones de pago son parejos
+  // y Guardar está siempre abajo. Si se cierra con algo elegido, pregunta antes de descartar; al guardar, confirma.
   function abrirNueva() {
-    nueva = { tablas: 0, fibras: 0, trajes: 0, tiempo: '', pago: '', nombre: '', telefono: '', nota: '', monto: '', montoAMano: false };
+    nueva = { tablas: 0, fibras: 0, trajes: 0, tiempo: '', pago: '', nombre: '', telefono: '', nota: '', monto: '', montoAMano: false, editar: false };
     const PR = (R && R.precios) || { tablas: { medio: 10000, dia: 20000 }, fibras: { medio: 20000, dia: 40000 }, trajes: { medio: 10000, dia: 20000 } };
     const precio = () => ['tablas', 'fibras', 'trajes'].reduce((t, k) => t + nueva[k] * (PR[k][nueva.tiempo] || 0), 0);
+    const hay = () => nueva.tablas + nueva.fibras + nueva.trajes > 0;
+    const monto = () => nueva.montoAMano ? Number(nueva.monto) || 0 : (nueva.tiempo && hay() ? precio() : 0);
+    const que = () => [nueva.tablas ? nueva.tablas + ' soft' : '', nueva.fibras ? nueva.fibras + ' fibra' : '', nueva.trajes ? nueva.trajes + (nueva.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ');
     const w = document.createElement('div'); w.className = 'rn-f'; document.body.appendChild(w);
-    const leer = () => { const mm = w.querySelector('#rn-monto'); if (mm && mm.value.replace(/\D/g, '') !== String(nueva.mostrado)) { nueva.monto = mm.value.replace(/\D/g, ''); nueva.montoAMano = true; } nueva.nombre = w.querySelector('#rn-nom').value; nueva.telefono = w.querySelector('#rn-tel').value; nueva.nota = w.querySelector('#rn-nota').value; };
-    const p = () => {
-      w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>Nueva renta</h2>
-        <p class='rn-q'>¿Qué se lleva?</p>
+    let listo = false;
+    const cerrar = () => { if (!listo && (hay() || nueva.nombre.trim()) && !confirm('¿Descartar esta renta? No se ha guardado.')) return; w.remove(); };
+    const leer = () => { const q = id => w.querySelector(id); if (q('#rn-nom')) { nueva.nombre = q('#rn-nom').value; nueva.telefono = q('#rn-tel').value; nueva.nota = q('#rn-nota').value; } if (q('#rn-monto')) { nueva.monto = q('#rn-monto').value.replace(/\D/g, ''); nueva.montoAMano = true; } };
+    const MED = [['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco], ['Link de pago', 'Link de pago', ICO.link], ['Falta pagar', 'Falta pagar', ICO.reloj, 'Paga al volver']];
+    w.innerHTML = `<div class='rn-cart'><div class='rn-ch2 solo'><h2>Nueva renta</h2><button class='rn-x' aria-label='Cerrar'>✕</button></div><div class='rn-cb'></div><div class='rn-cf'></div></div>`;
+    const cb = w.querySelector('.rn-cb'), cf = w.querySelector('.rn-cf');
+    function cuerpo() {
+      const y = cb.scrollTop;
+      cb.innerHTML = `<p class='rn-q' style='margin-top:4px'>¿Qué se lleva?</p>
         <div class='rn-st'>${[['tablas', 'Tabla soft', ICO.tabla], ['fibras', 'Tabla de fibra', ICO.tabla], ['trajes', 'Traje', ICO.traje]].map(([k, t, ic]) => `<div class='${nueva[k] ? 'on' : ''}'><i>${ic}</i><span>${t}</span><button data-m='${k}' aria-label='Menos'>−</button><b>${nueva[k]}</b><button data-p='${k}' aria-label='Más'>+</button></div>`).join('')}</div>
         <p class='rn-q'>¿Cuánto tiempo?</p>
         <div class='rn-ch dos'>${[['medio', 'Medio día'], ['dia', 'Día completo']].map(([k, t]) => `<button class='${nueva.tiempo === k ? 'on' : ''}' data-t='${k}'>${t}</button>`).join('')}</div>
-        <p class='rn-q'>¿Cómo pagó?</p>
-        <div class='rn-ch'>${PAGOS.concat([['Link de pago', 'Link de pago'], ['Falta pagar', 'Falta pagar']]).map(([k, t]) => `<button class='${nueva.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
-        <p class='rn-q'>${nueva.pago === 'Link de pago' ? '¿Cuánto se cobra?' : '¿Cuánto pagó?'}</p>
-        <input id='rn-monto' class='rn-in' inputmode='numeric' placeholder='Monto' value='${nueva.mostrado = nueva.montoAMano ? nueva.monto : (nueva.tiempo && (nueva.tablas + nueva.fibras + nueva.trajes) ? precio() : '')}'>
+        <p class='rn-q'>¿Cómo paga?</p>
+        <div class='rn-pm chico'>${MED.map(([k, t, ic, sub]) => `<button class='${nueva.pago === k ? 'on' : ''}${sub ? ' ancho' : ''}' data-pg='${k}'>${ic}<span>${t}${sub ? `<small>${sub}</small>` : ''}</span></button>`).join('')}</div>
         <p class='rn-q'>¿Quién arrienda?</p>
         <input id='rn-nom' class='rn-in' placeholder='Nombre' autocomplete='off' value='${esc(nueva.nombre)}'>
-        <input id='rn-tel' class='rn-in' placeholder='Teléfono (para avisarle si no vuelve)' inputmode='tel' autocomplete='off' value='${esc(nueva.telefono)}'>
+        <input id='rn-tel' class='rn-in' placeholder='WhatsApp (para avisarle si no vuelve)' inputmode='tel' autocomplete='off' value='${esc(nueva.telefono)}'>
         <input id='rn-nota' class='rn-in' placeholder='Nota (ej: tabla azul 8’0, traje talla M, dejó carnet)' autocomplete='off' value='${esc(nueva.nota)}'>
-        <button class='rn-go' data-guardar style='margin-top:18px'>Guardar renta</button><p class='rn-err'></p></div>`;
-    };
-    p();
+        ${nueva.editar ? `<p class='rn-q'>Monto</p><input id='rn-monto' class='rn-in' inputmode='numeric' placeholder='Monto' value='${monto() || ''}'>` : `<button class='rn-lk' data-editar style='display:block;margin:14px auto 0'>Cambiar el monto (descuento)</button>`}
+        <p class='rn-err'></p>`;
+      cb.scrollTop = y;
+      const mm = cb.querySelector('#rn-monto'); if (mm) mm.oninput = () => { nueva.monto = mm.value.replace(/\D/g, ''); nueva.montoAMano = true; pie(); };
+      pie();
+    }
+    function pie() {
+      const ok = hay() && nueva.tiempo && nueva.pago, m = monto();
+      const sub = !hay() ? 'Toca + en lo que se lleva' : !nueva.tiempo ? 'Elige medio día o día completo' : !nueva.pago ? 'Elige cómo paga' : nueva.pago === 'Falta pagar' ? 'Paga al volver · ' + que() : que();
+      cf.innerHTML = `<div class='rn-tt'><small>${esc(sub)}</small><b>${clp(m)}</b></div><button class='rn-go' data-guardar ${ok ? '' : 'disabled'}>${nueva.pago === 'Link de pago' ? 'Crear link' : 'Guardar'}</button>`;
+    }
+    function hecho() {
+      listo = true;
+      const tag = nueva.pago === 'Falta pagar' ? 'Falta pagar · se cobra al volver' : nueva.pago;
+      w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Renta guardada</h2><p>${clp(monto())} · ${esc(tag)}</p><p class='rn-res' style='text-align:center'>${esc(nueva.nombre.trim())} · ${esc(que())} · ${tiempoT(nueva.tiempo)}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
+      setTimeout(() => { if (w.isConnected) w.remove(); }, 2500);
+    }
+    cuerpo();
     w.onclick = async e => {
-      if (e.target === w || e.target.closest('.rn-x')) return w.remove();
-      const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.m || b.dataset.p) { leer(); const k = b.dataset.m || b.dataset.p; nueva[k] = Math.max(0, Math.min(20, nueva[k] + (b.dataset.m ? -1 : 1))); return p(); }
-      if (b.dataset.t) { leer(); nueva.tiempo = b.dataset.t; return p(); }
-      if (b.dataset.pg) { leer(); nueva.pago = b.dataset.pg; return p(); }
+      if (e.target === w || e.target.closest('.rn-x')) return cerrar();
+      const b = e.target.closest('button'); if (!b || b.disabled) return;
+      if (b.dataset.fin !== undefined) return w.remove();
+      if (b.dataset.m || b.dataset.p) { leer(); const k = b.dataset.m || b.dataset.p; nueva[k] = Math.max(0, Math.min(20, nueva[k] + (b.dataset.m ? -1 : 1))); if (!nueva.editar) nueva.montoAMano = false; return cuerpo(); }
+      if (b.dataset.t) { leer(); nueva.tiempo = b.dataset.t; if (!nueva.editar) nueva.montoAMano = false; return cuerpo(); }
+      if (b.dataset.pg) { leer(); nueva.pago = b.dataset.pg; return cuerpo(); }
+      if (b.dataset.editar !== undefined) { leer(); nueva.monto = String(monto() || ''); nueva.montoAMano = true; nueva.editar = true; cuerpo(); const mm = w.querySelector('#rn-monto'); if (mm) { mm.focus(); mm.select(); } return; }
       if (b.dataset.guardar !== undefined) {
         leer(); const er = w.querySelector('.rn-err');
-        if (!nueva.tablas && !nueva.fibras && !nueva.trajes) return er.textContent = 'Toca + en tabla soft, tabla de fibra o traje.';
-        if (!nueva.tiempo) return er.textContent = 'Elige medio día o día completo.';
-        if (!nueva.pago) return er.textContent = 'Elige cómo pagó.';
-        const mt = w.querySelector('#rn-monto').value.replace(/\D/g, ''); if (!mt && nueva.pago !== 'Falta pagar') return er.textContent = 'Escribe cuánto pagó.';
-        nueva.monto = mt;
-        if (nueva.nombre.trim().length < 2) { er.textContent = 'Escribe el nombre.'; return w.querySelector('#rn-nom').focus(); }
-        b.disabled = true; b.textContent = 'Guardando…';
-        try { R = await post(Object.assign({ accion: 'rentas', op: 'nueva' }, nueva)); guardarCache(); w.remove(); pintar(); alCambiar(); if (nueva.pago === 'Link de pago' && R.nuevo) abrirTienda({ link: true, sel: [R.nuevo] }); }
-        catch (x) { b.disabled = false; b.textContent = 'Guardar renta'; er.textContent = x.message; }
+        if (!monto() && nueva.pago !== 'Falta pagar') { er.textContent = 'Escribe el monto.'; return er.scrollIntoView({ block: 'center' }); }
+        if (nueva.nombre.trim().length < 2) { er.textContent = 'Escribe el nombre de quien arrienda.'; const n = w.querySelector('#rn-nom'); n.scrollIntoView({ block: 'center' }); return n.focus(); }
+        er.textContent = ''; b.disabled = true; b.textContent = nueva.pago === 'Link de pago' ? 'Creando link…' : 'Guardando…';
+        try {
+          R = await post(Object.assign({ accion: 'rentas', op: 'nueva' }, nueva, { monto: String(monto()) })); guardarCache(); pintar(); alCambiar();
+          if (nueva.pago !== 'Link de pago' || !R.nuevo) return hecho();
+          listo = true;
+          try { const d = await post({ accion: 'link', op: 'crear', rentas: [R.nuevo], nombre: nueva.nombre, telefono: nueva.telefono }); w.remove(); linkListo(d.nuevo); cargar(); }
+          catch (x) { w.remove(); alert('La renta quedó guardada, pero no se pudo crear el link: ' + x.message + '\nTócala y usa Pagó › Mandar link de pago.'); }
+        } catch (x) { b.disabled = false; pie(); er.textContent = x.message; er.scrollIntoView({ block: 'center' }); }
       }
     };
   }
 
   // ---------- Tienda (Isidora 23-11): se anota qué se vendió al cobrar ----------
   function hoja(html) { const w = document.createElement('div'); w.className = 'rn-f'; w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button>${html}</div>`; document.body.appendChild(w); return w; }
-  // Venta tienda y Link de pago (Isidora 24-11): la misma hoja. Con "Link de pago" se arma un solo carro con productos,
-  // rentas y clases sin pagar, y se manda un link para pagar todo junto con tarjeta.
+  // Cobrar (Isidora 24-11): un solo carro con productos de la tienda, rentas y clases sin pagar.
+  // Paso 1: armar el carro (buscador, productos con un toque, total siempre visible abajo). Paso 2: cómo paga (POS, efectivo,
+  // transferencia o link de pago). Al guardar se confirma; si se cierra con cosas en el carro, pregunta antes de descartar.
   function abrirTienda(opt) {
     opt = opt || {};
-    const v = { cant: {}, pago: opt.link ? 'LINK' : '', otro: false, dano: false, sel: new Set(opt.sel || []), ops: null, nombre: '', telefono: '' };
+    const v = { cant: {}, sel: new Set(opt.sel || []), ops: null, paso: 'carro', otro: false, dano: false, q: '', od: '', om: '', ln: '', lt: '' };
     const w = document.createElement('div'); w.className = 'rn-f'; document.body.appendChild(w);
-    const guarda = () => { ['#rn-od', '#rn-om', '#rn-ln', '#rn-lt'].forEach(k => { const e = w.querySelector(k); if (e) v[k] = e.value; }); };
     const num = t => Number(String(t || '').replace(/\D/g, '')) || 0;
-    const esLink = () => v.pago === 'LINK';
-    const extra = () => esLink() && v.ops ? v.ops.filter(o => v.sel.has(o.id)).reduce((t, o) => t + o.monto, 0) : 0;
-    const total = () => (R.productos || []).reduce((t, p) => t + p.precio * (v.cant[p.id] || 0), 0) + (v.otro ? num(v['#rn-om']) : 0) + extra();
     const sinT = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    const lista = () => { const q = sinT(v.q).trim(), l = (R.productos || []).filter(x => !q || v.cant[x.id] || sinT(x.nombre).includes(q));
-      return l.length ? l.map(x => `<div class='${v.cant[x.id] ? 'on' : ''}'><span>${esc(x.nombre)}<small>${clp(x.precio)}</small></span><button data-m='${esc(x.id)}' aria-label='Menos'>−</button><b>${v.cant[x.id] || 0}</b><button data-p='${esc(x.id)}' aria-label='Más'>+</button></div>`).join('') : `<div class='rn-vacio' style='border:0'>No hay productos con ese nombre. Usa Otro.</div>`; };
-    const cargarOps = () => { if (v.ops || v.cargando) return; v.cargando = true; post({ accion: 'link', op: 'opciones' }).then(d => { guarda(); v.ops = d.opciones || []; const o = v.ops.find(x => v.sel.has(x.id)); if (o) { v['#rn-ln'] = v['#rn-ln'] || o.nombre; v['#rn-lt'] = v['#rn-lt'] || o.telefono; } p(); }).catch(x => { v.ops = []; v.err = x.message; p(); }); };
-    const sumar = () => !v.ops ? `<div class='pn-skel'></div>` : !v.ops.length ? `<div class='rn-vacio' style='margin:0'>No hay rentas ni clases sin pagar.</div>`
-      : v.ops.map(o => `<button class='rn-op${v.sel.has(o.id) ? ' on' : ''}' data-op='${esc(o.id)}'><i>${v.sel.has(o.id) ? '✓' : ''}</i><span>${esc(o.detalle)}<small>${esc(o.sub)}</small></span><b>${clp(o.monto)}</b></button>`).join('');
-    const p = () => {
-      w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>${esLink() ? 'Link de pago' : 'Venta tienda'}</h2>
-        ${esLink() ? `<p class='rn-q'>¿Qué se cobra?</p><div class='rn-ops'>${sumar()}</div><p class='rn-q'>¿Algo de la tienda?</p>` : `<p class='rn-q'>¿Qué se vendió?</p>`}
-        ${(R.productos || []).length > 8 ? `<input id='rn-bq' class='rn-in' type='search' placeholder='Buscar producto' autocomplete='off' value='${esc(v.q || '')}' style='margin:0 0 10px'>` : ''}
-        <div class='rn-pr'>${lista()}</div>
-        <div class='rn-ch' style='margin-top:10px'><button class='${v.otro ? 'on' : ''}' data-otro>Otro</button></div>
-        ${v.otro ? `<input id='rn-od' class='rn-in' placeholder='${v.dano ? '¿Qué se rompió? (ej: tabla 8’0 quebrada)' : '¿Qué se vendió?'}' value='${esc(v['#rn-od'] || '')}'><input id='rn-om' class='rn-in' inputmode='numeric' placeholder='Monto' value='${esc(v['#rn-om'] || '')}'>
-          <button class='rn-lk' data-dano>${v.dano ? '☑' : '☐'} Es un cobro por daño de algo arrendado</button>` : ''}
-        <div class='rn-tot'><span>Total</span><b>${clp(total())}</b></div>
-        <p class='rn-q'>¿Cómo paga?</p>
-        <div class='rn-ch dos'>${PAGOS.concat([['LINK', 'Link de pago']]).map(([k, t]) => `<button class='${v.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
-        ${esLink() ? `<p class='rn-q'>¿A quién se lo mandas?</p><input id='rn-ln' class='rn-in' placeholder='Nombre (opcional)' autocomplete='off' value='${esc(v['#rn-ln'] || '')}'><input id='rn-lt' class='rn-in' inputmode='tel' placeholder='WhatsApp (opcional)' autocomplete='off' value='${esc(v['#rn-lt'] || '')}'>` : ''}
-        <button class='rn-go' data-guardar style='margin-top:18px'>${esLink() ? 'Crear link de pago' : 'Guardar venta'}</button><p class='rn-err'>${esc(v.err || '')}</p>
-        ${R.admin && !esLink() ? `<button class='rn-lk' data-editar style='display:block;margin:8px auto 0'>Editar productos y precios</button>` : ''}</div>`;
-      const bq = w.querySelector('#rn-bq'); if (bq) bq.oninput = () => { v.q = bq.value; w.querySelector('.rn-pr').innerHTML = lista(); };
-      w.querySelectorAll('#rn-om').forEach(e => e.oninput = () => { guarda(); w.querySelector('.rn-tot b').textContent = clp(total()); });
-      if (esLink()) cargarOps();
-    };
-    p();
+    const prods = () => R.productos || [];
+    const enCarro = () => prods().filter(x => v.cant[x.id]);
+    const opsSel = () => (v.ops || []).filter(o => v.sel.has(o.id));
+    const total = () => enCarro().reduce((t, x) => t + x.precio * v.cant[x.id], 0) + (v.otro ? num(v.om) : 0) + opsSel().reduce((t, o) => t + o.monto, 0);
+    const lleno = () => total() > 0;
+    const cerrar = () => { if (v.paso !== 'listo' && lleno() && !confirm('¿Descartar este cobro? No se ha guardado.')) return; w.remove(); };
+    post({ accion: 'link', op: 'opciones' }).then(d => { v.ops = d.opciones || []; const o = opsSel()[0]; if (o) { v.ln = v.ln || o.nombre; v.lt = v.lt || o.telefono; } if (v.paso === 'carro') cuerpo(); pie(); }).catch(() => { v.ops = []; if (v.paso === 'carro') cuerpo(); });
+    // --- paso 1: el carro ---
+    const fila = (k, nombre, sub, monto, n) => `<div class='rn-ci2'><span>${esc(nombre)}${sub ? `<small>${esc(sub)}</small>` : ''}</span>${n != null ? `<button data-m='${k}' aria-label='Uno menos'>−</button><b>${n}</b><button data-p='${k}' aria-label='Uno más'>+</button>` : `<button data-qs='${k}' aria-label='Quitar'>✕</button>`}<em>${clp(monto)}</em></div>`;
+    function cuerpo() {
+      const b = w.querySelector('.rn-cb'); if (!b) return;
+      const q = sinT(v.q).trim(), lista = prods().filter(x => !q || sinT(x.nombre).includes(q));
+      const libres = (v.ops || []).filter(o => !v.sel.has(o.id) && (!q || sinT(o.detalle + ' ' + o.sub).includes(q)));
+      const items = enCarro().map(x => fila(x.id, x.nombre, '', x.precio * v.cant[x.id], v.cant[x.id])).join('') + opsSel().map(o => fila(o.id, o.detalle, o.sub, o.monto)).join('')
+        + (v.otro && num(v.om) ? fila('otro', v.od || (v.dano ? 'Cobro por daño' : 'Otro'), v.dano ? 'Cobro por daño' : '', num(v.om)) : '');
+      b.innerHTML = `${items ? `<p class='rn-q' style='margin-top:4px'>En el cobro</p><div class='rn-cl'>${items}</div>` : ''}
+        ${libres.length ? `<p class='rn-q'>Sin pagar</p><div class='rn-sp'>${libres.map(o => `<button data-op='${esc(o.id)}'><span>${esc(o.detalle)}<small>${esc(o.sub)}</small></span><b>${clp(o.monto)}</b><i>+</i></button>`).join('')}</div>` : !v.ops ? `<div class='pn-skel' style='height:52px;margin-top:10px'></div>` : ''}
+        <p class='rn-q'>Tienda</p>
+        <div class='rn-pg2'>${lista.map(x => `<button data-p='${esc(x.id)}' class='${v.cant[x.id] ? 'on' : ''}'><span>${esc(x.nombre)}</span><small>${clp(x.precio)}</small>${v.cant[x.id] ? `<i>${v.cant[x.id]}</i>` : ''}</button>`).join('')}
+          ${!q || 'otro'.includes(q) ? `<button data-otro class='${v.otro ? 'on' : ''}'><span>Otro monto</span><small>Escribe el monto</small></button>` : ''}</div>
+        ${!lista.length && !libres.length ? `<div class='rn-vacio'>No hay nada con “${esc(v.q)}”. Usa Otro monto.</div>` : ''}
+        ${v.otro ? `<div class='rn-otro'><input id='rn-od' class='rn-in' placeholder='${v.dano ? '¿Qué se rompió?' : '¿Qué es? (ej: parafina)'}' value='${esc(v.od)}'><input id='rn-om' class='rn-in' inputmode='numeric' placeholder='Monto' value='${esc(v.om)}'>
+          <button class='rn-lk' data-dano>${v.dano ? '☑' : '☐'} Es un cobro por daño de algo arrendado</button></div>` : ''}
+        ${R.admin ? `<button class='rn-lk' data-editar style='display:block;margin:14px auto 0'>Editar productos y precios</button>` : ''}`;
+      const od = b.querySelector('#rn-od'), om = b.querySelector('#rn-om');
+      if (od) od.oninput = () => { v.od = od.value; };
+      if (om) { om.oninput = () => { v.om = om.value.replace(/\D/g, ''); pie(); }; om.onblur = () => cuerpo(); }
+    }
+    function pie() {
+      const f = w.querySelector('.rn-cf'); if (!f) return;
+      const n = enCarro().reduce((t, x) => t + v.cant[x.id], 0) + opsSel().length + (v.otro && num(v.om) ? 1 : 0);
+      f.innerHTML = v.paso === 'carro' ? `<div class='rn-tt'><small>${n ? n + (n === 1 ? ' cosa' : ' cosas') : 'Toca lo que se cobra'}</small><b>${clp(total())}</b></div><button class='rn-go' data-cobrar ${lleno() ? '' : 'disabled'}>Cobrar</button>` : '';
+    }
+    function carro() {
+      v.paso = 'carro';
+      w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><h2>Cobrar</h2><button class='rn-x' aria-label='Cerrar'>✕</button>
+        <input id='rn-bq' class='rn-in' type='search' placeholder='Buscar producto, renta o clase' autocomplete='off' value='${esc(v.q)}'></div>
+        <div class='rn-cb'></div><div class='rn-cf'></div></div>`;
+      const bq = w.querySelector('#rn-bq'); bq.oninput = () => { v.q = bq.value; cuerpo(); };
+      cuerpo(); pie();
+    }
+    // --- paso 2: cómo paga ---
+    const resumen = () => enCarro().map(x => (v.cant[x.id] > 1 ? v.cant[x.id] + ' × ' : '') + x.nombre).concat(opsSel().map(o => o.detalle), v.otro && num(v.om) ? [v.od || 'Otro'] : []).join(' · ');
+    function pago(err) {
+      v.paso = 'pago';
+      w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><button class='rn-back' data-volver aria-label='Volver'>‹</button><h2>${clp(total())}</h2><button class='rn-x' aria-label='Cerrar'>✕</button><p class='rn-res'>${esc(resumen())}</p></div>
+        <div class='rn-cb'><p class='rn-q' style='margin-top:6px'>¿Cómo paga?</p>
+        <div class='rn-pm'>${[['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco], ['LINK', 'Link de pago', ICO.link]].map(([k, t, ic]) => `<button data-pg='${k}'>${ic}<span>${t}</span></button>`).join('')}</div>
+        <p class='rn-err'>${esc(err || '')}</p></div><div class='rn-cf'></div></div>`;
+    }
+    function datosLink(err) {
+      v.paso = 'link';
+      w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><button class='rn-back' data-volver aria-label='Volver'>‹</button><h2>Link de pago</h2><button class='rn-x' aria-label='Cerrar'>✕</button><p class='rn-res'>${clp(total())} · ${esc(resumen())}</p></div>
+        <div class='rn-cb'><p class='rn-q' style='margin-top:6px'>¿A quién se lo mandas?</p><input id='rn-ln' class='rn-in' placeholder='Nombre (opcional)' autocomplete='off' value='${esc(v.ln)}'><input id='rn-lt' class='rn-in' inputmode='tel' placeholder='WhatsApp (opcional)' autocomplete='off' value='${esc(v.lt)}'>
+        <p style='font-size:1.25rem;color:#8a8986;margin:10px 2px 0'>Le llega un link para pagar en línea (Webpay o Mercado Pago). Cuando pague, cada cosa queda anotada sola.</p><p class='rn-err'>${esc(err || '')}</p></div>
+        <div class='rn-cf'><button class='rn-go' data-crear>Crear link</button></div></div>`;
+    }
+    function listo(medio) {
+      v.paso = 'listo';
+      w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Cobro guardado</h2><p>${clp(v.totalOk)} · ${esc(medio)}</p><p class='rn-res' style='text-align:center'>${esc(v.resOk)}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
+      setTimeout(() => { if (w.isConnected && v.paso === 'listo') w.remove(); }, 2500);
+    }
+    const base = () => ({ items: Object.keys(v.cant).filter(k => v.cant[k]).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v.od : '', otroMonto: v.otro && !v.dano ? v.om : '', danoDetalle: v.otro && v.dano ? v.od : '', danoMonto: v.otro && v.dano ? v.om : '', rentas: [...v.sel], clases: [...v.sel] });
     w.onclick = async e => {
-      if (e.target === w || e.target.closest('.rn-x')) return w.remove();
-      const b = e.target.closest('button'); if (!b) return; guarda();
-      if (b.dataset.m || b.dataset.p) { const k = b.dataset.m || b.dataset.p; v.cant[k] = Math.max(0, (v.cant[k] || 0) + (b.dataset.m ? -1 : 1)); return p(); }
-      if (b.dataset.op) { const k = b.dataset.op; v.sel.has(k) ? v.sel.delete(k) : v.sel.add(k); const o = (v.ops || []).find(x => x.id === k); if (o && v.sel.has(k)) { v['#rn-ln'] = v['#rn-ln'] || o.nombre; v['#rn-lt'] = v['#rn-lt'] || o.telefono; } return p(); }
-      if (b.dataset.otro !== undefined) { v.otro = !v.otro; return p(); }
-      if (b.dataset.dano !== undefined) { v.dano = !v.dano; return p(); }
-      if (b.dataset.pg) { v.pago = b.dataset.pg; v.err = ''; return p(); }
-      if (b.dataset.editar !== undefined) { w.remove(); return editarProductos(); }
-      if (b.dataset.guardar !== undefined) {
-        const er = w.querySelector('.rn-err');
-        if (!total()) return er.textContent = esLink() ? 'Elige qué se cobra.' : 'Toca + en lo que se vendió.';
-        if (!v.pago) return er.textContent = 'Elige cómo paga.';
-        const t0 = b.textContent; b.disabled = true; b.textContent = esLink() ? 'Creando link…' : 'Guardando…';
-        const base = { items: Object.keys(v.cant).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v['#rn-od'] : '', otroMonto: v.otro && !v.dano ? v['#rn-om'] : '', danoDetalle: v.otro && v.dano ? v['#rn-od'] : '', danoMonto: v.otro && v.dano ? v['#rn-om'] : '' };
+      if (e.target === w || e.target.closest('.rn-x')) return cerrar();
+      const b = e.target.closest('button'); if (!b || b.disabled) return;
+      if (b.dataset.fin !== undefined) return w.remove();
+      if (b.dataset.volver !== undefined) return carro();
+      if (b.dataset.p || b.dataset.m) { const k = b.dataset.p || b.dataset.m; v.cant[k] = Math.max(0, (v.cant[k] || 0) + (b.dataset.m ? -1 : 1)); cuerpo(); return pie(); }
+      if (b.dataset.op) { v.sel.add(b.dataset.op); const o = (v.ops || []).find(x => x.id === b.dataset.op); if (o) { v.ln = v.ln || o.nombre; v.lt = v.lt || o.telefono; } v.q = ''; const bq = w.querySelector('#rn-bq'); if (bq) bq.value = ''; cuerpo(); return pie(); }
+      if (b.dataset.qs) { if (b.dataset.qs === 'otro') { v.otro = false; v.om = ''; v.od = ''; } else v.sel.delete(b.dataset.qs); cuerpo(); return pie(); }
+      if (b.dataset.otro !== undefined) { v.otro = !v.otro; cuerpo(); pie(); const om = w.querySelector('#rn-od'); if (om) om.focus(); return; }
+      if (b.dataset.dano !== undefined) { v.dano = !v.dano; return cuerpo(); }
+      if (b.dataset.editar !== undefined) { if (lleno() && !confirm('¿Descartar este cobro? No se ha guardado.')) return; w.remove(); return editarProductos(); }
+      if (b.dataset.cobrar !== undefined) return pago();
+      if (b.dataset.pg === 'LINK') return datosLink();
+      if (b.dataset.pg || b.dataset.crear !== undefined) {
+        const link = b.dataset.crear !== undefined; if (link) { v.ln = w.querySelector('#rn-ln').value; v.lt = w.querySelector('#rn-lt').value; }
+        w.querySelectorAll('button').forEach(x => x.disabled = true); const t0 = b.innerHTML; b.innerHTML = link ? 'Creando link…' : 'Guardando…';
+        v.totalOk = total(); v.resOk = resumen();
         try {
-          if (esLink()) {
-            const d = await post(Object.assign({ accion: 'link', op: 'crear', rentas: [...v.sel], clases: [...v.sel], nombre: v['#rn-ln'], telefono: v['#rn-lt'] }, base));
-            w.remove(); linkListo(d.nuevo); cargar();
-          } else { R = await post(Object.assign({ accion: 'tienda', op: 'venta', pago: v.pago }, base)); guardarCache(); w.remove(); pintar(); alCambiar(); }
-        } catch (x) { b.disabled = false; b.textContent = t0; er.textContent = x.message; }
+          if (link) { const d = await post(Object.assign({ accion: 'link', op: 'crear', nombre: v.ln, telefono: v.lt }, base())); v.paso = 'listo'; w.remove(); linkListo(d.nuevo); cargar(); }
+          else { R = await post(Object.assign({ accion: 'tienda', op: 'venta', pago: b.dataset.pg }, base())); guardarCache(); pintar(); alCambiar(); listo(pagoT(b.dataset.pg)); }
+        } catch (x) { link ? datosLink(x.message) : pago(x.message); }
       }
     };
+    carro();
   }
   const msgLink = n => 'Hola' + (n.nombre ? ' ' + n.nombre.split(' ')[0] : '') + ', aquí puedes pagar en Storm (' + clp(n.total) + '): ' + n.link;
   function linkListo(n) {
@@ -391,7 +490,7 @@
     const pinta = () => {
       const tOk = c.tuu === c.tarjeta, ci = c.cierre;
       caja.innerHTML = `<button class='rn-x' aria-label='Cerrar'>✕</button><h2>Cierre del día</h2>
-        <p class='rn-q'>Tarjeta</p>
+        <p class='rn-q'>POS</p>
         <div class='rn-ci'><div><span>Anotado en el Panel</span><b>${clp(c.tarjeta)}</b></div><div><span>Máquina Tuu</span><b>${clp(c.tuu)}</b></div>
           <div><span>${tOk ? 'Calza' : c.tuu > c.tarjeta ? 'Falta anotar en el Panel' : 'Anotado de más (¿se cobró?)'}</span><b class='${tOk ? 'rn-ok' : 'rn-mal'}'>${tOk ? '✓' : clp(Math.abs(c.tuu - c.tarjeta))}</b></div></div>
         <p style='font-size:1.2rem;color:#8a8986;margin:6px 2px 0'>La máquina se lee cada 15 minutos: si recién cobraste, espera un poco.</p>

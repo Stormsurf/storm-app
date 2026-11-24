@@ -1068,10 +1068,18 @@ async function tiendaAccion(env, q, d) {
     (Array.isArray(d.items) ? d.items : []).forEach(i => { const p = prods.find(x => x.id === String(i.id)), n = Math.min(50, Math.floor(Number(i.cant) || 0)); if (p && n > 0) lineas.push({ detalle: (n > 1 ? n + ' × ' : '') + p.nombre, monto: p.precio * n, area: 'tienda' }); });
     const otro = num(d.otroMonto); if (otro) lineas.push({ detalle: String(d.otroDetalle || '').trim().slice(0, 80) || 'Otro producto', monto: otro, area: 'tienda' });
     const dano = num(d.danoMonto); if (dano) lineas.push({ detalle: 'Cobro por daño' + (String(d.danoDetalle || '').trim() ? ': ' + String(d.danoDetalle).trim().slice(0, 80) : ''), monto: dano, area: 'renta' });
-    if (!lineas.length) throw err('Elige qué se vendió.');
+    // Rentas y clases sin pagar sumadas al carro (el monto se lee aquí): cada una queda pagada en su área
+    const ids = new Set([].concat(d.rentas || [], d.clases || []).map(String)), otras = ids.size ? (await linkOpciones(env)).filter(o => ids.has(o.id)) : [];
+    const partes = lineas.map(l => Object.assign({ tipo: 'tienda' }, l)).concat(otras.map(o => ({ tipo: o.tipo, id: o.id, detalle: o.detalle, monto: o.monto })));
+    if (!partes.length) throw err('Elige qué se cobra.');
     const yo = await quienNombre(env, q.email);
-    await db.batch(lineas.map(l => db.prepare('INSERT INTO ventas (id, creada_ms, fecha, hora, detalle, area, monto, pago, por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(nuevoId('V', t), Date.now(), t.fecha, t.hora, l.detalle, l.area, l.monto, pago, yo)));
-    await anotar(db, q, 'venta ' + lineas.map(l => l.detalle).join(', '));
+    if (otras.length) { // si estaban en un link esperando pago, ese link se anula (ya se pagó aquí)
+      await linkTabla(db);
+      const viejos = (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente'").all()).results.filter(L => partesDe(L).some(p => p.id && ids.has(p.id)));
+      if (viejos.length) await db.batch(viejos.map(L => db.prepare("UPDATE links SET estado = 'anulada' WHERE ref = ? AND estado = 'pendiente'").bind(L.ref)));
+    }
+    await anotarPartes(env, partes, pago, yo, null, false);
+    await anotar(db, q, 'venta ' + partes.map(l => l.detalle).join(', '));
   } else if (op === 'borrar') {
     await db.prepare("UPDATE ventas SET estado = 'borrada' WHERE id = ?").bind(String(d.id || '')).run();
     await anotar(db, q, 'venta borrada ' + d.id);
@@ -1216,12 +1224,10 @@ async function revisarLink(env, L, ctx) {
   if (o && o.external_reference === L.ref && o.status === 'processed' && o.status_detail === 'accredited') return confirmarLink(env, L, 'Mercado Pago', Number(o.total_paid_amount || o.total_amount), ctx);
   return L.estado;
 }
-async function confirmarLink(env, L, medio, monto, ctx) {
-  const db = env.DB, t = ahoraChile();
-  if (Math.round(monto) < L.total) { console.error('Link monto distinto', L.ref, monto, L.total); return L.estado; }
-  const ch = await db.prepare("UPDATE links SET estado = 'pagada', medio = ?, pagado_ms = ? WHERE ref = ? AND estado = 'pendiente'").bind(medio, Date.now(), L.ref).run();
-  if (!ch.meta || !ch.meta.changes) return 'pagada'; // ya estaba anotado
-  const st = [], partes = partesDe(L), por = 'Link de pago';
+/** Anota cada parte cobrada en su área: tienda como venta, renta con su forma de pago, clase pagada en la Agenda.
+ *  Lo usan el link de pago (al pagarse) y el carro de la recepción (al cobrar con la máquina, efectivo o transferencia). */
+async function anotarPartes(env, partes, medio, por, ctx, enLinea) {
+  const db = env.DB, t = ahoraChile(), st = [], packs = [];
   for (const p of partes) {
     if (p.tipo === 'tienda') st.push(db.prepare('INSERT INTO ventas (id, creada_ms, fecha, hora, detalle, area, monto, pago, por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(nuevoId('V', t), Date.now(), t.fecha, t.hora, p.detalle, p.area || 'tienda', p.monto, medio, por));
     else if (p.tipo === 'renta') st.push(db.prepare("UPDATE rentas SET pago = ?, monto = ? WHERE id = ? AND pago IN ('Falta pagar', 'Link de pago')").bind(medio, p.monto, p.id));
@@ -1229,10 +1235,23 @@ async function confirmarLink(env, L, medio, monto, ctx) {
       const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(p.id).first(); if (!r) continue;
       if (r.estado === 'pagada' && r.medio !== 'Por pagar') { const sl = saldosDe(r); sl.forEach(x => { if (!x.medio) { x.medio = medio; x.pagado = t.fecha; } }); st.push(db.prepare('UPDATE reservas SET saldos = ? WHERE ref = ?').bind(JSON.stringify(sl), r.ref)); }
       else if (r.estado === 'pagada') st.push(db.prepare("UPDATE reservas SET medio = ? WHERE ref = ? AND medio = 'Por pagar'").bind(medio, r.ref));
-      else if (r.estado === 'pendiente') { await db.prepare('UPDATE reservas SET medio = ? WHERE ref = ?').bind(medio, r.ref).run(); await confirmar(env, Object.assign({}, r, { medio }), r.total, ctx); }
+      else if (r.estado === 'pendiente' && enLinea) { await db.prepare('UPDATE reservas SET medio = ? WHERE ref = ?').bind(medio, r.ref).run(); await confirmar(env, Object.assign({}, r, { medio }), r.total, ctx); }
+      else if (r.estado === 'pendiente') { // en la recepción: igual que marcar en el Panel cómo pagó (queda pagada y con el horario fijo)
+        st.push(db.prepare("UPDATE reservas SET estado = 'pagada', medio = ?, link_pago = '' WHERE ref = ? AND estado = 'pendiente'").bind(medio, r.ref), db.prepare('UPDATE bloques SET hasta = 0 WHERE ref = ?').bind(r.ref));
+        if (r.pack) packs.push(Object.assign({}, r, { medio }));
+      }
     }
   }
   if (st.length) await db.batch(st);
+  for (const r of packs) await activarPack(db, r);
+}
+async function confirmarLink(env, L, medio, monto, ctx) {
+  const db = env.DB, t = ahoraChile();
+  if (Math.round(monto) < L.total) { console.error('Link monto distinto', L.ref, monto, L.total); return L.estado; }
+  const ch = await db.prepare("UPDATE links SET estado = 'pagada', medio = ?, pagado_ms = ? WHERE ref = ? AND estado = 'pendiente'").bind(medio, Date.now(), L.ref).run();
+  if (!ch.meta || !ch.meta.changes) return 'pagada'; // ya estaba anotado
+  const partes = partesDe(L);
+  await anotarPartes(env, partes, medio, 'Link de pago', ctx, true);
   const a = await ajustes(db);
   tarea(ctx, enviarPush(env, a.admins, 'Pagaron un link 💳 ' + clp(L.total), (L.nombre ? L.nombre + ' · ' : '') + partes.map(p => p.detalle).join(', ').slice(0, 160)));
   return 'pagada';
