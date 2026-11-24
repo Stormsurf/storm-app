@@ -24,6 +24,8 @@
  *   Variables: WEBPAY_CODIGO (código de comercio 5970...) y WEBPAY_LLAVE (API Key Secret que manda Transbank).
  *   WEBPAY_PRUEBA=1 usa el ambiente de integración de Transbank con sus datos públicos de prueba (para la vista previa y la validación).
  *   Webpay no avisa por detrás: el pago se confirma (commit) cuando la persona vuelve a /api/pagar?webpay=vuelta.
+ *   Con Webpay activo, /pagar ofrece SOLO Webpay (Isidora 24-11): todo lo online entra por un solo código de comercio,
+ *   que se declara exento de IVA. Por eso el link de pago es solo para clases: rentas y tienda (con IVA) se cobran con POS.
  */
 
 const MP_API = 'https://api.mercadopago.com';

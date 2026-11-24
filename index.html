@@ -364,7 +364,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   if(auth) guardar(auth);
   if(q.get('e')){ ['e','ts','f'].forEach(k=>q.delete(k)); history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '')); }
 
-  let msg = q.get('pago')==='pendiente' ? `<div class='mc-msg mc-msg--ok'>Tu pago está en proceso. Cuando Mercado Pago lo apruebe te llegará un correo y aparecerá aquí.</div>`
+  let msg = q.get('pago')==='pendiente' ? `<div class='mc-msg mc-msg--ok'>Tu pago está en proceso. Cuando se apruebe te llegará un correo y aparecerá aquí.</div>`
     : q.get('pago')==='ok' ? `<div class='mc-msg mc-msg--ok'>¡Pago recibido! Te enviamos la confirmación por correo.</div>` : '';
   const revisar = (q.get('ref') && API) ? post({accion:'revisar-pago', ref:q.get('ref')}).catch(()=>null) : null;
 
@@ -945,7 +945,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     h += `<div class='ad-pay'><button class='ad-opt best' data-adpay='4 clases'><small>4 clases · ${p4.semanas} semanas</small><b>${clp(p4.monto)}</b><small>Sale ${clp(p4.monto/p4.clases)} la clase</small></button>
       <button class='ad-opt' data-adpay='8 clases'><small>8 clases · ${p8.semanas} semanas</small><b>${clp(p8.monto)}</b><small>Sale ${clp(p8.monto/p8.clases)} la clase</small></button>
       <button class='ad-opt' data-adpay='Suelta' style='grid-column:1/-1'><small>Clase suelta</small><b>${clp(ps.monto)}</b><small>Con un plan te ahorras hasta ${clp(ps.monto - p8.monto/p8.clases)} por clase</small></button></div>
-      <p class='mc-note'>Pagas con Mercado Pago y queda anotado solo.</p>`;
+      <p class='mc-note'>Pagas en línea con Webpay y queda anotado solo.</p>`;
     h += `<div class='mc-card mc-cta'><p><b>¿Tienes dudas?</b>Escríbenos y te ayudamos.</p><a class='mc-go mc-go--sm mc-wa' href='https://wa.me/56977744306' target='_blank' rel='noopener'>WhatsApp</a></div></div>`;
     app.innerHTML = h;
     bindSw();
@@ -958,7 +958,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     app.querySelectorAll('[data-adfui]').forEach(b => b.onclick = () => { if(!b.classList.contains('done')) accion(b, {accion:'adultos-fui', fecha:b.dataset.adfui}, 'Anotando…'); });
     app.querySelectorAll('[data-adno]').forEach(b => b.onclick = () => { if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Seguro? Toca otra vez'; return; } accion(b, {accion:'adultos-fui', fecha:b.dataset.adno, si:false}, 'Quitando…'); });
     app.querySelectorAll('[data-advoy]').forEach(b => b.onclick = () => accion(b, {accion:'adultos-voy', fecha:b.dataset.advoy, si: b.dataset.si === '1'}, '…'));
-    app.querySelectorAll('[data-adpay]').forEach(b => b.onclick = () => accion(b, {accion:'adultos-pagar', plan:b.dataset.adpay}, 'Abriendo Mercado Pago…'));
+    app.querySelectorAll('[data-adpay]').forEach(b => b.onclick = () => accion(b, {accion:'adultos-pagar', plan:b.dataset.adpay}, 'Abriendo el pago…'));
   }
   async function load(){
     if(!auth) return login();

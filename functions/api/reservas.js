@@ -1049,6 +1049,7 @@ async function rentasAccion(env, q, d) {
   const t = ahoraChile(), op = d.op || 'ver', yo = op === 'ver' ? '' : await quienNombre(env, q.email);
   let nuevo = '';
   if (op === 'nueva') {
+    if (d.pago === 'Link de pago') throw err('Las rentas se cobran con POS, efectivo o transferencia.');
     nuevo = await crearRenta(env, q, d, yo);
   } else if (op !== 'ver') {
     const x = await db.prepare('SELECT * FROM rentas WHERE id = ?').bind(String(d.id || '')).first();
@@ -1139,7 +1140,7 @@ async function notasAccion(env, q, d) {
 }
 
 // ---------- Link de pago (Isidora 24-11): un solo carro con productos de la tienda, rentas y clases sin pagar ----------
-// Se cobra con la pantalla Storm /pagar (Webpay o Mercado Pago). Referencia LK-. Al pagarse, cada parte queda anotada en su área:
+// Se cobra con la pantalla Storm /pagar (solo Webpay). Desde 24-11 solo clases: tienda y rentas van por POS. Referencia LK-. Al pagarse, cada parte queda anotada en su área:
 // la tienda como venta, la renta con su forma de pago y la clase pagada en la Agenda. Así Finanzas suma cada cosa donde va.
 const LINK_COMISION = { 'Webpay crédito': 0.0229 * 1.19, 'Webpay débito': 0.0149 * 1.19, 'Webpay': 0.0229 * 1.19, 'Mercado Pago': 0.0229 * 1.19 };
 async function linkTabla(db) {
@@ -1184,6 +1185,10 @@ async function linkAccion(env, q, d, ctx) {
   if (op === 'opciones') return { ok: true, opciones: await linkOpciones(env), links: await linksLista(db) };
   if (op === 'crear') {
     if (!env.MP_TOKEN) throw err('El pago en línea no está activo en este momento.');
+    // Solo clases (Isidora 24-11): lo online entra por Webpay y se declara exento de IVA. Tienda y rentas llevan IVA: se cobran con POS.
+    const ops0 = await linkOpciones(env), ids0 = new Set([].concat(d.rentas || [], d.clases || []).map(String));
+    if ((Array.isArray(d.items) && d.items.some(i => Number(i.cant) > 0)) || num(d.otroMonto) || num(d.danoMonto) || rentasCarro(d).length || ops0.some(o => ids0.has(o.id) && o.tipo !== 'clase'))
+      throw err('El link de pago es solo para clases. La tienda y las rentas se cobran con POS.');
     const partes = [];
     // Tienda: los mismos productos y precios que Venta tienda
     const prods = (await db.prepare('SELECT * FROM productos').all()).results, lineas = [];

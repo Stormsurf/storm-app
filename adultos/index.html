@@ -56,7 +56,7 @@
     <input class="ad-in" id="nombre" autocomplete="name" placeholder="Nombre y apellido" style="margin-top:0">
     <input class="ad-in" id="correo" type="email" autocomplete="email" placeholder="tu@correo.cl">
     <input class="ad-in" id="tel" type="tel" autocomplete="tel" placeholder="Teléfono (WhatsApp)">
-    <button class="ad-go" id="pagar">Pagar con Mercado Pago</button>
+    <button class="ad-go" id="pagar">Pagar</button>
     <div id="err"></div>
     <p class="ad-note">Usa este mismo correo para entrar después a la app Storm.</p>
   </div>
@@ -73,12 +73,12 @@
     const nombre = $('#nombre').value.trim(), correo = $('#correo').value.trim().toLowerCase(), telefono = $('#tel').value.trim();
     if(!nombre) return err('Escribe tu nombre.');
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return err('Revisa tu correo.');
-    err(''); const b = $('#pagar'); b.disabled = true; b.textContent = 'Abriendo Mercado Pago…';
+    err(''); const b = $('#pagar'); b.disabled = true; b.textContent = 'Abriendo el pago…';
     try{
       const r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({accion:'adultos-inscribir', nombre, correo, telefono, plan})});
       const d = await r.json(); if(!d.ok) throw new Error(d.error || 'No se pudo crear el pago.');
       location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] : u; })(d.url);
-    }catch(x){ err(x.message); b.disabled = false; b.textContent = 'Pagar con Mercado Pago'; }
+    }catch(x){ err(x.message); b.disabled = false; b.textContent = 'Pagar'; }
   };
 })();
 </script>

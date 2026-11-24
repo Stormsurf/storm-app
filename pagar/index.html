@@ -113,14 +113,13 @@
       pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment expired' : 'Pago vencido'}</h1><p>${EN ? 'This payment link is no longer valid. Go back and start again.' : 'Este link de pago ya no sirve. Vuelve atrás y empieza de nuevo.'}</p></div>${ayuda}`;
       return;
     }
-    // Con Webpay (Transbank): "Tarjeta" paga con Webpay para todos (chilenas y extranjeras, sin RUT). Mercado Pago queda solo con la cuenta.
+    // Con Webpay (Transbank): todo lo online se paga solo con Webpay (Isidora 24-11: un solo código de comercio, ventas exentas). Sin cuenta Mercado Pago.
     if(D.webpay){
       pg.innerHTML = (D.carro ? carroH() : `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>`) + `
         <h2 class="pg-h2">${EN ? 'How would you like to pay?' : '¿Cómo quieres pagar?'}</h2>
         <button class="pg-opt" id="op-wp" type="button"><i>💳</i><span><b>${EN ? 'Card' : 'Tarjeta'}</b><small>${EN ? 'Credit, debit or prepaid, Chilean or foreign (Webpay)' : 'Crédito, débito o prepago, chilena o extranjera (Webpay)'}</small></span></button>
         <div class="pg-err" id="err" hidden></div>
-        <a class="pg-opt" id="op-cuenta" href="${esc(D.cuenta)}"><i>👤</i><span><b>${EN ? 'With my Mercado Pago account' : 'Con mi cuenta Mercado Pago'}</b><small>${EN ? 'Use your Mercado Pago balance or saved cards' : 'Usa el saldo o las tarjetas guardadas en tu cuenta'}</small></span></a>
-        <p class="pg-note">${EN ? 'Payments are processed securely by Transbank (Webpay) or Mercado Pago.' : 'Pago seguro con Webpay (Transbank) o Mercado Pago.'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+        <p class="pg-note">${EN ? 'Payments are processed securely by Transbank (Webpay).' : 'Pago seguro con Webpay (Transbank).'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
       const b = document.getElementById('op-wp');
       b.onclick = async () => {
         if(b.disabled) return; b.disabled = true; b.classList.add('on'); error('');

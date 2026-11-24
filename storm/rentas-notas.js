@@ -272,9 +272,9 @@
   }
   function elegirPago(id) {
     const w = document.createElement('div'); w.className = 'rn-f';
-    w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>¿Cómo pagó?</h2><div class='rn-pm chico' style='margin-top:14px'>${[['POS', ICO.tarjeta], ['Efectivo', ICO.billete], ['Transferencia', ICO.banco], ['Link de pago', ICO.link]].map(([p, ic]) => `<button data-${p === 'Link de pago' ? 'link' : 'p'}='${p}'>${ic}<span>${p}</span></button>`).join('')}</div></div>`;
+    w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>¿Cómo pagó?</h2><div class='rn-pm chico' style='margin-top:14px'>${[['POS', ICO.tarjeta], ['Efectivo', ICO.billete], ['Transferencia', ICO.banco]].map(([p, ic]) => `<button data-p='${p}'>${ic}<span>${p}</span></button>`).join('')}</div></div>`;
     document.body.appendChild(w);
-    w.onclick = async e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); if (e.target.closest('[data-link]')) { w.remove(); return abrirTienda({ sel: [id] }); } const b = e.target.closest('[data-p]'); if (b && await hacer('rentas', { op: 'pago', id, pago: b.dataset.p }, b)) w.remove(); };
+    w.onclick = async e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); const b = e.target.closest('[data-p]'); if (b && await hacer('rentas', { op: 'pago', id, pago: b.dataset.p }, b)) w.remove(); };
   }
   // Formulario de renta (lo usan Nueva renta y el carro de Cobrar)
   const rPR = () => (R && R.precios) || { tablas: { medio: 10000, dia: 20000 }, fibras: { medio: 20000, dia: 40000 }, trajes: { medio: 10000, dia: 20000 } };
@@ -307,7 +307,7 @@
     const w = document.createElement('div'); w.className = 'rn-f'; document.body.appendChild(w);
     let listo = false;
     const cerrar = () => { rLeer(w, nueva); if (!listo && (hay() || nueva.nombre.trim()) && !confirm('¿Descartar esta renta? No se ha guardado.')) return; w.remove(); };
-    const MED = [['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco], ['Link de pago', 'Link de pago', ICO.link], ['Falta pagar', 'Falta pagar', ICO.reloj, 'Paga al volver']];
+    const MED = [['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco], ['Falta pagar', 'Falta pagar', ICO.reloj, 'Paga al volver']];
     w.innerHTML = `<div class='rn-cart'><div class='rn-ch2 solo'><h2>Nueva renta</h2><button class='rn-x' aria-label='Cerrar'>✕</button></div><div class='rn-cb'></div><div class='rn-cf'></div></div>`;
     const cb = w.querySelector('.rn-cb'), cf = w.querySelector('.rn-cf');
     function cuerpo() {
@@ -324,7 +324,7 @@
     function pie() {
       const ok = hay() && nueva.tiempo && nueva.pago, m = monto();
       const sub = !hay() ? 'Toca + en lo que se lleva' : !nueva.tiempo ? 'Elige medio día o día completo' : !nueva.pago ? 'Elige cómo paga' : nueva.pago === 'Falta pagar' ? 'Paga al volver · ' + que() : que();
-      cf.innerHTML = `<div class='rn-tt'><small>${esc(sub)}</small><b>${clp(m)}</b></div><button class='rn-go' data-guardar ${ok ? '' : 'disabled'}>${nueva.pago === 'Link de pago' ? 'Crear link' : 'Guardar'}</button>`;
+      cf.innerHTML = `<div class='rn-tt'><small>${esc(sub)}</small><b>${clp(m)}</b></div><button class='rn-go' data-guardar ${ok ? '' : 'disabled'}>Guardar</button>`;
     }
     function hecho() {
       listo = true;
@@ -343,13 +343,10 @@
         rLeer(w, nueva); const er = w.querySelector('.rn-err');
         if (!monto() && nueva.pago !== 'Falta pagar') { er.textContent = 'Escribe el monto.'; return er.scrollIntoView({ block: 'center' }); }
         if (nueva.nombre.trim().length < 2) { er.textContent = 'Escribe el nombre de quien arrienda.'; const n = w.querySelector('#rn-nom'); n.scrollIntoView({ block: 'center' }); return n.focus(); }
-        er.textContent = ''; b.disabled = true; b.textContent = nueva.pago === 'Link de pago' ? 'Creando link…' : 'Guardando…';
+        er.textContent = ''; b.disabled = true; b.textContent = 'Guardando…';
         try {
           R = await post(Object.assign({ accion: 'rentas', op: 'nueva' }, nueva, { monto: String(monto()) })); guardarCache(); pintar(); alCambiar();
-          if (nueva.pago !== 'Link de pago' || !R.nuevo) return hecho();
-          listo = true;
-          try { const d = await post({ accion: 'link', op: 'crear', rentas: [R.nuevo], nombre: nueva.nombre, telefono: nueva.telefono }); w.remove(); linkListo(d.nuevo); cargar(); }
-          catch (x) { w.remove(); alert('La renta quedó guardada, pero no se pudo crear el link: ' + x.message + '\nTócala y usa Pagó › Mandar link de pago.'); }
+          hecho();
         } catch (x) { b.disabled = false; pie(); er.textContent = x.message; er.scrollIntoView({ block: 'center' }); }
       }
     };
@@ -419,18 +416,20 @@
     }
     // --- paso 2: cómo paga ---
     const resumen = () => enCarro().map(x => (v.cant[x.id] > 1 ? v.cant[x.id] + ' × ' : '') + x.nombre).concat(opsSel().map(o => o.detalle), v.nr.map(n => 'Renta · ' + n.nombre.trim()), v.otro && num(v.om) ? [v.od || 'Otro'] : []).join(' · ');
+    // Link de pago solo para clases (Isidora 24-11): lo online entra por Webpay y se declara exento; rentas y tienda llevan IVA y van por POS.
+    const soloClases = () => !enCarro().length && !(v.otro && num(v.om)) && !v.nr.length && opsSel().length > 0 && opsSel().every(o => o.tipo === 'clase');
     function pago(err) {
       v.paso = 'pago';
       w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><button class='rn-back' data-volver aria-label='Volver'>‹</button><h2>${clp(total())}</h2><button class='rn-x' aria-label='Cerrar'>✕</button><p class='rn-res'>${esc(resumen())}</p></div>
         <div class='rn-cb'><p class='rn-q' style='margin-top:6px'>¿Cómo paga?</p>
-        <div class='rn-pm'>${[['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco], ['LINK', 'Link de pago', ICO.link]].map(([k, t, ic]) => `<button data-pg='${k}'>${ic}<span>${t}</span></button>`).join('')}</div>
+        <div class='rn-pm'>${[['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco]].concat(soloClases() ? [['LINK', 'Link de pago', ICO.link]] : []).map(([k, t, ic]) => `<button data-pg='${k}'>${ic}<span>${t}</span></button>`).join('')}</div>
         <p class='rn-err'>${esc(err || '')}</p></div><div class='rn-cf'></div></div>`;
     }
     function datosLink(err) {
       v.paso = 'link';
       w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><button class='rn-back' data-volver aria-label='Volver'>‹</button><h2>Link de pago</h2><button class='rn-x' aria-label='Cerrar'>✕</button><p class='rn-res'>${clp(total())} · ${esc(resumen())}</p></div>
         <div class='rn-cb'><p class='rn-q' style='margin-top:6px'>¿A quién se lo mandas?</p><input id='rn-ln' class='rn-in' placeholder='Nombre (opcional)' autocomplete='off' value='${esc(v.ln)}'><input id='rn-lt' class='rn-in' inputmode='tel' placeholder='WhatsApp (opcional)' autocomplete='off' value='${esc(v.lt)}'>
-        <p style='font-size:1.25rem;color:#8a8986;margin:10px 2px 0'>Le llega un link para pagar en línea (Webpay o Mercado Pago). Cuando pague, cada cosa queda anotada sola.</p><p class='rn-err'>${esc(err || '')}</p></div>
+        <p style='font-size:1.25rem;color:#8a8986;margin:10px 2px 0'>Le llega un link para pagar en línea con Webpay. Cuando pague, cada cosa queda anotada sola.</p><p class='rn-err'>${esc(err || '')}</p></div>
         <div class='rn-cf'><button class='rn-go' data-crear>Crear link</button></div></div>`;
     }
     function listo(medio) {

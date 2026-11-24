@@ -210,7 +210,7 @@
   function extrasCard(){
     return `<h3>Clases extra por cobrar${EXTRAS_PEND.length ? `<span class='pn-count'>${EXTRAS_PEND.length}</span>` : ''}</h3>
       ${EXTRAS_PEND.length ? EXTRAS_PEND.map((e,i) => `<div class='pn-row pn-row--wrap'><div><b>${esc(e.alumno)}</b><small>${esc(e.clase)} · ${esc(e.texto)} · ${clp(e.monto)}</small></div><div class='pn-acts'><button class='pn-paid' data-xc='${i}'>Ya lo cobré</button></div></div>`).join('')
-        + `<p class='pn-sub' style='margin-top:10px'>Se suman solas al próximo pago con Mercado Pago. Si la familia paga por transferencia, cóbralas junto con la mensualidad y aprieta "Ya lo cobré".</p>`
+        + `<p class='pn-sub' style='margin-top:10px'>Se suman solas al próximo pago en línea. Si la familia paga por transferencia, cóbralas junto con la mensualidad y aprieta "Ya lo cobré".</p>`
         : `<p class='pn-empty'>No hay clases extra pendientes. Se anotan al pasar lista.</p>`}`;
   }
   function bindExtras(){
