@@ -12,6 +12,7 @@
  *   CLAVE_CORREO  Clave del programa de correos de contacto@stormsurf.cl
  *   TAREA_CLAVE   Clave para la revisión automática
  */
+import { reintentarBoletas } from './pagar.js';
 
 const TZ = 'America/Santiago';
 const MP_API = 'https://api.mercadopago.com';
@@ -1973,7 +1974,9 @@ export async function onRequest(context) {
     }
     if (url.searchParams.get('tarea')) {
       if (!env.TAREA_CLAVE || url.searchParams.get('tarea') !== env.TAREA_CLAVE) return json({ ok: false }, 403);
-      return json(await revisionAutomatica(env, context));
+      const rv = await revisionAutomatica(env, context);
+      rv.boletas = await reintentarBoletas(env).catch(() => 0);
+      return json(rv);
     }
     if (request.method === 'GET') return json({ ok: true, servicio: 'Storm Escuela · reservas' });
     if (request.method !== 'POST') return json({ ok: false, error: 'Método no permitido' }, 405);

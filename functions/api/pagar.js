@@ -47,6 +47,51 @@ const MAX_COMPROBANTE = 4 * 1024 * 1024; // base64 (~3 MB de archivo); las fotos
 async function compTabla(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS comprobantes (clave TEXT PRIMARY KEY, orden TEXT NOT NULL, ref TEXT NOT NULL, monto INTEGER NOT NULL DEFAULT 0, archivo TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT '', datos TEXT NOT NULL DEFAULT '', creada_ms INTEGER NOT NULL)").run();
 }
+// Boleta exenta (Isidora 24-11): desde el 1-12 el SII de Storm queda en "Siempre emito boleta". Cada pago con Webpay
+// (clases y Academia, todo exento) lleva su boleta exenta electrónica (tipo 41), que emite SimpleFactura (secreto SIMPLEFACTURA_TOKEN).
+// Se guarda en D1 (tabla boletas, una por pago). Si SimpleFactura falla, la revisión automática (cada 5 min) la reintenta.
+const BOLETA_DESDE = '2026-12-01';
+const SF_API = 'https://api.simplefactura.cl';
+const EMISOR = { RUTEmisor: '77957792-9', RznSocEmisor: 'Storm SpA', GiroEmisor: 'Otros tipos de enseñanza n.c.p.', DirOrigen: 'Cam Las Brisas LT B Las Brisas', CmnaOrigen: 'Navidad' };
+const NOMBRE_REF = ref => /^AA-/.test(ref) ? 'Academia Anual de surf' : /^AD-/.test(ref) ? 'Academia Adultos de surf' : /^AV-/.test(ref) ? 'Academia de Verano de surf' : 'Clase de surf';
+async function boletaTabla(db) {
+  await db.prepare("CREATE TABLE IF NOT EXISTS boletas (pago TEXT PRIMARY KEY, ref TEXT NOT NULL, monto INTEGER NOT NULL, detalle TEXT NOT NULL DEFAULT '', fecha TEXT NOT NULL, estado TEXT NOT NULL DEFAULT 'pendiente', folio INTEGER, error TEXT NOT NULL DEFAULT '', intentos INTEGER NOT NULL DEFAULT 0, creada_ms INTEGER NOT NULL)").run();
+}
+/** Llama a SimpleFactura y emite la boleta exenta. Devuelve { folio } o { error }. */
+async function sfBoleta(env, b) {
+  const doc = { Documento: { Encabezado: {
+      IdDoc: { TipoDTE: 41, FchEmis: b.fecha, FchVenc: b.fecha, IndServicio: 3 },
+      Emisor: EMISOR,
+      Receptor: { RUTRecep: '66666666-6', RznSocRecep: 'Cliente', DirRecep: 'Navidad', CmnaRecep: 'Navidad' },
+      Totales: { MntExe: b.monto, MntTotal: b.monto } },
+    Detalle: [{ NroLinDet: 1, NmbItem: b.detalle.slice(0, 80), QtyItem: 1, PrcItem: b.monto, MontoItem: b.monto }] },
+    Observaciones: b.ref };
+  try {
+    const x = await fetch((env.SF_API || SF_API) + '/invoiceV2/' + encodeURIComponent(env.SF_SUCURSAL || 'Casa Matriz'), { method: 'POST', headers: { Authorization: 'Bearer ' + env.SIMPLEFACTURA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
+    const t = await x.text(); let r = {}; try { r = JSON.parse(t); } catch (_) {}
+    const folio = r && r.data && Number(r.data.folio);
+    return x.status === 200 && folio ? { folio } : { error: ('HTTP ' + x.status + ' ' + ((r && (r.message || r.errors && JSON.stringify(r.errors))) || t)).slice(0, 500) };
+  } catch (e) { return { error: String(e && e.message || e).slice(0, 500) }; }
+}
+/** Emite (una sola vez por pago) la boleta exenta de un pago Webpay. pago = 'webpay:<token>'. */
+export async function emitirBoleta(env, pago, ref, monto, fecha) {
+  if (!env.DB || !env.SIMPLEFACTURA_TOKEN || !/^(AA|AD|AV|ES|LK)-/.test(String(ref || '')) || fecha < BOLETA_DESDE) return null;
+  await boletaTabla(env.DB);
+  await env.DB.prepare('INSERT OR IGNORE INTO boletas (pago, ref, monto, detalle, fecha, creada_ms) VALUES (?, ?, ?, ?, ?, ?)').bind(pago, ref, Math.round(Number(monto)), NOMBRE_REF(ref), fecha, Date.now()).run();
+  const b = await env.DB.prepare("SELECT * FROM boletas WHERE pago = ? AND estado != 'emitida'").bind(pago).first();
+  if (!b) return null;
+  const r = await sfBoleta(env, b);
+  await env.DB.prepare('UPDATE boletas SET estado = ?, folio = ?, error = ?, intentos = intentos + 1 WHERE pago = ?').bind(r.folio ? 'emitida' : 'error', r.folio || null, r.error || '', pago).run();
+  return r;
+}
+/** Reintenta las boletas que fallaron (lo llama la revisión automática cada 5 min; máx. 10 intentos). */
+export async function reintentarBoletas(env) {
+  if (!env.DB || !env.SIMPLEFACTURA_TOKEN) return 0;
+  await boletaTabla(env.DB);
+  const l = (await env.DB.prepare("SELECT * FROM boletas WHERE estado != 'emitida' AND intentos < 10 ORDER BY creada_ms LIMIT 5").all()).results;
+  for (const b of l) { const r = await sfBoleta(env, b); await env.DB.prepare('UPDATE boletas SET estado = ?, folio = ?, error = ?, intentos = intentos + 1 WHERE pago = ?').bind(r.folio ? 'emitida' : 'error', r.folio || null, r.error || '', b.pago).run(); }
+  return l.length;
+}
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 const fallo = m => json({ ok: false, error: m });
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => '&#' + ch.charCodeAt(0) + ';');
@@ -205,6 +250,7 @@ export async function onRequest(context) {
     if (p50 && !ok) return html('<h1>Pago de prueba no aprobado</h1><p>' + (c ? 'Estado: ' + esc(c.status) + ' · código ' + esc(c.response_code) + ' · monto ' + esc(c.amount) : 'Transbank no respondió al confirmar: ' + esc(ultimoError)) + '</p><p>Token: ' + esc(tok) + '</p><p><a href="/api/pagar?prueba50=1">Intentar de nuevo</a></p>');
     if (!ok) { console.log('webpay no aprobado', c && c.status, c && c.response_code); return /\.storm-app\.pages\.dev$/.test(url.hostname) ? Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=error&tk=' + encodeURIComponent(tok), 303) : vuelve('error'); }
     if (!p50) await avisarExterno(env, ref, 'webpay:' + tok, c.amount, origen, tok, ['VD', 'VP'].includes(c.payment_type_code) ? 'debito' : 'credito');
+    if (!p50) context.waitUntil(emitirBoleta(env, 'webpay:' + tok, ref, c.amount, hoyChile()).catch(e => console.error(e)));
     // Comprobante (lo pide Transbank): se muestra en /pagar y desde ahí sigue a la página de siempre
     const cp = new URLSearchParams({ o: oid, comprobante: '1', oc: c.buy_order || '', m: String(Math.round(Number(c.amount))), ac: c.authorization_code || '', d: (c.card_detail || {}).card_number || '',
       f: c.transaction_date || '', t: c.payment_type_code || '', n: String(c.installments_number || 0) });
@@ -225,6 +271,14 @@ export async function onRequest(context) {
     return Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=' + (pend ? 'pendiente' : 'error'), 303);
   }
 
+  // Vista previa: prueba de boleta exenta en SimpleFactura (ambiente de pruebas). /api/pagar?sfprueba=1
+  if (request.method === 'GET' && url.searchParams.get('sfprueba') && /\.storm-app\.pages\.dev$/.test(url.hostname)) {
+    if (!env.SIMPLEFACTURA_TOKEN) return json({ ok: false, error: 'Falta SIMPLEFACTURA_TOKEN' });
+    const h = { Authorization: 'Bearer ' + env.SIMPLEFACTURA_TOKEN, 'Content-Type': 'application/json' }, out = {};
+    for (const amb of [0, 1]) { try { const x = await fetch(SF_API + '/folios/consultar', { method: 'POST', headers: h, body: JSON.stringify({ credenciales: { rutEmisor: EMISOR.RUTEmisor, nombreSucursal: 'Casa Matriz' }, ambiente: amb }) }); out['folios' + amb] = x.status + ' ' + (await x.text()).slice(0, 800); } catch (e) { out['folios' + amb] = String(e); } }
+    if (url.searchParams.get('emitir')) out.boleta = await sfBoleta(env, { ref: 'PRUEBA-' + Date.now(), monto: Number(url.searchParams.get('monto')) || 1000, detalle: 'Clase de surf (prueba)', fecha: hoyChile() });
+    return json(out);
+  }
   if (request.method === 'GET' && url.searchParams.get('comprobante') && env.DB) {
     await compTabla(env.DB);
     const c = await env.DB.prepare('SELECT * FROM comprobantes WHERE clave = ?').bind(String(url.searchParams.get('comprobante'))).first();
