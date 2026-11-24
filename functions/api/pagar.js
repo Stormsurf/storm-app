@@ -64,7 +64,7 @@ async function sfBoleta(env, b) {
       Emisor: EMISOR,
       Receptor: { RUTRecep: '66666666-6', RznSocRecep: 'Cliente', DirRecep: 'Navidad', CmnaRecep: 'Navidad' },
       Totales: { MntExe: b.monto, MntTotal: b.monto } },
-    Detalle: [{ NroLinDet: 1, NmbItem: b.detalle.slice(0, 80), QtyItem: 1, PrcItem: b.monto, MontoItem: b.monto }] },
+    Detalle: [{ NroLinDet: 1, NmbItem: b.detalle.slice(0, 80), QtyItem: 1, PrcItem: b.monto, MontoItem: b.monto, IndExe: 1 }] },
     Observaciones: b.ref };
   try {
     const x = await fetch((env.SF_API || SF_API) + '/invoiceV2/' + encodeURIComponent(env.SF_SUCURSAL || 'Casa Matriz'), { method: 'POST', headers: { Authorization: 'Bearer ' + env.SIMPLEFACTURA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
