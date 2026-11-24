@@ -1134,13 +1134,15 @@ const partesDe = L => { try { const v = JSON.parse(L.partes || '[]'); return Arr
 const origenApp = () => PAGINA.replace(/\/reservar\/$/, '');
 /** Lo que falta cobrar de una clase: la clase entera (pendiente o 'Por pagar') o las diferencias sin cobrar. */
 const debeClase = r => r.estado === 'pagada' && r.medio !== 'Por pagar' ? saldosDe(r).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0) : (Number(r.total) || 0);
+/** Cómo ve el cliente una renta en la página de pago (Isidora 24-11: el carro del cliente tiene que ser explícito). */
+const rentaCliente = x => 'Arriendo · ' + [x.tablas ? x.tablas + (x.tablas === 1 ? ' tabla soft' : ' tablas soft') : '', x.fibras ? x.fibras + (x.fibras === 1 ? ' tabla de fibra' : ' tablas de fibra') : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(', ') + (x.tiempo === 'dia' ? ' · día completo' : ' · medio día');
 /** Rentas y clases que se pueden sumar a un link (sin pagar). */
 async function linkOpciones(env) {
   const db = env.DB, hoy = ahoraChile().fecha;
   const rentas = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND pago IN ('Falta pagar', 'Link de pago') AND creada_ms > ? ORDER BY creada_ms DESC").bind(Date.now() - 14 * 86400000).all()).results
-    .filter(x => x.monto > 0).map(x => ({ tipo: 'renta', id: x.id, detalle: 'Renta · ' + x.nombre, sub: [x.tablas ? x.tablas + ' soft' : '', x.fibras ? x.fibras + ' fibra' : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ') + (x.tiempo === 'dia' ? ' · día completo' : ' · medio día'), monto: x.monto, telefono: x.telefono || '', nombre: x.nombre }));
+    .filter(x => x.monto > 0).map(x => ({ tipo: 'renta', id: x.id, detalle: 'Renta · ' + x.nombre, cliente: rentaCliente(x), sub: [x.tablas ? x.tablas + ' soft' : '', x.fibras ? x.fibras + ' fibra' : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ') + (x.tiempo === 'dia' ? ' · día completo' : ' · medio día'), monto: x.monto, telefono: x.telefono || '', nombre: x.nombre }));
   const clases = (await db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND (estado = 'pendiente' OR (estado = 'pagada' AND (medio = 'Por pagar' OR saldos LIKE '%\"medio\":\"\"%'))) ORDER BY fecha, hora").bind(sumarDias(hoy, -14), sumarDias(hoy, 14)).all()).results
-    .filter(r => r.estado !== 'pendiente' || aMano(r)).map(r => ({ tipo: 'clase', id: r.ref, detalle: 'Clase · ' + r.nombre, sub: (r.fecha === hoy ? 'Hoy' : r.fecha.slice(8) + '/' + r.fecha.slice(5, 7)) + ' ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas'), monto: debeClase(r), telefono: r.telefono || '', nombre: r.nombre }))
+    .filter(r => r.estado !== 'pendiente' || aMano(r)).map(r => ({ tipo: 'clase', id: r.ref, detalle: 'Clase · ' + r.nombre, cliente: 'Clase de surf · ' + DIAS[new Date(diaUTC(r.fecha)).getUTCDay()].replace(/^./, c => c.toUpperCase()) + ' ' + (+r.fecha.slice(8)) + '/' + (+r.fecha.slice(5, 7)) + ' · ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + (debeClase(r) < (Number(r.total) || 0) ? ' (diferencia)' : ''), sub: (r.fecha === hoy ? 'Hoy' : r.fecha.slice(8) + '/' + r.fecha.slice(5, 7)) + ' ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas'), monto: debeClase(r), telefono: r.telefono || '', nombre: r.nombre }))
     .filter(x => x.monto > 0);
   return rentas.concat(clases);
 }
@@ -1176,7 +1178,7 @@ async function linkAccion(env, q, d, ctx) {
     lineas.forEach(l => partes.push(Object.assign({ tipo: 'tienda' }, l)));
     // Rentas y clases sin pagar elegidas (el monto se lee aquí, no se confía en lo que manda el celular)
     const ops = await linkOpciones(env), ids = new Set([].concat(d.rentas || [], d.clases || []).map(String));
-    ops.filter(o => ids.has(o.id)).forEach(o => partes.push({ tipo: o.tipo, id: o.id, detalle: o.detalle + (o.sub ? ' (' + o.sub + ')' : ''), monto: o.monto }));
+    ops.filter(o => ids.has(o.id)).forEach(o => partes.push({ tipo: o.tipo, id: o.id, detalle: o.detalle + (o.sub ? ' (' + o.sub + ')' : ''), cliente: o.cliente, monto: o.monto }));
     if (!partes.length) throw err('Elige qué se cobra en el link.');
     const total = partes.reduce((s, p) => s + p.monto, 0);
     if (total < 50) throw err('El total es muy bajo para un link de pago.');

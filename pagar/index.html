@@ -18,6 +18,12 @@
 .pg-hero small{display:block;font-size:1.2rem;letter-spacing:.12em;text-transform:uppercase;opacity:.55;font-weight:600}
 .pg-hero h1{margin:6px 0 0;font-weight:600;font-size:3.4rem;line-height:1.1}
 .pg-hero p{margin:6px auto 0;max-width:36ch;font-size:1.45rem;opacity:.7}
+.pg-hola{font-size:2.6rem!important}
+.pg-carro{margin-top:16px;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:4px 16px}
+.pg-it{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.pg-it span{flex:1;min-width:0}.pg-it b{display:block;font-weight:600;font-size:1.55rem}.pg-it small{display:block;font-size:1.3rem;opacity:.6;margin-top:2px}
+.pg-it em{font-style:normal;font-weight:600;font-size:1.55rem;white-space:nowrap}
+.pg-tot{display:flex;align-items:baseline;justify-content:space-between;padding:14px 0 12px}.pg-tot span{font-size:1.5rem;opacity:.7}.pg-tot b{font-size:2.4rem;font-weight:700}
 .pg-h2{margin:24px 0 10px;font-weight:500;font-size:1.9rem;text-align:center}
 .pg-opt{display:flex;align-items:center;gap:14px;width:100%;margin-top:10px;border:1.5px solid var(--line);border-radius:16px;padding:16px;background:#fff;font:inherit;color:var(--ink);text-align:left;cursor:pointer;text-decoration:none}
 .pg-opt i{font-style:normal;font-size:2.4rem;flex:none;width:40px;text-align:center}
@@ -94,6 +100,10 @@
     });
   }
 
+  // Link de pago de la Tienda: el detalle de lo que paga, cada cosa con su precio y el total abajo
+  const carroH = () => `<div class="pg-hero"><h1 class="pg-hola">${D.carro.nombre ? (EN ? 'Hi ' : 'Hola ') + esc(D.carro.nombre) : (EN ? 'Your payment' : 'Tu pago')}</h1></div>
+    <div class="pg-carro">${D.carro.items.map(i => { const [a, ...b] = String(i.t).split(' · '); return `<div class="pg-it"><span><b>${esc(a)}</b>${b.length ? `<small>${esc(b.join(' · '))}</small>` : ''}</span><em>${clp(i.m)}</em></div>`; }).join('')}
+      <div class="pg-tot"><span>Total</span><b>${clp(D.monto)}</b></div></div>`;
   function pintar(){
     if(D.estado === 'processed'){
       pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment done' : 'Pago listo'}</h1><p>${EN ? 'This payment has already been made.' : 'Este pago ya está hecho.'}</p></div><a class="pg-opt" href="${esc(D.vuelta || '/')}"><i>✓</i><span><b>${EN ? 'Back' : 'Volver'}</b></span></a>`;
@@ -105,7 +115,7 @@
     }
     // Con Webpay (Transbank): "Tarjeta" paga con Webpay para todos (chilenas y extranjeras, sin RUT). Mercado Pago queda solo con la cuenta.
     if(D.webpay){
-      pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
+      pg.innerHTML = (D.carro ? carroH() : `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>`) + `
         <h2 class="pg-h2">${EN ? 'How would you like to pay?' : '¿Cómo quieres pagar?'}</h2>
         <button class="pg-opt" id="op-wp" type="button"><i>💳</i><span><b>${EN ? 'Card' : 'Tarjeta'}</b><small>${EN ? 'Credit, debit or prepaid, Chilean or foreign (Webpay)' : 'Crédito, débito o prepago, chilena o extranjera (Webpay)'}</small></span></button>
         <div class="pg-err" id="err" hidden></div>
@@ -120,7 +130,7 @@
       avisosVuelta();
       return;
     }
-    pg.innerHTML = `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>
+    pg.innerHTML = (D.carro ? carroH() : `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>`) + `
       <h2 class="pg-h2">${EN ? 'How would you like to pay?' : '¿Cómo quieres pagar?'}</h2>
       <button class="pg-opt" id="op-tarjeta" type="button"><i>💳</i><span><b>${EN ? 'Card' : 'Tarjeta'}</b><small>${EN ? 'Credit, debit or prepaid, no Mercado Pago account needed' : 'Crédito, débito o prepago, sin cuenta Mercado Pago'}</small></span></button>
       <div id="brick"></div>

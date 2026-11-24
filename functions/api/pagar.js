@@ -231,7 +231,15 @@ export async function onRequest(context) {
     if (!o) return fallo('No encontramos este pago. Vuelve atrás e intenta de nuevo.');
     const online = (o.config && o.config.online) || {};
     const it = (o.items || [])[0] || {};
-    return json({
+    // Link de pago de la Tienda: el cliente ve el detalle de lo que paga (cada producto, renta y clase con su precio)
+    let carro = null;
+    if (/^LK-/.test(String(o.external_reference || '')) && env.DB) {
+      const L = await env.DB.prepare('SELECT nombre, partes FROM links WHERE ref = ?').bind(o.external_reference).first().catch(() => null);
+      let ps = []; try { ps = JSON.parse((L && L.partes) || '[]'); } catch (_) {}
+      const ver = p => p.cliente || (p.tipo === 'renta' ? 'Arriendo de equipo' : p.tipo === 'clase' ? 'Clase de surf' : p.detalle);
+      if (ps.length) carro = { nombre: String((L && L.nombre) || '').split(' ')[0], items: ps.map(p => ({ t: ver(p), m: Number(p.monto) || 0 })) };
+    }
+    return json({ carro,
       ok: true, estado: o.status, monto: Number(o.total_amount), titulo: it.title || o.description || 'Pago Storm',
       cuenta: o.checkout_url || '', vuelta: online.success_url || '', volver: online.failure_url || '',
       publicKey: env.MP_PUBLIC_KEY || PUBLIC_KEY, flow: flowListo(env) || !!webpayCfg(env), webpay: !!webpayCfg(env)
