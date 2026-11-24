@@ -1206,7 +1206,7 @@
   }
 
 // ---------- Academia de Adultos (pasar lista, quiénes van, cambiar clase; cuentas solo admin) ----------
-  let ADU = null, adSel = '', adForm = false, adTipo = 'hora', adPagoDe = '';
+  let ADU = null, adSel = '', adForm = false, adTipo = 'hora', adPagoDe = '', adLink = null; // adLink: link de pago abierto {clave, link, total, clases, nombre, telefono}
   const adDia = f => { const d = new Date(f + 'T12:00'); return { d: ['dom','lun','mar','mié','jue','vie','sáb'][d.getDay()], n: d.getDate() }; };
   async function loadAdultos(){
     const pane = app.querySelector('.pn-adultos'); if(!pane) return;
@@ -1254,6 +1254,15 @@
     try{ const d = await post(Object.assign({}, auth, body)); ADU = d; cacheGuardar('adultos', d); pintarAdultos(); return true; }
     catch(x){ alert(x.message); if(btn){ btn.disabled = false; btn.textContent = btn.dataset.t; } return false; }
   }
+  // Mismo mensaje y mismos botones que el Link de pago de la Tienda.
+  const adMsgLink = n => 'Hola' + (n.nombre ? ' ' + n.nombre.split(' ')[0] : '') + ', aquí puedes pagar en Storm (' + clp(n.total) + '): ' + n.link;
+  const AD_WA = `<svg viewBox='0 0 24 24' width='20' height='20' fill='currentColor' aria-hidden='true'><path d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.6 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5-4.5-.2-.2-1.2-1.6-1.2-3s.7-2.2 1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.3.5-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2.1 1.1 1 2.1 1.3 2.4 1.4.3.2.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.4Z'/></svg>`;
+  const adLinkCaja = n => { const tel = wa(n.telefono), bt = 'display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:999px;font:inherit;font-weight:700;font-size:1.5rem;padding:13px;cursor:pointer;text-decoration:none;box-sizing:border-box';
+    return `<div style='margin-top:10px;padding:14px;background:#F6F4F1;border-radius:14px'>
+      <div style='display:flex;justify-content:space-between;align-items:baseline'><span style='font-size:1.35rem;opacity:.7'>Link de pago · ${n.clases === 1 ? '1 clase' : n.clases + ' clases'}</span><b style='font-size:1.8rem'>${clp(n.total)}</b></div>
+      <a href='https://wa.me/${tel}?text=${encodeURIComponent(adMsgLink(n))}' target='_blank' rel='noopener' style='${bt};margin-top:12px;border:0;background:#0f6e74;color:#fff'>${AD_WA}Mandar por WhatsApp</a>
+      <button data-adcopiar style='${bt};margin-top:8px;background:#fff;color:#0f6e74;border:2px solid #0f6e74'>Copiar link</button>
+      <p style='font-size:1.2rem;color:#8a8986;margin:10px 2px 0;text-align:center'>Cuando pague, queda anotado solo.</p></div>`; };
   function pintarAdultos(){
     const pane = app.querySelector('.pn-adultos'); if(!pane || !ADU) return;
     const d = ADU, hoy = d.hoy, cls = d.clases || [];
@@ -1266,7 +1275,7 @@
       const debenA = (k.alumnos || []).filter(a => a.debe), M = k.mes.charAt(0).toUpperCase() + k.mes.split(' ')[0].slice(1);
       top += `<div class='pn-stats' style='margin-top:14px'><div class='pn-stat pn-stat--main' style='background:#4F7F86'><small>Recaudado en ${esc(M)}</small><b>${clp(k.ingresos)}</b><em>${k.pagos || 0} ${k.pagos === 1 ? 'pago' : 'pagos'}${k.comision ? ' · comisión MP ' + clp(k.comision) : ''}</em></div>
         <div class='pn-stat'><small>Le toca al instructor</small><b>${clp(k.instructor)}</b><em>50% de las clases hechas</em></div>
-        <div class='pn-stat${debenA.length ? ' pn-stat--warn' : ''}'><small>Faltan por pagar</small><b>${debenA.length}</b><em>${debenA.length ? 'por cobrar ' + clp(debenA.reduce((t, a) => t + a.debe, 0)) : 'alumnos'}</em></div></div>
+        <div class='pn-stat${debenA.length ? ' pn-stat--warn' : ''}' ${debenA.length ? `data-adver style='cursor:pointer'` : ''}><small>Faltan por pagar</small><b>${debenA.length}</b><em>${debenA.length ? 'por cobrar ' + clp(debenA.reduce((t, a) => t + a.debe, 0)) : 'alumnos'}</em></div></div>
         <details style='margin-top:10px'><summary style='cursor:pointer;font-size:1.35rem;opacity:.75'>Ver detalle de las cuentas de ${esc(k.mes.split(' ')[0])}</summary>
         <div class='pn-card'>${(k.ganado != null ? [['Entró este mes', clp(k.ingresos)], ['Comisión Mercado Pago', '− ' + clp(k.comision)], ['Valor de las clases hechas', clp(k.hechas)]].concat(k.vencido ? [['Clases no usadas (plan vencido)', clp(k.vencido)]] : []).concat([['50% instructor', clp(k.instructor)], ['50% Storm', clp(k.storm)], ['Pagado y aún por usar', clp(k.porUsar)], ['Clases hechas', k.clasesHechas], ['Asistencias', k.asistencias]])
           : [['Entró', clp(k.ingresos)], ['Comisión Mercado Pago', '− ' + clp(k.comision)], ['Neto', clp(k.ingresos - k.comision)], ['50% instructor', clp(k.instructor)], ['50% Storm', clp(k.storm)], ['Clases hechas', k.clasesHechas], ['Asistencias', k.asistencias]]).map(r => `<div style='display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:1.45rem'><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')}</div></details>`;
@@ -1306,11 +1315,13 @@
     }
     if(d.cuentas){
       const k = d.cuentas;
-      h += `<h2 style='margin:26px 0 0;font-weight:500;font-size:2rem'>Pagos por alumno</h2>
-        <div class='pn-card'>` + (k.alumnos || []).map(a => `<div style='padding:10px 0;border-bottom:1px solid var(--line)'><div style='display:flex;justify-content:space-between;align-items:center;gap:8px'><div><b style='font-size:1.5rem'>${esc(a.nombre)}</b><small style='display:block;font-size:1.2rem;opacity:.62'>Fue a ${a.fue} este mes · pagó ${a.pagado ? clp(a.pagado) : 'nada aún'}</small></div><div style='display:flex;gap:6px;align-items:center'>${a.debe ? `<span class='pn-tag' style='background:#F6E3DF;color:#B5543C'>Debe ${clp(a.debe)}</span>` : ''}<button class='pn-link' data-adpagode='${esc(a.clave)}'>Anotar pago</button></div></div>
+      h += `<h2 id='ad-pagos' style='margin:26px 0 0;font-weight:500;font-size:2rem'>Pagos por alumno</h2>
+        <div class='pn-card'>` + (k.alumnos || []).slice().sort((x, y) => (y.debe ? 1 : 0) - (x.debe ? 1 : 0)).map(a => `<div style='padding:10px 0;border-bottom:1px solid var(--line)'><div style='display:flex;justify-content:space-between;align-items:center;gap:8px'><div><b style='font-size:1.5rem'>${esc(a.nombre)}</b><small style='display:block;font-size:1.2rem;opacity:.62'>Fue a ${a.fue} este mes · pagó ${a.pagado ? clp(a.pagado) : 'nada aún'}</small></div><div style='display:flex;gap:6px;align-items:center'>${a.debe ? `<span class='pn-tag' style='background:#F6E3DF;color:#B5543C;white-space:nowrap'>Debe ${clp(a.debe)}</span>` : `<button class='pn-link' data-adpagode='${esc(a.clave)}'>Anotar pago</button>`}</div></div>
+          ${a.debe ? `<div style='display:flex;gap:16px;align-items:center;margin-top:6px;white-space:nowrap'><button class='pn-link' data-adlink='${esc(a.clave)}'>Link de pago</button><button class='pn-link' data-adpagode='${esc(a.clave)}'>Anotar pago</button>${a.link ? `<span class='pn-tag' style='margin-left:auto'>Esperando pago</span>` : ''}</div>` : ''}
+          ${adLink && adLink.clave === a.clave ? adLinkCaja(adLink) : ''}
           ${adPagoDe === a.clave ? `<div style='margin-top:8px;padding:12px;background:#F6F4F1;border-radius:12px'><select id='ad-pl' class='pn-in'>${a.debeClases ? `<option value='Deuda'>Lo que debe (${a.debeClases} ${a.debeClases === 1 ? 'clase' : 'clases'}, ${clp(a.debe)})</option>` : ''}<option value='4 clases'>4 clases · ${clp(d.planes['4 clases'].monto)}</option><option value='8 clases'>8 clases · ${clp(d.planes['8 clases'].monto)}</option><option value='Suelta'>Clase suelta · ${clp(d.clase)}</option></select>
             <select id='ad-me' class='pn-in' style='margin-left:6px'><option>Transferencia</option><option>Efectivo</option></select> <button data-adpagar='${esc(a.clave)}' data-n='${a.debeClases}' style='border:0;border-radius:999px;background:#2C2C2B;color:#fff;font:inherit;font-weight:600;padding:8px 14px;cursor:pointer;margin-top:8px'>Guardar pago</button></div>` : ''}</div>`).join('') + `</div>
-        <p class='pn-note'>${k.ganado != null ? 'Cada clase vale lo pagado (menos comisión) dividido por las clases del plan. Se reparte 50% y 50% en el mes en que se hace la clase; lo que no se usa, en el mes en que vence el plan. ' : ''}Lo de Mercado Pago se anota solo. "Anotar pago" es para transferencias o efectivo.</p>`;
+        <p class='pn-note'>${k.ganado != null ? 'Cada clase vale lo pagado (menos comisión) dividido por las clases del plan. Se reparte 50% y 50% en el mes en que se hace la clase; lo que no se usa, en el mes en que vence el plan. ' : ''}Lo que se paga en línea (Mi clase o Link de pago) se anota solo. "Anotar pago" es para transferencias o efectivo.</p>`;
     }
     pane.innerHTML = h;
     pane.querySelectorAll('[data-adcl]').forEach(b => b.onclick = () => { adSel = b.dataset.adcl; adForm = false; pintarAdultos(); });
@@ -1326,7 +1337,26 @@
     };
     pane.querySelectorAll('[data-adal]').forEach(r => r.onclick = () => adMarcar(c, r.dataset.adal, r.dataset.on !== '1'));
     const an = pane.querySelector('[data-adagregar]'); if(an) an.onclick = () => { const n = pane.querySelector('#ad-nuevo').value.trim(); if(n) adEnviar({accion:'adultos-agregar', fecha:c.fecha, nombre:n}, an); };
-    pane.querySelectorAll('[data-adpagode]').forEach(b => b.onclick = () => { adPagoDe = adPagoDe === b.dataset.adpagode ? '' : b.dataset.adpagode; pintarAdultos(); });
+    pane.querySelectorAll('[data-adpagode]').forEach(b => b.onclick = () => { adPagoDe = adPagoDe === b.dataset.adpagode ? '' : b.dataset.adpagode; adLink = null; pintarAdultos(); });
+    const av = pane.querySelector('[data-adver]'); if(av) av.onclick = () => { const t = pane.querySelector('#ad-pagos'); if(t) t.scrollIntoView({behavior:'smooth', block:'start'}); };
+    // Link de pago: lo que debe, para mandarlo por WhatsApp. Si ya hay uno esperando pago por lo mismo, se usa ese.
+    pane.querySelectorAll('[data-adlink]').forEach(b => b.onclick = async () => {
+      const clave = b.dataset.adlink, a = (ADU.cuentas.alumnos || []).find(x => x.clave === clave) || {};
+      if(adLink && adLink.clave === clave){ adLink = null; return pintarAdultos(); }
+      adPagoDe = '';
+      if(a.link){ adLink = {clave, link:a.link, total:a.debe, clases:a.debeClases, nombre:a.nombre, telefono:a.telefono}; return pintarAdultos(); }
+      b.disabled = true; b.textContent = 'Creando link…';
+      try{
+        const d = await post(Object.assign({}, auth, {accion:'adultos-link', alumno:clave}));
+        if(!d.link) throw new Error(d.error || 'No pudimos crear el link.');
+        adLink = Object.assign({clave}, d, {telefono: d.telefono || a.telefono});
+        a.link = d.link; pintarAdultos();
+      }catch(x){ alert(x.message); b.disabled = false; b.textContent = 'Link de pago'; }
+    });
+    const lc = pane.querySelector('[data-adcopiar]'); if(lc) lc.onclick = () => {
+      const ok = () => { lc.textContent = '✓ Copiado'; setTimeout(() => lc.textContent = 'Copiar link', 1800); };
+      (navigator.clipboard ? navigator.clipboard.writeText(adLink.link) : Promise.reject()).then(ok).catch(() => prompt('Copia el link:', adLink.link));
+    };
     pane.querySelectorAll('[data-adpagar]').forEach(b => b.onclick = async () => {
       let plan = pane.querySelector('#ad-pl').value, clases = 1; if(plan === 'Deuda'){ plan = 'Suelta'; clases = +b.dataset.n || 1; }
       if(await adEnviar({accion:'adultos-pago-manual', alumno:b.dataset.adpagar, plan, clases, medio:pane.querySelector('#ad-me').value}, b)){ adPagoDe = ''; pintarAdultos(); }
