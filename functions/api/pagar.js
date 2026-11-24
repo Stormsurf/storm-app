@@ -37,6 +37,16 @@ const WEBPAY_PROD = 'https://webpay3g.transbank.cl', WEBPAY_INT = 'https://webpa
 const WEBPAY_INT_CODIGO = '597055555532', WEBPAY_INT_LLAVE = '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C'; // datos públicos de prueba de Transbank
 const REF_OK = /^(AA|AD|AV|ES|LK|PRUEBA)-[\w-]+$/; // LK- = link de pago de la Tienda (productos, rentas y clases) // PRUEBA- solo en la vista previa
 
+// Transferencia (Isidora 24-11): Anual, Adultos y Verano se pagan SOLO por transferencia hasta el 30-11 (hora Chile).
+// La familia ve los datos del banco y sube el comprobante; al subirlo el pago queda anotado. Desde el 1-12 vuelve Webpay solo.
+const BANCO = { titular: 'Storm SpA', rut: '77.957.792-9', banco: 'Banco de Chile - Edwards', tipo: 'Cuenta Vista', numero: '1367824213', correo: 'contacto@stormsurf.cl' };
+const TRANSFERENCIA_HASTA = '2026-11-30';
+const hoyChile = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const soloTransferencia = ref => /^(AA|AD|AV)-/.test(String(ref || '')) && hoyChile() <= TRANSFERENCIA_HASTA;
+const MAX_COMPROBANTE = 4 * 1024 * 1024; // base64 (~3 MB de archivo); las fotos se achican en el celular antes de subir
+async function compTabla(db) {
+  await db.prepare("CREATE TABLE IF NOT EXISTS comprobantes (clave TEXT PRIMARY KEY, orden TEXT NOT NULL, ref TEXT NOT NULL, monto INTEGER NOT NULL DEFAULT 0, archivo TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT '', datos TEXT NOT NULL DEFAULT '', creada_ms INTEGER NOT NULL)").run();
+}
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 const fallo = m => json({ ok: false, error: m });
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => '&#' + ch.charCodeAt(0) + ';');
@@ -215,6 +225,13 @@ export async function onRequest(context) {
     return Response.redirect(origen + '/pagar/?o=' + encodeURIComponent(oid) + '&flow=' + (pend ? 'pendiente' : 'error'), 303);
   }
 
+  if (request.method === 'GET' && url.searchParams.get('comprobante') && env.DB) {
+    await compTabla(env.DB);
+    const c = await env.DB.prepare('SELECT * FROM comprobantes WHERE clave = ?').bind(String(url.searchParams.get('comprobante'))).first();
+    if (!c) return html('<h1>Comprobante no encontrado</h1>');
+    const bin = Uint8Array.from(atob(c.datos), ch => ch.charCodeAt(0));
+    return new Response(bin, { headers: { 'Content-Type': c.tipo, 'Content-Disposition': 'inline; filename="' + (c.ref + (c.tipo === 'application/pdf' ? '.pdf' : '.jpg')) + '"', 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex' } });
+  }
   if (request.method === 'GET') {
     // Producto de prueba de $50 (lo pide Transbank para pasar a producción): /api/pagar?prueba50=1
     if (url.searchParams.get('prueba50') && webpayCfg(env)) {
@@ -241,7 +258,10 @@ export async function onRequest(context) {
       const ver = p => p.cliente || (p.tipo === 'renta' ? 'Arriendo de equipo' : p.tipo === 'clase' ? 'Clase de surf' : p.detalle);
       if (ps.length) carro = { nombre: String((L && L.nombre) || '').split(' ')[0], items: ps.map(p => ({ t: ver(p), m: Number(p.monto) || 0 })) };
     }
-    return json({ carro,
+    const tr = soloTransferencia(o.external_reference);
+    let subido = false;
+    if (tr && env.DB) { await compTabla(env.DB); subido = !!(await env.DB.prepare('SELECT clave FROM comprobantes WHERE orden = ?').bind(o.id).first()); }
+    return json({ carro, transferencia: tr ? BANCO : null, subido,
       ok: true, estado: o.status, monto: Number(o.total_amount), titulo: it.title || o.description || 'Pago Storm',
       cuenta: o.checkout_url || '', vuelta: online.success_url || '', volver: online.failure_url || '',
       publicKey: env.MP_PUBLIC_KEY || PUBLIC_KEY, flow: flowListo(env) || !!webpayCfg(env), webpay: !!webpayCfg(env)
@@ -254,6 +274,23 @@ export async function onRequest(context) {
   const o = await leerOrden(env, d.o, url);
   if (!o) return fallo('No encontramos este pago. Vuelve atrás e intenta de nuevo.');
   if (o.status !== 'created') return fallo(o.status === 'processed' ? 'Este pago ya está hecho.' : 'Este pago ya no está disponible. Vuelve atrás e intenta de nuevo.');
+  if (d.comprobante) {
+    const ref = String(o.external_reference || ''), c = d.comprobante;
+    if (!soloTransferencia(ref) || !env.DB) return fallo('Este pago se hace con tarjeta.');
+    const tipo = String(c.tipo || ''), datos = String(c.datos || '');
+    if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo) || !/^[A-Za-z0-9+/=]+$/.test(datos)) return fallo('Sube una foto o un PDF del comprobante.');
+    if (datos.length > MAX_COMPROBANTE) return fallo('El archivo es muy grande. Sube una foto o captura de pantalla.');
+    await compTabla(env.DB);
+    const ya = await env.DB.prepare('SELECT clave FROM comprobantes WHERE orden = ?').bind(o.id).first();
+    if (!ya) {
+      const clave = Array.from(crypto.getRandomValues(new Uint8Array(15)), b => b.toString(16).padStart(2, '0')).join('');
+      const monto = Math.round(Number(o.total_amount));
+      await env.DB.prepare('INSERT INTO comprobantes (clave, orden, ref, monto, archivo, tipo, datos, creada_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(clave, o.id, ref, monto, String(c.nombre || '').slice(0, 120), tipo, datos, Date.now()).run();
+      await avisarExterno(env, ref, 'transferencia:' + clave, monto, origen);
+    }
+    const online = (o.config && o.config.online) || {};
+    return json({ ok: true, vuelta: online.success_url || '' });
+  }
   if (d.flow && webpayCfg(env)) {
     const ref = o.external_reference;
     const c = await webpay(env, 'POST', '', { buy_order: 'S' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase(), session_id: o.id, amount: Math.round(Number(o.total_amount)), return_url: origen + '/api/pagar?webpay=vuelta&o=' + encodeURIComponent(o.id) });

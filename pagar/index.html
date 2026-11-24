@@ -41,6 +41,12 @@
 .pg-ok{margin-top:16px;padding:16px;border-radius:14px;background:var(--ac-soft);font-size:1.5rem;text-align:center}
 .pg-note{font-size:1.3rem;opacity:.6;margin-top:16px;line-height:1.5;text-align:center}
 .pg-note a{color:inherit}
+.pg-bk{margin-top:10px;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:4px 16px}
+.pg-bk div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:1.45rem}
+.pg-bk div:last-child{border-bottom:0}.pg-bk span{opacity:.6}.pg-bk b{flex:1;font-weight:600;text-align:right;overflow-wrap:anywhere}
+.pg-cp{font:inherit;font-size:1.3rem;font-weight:600;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;color:var(--ac);cursor:pointer;flex:none}
+.pg-up{display:block;width:100%;box-sizing:border-box;margin-top:12px;font:inherit;font-size:1.65rem;font-weight:600;padding:16px;border:0;border-radius:14px;background:var(--ac);color:#fff;cursor:pointer;text-align:center;text-decoration:none}
+.pg-up:disabled{opacity:.55}
 </style>
 </head>
 <body>
@@ -113,6 +119,8 @@
       pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment expired' : 'Pago vencido'}</h1><p>${EN ? 'This payment link is no longer valid. Go back and start again.' : 'Este link de pago ya no sirve. Vuelve atrás y empieza de nuevo.'}</p></div>${ayuda}`;
       return;
     }
+    // Transferencia (Isidora 24-11, hasta el 30-11): datos del banco y subir el comprobante. Al subirlo, el pago queda anotado.
+    if(D.transferencia){ transferencia(); return; }
     // Con Webpay (Transbank): todo lo online se paga solo con Webpay (Isidora 24-11: un solo código de comercio, ventas exentas). Sin cuenta Mercado Pago.
     if(D.webpay){
       pg.innerHTML = (D.carro ? carroH() : `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>`) + `
@@ -142,6 +150,51 @@
     avisosVuelta();
   }
 
+  function transferencia(){
+    const B = D.transferencia, hero = D.carro ? carroH() : `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>`;
+    const listo = () => { pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1 class="pg-hola">${EN ? 'Receipt received' : '¡Comprobante recibido!'}</h1><p>${EN ? 'Your payment is registered. Thank you!' : 'Tu pago quedó anotado. ¡Gracias!'}</p></div>${D.vuelta ? `<a class="pg-up" href="${esc(D.vuelta)}">${EN ? 'Continue' : 'Continuar'}</a>` : ''}`; };
+    if(D.subido){ listo(); return; }
+    const fila = (a, b, cp) => `<div><span>${a}</span><b>${esc(b)}</b>${cp ? `<button class="pg-cp" type="button" data-cp="${esc(b)}">${EN ? 'Copy' : 'Copiar'}</button>` : ''}</div>`;
+    pg.innerHTML = hero + `
+      <h2 class="pg-h2">${EN ? 'Pay by bank transfer' : 'Paga por transferencia'}</h2>
+      <div class="pg-bk">${fila(EN ? 'Name' : 'Nombre', B.titular)}${fila('RUT', B.rut, 1)}${fila(EN ? 'Bank' : 'Banco', B.banco)}${fila(EN ? 'Account' : 'Cuenta', B.tipo)}${fila(EN ? 'Number' : 'Número', B.numero, 1)}${fila(EN ? 'Email' : 'Correo', B.correo)}${fila(EN ? 'Amount' : 'Monto', clp(D.monto))}</div>
+      <p class="pg-note" style="margin-top:14px">${EN ? 'After transferring, upload a screenshot or PDF of the receipt. Your payment is registered when it is uploaded.' : 'Después de transferir, sube la captura o el PDF del comprobante. Tu pago queda anotado al subirlo.'}</p>
+      <input type="file" id="cmp" accept="image/*,application/pdf" hidden>
+      <button class="pg-up" id="up" type="button">${EN ? 'Upload receipt' : 'Subir comprobante'}</button>
+      <div class="pg-err" id="err" hidden></div>
+      <p class="pg-note">${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+    pg.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { try{ await navigator.clipboard.writeText(b.dataset.cp.replace(/\./g, '')); b.textContent = EN ? 'Copied' : 'Copiado'; }catch(_){} });
+    const up = document.getElementById('up'), inp = document.getElementById('cmp');
+    up.onclick = () => inp.click();
+    inp.onchange = async () => {
+      const f = inp.files && inp.files[0]; if(!f) return;
+      up.disabled = true; up.textContent = EN ? 'Uploading…' : 'Subiendo…'; error('');
+      try{
+        const c = await leerArchivo(f);
+        const r = await fetch('/api/pagar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ o: id, comprobante: c }) }).then(x => x.json());
+        if(!r.ok) throw new Error(r.error || '');
+        if(r.vuelta) D.vuelta = r.vuelta;
+        listo();
+      }catch(x){ error(x.message || (EN ? 'We could not upload it. Try again.' : 'No se pudo subir. Intenta de nuevo.')); up.disabled = false; up.textContent = EN ? 'Upload receipt' : 'Subir comprobante'; inp.value = ''; }
+    };
+  }
+  // Foto: se achica a JPEG (máx. 1600 px) para que suba rápido. PDF: tal cual (máx. 3 MB).
+  function leerArchivo(f){
+    return new Promise((ok, mal) => {
+      const r = new FileReader();
+      if(f.type === 'application/pdf'){
+        if(f.size > 3e6) return mal(new Error(EN ? 'The PDF is too large. Upload a screenshot.' : 'El PDF es muy grande. Sube una captura de pantalla.'));
+        r.onload = () => ok({ nombre: f.name, tipo: 'application/pdf', datos: String(r.result).split(',')[1] }); r.onerror = () => mal(new Error('')); return r.readAsDataURL(f);
+      }
+      if(!/^image\//.test(f.type)) return mal(new Error(EN ? 'Upload a photo or a PDF.' : 'Sube una foto o un PDF del comprobante.'));
+      r.onload = () => { const im = new Image(); im.onload = () => {
+        const k = Math.min(1, 1600 / Math.max(im.width, im.height)), cv = document.createElement('canvas');
+        cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+        ok({ nombre: f.name, tipo: 'image/jpeg', datos: cv.toDataURL('image/jpeg', 0.8).split(',')[1] });
+      }; im.onerror = () => mal(new Error(EN ? 'We could not read that image.' : 'No pudimos leer esa imagen. Sube una captura de pantalla.')); im.src = r.result; };
+      r.onerror = () => mal(new Error('')); r.readAsDataURL(f);
+    });
+  }
   // Mensaje al volver de Webpay o Flow sin pagar
   function avisosVuelta(){
     const fq = new URLSearchParams(location.search).get('flow');
