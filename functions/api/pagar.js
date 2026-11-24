@@ -70,7 +70,7 @@ async function sfBoleta(env, b) {
     const x = await fetch((env.SF_API || SF_API) + '/invoiceV2/' + encodeURIComponent(env.SF_SUCURSAL || 'Casa Matriz'), { method: 'POST', headers: { Authorization: 'Bearer ' + env.SIMPLEFACTURA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
     const t = await x.text(); let r = {}; try { r = JSON.parse(t); } catch (_) {}
     const folio = r && r.data && Number(r.data.folio);
-    return x.status === 200 && folio ? { folio } : { error: ('HTTP ' + x.status + ' ' + ((r && (r.message || r.errors && JSON.stringify(r.errors))) || t)).slice(0, 500) };
+    return x.status === 200 && folio ? { folio } : { error: ('HTTP ' + x.status + ' ' + t).slice(0, 800) };
   } catch (e) { return { error: String(e && e.message || e).slice(0, 500) }; }
 }
 /** Emite (una sola vez por pago) la boleta exenta de un pago Webpay. pago = 'webpay:<token>'. */
