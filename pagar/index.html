@@ -198,7 +198,12 @@
     }).catch(() => {});
     return;
   }
-  if(new URLSearchParams(location.search).get('listo')){ pg.innerHTML = `<div class="pg-ok"><b>¡Pago de prueba listo!</b><br>Llegó a Mercado Pago. Puedes devolverlo desde tu cuenta.</div>`; return; }
+  const LISTO = new URLSearchParams(location.search).get('listo');
+  // Link de pago de la Tienda: al volver de pagar
+  if(LISTO === 'link'){ pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment done' : '¡Pago listo!'}</h1><p>${EN ? 'Thank you! We received your payment.' : 'Gracias, ya lo recibimos en Storm. 🌊'}</p></div>`; return; }
+  if(LISTO === 'proceso'){ pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment in process' : 'Pago en proceso'}</h1><p>${EN ? 'We will let you know when it is confirmed.' : 'Te avisamos cuando se confirme.'}</p></div>`; return; }
+  if(LISTO === 'error'){ pg.innerHTML = `<div class="pg-hero"><small>Storm</small><h1>${EN ? 'Payment not completed' : 'El pago no se completó'}</h1><p>${EN ? 'Open the link you received again to try once more.' : 'Abre de nuevo el link que te mandamos para intentarlo otra vez.'}</p></div>`; return; }
+  if(LISTO){ pg.innerHTML = `<div class="pg-ok"><b>¡Pago de prueba listo!</b><br>Llegó a Mercado Pago. Puedes devolverlo desde tu cuenta.</div>`; return; }
   fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {
     if(!r.ok){ pg.innerHTML = `<div class="pg-err">${esc(r.error)}</div>${ayuda}`; return; }
     D = r; pintar();

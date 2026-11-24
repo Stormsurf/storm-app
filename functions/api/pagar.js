@@ -33,7 +33,7 @@ const PUBLIC_KEY = 'APP_USR-d9421f08-0996-410b-bd5c-5947565d6099'; // Public Key
 const FLOW_API = 'https://www.flow.cl/api';
 const WEBPAY_PROD = 'https://webpay3g.transbank.cl', WEBPAY_INT = 'https://webpay3gint.transbank.cl';
 const WEBPAY_INT_CODIGO = '597055555532', WEBPAY_INT_LLAVE = '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C'; // datos públicos de prueba de Transbank
-const REF_OK = /^(AA|AD|AV|ES|PRUEBA)-[\w-]+$/; // PRUEBA- solo en la vista previa
+const REF_OK = /^(AA|AD|AV|ES|LK|PRUEBA)-[\w-]+$/; // LK- = link de pago de la Tienda (productos, rentas y clases) // PRUEBA- solo en la vista previa
 
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 const fallo = m => json({ ok: false, error: m });
@@ -63,7 +63,7 @@ const MOTIVOS = {
 async function mp(env, path, opt = {}) {
   let code = 0, body = null;
   try {
-    const r = await fetch(MP_API + path, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + env.MP_TOKEN, 'Content-Type': 'application/json' }, opt.headers || {}) }));
+    const r = await fetch((env.MP_API || MP_API) + path, Object.assign({}, opt, { headers: Object.assign({ Authorization: 'Bearer ' + env.MP_TOKEN, 'Content-Type': 'application/json' }, opt.headers || {}) }));
     code = r.status; body = await r.json().catch(() => null);
   } catch (_) {}
   return { code, body };
@@ -80,6 +80,11 @@ async function leerOrden(env, id, url) {
     const r = await env.DB.prepare('SELECT estado FROM reservas WHERE ref = ?').bind(body.external_reference).first();
     if (!r || r.estado !== 'pendiente') body.status = r && r.estado === 'pagada' ? 'processed' : 'expired';
   }
+  // Link de pago de la Tienda: solo mientras sigue esperando pago
+  if (/^LK-/.test(body.external_reference) && body.status === 'created' && env.DB) {
+    const L = await env.DB.prepare('SELECT estado FROM links WHERE ref = ?').bind(body.external_reference).first().catch(() => null);
+    if (!L || L.estado !== 'pendiente') body.status = L && L.estado === 'pagada' ? 'processed' : 'expired';
+  }
   return body;
 }
 
@@ -87,6 +92,11 @@ async function leerOrden(env, id, url) {
 async function avisar(env, ref, id, origen) {
   if (/^PRUEBA-/.test(ref)) return;
   const body = JSON.stringify({ type: 'order', action: 'order.processed', data: { id } });
+  if (/^LK-/.test(ref)) { // link de pago de la Tienda: se guarda el número de orden nuevo y se revisa en /api/reservas
+    if (env.DB) await env.DB.prepare("UPDATE links SET orden_mp = ? WHERE ref = ? AND estado = 'pendiente'").bind(String(id), ref).run();
+    try { await fetch(origen + '/api/reservas?mp=1&data.id=' + encodeURIComponent(id), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }); } catch (_) {}
+    return;
+  }
   const url = /^ES-/.test(ref) ? null : (/^AV-/.test(ref) ? VERANO : ANUAL) + '?mp=1&type=order&data.id=' + encodeURIComponent(id);
   if (/^ES-/.test(ref)) {
     // Reservas: la reserva guarda el número de orden; se cambia por el nuevo y se revisa.
@@ -132,7 +142,7 @@ async function webpay(env, metodo, ruta, body) {
 /** Pago hecho fuera de Mercado Pago (Flow o Webpay): avisa al programa que corresponde. id = 'flow:<n>' o 'webpay:<token>'. */
 async function avisarExterno(env, ref, id, monto, origen, token, tipo) {
   if (/^PRUEBA-/.test(ref)) return;
-  if (/^ES-/.test(ref)) {
+  if (/^(ES|LK)-/.test(ref)) {
     try { await fetch(origen + '/api/reservas?externo=1', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref, token }) }); } catch (_) {}
     return;
   }
@@ -239,6 +249,7 @@ export async function onRequest(context) {
     const c = await webpay(env, 'POST', '', { buy_order: 'S' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase(), session_id: o.id, amount: Math.round(Number(o.total_amount)), return_url: origen + '/api/pagar?webpay=vuelta&o=' + encodeURIComponent(o.id) });
     if (!c || !c.url || !c.token) return fallo('No pudimos conectar con Webpay. Intenta de nuevo en un momento.');
     if (/^ES-/.test(ref) && env.DB) await env.DB.prepare("UPDATE reservas SET orden_mp = ?, medio = 'Webpay' WHERE ref = ? AND estado IN ('pendiente', 'vencida')").bind('webpay:' + c.token, ref).run();
+    if (/^LK-/.test(ref) && env.DB) await env.DB.prepare("UPDATE links SET orden_mp = ? WHERE ref = ? AND estado = 'pendiente'").bind('webpay:' + c.token, ref).run();
     return json({ ok: true, url: c.url, token_ws: c.token }); // la página manda el token por POST (como pide Transbank)
   }
   if (d.flow) {
@@ -254,6 +265,7 @@ export async function onRequest(context) {
     }, true);
     if (!c || !c.url || !c.token) return fallo('No pudimos conectar con Flow. Intenta de nuevo en un momento.');
     if (/^ES-/.test(ref) && env.DB) await env.DB.prepare("UPDATE reservas SET orden_mp = ?, medio = 'Flow' WHERE ref = ? AND estado IN ('pendiente', 'vencida')").bind('flow:' + c.token, ref).run();
+    if (/^LK-/.test(ref) && env.DB) await env.DB.prepare("UPDATE links SET orden_mp = ? WHERE ref = ? AND estado = 'pendiente'").bind('flow:' + c.token, ref).run();
     return json({ ok: true, url: c.url + '?token=' + c.token });
   }
   const token = String(d.token || ''), metodo = String(d.payment_method_id || ''), tipo = d.payment_type === 'debit_card' ? 'debit_card' : (d.payment_type === 'prepaid_card' ? 'prepaid_card' : 'credit_card');

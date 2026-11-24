@@ -748,6 +748,8 @@ async function revisionAutomatica(env, ctx) {
       if (!(guarda && guarda.n)) await db.prepare("UPDATE reservas SET estado = 'vencida' WHERE ref = ? AND estado = 'pendiente'").bind(r.ref).run();
     }
   }
+  // Links de pago esperando (por si el aviso del pago no llegó)
+  try { await linkTabla(db); for (const L of (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente' AND creada_ms > ?").bind(Date.now() - 7 * 86400000).all()).results) if (await revisarLink(env, L, ctx) === 'pagada') pagadas++; } catch (x) { console.error(x); }
   // Ventas de la máquina Tuu: el mes actual (y el anterior los primeros 3 días, por ventas que llegan tarde).
   if (env.TUU_KEY) try { const hoy = ahoraChile().fecha; await tuuSincronizar(env, hoy.slice(0, 7)); if (+hoy.slice(8) <= 3) await tuuSincronizar(env, sumarDias(hoy.slice(0, 8) + '01', -1).slice(0, 7)); } catch (x) { console.error(x); }
   let anual = null; try { anual = await sincronizarAnual(env); } catch (x) { console.error(x); anual = { error: x.message }; }
@@ -977,7 +979,7 @@ async function packAccion(env, q, d) {
 // Rentas: qué se arrendó (tablas / trajes), medio día o día completo, y si ya volvió. El cobro sigue pasando por Tuu
 // (Finanzas ya suma las ventas "Renta …" de Tuu), así que aquí no se suma plata: es el control de lo que está afuera.
 // Notas: avisos para el equipo (se marcan como listos) e información fija que hay que saber.
-const RENTA_PAGOS = ['POS', 'Efectivo', 'Transferencia', 'Falta pagar'];
+const RENTA_PAGOS = ['POS', 'Efectivo', 'Transferencia', 'Falta pagar', 'Link de pago'];
 async function rnTablas(db) {
   await db.batch([
     db.prepare("CREATE TABLE IF NOT EXISTS rentas (id TEXT PRIMARY KEY, creada_ms INTEGER NOT NULL, fecha TEXT NOT NULL, hora TEXT NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', tablas INTEGER NOT NULL DEFAULT 0, trajes INTEGER NOT NULL DEFAULT 0, tiempo TEXT NOT NULL DEFAULT 'medio', pago TEXT NOT NULL DEFAULT '', nota TEXT NOT NULL DEFAULT '', por TEXT NOT NULL DEFAULT '', devuelta_ms INTEGER NOT NULL DEFAULT 0, devuelta_hora TEXT NOT NULL DEFAULT '', devuelta_por TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activa')"),
@@ -1020,6 +1022,7 @@ async function rentasAccion(env, q, d) {
   if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores ven las rentas.');
   const db = env.DB; await rnTablas(db);
   const t = ahoraChile(), op = d.op || 'ver', yo = op === 'ver' ? '' : await quienNombre(env, q.email);
+  let nuevo = '';
   if (op === 'nueva') {
     const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Escribe el nombre de quien arrienda.');
     const n20 = v => Math.max(0, Math.min(20, Math.floor(Number(v) || 0))), tablas = n20(d.tablas), fibras = n20(d.fibras), trajes = n20(d.trajes);
@@ -1028,27 +1031,31 @@ async function rentasAccion(env, q, d) {
     const pago = RENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
     const hora = normHora(d.hora) || t.hora;
     const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : tablas * PRECIO_RENTA.tablas[tiempo] + fibras * PRECIO_RENTA.fibras[tiempo] + trajes * PRECIO_RENTA.trajes[tiempo];
+    if (pago === 'Link de pago' && !monto) throw err('Escribe cuánto se cobra.');
+    nuevo = nuevoId('R', t);
     await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, fibras, trajes, tiempo, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(nuevoId('R', t), Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, fibras, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
+      .bind(nuevo, Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, fibras, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
     await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'S ' + fibras + 'F ' + trajes + 'J ' + tiempo);
   } else if (op !== 'ver') {
     const x = await db.prepare('SELECT * FROM rentas WHERE id = ?').bind(String(d.id || '')).first();
     if (!x) throw err('No encontramos esa renta.');
     if (op === 'devuelta') await db.prepare('UPDATE rentas SET devuelta_ms = ?, devuelta_hora = ?, devuelta_por = ? WHERE id = ?').bind(Date.now(), t.fecha === x.fecha ? t.hora : t.fecha.slice(8) + '/' + t.fecha.slice(5, 7) + ' ' + t.hora, yo, x.id).run();
     else if (op === 'deshacer') await db.prepare("UPDATE rentas SET devuelta_ms = 0, devuelta_hora = '', devuelta_por = '' WHERE id = ?").bind(x.id).run();
-    else if (op === 'pago') { const p = RENTA_PAGOS.includes(d.pago) && d.pago !== 'Falta pagar' ? d.pago : ''; if (!p) throw err('¿Cómo pagó?'); await db.prepare('UPDATE rentas SET pago = ? WHERE id = ?').bind(p, x.id).run(); }
+    else if (op === 'pago') { const p = RENTA_PAGOS.includes(d.pago) && !['Falta pagar', 'Link de pago'].includes(d.pago) ? d.pago : ''; if (!p) throw err('¿Cómo pagó?'); await db.prepare('UPDATE rentas SET pago = ? WHERE id = ?').bind(p, x.id).run();
+      // pagó de otra forma: el link que la tenía ya no se cobra
+      await linkTabla(db); for (const L of (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente'").all()).results) if (partesDe(L).some(y => y.id === x.id)) await db.prepare("UPDATE links SET estado = 'anulada' WHERE ref = ?").bind(L.ref).run(); }
     else if (op === 'borrar') await db.prepare("UPDATE rentas SET estado = 'borrada' WHERE id = ?").bind(x.id).run();
     else throw err('Acción desconocida');
     await anotar(db, q, 'renta ' + x.id + ' ' + op);
   }
-  return Object.assign({ ok: true, hoy: t.fecha, rentas: await rentasLista(env) }, await tiendaLista(env, q));
+  return Object.assign({ ok: true, hoy: t.fecha, rentas: await rentasLista(env), nuevo }, await tiendaLista(env, q));
 }
 async function tiendaLista(env, q) {
   const db = env.DB, desde = ahoraChile(Date.now() - 30 * 86400000).fecha;
   const ventas = (await db.prepare("SELECT * FROM ventas WHERE estado = 'activa' AND fecha >= ? ORDER BY creada_ms DESC LIMIT 500").bind(desde).all()).results
     .map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, detalle: x.detalle, area: x.area, monto: x.monto, pago: x.pago, por: x.por }));
   const productos = (await db.prepare('SELECT * FROM productos WHERE activo = 1 ORDER BY orden, nombre').all()).results.map(x => ({ id: x.id, nombre: x.nombre, precio: x.precio }));
-  return { ventas, productos, precios: PRECIO_RENTA, admin: q.rol === 'admin' };
+  return { ventas, productos, precios: PRECIO_RENTA, admin: q.rol === 'admin', links: await linksLista(db) };
 }
 /** Venta de tienda o cobro por daño, anotada al cobrar. Productos: solo administradores los cambian. */
 async function tiendaAccion(env, q, d) {
@@ -1108,6 +1115,129 @@ async function notasAccion(env, q, d) {
   return { ok: true, hoy: t.fecha, notas: await notasLista(env) };
 }
 
+// ---------- Link de pago (Isidora 24-11): un solo carro con productos de la tienda, rentas y clases sin pagar ----------
+// Se cobra con la pantalla Storm /pagar (Webpay o Mercado Pago). Referencia LK-. Al pagarse, cada parte queda anotada en su área:
+// la tienda como venta, la renta con su forma de pago y la clase pagada en la Agenda. Así Finanzas suma cada cosa donde va.
+const LINK_COMISION = { 'Webpay crédito': 0.0229 * 1.19, 'Webpay débito': 0.0149 * 1.19, 'Webpay': 0.0229 * 1.19, 'Mercado Pago': 0.0229 * 1.19 };
+async function linkTabla(db) {
+  await db.prepare("CREATE TABLE IF NOT EXISTS links (ref TEXT PRIMARY KEY, creada_ms INTEGER NOT NULL, fecha TEXT NOT NULL, hora TEXT NOT NULL, por TEXT NOT NULL DEFAULT '', nombre TEXT NOT NULL DEFAULT '', telefono TEXT NOT NULL DEFAULT '', total INTEGER NOT NULL DEFAULT 0, partes TEXT NOT NULL DEFAULT '[]', estado TEXT NOT NULL DEFAULT 'pendiente', orden_mp TEXT NOT NULL DEFAULT '', link TEXT NOT NULL DEFAULT '', medio TEXT NOT NULL DEFAULT '', pagado_ms INTEGER NOT NULL DEFAULT 0)").run();
+}
+const partesDe = L => { try { const v = JSON.parse(L.partes || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
+const origenApp = () => PAGINA.replace(/\/reservar\/$/, '');
+/** Lo que falta cobrar de una clase: la clase entera (pendiente o 'Por pagar') o las diferencias sin cobrar. */
+const debeClase = r => r.estado === 'pagada' && r.medio !== 'Por pagar' ? saldosDe(r).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0) : (Number(r.total) || 0);
+/** Rentas y clases que se pueden sumar a un link (sin pagar). */
+async function linkOpciones(env) {
+  const db = env.DB, hoy = ahoraChile().fecha;
+  const rentas = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND pago IN ('Falta pagar', 'Link de pago') AND creada_ms > ? ORDER BY creada_ms DESC").bind(Date.now() - 14 * 86400000).all()).results
+    .filter(x => x.monto > 0).map(x => ({ tipo: 'renta', id: x.id, detalle: 'Renta · ' + x.nombre, sub: [x.tablas ? x.tablas + ' soft' : '', x.fibras ? x.fibras + ' fibra' : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ') + (x.tiempo === 'dia' ? ' · día completo' : ' · medio día'), monto: x.monto, telefono: x.telefono || '', nombre: x.nombre }));
+  const clases = (await db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND (estado = 'pendiente' OR (estado = 'pagada' AND (medio = 'Por pagar' OR saldos LIKE '%\"medio\":\"\"%'))) ORDER BY fecha, hora").bind(sumarDias(hoy, -14), sumarDias(hoy, 14)).all()).results
+    .filter(r => r.estado !== 'pendiente' || aMano(r)).map(r => ({ tipo: 'clase', id: r.ref, detalle: 'Clase · ' + r.nombre, sub: (r.fecha === hoy ? 'Hoy' : r.fecha.slice(8) + '/' + r.fecha.slice(5, 7)) + ' ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas'), monto: debeClase(r), telefono: r.telefono || '', nombre: r.nombre }))
+    .filter(x => x.monto > 0);
+  return rentas.concat(clases);
+}
+async function linksLista(db) {
+  await linkTabla(db);
+  return (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente' OR (estado = 'pagada' AND pagado_ms > ?) ORDER BY creada_ms DESC LIMIT 50").bind(Date.now() - 2 * 86400000).all()).results
+    .map(L => ({ ref: L.ref, fecha: L.fecha, hora: L.hora, nombre: L.nombre, telefono: L.telefono, total: L.total, estado: L.estado, medio: L.medio, link: L.link, por: L.por, partes: partesDe(L).map(p => p.detalle) }));
+}
+async function mpOrden(env, ref, total, titulo, items) {
+  const o = origenApp();
+  const orden = { type: 'online', processing_mode: 'manual', total_amount: String(total), external_reference: ref, description: titulo,
+    items: [{ title: items.map(i => i.tipo === 'renta' ? 'Renta' : i.tipo === 'clase' ? 'Clase de surf' : i.detalle).join(' + ').slice(0, 120), quantity: 1, unit_price: String(total) }],
+    config: { online: { success_url: o + '/pagar/?listo=link', pending_url: o + '/pagar/?listo=proceso', failure_url: o + '/pagar/?listo=error', auto_return: 'approved' }, payment_method: { max_installments: 1 } } };
+  try {
+    const x = await fetch((env.MP_API || MP_API) + '/v1/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + env.MP_TOKEN, 'X-Idempotency-Key': ref }, body: JSON.stringify(orden) });
+    const res = await x.json().catch(() => ({}));
+    return x.status < 300 && res.id ? res : null;
+  } catch (_) { return null; }
+}
+async function linkAccion(env, q, d, ctx) {
+  if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores hacen links de pago.');
+  const db = env.DB; await rnTablas(db); await linkTabla(db);
+  const t = ahoraChile(), op = d.op || 'lista', num = v => Math.max(0, Math.round(Number(String(v == null ? '' : v).replace(/\D/g, '')) || 0));
+  if (op === 'opciones') return { ok: true, opciones: await linkOpciones(env), links: await linksLista(db) };
+  if (op === 'crear') {
+    if (!env.MP_TOKEN) throw err('El pago en línea no está activo en este momento.');
+    const partes = [];
+    // Tienda: los mismos productos y precios que Venta tienda
+    const prods = (await db.prepare('SELECT * FROM productos').all()).results, lineas = [];
+    (Array.isArray(d.items) ? d.items : []).forEach(i => { const p = prods.find(x => x.id === String(i.id)), n = Math.min(50, Math.floor(Number(i.cant) || 0)); if (p && n > 0) lineas.push({ detalle: (n > 1 ? n + ' × ' : '') + p.nombre, monto: p.precio * n, area: 'tienda' }); });
+    const otro = num(d.otroMonto); if (otro) lineas.push({ detalle: String(d.otroDetalle || '').trim().slice(0, 80) || 'Otro producto', monto: otro, area: 'tienda' });
+    const dano = num(d.danoMonto); if (dano) lineas.push({ detalle: 'Cobro por daño' + (String(d.danoDetalle || '').trim() ? ': ' + String(d.danoDetalle).trim().slice(0, 80) : ''), monto: dano, area: 'renta' });
+    lineas.forEach(l => partes.push(Object.assign({ tipo: 'tienda' }, l)));
+    // Rentas y clases sin pagar elegidas (el monto se lee aquí, no se confía en lo que manda el celular)
+    const ops = await linkOpciones(env), ids = new Set([].concat(d.rentas || [], d.clases || []).map(String));
+    ops.filter(o => ids.has(o.id)).forEach(o => partes.push({ tipo: o.tipo, id: o.id, detalle: o.detalle + (o.sub ? ' (' + o.sub + ')' : ''), monto: o.monto }));
+    if (!partes.length) throw err('Elige qué se cobra en el link.');
+    const total = partes.reduce((s, p) => s + p.monto, 0);
+    if (total < 50) throw err('El total es muy bajo para un link de pago.');
+    const prim = ops.find(o => ids.has(o.id)) || {};
+    const nombre = nombrePropio(d.nombre || prim.nombre || ''), telefono = String(d.telefono || prim.telefono || '').trim().slice(0, 30), yo = await quienNombre(env, q.email);
+    const ref = 'LK-' + t.fecha.slice(2).replace(/-/g, '') + '-' + nuevaClave().slice(0, 8).toUpperCase();
+    const o = await mpOrden(env, ref, total, 'Storm' + (nombre ? ' · ' + nombre : ''), partes);
+    if (!o) throw err('No pudimos crear el link. Intenta de nuevo en un momento.');
+    const link = origenApp() + '/pagar/?o=' + encodeURIComponent(o.id);
+    // Una renta o clase va en un solo link pendiente: los anteriores que la tenían se anulan (así no se cobra dos veces)
+    const viejos = (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente'").all()).results.filter(L => partesDe(L).some(p => p.id && ids.has(p.id)));
+    const st = viejos.map(L => db.prepare("UPDATE links SET estado = 'anulada' WHERE ref = ? AND estado = 'pendiente'").bind(L.ref));
+    st.push(db.prepare('INSERT INTO links (ref, creada_ms, fecha, hora, por, nombre, telefono, total, partes, orden_mp, link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(ref, Date.now(), t.fecha, t.hora, yo, nombre, telefono, total, JSON.stringify(partes), String(o.id), link));
+    partes.filter(p => p.tipo === 'renta').forEach(p => st.push(db.prepare("UPDATE rentas SET pago = 'Link de pago' WHERE id = ? AND pago = 'Falta pagar'").bind(p.id)));
+    await db.batch(st);
+    await anotar(db, q, 'link ' + ref + ' ' + total);
+    return { ok: true, nuevo: { ref, link, total, nombre, telefono, partes: partes.map(p => p.detalle) }, links: await linksLista(db) };
+  }
+  const L = await db.prepare('SELECT * FROM links WHERE ref = ?').bind(String(d.ref || '')).first();
+  if (op !== 'lista' && !L) throw err('No encontramos ese link.');
+  if (op === 'anular') {
+    if (L.estado !== 'pendiente') throw err('Ese link ya no está esperando pago.');
+    const st = [db.prepare("UPDATE links SET estado = 'anulada' WHERE ref = ? AND estado = 'pendiente'").bind(L.ref)];
+    partesDe(L).filter(p => p.tipo === 'renta').forEach(p => st.push(db.prepare("UPDATE rentas SET pago = 'Falta pagar' WHERE id = ? AND pago = 'Link de pago'").bind(p.id)));
+    await db.batch(st); await anotar(db, q, 'link anulado ' + L.ref);
+  } else if (op === 'revisar') await revisarLink(env, L, ctx);
+  return { ok: true, links: await linksLista(db) };
+}
+/** Revisa si el link se pagó (Webpay, Flow o Mercado Pago) y, si se pagó, anota cada parte. */
+async function revisarLink(env, L, ctx) {
+  if (!L || L.estado !== 'pendiente') return L && L.estado;
+  const om = String(L.orden_mp || '');
+  if (om.startsWith('webpay:')) {
+    const o = await webpayEstado(env, om.slice(7));
+    if (!(o && o.status === 'AUTHORIZED' && Number(o.response_code) === 0)) return L.estado;
+    return confirmarLink(env, L, ['VD', 'VP'].includes(o.payment_type_code) ? 'Webpay débito' : 'Webpay crédito', Number(o.amount), ctx);
+  }
+  if (om.startsWith('flow:')) {
+    const o = await flowEstado(env, om.slice(5));
+    return o && Number(o.status) === 2 && String(o.commerceOrder || '').indexOf(L.ref) === 0 ? confirmarLink(env, L, 'Flow', Number(o.amount), ctx) : L.estado;
+  }
+  if (!om || !env.MP_TOKEN) return L.estado;
+  let o = null;
+  try { const x = await fetch((env.MP_API || MP_API) + '/v1/orders/' + encodeURIComponent(om), { headers: { Authorization: 'Bearer ' + env.MP_TOKEN } }); if (x.ok) o = await x.json(); } catch (_) {}
+  if (o && o.external_reference === L.ref && o.status === 'processed' && o.status_detail === 'accredited') return confirmarLink(env, L, 'Mercado Pago', Number(o.total_paid_amount || o.total_amount), ctx);
+  return L.estado;
+}
+async function confirmarLink(env, L, medio, monto, ctx) {
+  const db = env.DB, t = ahoraChile();
+  if (Math.round(monto) < L.total) { console.error('Link monto distinto', L.ref, monto, L.total); return L.estado; }
+  const ch = await db.prepare("UPDATE links SET estado = 'pagada', medio = ?, pagado_ms = ? WHERE ref = ? AND estado = 'pendiente'").bind(medio, Date.now(), L.ref).run();
+  if (!ch.meta || !ch.meta.changes) return 'pagada'; // ya estaba anotado
+  const st = [], partes = partesDe(L), por = 'Link de pago';
+  for (const p of partes) {
+    if (p.tipo === 'tienda') st.push(db.prepare('INSERT INTO ventas (id, creada_ms, fecha, hora, detalle, area, monto, pago, por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(nuevoId('V', t), Date.now(), t.fecha, t.hora, p.detalle, p.area || 'tienda', p.monto, medio, por));
+    else if (p.tipo === 'renta') st.push(db.prepare("UPDATE rentas SET pago = ?, monto = ? WHERE id = ? AND pago IN ('Falta pagar', 'Link de pago')").bind(medio, p.monto, p.id));
+    else if (p.tipo === 'clase') {
+      const r = await db.prepare('SELECT * FROM reservas WHERE ref = ?').bind(p.id).first(); if (!r) continue;
+      if (r.estado === 'pagada' && r.medio !== 'Por pagar') { const sl = saldosDe(r); sl.forEach(x => { if (!x.medio) { x.medio = medio; x.pagado = t.fecha; } }); st.push(db.prepare('UPDATE reservas SET saldos = ? WHERE ref = ?').bind(JSON.stringify(sl), r.ref)); }
+      else if (r.estado === 'pagada') st.push(db.prepare("UPDATE reservas SET medio = ? WHERE ref = ? AND medio = 'Por pagar'").bind(medio, r.ref));
+      else if (r.estado === 'pendiente') { await db.prepare('UPDATE reservas SET medio = ? WHERE ref = ?').bind(medio, r.ref).run(); await confirmar(env, Object.assign({}, r, { medio }), r.total, ctx); }
+    }
+  }
+  if (st.length) await db.batch(st);
+  const a = await ajustes(db);
+  tarea(ctx, enviarPush(env, a.admins, 'Pagaron un link 💳 ' + clp(L.total), (L.nombre ? L.nombre + ' · ' : '') + partes.map(p => p.detalle).join(', ').slice(0, 160)));
+  return 'pagada';
+}
+
 /** Para Finanzas (programa de la planilla Anual): ventas del mes, por medio de pago, y lo que se paga a instructores. mes = 'AAAA-MM'. */
 async function finanzasMes(env, d) {
   const mes = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7);
@@ -1137,11 +1267,12 @@ async function tasaTuu(db, mes) {
 async function ventasPanel(env, mes) {
   const db = env.DB; await rnTablas(db);
   const tasa = await tasaTuu(db, mes), desde = PANEL_DESDE;
-  const rentas = (await db.prepare("SELECT monto, pago FROM rentas WHERE estado = 'activa' AND substr(fecha,1,7) = ? AND fecha >= ? AND pago != 'Falta pagar'").bind(mes, desde).all()).results;
+  const rentas = (await db.prepare("SELECT monto, pago FROM rentas WHERE estado = 'activa' AND substr(fecha,1,7) = ? AND fecha >= ? AND pago NOT IN ('Falta pagar', 'Link de pago')").bind(mes, desde).all()).results;
   const ventas = (await db.prepare("SELECT monto, pago, area FROM ventas WHERE estado = 'activa' AND substr(fecha,1,7) = ? AND fecha >= ?").bind(mes, desde).all()).results;
   const o = { desde, tasa, rentas: 0, comRentas: 0, tienda: 0, comTienda: 0, comClasesPOS: 0 };
-  rentas.concat(ventas.filter(v => v.area === 'renta')).forEach(x => { o.rentas += x.monto; if (x.pago === 'POS') o.comRentas += x.monto * tasa; });
-  ventas.filter(v => v.area === 'tienda').forEach(x => { o.tienda += x.monto; if (x.pago === 'POS') o.comTienda += x.monto * tasa; });
+  const com = x => x.pago === 'POS' ? tasa : (LINK_COMISION[x.pago] || 0); // tarjeta en la máquina: tasa real de Tuu; link de pago: Webpay o Mercado Pago
+  rentas.concat(ventas.filter(v => v.area === 'renta')).forEach(x => { o.rentas += x.monto; o.comRentas += x.monto * com(x); });
+  ventas.filter(v => v.area === 'tienda').forEach(x => { o.tienda += x.monto; o.comTienda += x.monto * com(x); });
   // Clases con tarjeta anotadas desde PANEL_DESDE: su comisión con la misma tasa (las anteriores ya la sacan del cruce con Tuu).
   const cl = (await db.prepare("SELECT * FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada' AND substr(creada,1,10) >= ?").bind(mes, desde).all()).results;
   cl.forEach(r => partesPago(r).forEach(x => { if (x.medio === 'POS') o.comClasesPOS += x.monto * tasa; }));
@@ -1783,12 +1914,14 @@ export async function onRequest(context) {
     if (url.searchParams.get('mp')) {
       let id = url.searchParams.get('data.id') || url.searchParams.get('id');
       try { const b = await request.clone().json(); if (b && b.data && b.data.id) id = b.data.id; } catch (_) {}
-      if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, context); }
+      if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, context);
+        else { await linkTabla(env.DB); const L = await env.DB.prepare('SELECT * FROM links WHERE orden_mp = ?').bind(String(id)).first(); if (L) await revisarLink(env, L, context); } }
       return json({ ok: true });
     }
     // Pago con Flow o Webpay desde /pagar: se vuelve a revisar allá (no se confía en lo que llega)
     if (url.searchParams.get('externo')) {
       const b = await request.json().catch(() => ({}));
+      if (/^LK-/.test(String(b.ref || ''))) { await linkTabla(env.DB); const L = await env.DB.prepare('SELECT * FROM links WHERE ref = ?').bind(String(b.ref)).first(); if (L && b.token && (L.orden_mp === 'flow:' + b.token || L.orden_mp === 'webpay:' + b.token)) await revisarLink(env, L, context); return json({ ok: true }); }
       const r = b.ref ? await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(b.ref)).first() : null;
       if (r && b.token && (r.orden_mp === 'flow:' + b.token || r.orden_mp === 'webpay:' + b.token)) await revisarPago(env, r, context);
       return json({ ok: true });
@@ -1818,6 +1951,7 @@ export async function onRequest(context) {
     if (acc === 'vacaciones') return json(await vacaciones(env, q, d, context));
     if (acc === 'rentas') return json(await rentasAccion(env, q, d));
     if (acc === 'tienda') return json(await tiendaAccion(env, q, d));
+    if (acc === 'link') return json(await linkAccion(env, q, d, context));
     if (acc === 'cierre') return json(await cierreAccion(env, q, d));
     if (acc === 'tuu-control') { if (q.rol !== 'admin') throw err('Solo administradores.'); return json(Object.assign({ ok: true }, await tuuControl(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7)))); }
     if (acc === 'notas') return json(await notasAccion(env, q, d));

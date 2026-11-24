@@ -12,6 +12,7 @@
     tabla: sv("<path d='M12 2.5c3.5 3 4.5 9 3 14.5-.6 2.2-1.6 3.8-3 4.5-1.4-.7-2.4-2.3-3-4.5-1.5-5.5-.5-11.5 3-14.5Z'/><path d='M12 7v10'/>"),
     traje: sv("<path d='M9 3h6l1 3 3 2-1 5-2-1v9H8v-9l-2 1-1-5 3-2 1-3Z'/><path d='M12 6v6'/>"),
     ok: sv("<path d='m5 12.5 4.5 4.5L19 7.5'/>"),
+    link: sv("<path d='M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1'/><path d='M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'/>"),
     wa: `<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.6 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5-4.5-.2-.2-1.2-1.6-1.2-3s.7-2.2 1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.3.5-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.6 2.1 1.1 1 2.1 1.3 2.4 1.4.3.2.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.4Z'/></svg>`,
     alerta: sv("<path d='M12 3 2.5 20h19L12 3Z'/><path d='M12 10v4.5M12 17.5v.01'/>"),
     nota: sv("<path d='M5 4h14v12l-4 4H5z'/><path d='M15 20v-4h4M8.5 9h7M8.5 12.5h5'/>")
@@ -92,6 +93,17 @@
   /* tienda y cierre (23-11) */
   .rn-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .rn-go.sec{background:#fff;color:#0f6e74;border:2px solid #0f6e74}
+  .rn-go.ter{background:none;color:#0f6e74;border:1.5px dashed rgba(15,110,116,.45);margin-top:8px;padding:11px;font-size:1.4rem}
+  .rn-ops{display:grid;gap:8px}
+  .rn-op{display:flex;align-items:center;gap:10px;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:16px;padding:12px 14px;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+  .rn-op i{flex:none;width:24px;height:24px;border-radius:7px;border:1.5px solid var(--line);display:grid;place-items:center;font-style:normal;font-size:1.4rem;color:#fff}
+  .rn-op.on{border-color:#0f6e74;background:#E3F1F1}.rn-op.on i{background:#0f6e74;border-color:#0f6e74}
+  .rn-op span{flex:1;min-width:0;font-weight:600;font-size:1.4rem}.rn-op small{display:block;font-weight:400;color:#6d6c68;font-size:1.2rem}.rn-op b{font-size:1.4rem}
+  .rn-lp{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:1.3rem;color:#55544f}
+  .rn-li{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:8px}.rn-li.ok{opacity:.75}
+  .rn-lt{display:flex;gap:10px;align-items:flex-start}.rn-lt span{flex:1;min-width:0;font-size:1.4rem}.rn-lt small{display:block;color:#6d6c68;font-size:1.2rem}.rn-lt em{font-style:normal;font-weight:700;font-size:1.45rem}
+  .rn-li .rn-acc{align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px}.rn-li .rn-wa{width:36px;height:36px}
+  .rn-lok{margin:6px 0 0;color:#2f7a4d;font-weight:600;font-size:1.3rem}
   .rn-pr{display:grid;grid-template-columns:1fr;gap:8px}
   .rn-pr>div{border:1.5px solid var(--line);border-radius:16px;padding:10px 10px 10px 14px;display:flex;align-items:center;gap:8px}
   .rn-pr>div.on{border-color:#0f6e74;background:#E3F1F1}
@@ -138,7 +150,8 @@
   }
   const pintar = () => { pintarRentas(); pintarNotas(); };
   const clp = n => (n < 0 ? '−' : '') + '$' + Math.abs(Math.round(n || 0)).toLocaleString('es-CL');
-  const pagoT = p => p === 'POS' ? 'Tarjeta' : p;
+  const pagoT = p => p === 'POS' ? 'Tarjeta' : p === 'Link de pago' ? 'Esperando link' : p;
+  const debe = x => x.pago === 'Falta pagar' || x.pago === 'Link de pago';
   const PAGOS = [['POS', 'Tarjeta'], ['Efectivo', 'Efectivo'], ['Transferencia', 'Transferencia']];
 
   // ---------- Rentas ----------
@@ -157,11 +170,28 @@
         <div class='rn-tx'><b>${esc(x.nombre)}</b><small>${esc(queEs(x))} · ${tiempoT(x.tiempo)}</small>
           <small>${x.devuelta ? 'Salió ' + esc(x.hora) + ' · volvió ' + esc(x.devueltaHora) : (x.fecha === hoy() ? 'Salió hoy ' + esc(x.hora) + hace(x.fecha, x.hora) : 'Salió ' + fechaC(x.fecha) + ' ' + esc(x.hora))}${x.por ? ' · anotó ' + esc(x.por) : ''}</small>
           ${x.nota ? `<small class='rn-nt'>${esc(x.nota)}</small>` : ''}</div>
-        ${t ? `<span class='rn-tag tarde'>No ha vuelto</span>` : x.pago === 'Falta pagar' ? `<span class='rn-tag debe'>Falta pagar</span>` : `<span class='rn-tag'>${esc(pagoT(x.pago))}${x.monto ? ' ' + clp(x.monto) : ''}</span>`}</div>
+        ${t ? `<span class='rn-tag tarde'>No ha vuelto</span>` : debe(x) ? `<span class='rn-tag debe'>${x.pago === 'Link de pago' ? 'Esperando pago' : 'Falta pagar'}</span>` : `<span class='rn-tag'>${esc(pagoT(x.pago))}${x.monto ? ' ' + clp(x.monto) : ''}</span>`}</div>
       ${x.devuelta ? `<div class='rn-acc'><button class='rn-lk' data-op='deshacer' data-id='${esc(x.id)}'>No ha vuelto (deshacer)</button></div>`
-        : `<div class='rn-acc'><button class='rn-vol' data-op='devuelta' data-id='${esc(x.id)}'>${ICO.ok}Volvió</button>${x.pago === 'Falta pagar' ? `<button class='rn-pg' data-pagar='${esc(x.id)}'>Pagó</button>` : ''}${wl ? `<a class='rn-wa' href='https://wa.me/${wl}?text=${msg}' target='_blank' rel='noopener' aria-label='WhatsApp'>${ICO.wa}</a>` : ''}</div>
+        : `<div class='rn-acc'><button class='rn-vol' data-op='devuelta' data-id='${esc(x.id)}'>${ICO.ok}Volvió</button>${debe(x) ? `<button class='rn-pg' data-pagar='${esc(x.id)}'>Pagó</button>` : ''}${wl ? `<a class='rn-wa' href='https://wa.me/${wl}?text=${msg}' target='_blank' rel='noopener' aria-label='WhatsApp'>${ICO.wa}</a>` : ''}</div>
           <div class='rn-acc' style='margin-top:4px'><button class='rn-lk rojo' data-op='borrar' data-id='${esc(x.id)}'>Borrar (me equivoqué)</button></div>`}
     </div>`;
+  }
+  // Links de pago esperando (y los pagados de hoy)
+  function linksH() {
+    const L = (R && R.links) || []; if (!L.length) return '';
+    return `<p class='rn-h'>Links de pago</p>` + L.map(l => `<div class='rn-li${l.estado === 'pagada' ? ' ok' : ''}'>
+      <div class='rn-lt'><span><b>${esc(l.nombre || l.partes[0] || 'Link de pago')}</b><small>${esc(l.partes.join(' · '))}</small></span><em>${clp(l.total)}</em></div>
+      ${l.estado === 'pagada' ? `<p class='rn-lok'>✓ Pagado · ${esc(l.medio)}</p>`
+        : `<div class='rn-acc'><span class='rn-tag debe'>Esperando pago</span><a class='rn-wa' href='https://wa.me/${wa(l.telefono)}?text=${encodeURIComponent(msgLink(l))}' target='_blank' rel='noopener' aria-label='Mandar por WhatsApp'>${ICO.wa}</a><button class='rn-lk' data-lk='copiar' data-r='${esc(l.ref)}'>Copiar</button><button class='rn-lk' data-lk='revisar' data-r='${esc(l.ref)}'>¿Ya pagó?</button><button class='rn-lk rojo' data-lk='anular' data-r='${esc(l.ref)}'>Anular</button></div>`}
+    </div>`).join('');
+  }
+  async function accionLink(op, ref, b) {
+    const l = ((R && R.links) || []).find(x => x.ref === ref); if (!l) return;
+    if (op === 'copiar') return copiar(l.link, b);
+    if (op === 'anular' && !confirm('¿Anular este link? Ya no se podrá pagar.')) return;
+    const t = b.textContent; b.disabled = true; b.textContent = op === 'revisar' ? 'Revisando…' : 'Anulando…';
+    try { const d = await post({ accion: 'link', op, ref }); R.links = d.links; const y = d.links.find(x => x.ref === ref); if (op === 'revisar' && y && y.estado !== 'pagada') alert('Todavía no aparece pagado.'); await cargar(); }
+    catch (x) { alert(x.message); } finally { b.disabled = false; b.textContent = t; }
   }
   function pintarRentas() {
     if (!elR) return;
@@ -174,6 +204,8 @@
     const nT = af.reduce((s, x) => s + x.tablas + (x.fibras || 0), 0), nJ = af.reduce((s, x) => s + x.trajes, 0);
     const vHoy = (R.ventas || []).filter(v => v.fecha === hoy());
     let h = `<div class='rn'><div class='rn-2'><button class='rn-go' data-rnnueva>${sv("<path d='M12 5v14M5 12h14'/>")}Nueva renta</button><button class='rn-go sec' data-tienda>${sv("<path d='M12 5v14M5 12h14'/>")}Venta tienda</button></div>
+      <button class='rn-go ter' data-nlink>${ICO.link}Link de pago</button>
+      ${linksH()}
       <p class='rn-h'>Afuera ahora ${af.length ? `<em>${[nT ? nT + (nT === 1 ? ' tabla' : ' tablas') : '', nJ ? nJ + (nJ === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ')}</em>` : ''}</p>
       ${af.length ? af.map(tarjeta).join('') : `<div class='rn-vacio'>No hay tablas ni trajes afuera. 🌊</div>`}`;
     const otras = verDev ? dev : devHoy;
@@ -190,6 +222,8 @@
     elR.innerHTML = h;
     elR.querySelector('[data-rnnueva]').onclick = () => abrirNueva();
     elR.querySelector('[data-tienda]').onclick = () => abrirTienda();
+    elR.querySelector('[data-nlink]').onclick = () => abrirTienda({ link: true });
+    elR.querySelectorAll('[data-lk]').forEach(b => b.onclick = () => accionLink(b.dataset.lk, b.dataset.r, b));
     elR.querySelector('[data-cierre]').onclick = () => abrirCierre();
     const vb = elR.querySelector('[data-vborrar]'); if (vb) vb.onclick = () => borrarVenta();
     const vd = elR.querySelector('[data-verdev]'); if (vd) vd.onclick = () => { verDev = !verDev; pintarRentas(); };
@@ -201,9 +235,9 @@
   }
   function elegirPago(id) {
     const w = document.createElement('div'); w.className = 'rn-f';
-    w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>¿Cómo pagó?</h2><div class='rn-ch dos' style='margin-top:14px'>${PAGOS.map(([p, t]) => `<button data-p='${p}'>${t}</button>`).join('')}</div></div>`;
+    w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>¿Cómo pagó?</h2><div class='rn-ch dos' style='margin-top:14px'>${PAGOS.map(([p, t]) => `<button data-p='${p}'>${t}</button>`).join('')}</div><button class='rn-go sec' data-link style='margin-top:14px'>Mandar link de pago</button></div>`;
     document.body.appendChild(w);
-    w.onclick = async e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); const b = e.target.closest('[data-p]'); if (b && await hacer('rentas', { op: 'pago', id, pago: b.dataset.p }, b)) w.remove(); };
+    w.onclick = async e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); if (e.target.closest('[data-link]')) { w.remove(); return abrirTienda({ link: true, sel: [id] }); } const b = e.target.closest('[data-p]'); if (b && await hacer('rentas', { op: 'pago', id, pago: b.dataset.p }, b)) w.remove(); };
   }
   function abrirNueva() {
     nueva = { tablas: 0, fibras: 0, trajes: 0, tiempo: '', pago: '', nombre: '', telefono: '', nota: '', monto: '', montoAMano: false };
@@ -218,8 +252,8 @@
         <p class='rn-q'>¿Cuánto tiempo?</p>
         <div class='rn-ch dos'>${[['medio', 'Medio día'], ['dia', 'Día completo']].map(([k, t]) => `<button class='${nueva.tiempo === k ? 'on' : ''}' data-t='${k}'>${t}</button>`).join('')}</div>
         <p class='rn-q'>¿Cómo pagó?</p>
-        <div class='rn-ch'>${PAGOS.concat([['Falta pagar', 'Falta pagar']]).map(([k, t]) => `<button class='${nueva.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
-        <p class='rn-q'>¿Cuánto pagó?</p>
+        <div class='rn-ch'>${PAGOS.concat([['Link de pago', 'Link de pago'], ['Falta pagar', 'Falta pagar']]).map(([k, t]) => `<button class='${nueva.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
+        <p class='rn-q'>${nueva.pago === 'Link de pago' ? '¿Cuánto se cobra?' : '¿Cuánto pagó?'}</p>
         <input id='rn-monto' class='rn-in' inputmode='numeric' placeholder='Monto' value='${nueva.mostrado = nueva.montoAMano ? nueva.monto : (nueva.tiempo && (nueva.tablas + nueva.fibras + nueva.trajes) ? precio() : '')}'>
         <p class='rn-q'>¿Quién arrienda?</p>
         <input id='rn-nom' class='rn-in' placeholder='Nombre' autocomplete='off' value='${esc(nueva.nombre)}'>
@@ -243,7 +277,7 @@
         nueva.monto = mt;
         if (nueva.nombre.trim().length < 2) { er.textContent = 'Escribe el nombre.'; return w.querySelector('#rn-nom').focus(); }
         b.disabled = true; b.textContent = 'Guardando…';
-        try { R = await post(Object.assign({ accion: 'rentas', op: 'nueva' }, nueva)); guardarCache(); w.remove(); pintar(); alCambiar(); }
+        try { R = await post(Object.assign({ accion: 'rentas', op: 'nueva' }, nueva)); guardarCache(); w.remove(); pintar(); alCambiar(); if (nueva.pago === 'Link de pago' && R.nuevo) abrirTienda({ link: true, sel: [R.nuevo] }); }
         catch (x) { b.disabled = false; b.textContent = 'Guardar renta'; er.textContent = x.message; }
       }
     };
@@ -251,51 +285,77 @@
 
   // ---------- Tienda (Isidora 23-11): se anota qué se vendió al cobrar ----------
   function hoja(html) { const w = document.createElement('div'); w.className = 'rn-f'; w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button>${html}</div>`; document.body.appendChild(w); return w; }
-  function abrirTienda() {
-    const v = { cant: {}, pago: '', otro: false, dano: false };
+  // Venta tienda y Link de pago (Isidora 24-11): la misma hoja. Con "Link de pago" se arma un solo carro con productos,
+  // rentas y clases sin pagar, y se manda un link para pagar todo junto con tarjeta.
+  function abrirTienda(opt) {
+    opt = opt || {};
+    const v = { cant: {}, pago: opt.link ? 'LINK' : '', otro: false, dano: false, sel: new Set(opt.sel || []), ops: null, nombre: '', telefono: '' };
     const w = document.createElement('div'); w.className = 'rn-f'; document.body.appendChild(w);
-    const val = id => { const e = w.querySelector(id); return e ? e.value : ''; };
-    const guarda = () => { ['#rn-od', '#rn-om'].forEach(k => { const e = w.querySelector(k); if (e) v[k] = e.value; }); };
+    const guarda = () => { ['#rn-od', '#rn-om', '#rn-ln', '#rn-lt'].forEach(k => { const e = w.querySelector(k); if (e) v[k] = e.value; }); };
     const num = t => Number(String(t || '').replace(/\D/g, '')) || 0;
-    const total = () => (R.productos || []).reduce((t, p) => t + p.precio * (v.cant[p.id] || 0), 0) + (v.otro ? num(v['#rn-om']) : 0);
-    const sinT = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const esLink = () => v.pago === 'LINK';
+    const extra = () => esLink() && v.ops ? v.ops.filter(o => v.sel.has(o.id)).reduce((t, o) => t + o.monto, 0) : 0;
+    const total = () => (R.productos || []).reduce((t, p) => t + p.precio * (v.cant[p.id] || 0), 0) + (v.otro ? num(v['#rn-om']) : 0) + extra();
+    const sinT = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     const lista = () => { const q = sinT(v.q).trim(), l = (R.productos || []).filter(x => !q || v.cant[x.id] || sinT(x.nombre).includes(q));
       return l.length ? l.map(x => `<div class='${v.cant[x.id] ? 'on' : ''}'><span>${esc(x.nombre)}<small>${clp(x.precio)}</small></span><button data-m='${esc(x.id)}' aria-label='Menos'>−</button><b>${v.cant[x.id] || 0}</b><button data-p='${esc(x.id)}' aria-label='Más'>+</button></div>`).join('') : `<div class='rn-vacio' style='border:0'>No hay productos con ese nombre. Usa Otro.</div>`; };
+    const cargarOps = () => { if (v.ops || v.cargando) return; v.cargando = true; post({ accion: 'link', op: 'opciones' }).then(d => { guarda(); v.ops = d.opciones || []; const o = v.ops.find(x => v.sel.has(x.id)); if (o) { v['#rn-ln'] = v['#rn-ln'] || o.nombre; v['#rn-lt'] = v['#rn-lt'] || o.telefono; } p(); }).catch(x => { v.ops = []; v.err = x.message; p(); }); };
+    const sumar = () => !v.ops ? `<div class='pn-skel'></div>` : !v.ops.length ? `<div class='rn-vacio' style='margin:0'>No hay rentas ni clases sin pagar.</div>`
+      : v.ops.map(o => `<button class='rn-op${v.sel.has(o.id) ? ' on' : ''}' data-op='${esc(o.id)}'><i>${v.sel.has(o.id) ? '✓' : ''}</i><span>${esc(o.detalle)}<small>${esc(o.sub)}</small></span><b>${clp(o.monto)}</b></button>`).join('');
     const p = () => {
-      w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>Venta tienda</h2>
-        <p class='rn-q'>¿Qué se vendió?</p>
+      w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button><h2>${esLink() ? 'Link de pago' : 'Venta tienda'}</h2>
+        ${esLink() ? `<p class='rn-q'>¿Qué se cobra?</p><div class='rn-ops'>${sumar()}</div><p class='rn-q'>¿Algo de la tienda?</p>` : `<p class='rn-q'>¿Qué se vendió?</p>`}
         ${(R.productos || []).length > 8 ? `<input id='rn-bq' class='rn-in' type='search' placeholder='Buscar producto' autocomplete='off' value='${esc(v.q || '')}' style='margin:0 0 10px'>` : ''}
         <div class='rn-pr'>${lista()}</div>
         <div class='rn-ch' style='margin-top:10px'><button class='${v.otro ? 'on' : ''}' data-otro>Otro</button></div>
         ${v.otro ? `<input id='rn-od' class='rn-in' placeholder='${v.dano ? '¿Qué se rompió? (ej: tabla 8’0 quebrada)' : '¿Qué se vendió?'}' value='${esc(v['#rn-od'] || '')}'><input id='rn-om' class='rn-in' inputmode='numeric' placeholder='Monto' value='${esc(v['#rn-om'] || '')}'>
           <button class='rn-lk' data-dano>${v.dano ? '☑' : '☐'} Es un cobro por daño de algo arrendado</button>` : ''}
         <div class='rn-tot'><span>Total</span><b>${clp(total())}</b></div>
-        <p class='rn-q'>¿Cómo pagó?</p>
-        <div class='rn-ch dos'>${PAGOS.map(([k, t]) => `<button class='${v.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
-        <button class='rn-go' data-guardar style='margin-top:18px'>Guardar venta</button><p class='rn-err'></p>
-        ${R.admin ? `<button class='rn-lk' data-editar style='display:block;margin:8px auto 0'>Editar productos y precios</button>` : ''}</div>`;
+        <p class='rn-q'>¿Cómo paga?</p>
+        <div class='rn-ch dos'>${PAGOS.concat([['LINK', 'Link de pago']]).map(([k, t]) => `<button class='${v.pago === k ? 'on' : ''}' data-pg='${k}'>${t}</button>`).join('')}</div>
+        ${esLink() ? `<p class='rn-q'>¿A quién se lo mandas?</p><input id='rn-ln' class='rn-in' placeholder='Nombre (opcional)' autocomplete='off' value='${esc(v['#rn-ln'] || '')}'><input id='rn-lt' class='rn-in' inputmode='tel' placeholder='WhatsApp (opcional)' autocomplete='off' value='${esc(v['#rn-lt'] || '')}'>` : ''}
+        <button class='rn-go' data-guardar style='margin-top:18px'>${esLink() ? 'Crear link de pago' : 'Guardar venta'}</button><p class='rn-err'>${esc(v.err || '')}</p>
+        ${R.admin && !esLink() ? `<button class='rn-lk' data-editar style='display:block;margin:8px auto 0'>Editar productos y precios</button>` : ''}</div>`;
       const bq = w.querySelector('#rn-bq'); if (bq) bq.oninput = () => { v.q = bq.value; w.querySelector('.rn-pr').innerHTML = lista(); };
       w.querySelectorAll('#rn-om').forEach(e => e.oninput = () => { guarda(); w.querySelector('.rn-tot b').textContent = clp(total()); });
+      if (esLink()) cargarOps();
     };
     p();
     w.onclick = async e => {
       if (e.target === w || e.target.closest('.rn-x')) return w.remove();
       const b = e.target.closest('button'); if (!b) return; guarda();
       if (b.dataset.m || b.dataset.p) { const k = b.dataset.m || b.dataset.p; v.cant[k] = Math.max(0, (v.cant[k] || 0) + (b.dataset.m ? -1 : 1)); return p(); }
+      if (b.dataset.op) { const k = b.dataset.op; v.sel.has(k) ? v.sel.delete(k) : v.sel.add(k); const o = (v.ops || []).find(x => x.id === k); if (o && v.sel.has(k)) { v['#rn-ln'] = v['#rn-ln'] || o.nombre; v['#rn-lt'] = v['#rn-lt'] || o.telefono; } return p(); }
       if (b.dataset.otro !== undefined) { v.otro = !v.otro; return p(); }
       if (b.dataset.dano !== undefined) { v.dano = !v.dano; return p(); }
-      if (b.dataset.pg) { v.pago = b.dataset.pg; return p(); }
+      if (b.dataset.pg) { v.pago = b.dataset.pg; v.err = ''; return p(); }
       if (b.dataset.editar !== undefined) { w.remove(); return editarProductos(); }
       if (b.dataset.guardar !== undefined) {
         const er = w.querySelector('.rn-err');
-        if (!total()) return er.textContent = 'Toca + en lo que se vendió.';
-        if (!v.pago) return er.textContent = 'Elige cómo pagó.';
-        b.disabled = true; b.textContent = 'Guardando…';
-        try { R = await post({ accion: 'tienda', op: 'venta', pago: v.pago, items: Object.keys(v.cant).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v['#rn-od'] : '', otroMonto: v.otro && !v.dano ? v['#rn-om'] : '', danoDetalle: v.otro && v.dano ? v['#rn-od'] : '', danoMonto: v.otro && v.dano ? v['#rn-om'] : '' }); guardarCache(); w.remove(); pintar(); alCambiar(); }
-        catch (x) { b.disabled = false; b.textContent = 'Guardar venta'; er.textContent = x.message; }
+        if (!total()) return er.textContent = esLink() ? 'Elige qué se cobra.' : 'Toca + en lo que se vendió.';
+        if (!v.pago) return er.textContent = 'Elige cómo paga.';
+        const t0 = b.textContent; b.disabled = true; b.textContent = esLink() ? 'Creando link…' : 'Guardando…';
+        const base = { items: Object.keys(v.cant).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v['#rn-od'] : '', otroMonto: v.otro && !v.dano ? v['#rn-om'] : '', danoDetalle: v.otro && v.dano ? v['#rn-od'] : '', danoMonto: v.otro && v.dano ? v['#rn-om'] : '' };
+        try {
+          if (esLink()) {
+            const d = await post(Object.assign({ accion: 'link', op: 'crear', rentas: [...v.sel], clases: [...v.sel], nombre: v['#rn-ln'], telefono: v['#rn-lt'] }, base));
+            w.remove(); linkListo(d.nuevo); cargar();
+          } else { R = await post(Object.assign({ accion: 'tienda', op: 'venta', pago: v.pago }, base)); guardarCache(); w.remove(); pintar(); alCambiar(); }
+        } catch (x) { b.disabled = false; b.textContent = t0; er.textContent = x.message; }
       }
     };
   }
+  const msgLink = n => 'Hola' + (n.nombre ? ' ' + n.nombre.split(' ')[0] : '') + ', aquí puedes pagar en Storm (' + clp(n.total) + '): ' + n.link;
+  function linkListo(n) {
+    const tel = wa(n.telefono);
+    const w = hoja(`<h2>Link listo</h2><div class='rn-tot' style='margin-top:4px'><span>Total</span><b>${clp(n.total)}</b></div>
+      <div class='rn-lp'>${n.partes.map(x => `<span>${esc(x)}</span>`).join('')}</div>
+      <a class='rn-go' href='https://wa.me/${tel}?text=${encodeURIComponent(msgLink(n))}' target='_blank' rel='noopener' style='margin-top:16px;text-decoration:none'>${ICO.wa}Mandar por WhatsApp</a>
+      <button class='rn-go sec' data-copiar style='margin-top:8px'>Copiar link</button>
+      <p style='font-size:1.2rem;color:#8a8986;margin:10px 2px 0;text-align:center'>Cuando paguen, queda anotado solo en la Tienda y en la Agenda.</p>`);
+    w.onclick = e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); const b = e.target.closest('[data-copiar]'); if (b) copiar(n.link, b); };
+  }
+  function copiar(t, b) { const ok = () => { b.textContent = '✓ Copiado'; setTimeout(() => b.textContent = 'Copiar link', 1800); }; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(ok).catch(() => { prompt('Copia el link:', t); }); }
   function editarProductos() {
     const w = hoja('');
     const p = () => {
