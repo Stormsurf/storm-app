@@ -978,61 +978,122 @@
     mostrarAcad();
   }
   // ---------- Guía del instructor: ser mejor instructor de Storm más allá de la técnica ----------
+  // Cada tema se recorre como tarjetas (tocar o deslizar): idea, puntos, "Evita", "¿Qué harías?" y el reto.
   const GUIA = [
-    {t:'Puntualidad y compromiso', s:'Llegar a tiempo es la primera forma de respeto.',
-     si:['Llega 20 minutos antes: revisa el mar, saca el equipo y recibe a tus alumnos con calma.','A la hora de la clase ya estás cambiado y con la polera celeste.','Si no puedes venir o vas a llegar tarde, avisa a Isidora o Diego con tiempo, nunca a última hora.','No te vas apenas termina: te quedas hasta que todo queda ordenado.'],
+    {t:'Puntualidad', ico:'⏰', c:'#FDE7C8', k:'#A85A1E', s:'Llegar a tiempo es la primera forma de respeto.',
+     si:['Llega 20 minutos antes: revisa el mar, saca el equipo y recibe a tus alumnos con calma.','A la hora de la clase ya estás cambiado y con la polera celeste.','No te vas apenas termina: te quedas hasta que todo queda ordenado.'],
      no:'Llegar justo o cambiarte mientras los alumnos esperan.',
+     q:{p:'Te quedaste dormido y vas a llegar 15 minutos tarde.', op:['Llego y explico cuando esté allá.','Aviso altiro a Isidora o Diego.','Mejor no voy.'], ok:1, fb:'Avisar con tiempo permite que alguien reciba a tu grupo. Nunca a última hora, nunca sin avisar.'},
      reto:'Llega 20 minutos antes a todas tus clases.'},
-    {t:'Tu rol: instructor, no par', s:'Cuando te pones la polera celeste, estás trabajando.',
+    {t:'Tu rol', ico:'👕', c:'#DCEBF7', k:'#2D6E94', s:'Instructor, no par. Con la polera celeste estás trabajando.',
      si:['Puedes ser cercano y divertido, pero eres el adulto a cargo de su seguridad.','Tu atención está en tu grupo: no en el celular, en tus olas ni conversando con otros adultos.','Llegas aseado, limpio y ordenado. Tu imagen es la imagen de Storm.','Muchos niños sueñan con usar la polera celeste. Lo que haces les enseña más que lo que dices.'],
      no:'Juegos bruscos, tratos de “amigo” o usar el celular en clase.',
+     q:{p:'En plena clase te suena el celular.', op:['Contesto rápido, es un minuto.','Miro quién es y sigo.','Lo dejo guardado y lo veo al terminar.'], ok:2, fb:'Un minuto mirando el celular es un minuto sin mirar a tu grupo. Guárdalo desde que llegas.'},
      reto:'Guarda el celular desde que llegas hasta que te vas.'},
-    {t:'Trato con los alumnos', s:'Cada alumno tiene que sentirse visto.',
-     si:['Saluda a cada uno por su nombre, al llegar y al despedirte.','Háblales a su altura, mirándolos a los ojos y con calma.','Habla siempre en positivo: “¡Sí puedes!”, nunca “todavía no puedes”.','Corrige la conducta, nunca a la persona. Si alguien se porta mal, háblale aparte y con cariño.','Trata a todos por igual: sin favoritos y sin dejar a nadie de lado.'],
+    {t:'Trato', ico:'💬', c:'#FBE0E6', k:'#A63D58', s:'Cada alumno tiene que sentirse visto.',
+     si:['Saluda a cada uno por su nombre, al llegar y al despedirte.','Háblales a su altura, mirándolos a los ojos y con calma.','Corrige la conducta, nunca a la persona. Si alguien se porta mal, háblale aparte y con cariño.','Trata a todos por igual: sin favoritos y sin dejar a nadie de lado.'],
      no:'Garabatos, gritos o burlas, aunque sean “en buena”. Comparar a un alumno con otro.',
+     q:{p:'Un niño se cae cinco veces y te dice: “no puedo”.', op:['“Todavía no puedes, sigue intentando.”','“¡Sí puedes! Vamos paso a paso: primero la remada.”','“Mira a tu compañero, él sí puede.”'], ok:1, fb:'Siempre en positivo: “¡Sí puedes!”. Y dale un paso chico que sí pueda lograr ahora.'},
      reto:'Usa el nombre de cada alumno en cada clase.'},
-    {t:'Motivar y dar confianza', s:'Creer en ellos es lo que los hace avanzar.',
-     si:['Felicita logros concretos: “¡Qué buena remada, metiste el brazo profundo!” vale más que “bien”.','Propón a cada uno un desafío que pueda lograr.','Si a alguien le cuesta, busca otra forma de explicarle. No te rindes.','El miedo es normal: escúchalo, valida lo que siente y quédate cerca.','Llega con buena energía, aunque haga frío o el mar esté difícil.'],
+    {t:'Motivar', ico:'⭐', c:'#FFF1BF', k:'#8A6A00', s:'Creer en ellos es lo que los hace avanzar.',
+     si:['Felicita logros concretos: “¡Qué buena remada, metiste el brazo profundo!” vale más que “bien”.','Propón a cada uno un desafío que pueda lograr.','Si a alguien le cuesta, busca otra forma de explicarle. No te rindes.','Llega con buena energía, aunque haga frío o el mar esté difícil.'],
      no:'Apurar a quien tiene miedo o dejar de insistir con quien le cuesta.',
+     q:{p:'Una niña tiene miedo y no quiere entrar al agua.', op:['La llevo igual, ya se le va a pasar.','La escucho, le digo que es normal y la acompaño de a poco.','Que se quede sentada en la arena.'], ok:1, fb:'El miedo es normal. Escúchalo, quédate cerca y avancen de a poco. Si necesitas, pide ayuda a un ayudante.'},
      reto:'Felicita a cada alumno por algo concreto que hizo bien.'},
-    {t:'Una buena clase', s:'Una clase planificada se nota.',
-     si:['Llega sabiendo qué vas a trabajar con tu grupo.','Tu grupo calienta separado, según su nivel, nunca todos juntos.','En la arena: muestras, cada uno lo hace y corriges uno por uno.','Antes de entrar explicas el plan: objetivo, zona y señales.','Cierras en grupo: felicitas y adelantas el próximo desafío.'],
-     no:'Improvisar la clase o calentar todos los grupos juntos.',
+    {t:'La clase', ico:'📋', c:'#E1F1E6', k:'#2F7A4C', s:'Una clase planificada se nota.',
+     si:['Llega sabiendo qué vas a trabajar con tu grupo.','En la arena: muestras, cada uno lo hace y corriges uno por uno.','Antes de entrar explicas el plan: objetivo, zona y señales.','Cierras en grupo: felicitas y adelantas el próximo desafío.'],
+     no:'Improvisar la clase.',
+     q:{p:'Todos los grupos llegan a la arena al mismo tiempo.', op:['Calentamos todos juntos, es más rápido.','Cada grupo calienta separado, con su instructor.','Nos saltamos el calentamiento.'], ok:1, fb:'Cada grupo calienta separado y según su nivel. Nunca todos juntos.'},
      reto:'Antes de cada clase, define en una frase qué va a aprender tu grupo.'},
-    {t:'Seguridad', s:'Lo primero, siempre.',
-     si:['Revisa el mar antes de entrar y define la zona.','Cuenta a tu grupo al llegar, varias veces en el agua, al salir y al entregarlo.','Ubícate donde ves a todos. No surfeas tus propias olas mientras estás a cargo.','Tus alumnos conocen las señales: puño extendido es “¿estás bien?”, mano en la cabeza es “estoy bien”, brazo moviéndose es “ayuda”.','Llevas siempre tu silbato.'],
+    {t:'Seguridad', ico:'🛟', c:'#FCDDD6', k:'#B23A26', s:'Lo primero, siempre.',
+     si:['Revisa el mar antes de entrar y define la zona.','Cuenta a tu grupo al llegar, varias veces en el agua, al salir y al entregarlo.','Tus alumnos conocen las señales: puño extendido es “¿estás bien?”, mano en la cabeza es “estoy bien”, brazo moviéndose es “ayuda”.','Llevas siempre tu silbato.'],
      no:'Perder de vista a un alumno, aunque sea un momento.',
+     q:{p:'Estás a cargo y entra un set buenísimo.', op:['Me tomo una ola rápida.','Le pido a un alumno que mire al grupo.','Sigo mirando a mi grupo y los cuento.'], ok:2, fb:'Mientras estás a cargo no surfeas tus propias olas. Tu grupo es tu ola.'},
      reto:'Cuenta a tu grupo cada vez que entra un set.'},
-    {t:'Familias y apoderados', s:'Storm habla con las familias.',
-     si:['Saluda y sé amable con las familias. Los temas importantes (progreso, conducta, salud, pagos o cambio de grupo) los ve Storm.','No des tu WhatsApp personal ni escribas a las familias por tu cuenta.','Si alguien reclama, escucha sin discutir y dile: “Gracias por contarme, se lo paso altiro a Isidora y Diego”.','Avisa el mismo día cualquier golpe, conducta difícil o algo que te preocupó.','Ningún niño se va solo ni con alguien que no conoces sin que Storm lo sepa.'],
+    {t:'Familias', ico:'👨‍👩‍👧', c:'#ECE3F7', k:'#6447A0', s:'Storm habla con las familias.',
+     si:['Saluda y sé amable. Los temas importantes (progreso, conducta, salud, pagos o cambio de grupo) los ve Storm.','No des tu WhatsApp personal ni escribas a las familias por tu cuenta.','Avisa el mismo día cualquier golpe, conducta difícil o algo que te preocupó.','Ningún niño se va solo ni con alguien que no conoces sin que Storm lo sepa.'],
      no:'Defenderte frente a un reclamo o prometer algo en nombre de Storm.',
+     q:{p:'Un apoderado te reclama porque su hijo no avanza.', op:['Le explico que su hijo no hace caso.','Escucho, agradezco y aviso altiro a Isidora o Diego.','Le doy mi WhatsApp para conversarlo.'], ok:1, fb:'“Gracias por contarme, se lo paso altiro a Isidora y Diego.” Escuchar sin discutir, y Storm lo soluciona.'},
      reto:'Cuéntanos el mismo día cualquier cosa que te haya preocupado.'},
-    {t:'Trabajo en equipo', s:'Sumar, no restar.',
-     si:['Ves lo que falta y lo haces sin que te lo pidan: sacar tablas, ayudar con un traje, apoyar otro grupo.','Celebras las olas de todos, no solo las de tu grupo.','Aceptas correcciones de Isidora, Diego u otro instructor sin ponerte a la defensiva.','Compartes lo que sabes y propones ideas para mejorar.'],
+    {t:'Equipo', ico:'🙌', c:'#D9F1EF', k:'#17736E', s:'Sumar, no restar.',
+     si:['Ves lo que falta y lo haces sin que te lo pidan: sacar tablas, ayudar con un traje, apoyar otro grupo.','Celebras las olas de todos, no solo las de tu grupo.','Compartes lo que sabes y propones ideas para mejorar.'],
      no:'Decir “no es mi parte” o hablar mal de un compañero.',
+     q:{p:'Terminó tu clase y otro instructor está solo guardando todas las tablas.', op:['Me voy, mi clase ya terminó.','Lo ayudo sin que me lo pida.','Le pido a un alumno que lo ayude.'], ok:1, fb:'En Storm nadie ordena solo. Ver lo que falta y hacerlo es lo que más se nota.'},
      reto:'Ayuda a otro instructor sin que te lo pida.'},
-    {t:'Orden y cuidado del equipo', s:'La escuela queda mejor de como la encontramos.',
-     si:['Tablas sin arena y guardadas en su lugar, nunca tiradas al sol.','Trajes enjuagados y colgados en su talla.','Escuela barrida y ordenada al terminar tu día.','Si una tabla o algún equipo se daña, avisas.'],
+    {t:'Orden', ico:'🧹', c:'#F0E9DE', k:'#7A5A36', s:'La escuela queda mejor de como la encontramos.',
+     si:['Tablas sin arena y guardadas en su lugar, nunca tiradas al sol.','Trajes enjuagados y colgados en su talla.','Escuela barrida y ordenada al terminar tu día.'],
      no:'Irte dejando tablas, trajes o tus cosas tiradas.',
+     q:{p:'Al guardar ves que una tabla tiene un golpe nuevo.', op:['La guardo igual, se ve poco.','Aviso a Isidora o Diego.','La dejo atrás de las otras.'], ok:1, fb:'Una tabla dañada que nadie avisa puede cortar a un alumno. Siempre se avisa.'},
      reto:'Antes de irte, revisa que todo quede en su lugar.'},
-    {t:'Seguir creciendo', s:'Siempre hay algo nuevo que aprender del mar y de los demás.',
-     si:['Después de cada clase piensa: ¿qué salió bien? ¿qué haría distinto?','Deja notas de tus alumnos en la app: qué lograron y en qué están.','Pide consejos a Isidora, Diego u otro instructor.','Sigue formándote. Si quieres certificarte en primeros auxilios, rescate o como instructor, cuéntanos y te acompañamos.'],
+    {t:'Crecer', ico:'🌱', c:'#E5F3D6', k:'#4A7A1C', s:'Siempre hay algo nuevo que aprender del mar y de los demás.',
+     si:['Después de cada clase piensa: ¿qué salió bien? ¿qué haría distinto?','Deja notas de tus alumnos en la app: qué lograron y en qué están.','Sigue formándote. Si quieres certificarte en primeros auxilios, rescate o como instructor, cuéntanos y te acompañamos.'],
      no:'Creer que ya lo sabes todo.',
+     q:{p:'Diego te corrige frente al grupo.', op:['Le explico que yo lo hago así.','Escucho, agradezco y lo pruebo.','Me pongo serio el resto de la clase.'], ok:1, fb:'Aceptar una corrección sin ponerse a la defensiva también es enseñar humildad a los niños.'},
      reto:'Pídele a Isidora o Diego un consejo para tu próxima clase.'}
   ];
-  let guiaAbierta = -1;
+  const GKEY = KEY + '-guia';
+  const gLeer = () => { try{ const g = JSON.parse(localStorage.getItem(GKEY) || '{}'); return {vistos: g.vistos || [], retos: g.retos || []}; }catch(_){ return {vistos: [], retos: []}; } };
+  const gGuardar = g => { try{ localStorage.setItem(GKEY, JSON.stringify(g)); }catch(_){} };
+  const gSemana = () => Math.floor((Date.now() / 864e5 + 3) / 7); // cambia cada lunes
   function pintarGuia(pane){
-    // Reto de la semana: cambia solo cada lunes y recorre los 10 temas.
-    const sem = Math.floor((Date.now() / 864e5 + 3) / 7), r = sem % GUIA.length;
-    pane.innerHTML = `<div class='pn-card pn-gui'><b>Ser mejor instructor de Storm</b><p>Más allá de la técnica: lo que hace que un alumno se sienta seguro, aprenda y quiera volver. Lee un tema a la vez y vuelve cuando tengas una duda.</p></div>
-      <div class='pn-card pn-gur'><small>Reto de esta semana</small><b>${esc(GUIA[r].reto)}</b><button class='pn-link' data-gir='${r}'>${esc(GUIA[r].t)} ›</button></div>
-      <div class='pn-card pn-gul'>${GUIA.map((g, i) => `<div class='pn-gut${guiaAbierta === i ? ' on' : ''}' data-gt='${i}'>
-        <button class='pn-guh' aria-expanded='${guiaAbierta === i}'><span class='pn-gun'>${String(i + 1).padStart(2, '0')}</span><span><b>${esc(g.t)}</b><small>${esc(g.s)}</small></span><i>›</i></button>
-        ${guiaAbierta === i ? `<div class='pn-gub'><ul>${g.si.map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class='pn-guno'><b>Evita</b>${esc(g.no)}</p><p class='pn-gure'><b>Reto</b>${esc(g.reto)}</p></div>` : ''}</div>`).join('')}</div>
+    const g = gLeer(), sem = gSemana(), r = sem % GUIA.length, hecho = g.retos.includes(sem), n = g.vistos.length;
+    pane.innerHTML = `<div class='pn-gur' style='--c:${GUIA[r].c};--k:${GUIA[r].k}'>
+        <small>Reto de esta semana</small><span class='pn-gur-ico'>${GUIA[r].ico}</span>
+        <b>${esc(GUIA[r].reto)}</b>
+        <button class='pn-gur-ok${hecho ? ' on' : ''}' data-greto>${hecho ? '✓ ¡Lo cumpliste!' : 'Lo cumplí'}</button>
+        ${g.retos.length ? `<em>${g.retos.length} reto${g.retos.length === 1 ? '' : 's'} cumplido${g.retos.length === 1 ? '' : 's'} 🔥</em>` : ''}
+      </div>
+      <div class='pn-guav'><span>Tu avance</span><b>${n} de ${GUIA.length} temas</b><i><u style='width:${n / GUIA.length * 100}%'></u></i></div>
+      <div class='pn-gugr'>${GUIA.map((t, i) => `<button class='pn-gut${g.vistos.includes(i) ? ' ok' : ''}' data-gt='${i}' style='--c:${t.c};--k:${t.k}'><span>${t.ico}</span><b>${esc(t.t)}</b><small>${esc(t.s)}</small></button>`).join('')}</div>
       <div class='pn-guc'><p>“Confíen en sus capacidades: son buenos instructores y tienen mucho por enseñar e inspirar a las nuevas generaciones.”</p><small>Isidora y Diego</small></div>`;
-    const abrir = i => { guiaAbierta = guiaAbierta === i ? -1 : i; pintarGuia(pane); const el = pane.querySelector(`[data-gt='${i}']`); if(el && guiaAbierta === i) el.scrollIntoView({block:'nearest', behavior:'smooth'}); };
-    pane.querySelectorAll('[data-gt] .pn-guh').forEach(b => b.onclick = () => abrir(+b.parentNode.dataset.gt));
-    const ir = pane.querySelector('[data-gir]'); if(ir) ir.onclick = () => { guiaAbierta = -1; abrir(+ir.dataset.gir); };
+    pane.querySelectorAll('[data-gt]').forEach(b => b.onclick = () => abrirTema(+b.dataset.gt, pane));
+    pane.querySelector('[data-greto]').onclick = () => {
+      const g = gLeer(); g.retos = g.retos.includes(sem) ? g.retos.filter(x => x !== sem) : g.retos.concat(sem); gGuardar(g); pintarGuia(pane);
+      if(g.retos.includes(sem)) festejo(pane.querySelector('[data-greto]'));
+    };
+  }
+  function festejo(el){
+    if(!el) return; const r = el.getBoundingClientRect();
+    for(let i = 0; i < 14; i++){ const s = document.createElement('i'); s.className = 'pn-guf'; s.textContent = ['🌊','⭐','🔥','🤙'][i % 4];
+      s.style.left = (r.left + r.width / 2) + 'px'; s.style.top = (r.top + r.height / 2) + 'px';
+      s.style.setProperty('--x', (Math.random() * 220 - 110) + 'px'); s.style.setProperty('--y', (-60 - Math.random() * 140) + 'px');
+      document.body.appendChild(s); setTimeout(() => s.remove(), 1000); }
+  }
+  // Un tema = una serie de tarjetas, como historias.
+  function abrirTema(i, pane){
+    const t = GUIA[i];
+    const cards = [{tipo:'portada'}].concat(t.si.map(x => ({tipo:'punto', x})), [{tipo:'evita'}, {tipo:'quiz'}, {tipo:'reto'}]);
+    let k = 0, resp = -1;
+    const ov = document.createElement('div'); ov.className = 'pn-guo'; ov.style.cssText = `--c:${t.c};--k:${t.k}`;
+    document.body.appendChild(ov); document.documentElement.style.overflow = 'hidden';
+    const cerrar = () => { ov.remove(); document.documentElement.style.overflow = ''; pintarGuia(pane); };
+    const pinta = dir => {
+      const c = cards[k], ult = k === cards.length - 1, quiz = c.tipo === 'quiz';
+      let body = '';
+      if(c.tipo === 'portada') body = `<span class='pn-guo-ico'>${t.ico}</span><h2>${esc(t.t)}</h2><p class='pn-guo-s'>${esc(t.s)}</p>`;
+      else if(c.tipo === 'punto') body = `<small>${k} de ${t.si.length}</small><p class='pn-guo-p'>${esc(c.x)}</p>`;
+      else if(c.tipo === 'evita') body = `<span class='pn-guo-tag no'>Evita</span><p class='pn-guo-p'>${esc(t.no)}</p>`;
+      else if(quiz) body = `<span class='pn-guo-tag'>¿Qué harías?</span><p class='pn-guo-q'>${esc(t.q.p)}</p><div class='pn-guo-ops'>${t.q.op.map((o, j) => `<button data-op='${j}' class='${resp < 0 ? '' : j === t.q.ok ? 'bien' : j === resp ? 'mal' : 'off'}'>${esc(o)}</button>`).join('')}</div>${resp >= 0 ? `<p class='pn-guo-fb'><b>${resp === t.q.ok ? '¡Bien! 🙌' : 'Mejor la otra 👀'}</b>${esc(t.q.fb)}</p>` : ''}`;
+      else body = `<span class='pn-guo-tag ok'>Tu reto</span><p class='pn-guo-p'>${esc(t.reto)}</p>`;
+      ov.innerHTML = `<div class='pn-guo-in'>
+        <div class='pn-guo-top'><div class='pn-guo-bar'>${cards.map((_, j) => `<i class='${j < k ? 'ya' : j === k ? 'ahora' : ''}'></i>`).join('')}</div><button class='pn-guo-x' aria-label='Cerrar'>✕</button></div>
+        <div class='pn-guo-card${dir ? ' in-' + dir : ''}'>${body}</div>
+        <div class='pn-guo-nav'>${k ? `<button class='pn-guo-atras' aria-label='Atrás'>‹</button>` : ''}<button class='pn-guo-sig' ${quiz && resp < 0 ? 'disabled' : ''}>${ult ? 'Acepto el reto 🤙' : k === 0 ? 'Empezar' : quiz && resp < 0 ? 'Elige una' : 'Siguiente'}</button></div></div>`;
+      ov.querySelector('.pn-guo-x').onclick = cerrar;
+      const at = ov.querySelector('.pn-guo-atras'); if(at) at.onclick = () => ir(-1);
+      ov.querySelector('.pn-guo-sig').onclick = () => ir(1);
+      ov.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { if(resp >= 0) return; resp = +b.dataset.op; pinta(); });
+    };
+    const ir = d => {
+      const c = cards[k];
+      if(d > 0 && c.tipo === 'quiz' && resp < 0) return;
+      if(d > 0 && k === cards.length - 1){ const g = gLeer(); if(!g.vistos.includes(i)) g.vistos.push(i); gGuardar(g); festejo(ov.querySelector('.pn-guo-sig')); setTimeout(cerrar, 650); return; }
+      k = Math.max(0, Math.min(cards.length - 1, k + d)); pinta(d > 0 ? 'der' : 'izq');
+    };
+    let x0 = null;
+    ov.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, {passive:true});
+    ov.addEventListener('touchend', e => { if(x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if(Math.abs(dx) > 50) ir(dx < 0 ? 1 : -1); }, {passive:true});
+    pinta();
   }
   let fSub = (() => { try{ return sessionStorage.getItem(KEY + '-fsub'); }catch(_){ return null; } })() || 'finanzas';
   function mostrarAcad(){
