@@ -1018,24 +1018,38 @@ async function rentasLista(env) {
   return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, fibras: x.fibras || 0, trajes: x.trajes, tiempo: x.tiempo, pago: x.pago, monto: x.monto || 0, nota: x.nota, por: x.por,
     devuelta: !!x.devuelta_ms, devueltaHora: x.devuelta_hora, devueltaPor: x.devuelta_por }));
 }
+/** Anota una renta nueva (desde Nueva renta o desde el carro de Cobrar). Devuelve su id. */
+async function crearRenta(env, q, d, yo) {
+  const db = env.DB, t = ahoraChile();
+  const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Escribe el nombre de quien arrienda.');
+  const n20 = v => Math.max(0, Math.min(20, Math.floor(Number(v) || 0))), tablas = n20(d.tablas), fibras = n20(d.fibras), trajes = n20(d.trajes);
+  if (!tablas && !fibras && !trajes) throw err('Elige tabla soft, tabla de fibra o traje.');
+  const tiempo = d.tiempo === 'dia' ? 'dia' : d.tiempo === 'medio' ? 'medio' : ''; if (!tiempo) throw err('Elige medio día o día completo.');
+  const pago = RENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
+  const hora = normHora(d.hora) || t.hora;
+  const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : tablas * PRECIO_RENTA.tablas[tiempo] + fibras * PRECIO_RENTA.fibras[tiempo] + trajes * PRECIO_RENTA.trajes[tiempo];
+  if (pago === 'Link de pago' && !monto) throw err('Escribe cuánto se cobra.');
+  const id = nuevoId('R', t);
+  await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, fibras, trajes, tiempo, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, fibras, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
+  await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'S ' + fibras + 'F ' + trajes + 'J ' + tiempo);
+  return id;
+}
+/** Rentas armadas en el carro (todavía sin guardar): se revisan todas antes de guardar ninguna. */
+const rentasCarro = d => (Array.isArray(d.nuevasRentas) ? d.nuevasRentas : []).slice(0, 10);
+async function guardarRentasCarro(env, q, d, pago, yo) {
+  const L = rentasCarro(d); if (!L.length) return [];
+  for (const r of L) { if (nombrePropio(r.nombre).length < 2) throw err('Falta el nombre en la renta nueva.'); if (!(Number(r.tablas) || Number(r.fibras) || Number(r.trajes)) || !['medio', 'dia'].includes(r.tiempo)) throw err('Revisa la renta nueva: qué se lleva y cuánto tiempo.'); }
+  const ids = []; for (const r of L) ids.push(await crearRenta(env, q, Object.assign({}, r, { pago }), yo));
+  return ids;
+}
 async function rentasAccion(env, q, d) {
   if (!['admin', 'recepcion'].includes(q.rol)) throw err('Solo la recepción y los administradores ven las rentas.');
   const db = env.DB; await rnTablas(db);
   const t = ahoraChile(), op = d.op || 'ver', yo = op === 'ver' ? '' : await quienNombre(env, q.email);
   let nuevo = '';
   if (op === 'nueva') {
-    const nombre = nombrePropio(d.nombre); if (nombre.length < 2) throw err('Escribe el nombre de quien arrienda.');
-    const n20 = v => Math.max(0, Math.min(20, Math.floor(Number(v) || 0))), tablas = n20(d.tablas), fibras = n20(d.fibras), trajes = n20(d.trajes);
-    if (!tablas && !fibras && !trajes) throw err('Elige tabla soft, tabla de fibra o traje.');
-    const tiempo = d.tiempo === 'dia' ? 'dia' : d.tiempo === 'medio' ? 'medio' : ''; if (!tiempo) throw err('Elige medio día o día completo.');
-    const pago = RENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
-    const hora = normHora(d.hora) || t.hora;
-    const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : tablas * PRECIO_RENTA.tablas[tiempo] + fibras * PRECIO_RENTA.fibras[tiempo] + trajes * PRECIO_RENTA.trajes[tiempo];
-    if (pago === 'Link de pago' && !monto) throw err('Escribe cuánto se cobra.');
-    nuevo = nuevoId('R', t);
-    await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, fibras, trajes, tiempo, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(nuevo, Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, fibras, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
-    await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'S ' + fibras + 'F ' + trajes + 'J ' + tiempo);
+    nuevo = await crearRenta(env, q, d, yo);
   } else if (op !== 'ver') {
     const x = await db.prepare('SELECT * FROM rentas WHERE id = ?').bind(String(d.id || '')).first();
     if (!x) throw err('No encontramos esa renta.');
@@ -1071,15 +1085,16 @@ async function tiendaAccion(env, q, d) {
     // Rentas y clases sin pagar sumadas al carro (el monto se lee aquí): cada una queda pagada en su área
     const ids = new Set([].concat(d.rentas || [], d.clases || []).map(String)), otras = ids.size ? (await linkOpciones(env)).filter(o => ids.has(o.id)) : [];
     const partes = lineas.map(l => Object.assign({ tipo: 'tienda' }, l)).concat(otras.map(o => ({ tipo: o.tipo, id: o.id, detalle: o.detalle, monto: o.monto })));
-    if (!partes.length) throw err('Elige qué se cobra.');
+    if (!partes.length && !rentasCarro(d).length) throw err('Elige qué se cobra.');
     const yo = await quienNombre(env, q.email);
+    const nuevas = await guardarRentasCarro(env, q, d, pago, yo); // las rentas armadas en el carro se guardan ya pagadas con esta forma de pago
     if (otras.length) { // si estaban en un link esperando pago, ese link se anula (ya se pagó aquí)
       await linkTabla(db);
       const viejos = (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente'").all()).results.filter(L => partesDe(L).some(p => p.id && ids.has(p.id)));
       if (viejos.length) await db.batch(viejos.map(L => db.prepare("UPDATE links SET estado = 'anulada' WHERE ref = ? AND estado = 'pendiente'").bind(L.ref)));
     }
-    await anotarPartes(env, partes, pago, yo, null, false);
-    await anotar(db, q, 'venta ' + partes.map(l => l.detalle).join(', '));
+    if (partes.length) { await anotarPartes(env, partes, pago, yo, null, false); await anotar(db, q, 'venta ' + partes.map(l => l.detalle).join(', ')); }
+    if (nuevas.length && !partes.length) await anotar(db, q, 'cobro rentas ' + nuevas.join(', '));
   } else if (op === 'borrar') {
     await db.prepare("UPDATE ventas SET estado = 'borrada' WHERE id = ?").bind(String(d.id || '')).run();
     await anotar(db, q, 'venta borrada ' + d.id);
@@ -1176,17 +1191,21 @@ async function linkAccion(env, q, d, ctx) {
     const otro = num(d.otroMonto); if (otro) lineas.push({ detalle: String(d.otroDetalle || '').trim().slice(0, 80) || 'Otro producto', monto: otro, area: 'tienda' });
     const dano = num(d.danoMonto); if (dano) lineas.push({ detalle: 'Cobro por daño' + (String(d.danoDetalle || '').trim() ? ': ' + String(d.danoDetalle).trim().slice(0, 80) : ''), monto: dano, area: 'renta' });
     lineas.forEach(l => partes.push(Object.assign({ tipo: 'tienda' }, l)));
+    // Rentas armadas en el carro: se guardan ahora esperando el link (si el link falla, quedan como renta 'Esperando pago' y se cobran igual)
+    const yo0 = await quienNombre(env, q.email), nuevas = await guardarRentasCarro(env, q, d, 'Link de pago', yo0);
     // Rentas y clases sin pagar elegidas (el monto se lee aquí, no se confía en lo que manda el celular)
-    const ops = await linkOpciones(env), ids = new Set([].concat(d.rentas || [], d.clases || []).map(String));
+    const ops = await linkOpciones(env), ids = new Set([].concat(d.rentas || [], d.clases || [], nuevas).map(String));
     ops.filter(o => ids.has(o.id)).forEach(o => partes.push({ tipo: o.tipo, id: o.id, detalle: o.detalle + (o.sub ? ' (' + o.sub + ')' : ''), cliente: o.cliente, monto: o.monto }));
-    if (!partes.length) throw err('Elige qué se cobra en el link.');
+    // Si el link no se puede crear, las rentas armadas en el carro se deshacen (así al reintentar no quedan repetidas)
+    const deshacer = async m => { if (nuevas.length) await db.batch(nuevas.map(id => db.prepare("UPDATE rentas SET estado = 'borrada' WHERE id = ?").bind(id))); throw err(m); };
+    if (!partes.length) await deshacer('Elige qué se cobra en el link.');
     const total = partes.reduce((s, p) => s + p.monto, 0);
-    if (total < 50) throw err('El total es muy bajo para un link de pago.');
+    if (total < 50) await deshacer('El total es muy bajo para un link de pago.');
     const prim = ops.find(o => ids.has(o.id)) || {};
     const nombre = nombrePropio(d.nombre || prim.nombre || ''), telefono = String(d.telefono || prim.telefono || '').trim().slice(0, 30), yo = await quienNombre(env, q.email);
     const ref = 'LK-' + t.fecha.slice(2).replace(/-/g, '') + '-' + nuevaClave().slice(0, 8).toUpperCase();
     const o = await mpOrden(env, ref, total, 'Storm' + (nombre ? ' · ' + nombre : ''), partes);
-    if (!o) throw err('No pudimos crear el link. Intenta de nuevo en un momento.');
+    if (!o) await deshacer('No pudimos crear el link. Intenta de nuevo en un momento.');
     const link = origenApp() + '/pagar/?o=' + encodeURIComponent(o.id);
     // Una renta o clase va en un solo link pendiente: los anteriores que la tenían se anulan (así no se cobra dos veces)
     const viejos = (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente'").all()).results.filter(L => partesDe(L).some(p => p.id && ids.has(p.id)));
