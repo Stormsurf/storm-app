@@ -40,7 +40,8 @@ const AJUSTES_BASE = {
   cierreNoche: '20:00',  // las de la mañana se reservan hasta esta hora del día anterior
   diasAdelante: 60,
   retencionMin: 30,      // minutos que se guarda el horario mientras pagan
-  maxWeb: 4,             // más personas = por WhatsApp (Armada 24-11: 1 instructor cada 4 alumnos)
+  maxWeb: 8,             // más personas = por WhatsApp. Armada (24-11): 1 instructor cada 4 alumnos → de 5 a 8 van 2 instructores
+  porPersona: 25000,     // desde 5 personas se cobra por persona (Isidora 25-11)
   maxSeguidas: 2,
   // Enero y febrero: la Academia de Verano usa lun, mar, jue y vie de 9:00 a 12:00; en ese rato queda 1 instructor para particulares
   // Esos días la primera clase parte 9:30 (no llegar junto con los niños de la Academia): 9:00 → 9:30 y 10:30 → 11:00
@@ -114,7 +115,7 @@ async function ajustes(db) {
   const { results } = await db.prepare('SELECT clave, valor FROM ajustes').all();
   const a = JSON.parse(JSON.stringify(AJUSTES_BASE));
   results.forEach(r => { try { a[r.clave] = JSON.parse(r.valor); } catch (_) {} });
-  a.maxWeb = Math.min(Number(a.maxWeb) || MAX_GRUPO, MAX_GRUPO); // nunca más de 4 por la web (regla Armada), aunque Ajustes diga otra cosa
+  a.maxWeb = Math.min(Number(a.maxWeb) || MAX_WEB, MAX_WEB); // hasta 8 por la web (2 instructores), aunque Ajustes diga otra cosa
   a.horarios = [...new Set((a.horarios || []).map(normHora).filter(Boolean))].sort();
   return a;
 }
@@ -145,10 +146,11 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
 /** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
  *  - menores de 8: de a 2 por instructor; si sobra uno, va con los demás (o, si no hay más, con el último par: 3 niños = 1 instructor) (menores de 5: clase individual, aviso en la página);
  *  - (ninos: reservado por si se vuelve a separar por edades; hoy siempre 0)
- *  - desde 12 años cuenta como adulto; máximo 4 por instructor (Armada 24-11-2026).
+ *  - desde 12 años cuenta como adulto; máximo 4 por instructor (Armada 24-11-2026): 5 = 3+2, 8 = 4+4.
+ *  - de 5 a 8 personas se cobra por persona (porPersona); los grupos solo sirven para saber cuántos instructores y cuánto se les paga.
  *  Ej.: 4 niños = 2+2; 3 niños = 3; 3 niños + 1 adulto = 2+2. */
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
-const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 4; // Armada (24-11-2026): máximo 4 alumnos por instructor
+const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 4, MAX_WEB = 8; // Armada (24-11-2026): máximo 4 alumnos por instructor
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
 const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay', 'Webpay crédito', 'Webpay débito'];
 function cotizar(a, personas, menores, ninos, nivel) {
@@ -167,8 +169,9 @@ function cotizar(a, personas, menores, ninos, nivel) {
     for (let g = 0; g < n; g++) grupos.push({ personas: Math.floor(resto / n) + (g < resto % n ? 1 : 0), ninos: false });
   }
   let precio = 0, pago = 0;
+  const pp = personas >= 5 && personas <= a.maxWeb ? Number(a.porPersona) || AJUSTES_BASE.porPersona : 0; // 5 a 8: precio por persona
   grupos.forEach(g => {
-    g.precio = inter && g.personas === 1 ? Number((a.intermedio || {}).precio) || 0 : Number(a.precios[g.personas]) || 0; // intermedio: $50.000 individual (Isidora 21-11); desde 2 personas, precio normal
+    g.precio = pp ? g.personas * pp : inter && g.personas === 1 ? Number((a.intermedio || {}).precio) || 0 : Number(a.precios[g.personas]) || 0; // intermedio: $50.000 individual (Isidora 21-11); desde 2 personas, precio normal
     g.pago = Number(g.personas <= 5 ? a.pagos[g.personas] : a.pagos.grupo) || Number(a.pagos.grupo) || 0;
     precio += g.precio; pago += g.pago;
   });
@@ -280,7 +283,7 @@ async function disponibilidad(db, d) {
     const horas = horasDia(a, f).filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
     if (horas.length) dias[f] = horas;
   }
-  return { ok: true, pack: a.pack || AJUSTES_BASE.pack, precios: a.precios, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
+  return { ok: true, pack: a.pack || AJUSTES_BASE.pack, precios: a.precios, porPersona: a.porPersona, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
 }
 
 // ---------- reservar y pagar ----------
@@ -809,7 +812,7 @@ async function panel(env, q) {
     reservas: reservas.map(r => Object.assign(filaPanel(r, todo), { fichas: fichasPor[r.ref] || [], linkFicha: linkFicha(r) })), link: PAGINA,
     vacaciones: (await vacacionesLista(db, hoy)).filter(v => todo || v.instructor === q.yo) };
   if (admin) {
-    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, lugar: a.lugar, admins: a.admins, recepcion: a.recepcion || [], pack: a.pack };
+    out.ajustes = { precios: a.precios, pagos: a.pagos, horarios: a.horarios, minHoras: a.minHoras, maxSeguidas: a.maxSeguidas, horaTarde: a.horaTarde, cierreNoche: a.cierreNoche, diasAdelante: a.diasAdelante, maxWeb: a.maxWeb, porPersona: a.porPersona, lugar: a.lugar, admins: a.admins, recepcion: a.recepcion || [], pack: a.pack };
     const mes = hoy.slice(0, 7);
     const m = await db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS total, COALESCE(SUM(pago_instructor),0) AS pago FROM reservas WHERE substr(fecha,1,7) = ? AND estado = 'pagada'").bind(mes).first();
     m.total += await packsVendidos(db, mes); // los packs cuentan el mes en que se pagan (sus clases van en $0)
@@ -828,7 +831,7 @@ async function panel(env, q) {
     porIns.results.forEach(r => { const p = pagosDe(r); if (q.yo in p) { clases++; pago += p[q.yo]; } });
     out.mes = { mes, clases, pagoYo: pago };
   }
-  if (!admin && todo) out.ajustes = { precios: a.precios, maxWeb: a.maxWeb, horarios: a.horarios, pack: a.pack };
+  if (!admin && todo) out.ajustes = { precios: a.precios, porPersona: a.porPersona, maxWeb: a.maxWeb, horarios: a.horarios, pack: a.pack };
   if (todo) out.packs = await packsLista(db);
   if (todo) out.clientes = await clientesLista(env); // para no escribirlos de nuevo en la reserva a mano
   return out;
@@ -1613,6 +1616,7 @@ async function guardarAjustes(env, q, d) {
   const db = env.DB, a = await ajustes(db), st = [], n = v => Math.round(Number(String(v).replace(/\D/g, '')) || 0);
   if (d.precios) { const p = {}; for (let i = 1; i <= 5; i++) p[i] = n(d.precios[i]) || a.precios[i]; st.push(['precios', p]); }
   if (d.pagos) { const p = {}; for (let i = 1; i <= 5; i++) p[i] = n(d.pagos[i]) || 0; p.grupo = n(d.pagos.grupo) || 0; st.push(['pagos', p]); }
+  if (d.porPersona != null && n(d.porPersona)) st.push(['porPersona', n(d.porPersona)]);
   if (d.horarios) { const h = [...new Set(d.horarios.map(normHora).filter(Boolean))].sort(); if (!h.length) throw err('Deja al menos un horario.'); st.push(['horarios', h]); }
   ['minHoras', 'diasAdelante', 'maxWeb', 'maxSeguidas'].forEach(k => { if (d[k] != null && d[k] !== '') st.push([k, Math.max(0, Number(d[k]) || 0)]); });
   ['horaTarde', 'cierreNoche'].forEach(k => { if (d[k]) { const h = normHora(d[k]); if (h) st.push([k, h]); } });

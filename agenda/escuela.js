@@ -147,6 +147,7 @@
   .es-tab{width:100%;border-collapse:collapse;font-size:1.35rem;margin-top:6px}
   .es-tab th{font-size:1.15rem;text-align:left;opacity:.6;font-weight:600;padding:4px}
   .es-tab td{padding:4px}
+  .es-tab td small{display:block;font-size:1.1rem;opacity:.6;line-height:1.3}
   .es-tab input{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit;font-size:1.35rem}
   .es-insrow{display:grid;grid-template-columns:1fr 1.4fr auto;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
   .es-insrow input{border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:inherit;font-size:1.3rem;min-width:0}
@@ -441,14 +442,15 @@
 
   const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Por pagar', 'Aún no paga']];
   const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m === 'Flow' ? 'Reserva online (Flow)' : /^Webpay/.test(m) ? 'Reserva online (' + m + ')' : m;
-  // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 4 (Armada)
+  // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 4 (Armada); de 5 a 8, precio por persona
   function cotiza(p, m) {
     const a = E.ajustes || {}, g = [];
     p = Math.max(1, Math.floor(+p || 1)); m = Math.max(0, Math.min(p, Math.floor(+m || 0)));
     const pares = Math.floor(m / 2); for (let k = 0; k < pares; k++) g.push(2);
     let resto = p - pares * 2; if (pares && resto === 1) { g[g.length - 1]++; resto = 0; }
-    if (resto > 0) { const n = p > (a.maxWeb || 4) ? 1 : Math.max(Math.ceil(resto / 4), 1); for (let k = 0; k < n; k++) g.push(Math.floor(resto / n) + (k < resto % n ? 1 : 0)); }
-    const precios = g.map(x => Number((a.precios || {})[x]) || 0);
+    if (resto > 0) { const n = p > (a.maxWeb || 8) ? 1 : Math.max(Math.ceil(resto / 4), 1); for (let k = 0; k < n; k++) g.push(Math.floor(resto / n) + (k < resto % n ? 1 : 0)); }
+    const pp = p >= 5 && p <= (a.maxWeb || 8) ? Number(a.porPersona) || 25000 : 0;
+    const precios = g.map(x => pp ? x * pp : Number((a.precios || {})[x]) || 0);
     return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
   }
   const faltaCobrar = r => (r.saldos || []).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0);
@@ -864,15 +866,16 @@
       h += E.instructores.map(i => `<div class='pn-card es-ic'><div class='es-ich'><b>${esc(i.nombre)}</b><label class='es-sw'><input type='checkbox' data-ia='${esc(i.nombre)}'${i.activo ? ' checked' : ''}><span class='es-tg'></span>${i.activo ? 'Activo' : 'Inactivo'}</label></div>
         <div class='es-f'><label>Correo<input data-ic='${esc(i.nombre)}' type='email' placeholder='correo@gmail.com' value='${esc(i.correo || '')}'></label><label>RUT (sale en la ficha)<input data-ir='${esc(i.nombre)}' value='${esc(i.rut || '')}'></label></div>
         <details class='es-det'${Object.keys(i.tarifas || {}).length ? ' open' : ''}><summary>Pago distinto a la tabla general</summary><p class='es-nota'>Llena solo si a ${esc(i.nombre)} le pagas otro monto. Vacío = lo de la pestaña Precios.</p>
-          <div class='es-tar'>${['1', '2', '3', '4', '5', 'grupo'].map(k => `<label>${k === 'grupo' ? 'Grupo grande' : k + (k === '1' ? ' persona' : ' personas')}<input data-it='${esc(i.nombre)}' data-k='${k}' inputmode='numeric' placeholder='${esc(String((a.pagos || {})[k] || ''))}' value='${esc(String((i.tarifas || {})[k] || ''))}'></label>`).join('')}</div></details></div>`).join('');
+          <div class='es-tar'>${['1', '2', '3', '4', 'grupo'].map(k => `<label>${k === 'grupo' ? 'Grupo grande' : k + (k === '1' ? ' persona' : ' personas')}<input data-it='${esc(i.nombre)}' data-k='${k}' inputmode='numeric' placeholder='${esc(String((a.pagos || {})[k] || ''))}' value='${esc(String((i.tarifas || {})[k] || ''))}'></label>`).join('')}</div></details></div>`).join('');
       h += `<div class='pn-card'><h3>Agregar instructor</h3><div class='es-f'><label>Nombre<input id='es-nn' placeholder='Nombre'></label><label>Correo<input id='es-nc' type='email' placeholder='correo@gmail.com'></label></div></div>
         <div class='es-acc'><button class='es-btn' data-aj='instructores'>Guardar cambios</button></div><p class='es-err vivo'></p>`;
     }
     if (ajTab === 'precios') {
       h += `<div class='pn-card'><h3>Precio por clase</h3><p class='pn-sub'>Lo que paga el cliente (lo ve en la página para reservar) y lo que recibe cada instructor por esa clase.</p>
-        <table class='es-tab'><tr><th>Personas</th><th>Cliente paga</th><th>Instructor recibe</th></tr>${[1, 2, 3, 4, 5].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
+        <table class='es-tab'><tr><th>Personas</th><th>Cliente paga</th><th>Instructor recibe</th></tr>${[1, 2, 3, 4].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
+        <tr><td><b>5 a 8</b></td><td><input data-pp value='${a.porPersona || 25000}' inputmode='numeric'><small>por persona</small></td><td><small>2 instructores, cada uno según su grupo</small></td></tr>
         <tr><td colspan='2'>Grupo grande o empresa</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
-        ${nota('Con niños menores de 8 la app arma los grupos sola: 2 niños por instructor, y si sobra uno se suma al último par.')}
+        ${nota('Máximo 4 alumnos por instructor (Armada). De 5 a 8 la app pone 2 instructores (5 = 3+2, 8 = 4+4) y cada uno recibe lo de su grupo. Con niños menores de 8: 2 niños por instructor, y si sobra uno se suma al último par.')}
         <h3 style='margin-top:18px'>Pack de clases</h3><p class='pn-sub'>Se vende desde la página del cliente o al anotar una clase. El instructor recibe lo mismo de siempre por cada clase.</p>
         <div class='es-f'><label>Clases del pack<input data-pk='clases' inputmode='numeric' value='${PK().clases}'></label><label>Descuento (%)<input data-pk='descuento' inputmode='numeric' value='${PK().descuento}'></label><label>Se usa en… (meses)<input data-pk='meses' inputmode='numeric' value='${PK().meses}'></label></div>
         ${nota('Con 1 persona el pack queda en ' + clp(precioPack(1)) + ' (' + PK().clases + ' clases de ' + clp(a.precios[1]) + ' menos ' + PK().descuento + '%).')}
@@ -1085,7 +1088,7 @@
       const t = b.dataset.aj;
       if (t === 'precios') {
         const precios = {}, pagos = {}, pack = {}; $$('[data-pr]').forEach(i => precios[i.dataset.pr] = i.value); $$('[data-pa]').forEach(i => pagos[i.dataset.pa] = i.value); $$('[data-pk]').forEach(i => pack[i.dataset.pk] = i.value);
-        if (await accion({ accion: 'ajustes', precios, pagos, pack }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
+        if (await accion({ accion: 'ajustes', precios, pagos, pack, porPersona: ($('[data-pp]') || {}).value }, b)) { msg = 'Precios guardados. La página para reservar ya muestra los nuevos.'; pintar(); }
       }
       if (t === 'reglas' && await accion({ accion: 'ajustes', horarios: $('#es-hor').value.split(/[,\s]+/).filter(Boolean), minHoras: $('#es-min').value, maxSeguidas: $('#es-seg').value, diasAdelante: $('#es-dias').value, horaTarde: $('#es-mismo').checked ? $('#es-tarde').value : '23:59', cierreNoche: $('#es-noche').value, lugar: $('#es-lugar').value }, b)) { msg = 'Horarios y reglas guardados.'; pintar(); }
       if (t === 'resenas' && await accion({ accion: 'ajustes', linkResena: $('#es-glink').value.trim() }, b)) { msg = 'Link guardado.'; pintar(); }
