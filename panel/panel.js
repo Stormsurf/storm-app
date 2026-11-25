@@ -74,6 +74,7 @@
   }
   addEventListener('offline', () => estado('Sin internet · lo que anotes se guarda al volver', true));
   addEventListener('online', () => { if(!colaLeer().length) estado(''); else procesar(); });
+  const pendientes = () => colaLeer().length;
   function enFondo(body, que, ok, mal){
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const c = colaLeer(); c.push({ id, que, body: Object.assign({}, body, { idem: id }) }); colaGuardar(c);
@@ -185,27 +186,20 @@
 
   // ---------- Lista: asistencia ----------
   let LISTA = [], LISTA_TODOS = [], EXTRAS_PEND = [], diaSel = 0, marcas = {}, agregando = false;
+  // Isidora (25-11): ya no se pasa lista en la Anual. Solo se anota quién vino de extra (otro día que no es el suyo):
+  // esa clase se suma sola a su próximo pago. Se guarda al tiro, sin botón Guardar.
   function listaPane(){
-    if(!LISTA.length) return `<div class='pn-card'><p class='pn-empty'>No hay clases de los últimos días para pasar lista.</p></div>`;
+    if(!LISTA.length) return `<div class='pn-card'><p class='pn-empty'>No hay clases de los últimos días.</p></div>`;
     if(diaSel >= LISTA.length) diaSel = 0;
-    const c = LISTA[diaSel];
-    if(!marcas[c.fecha]) marcas[c.fecha] = {}; const m = marcas[c.fecha];
-    c.alumnos.forEach(a => { if(!(a.nombre in m)) m[a.nombre] = a.vino; });
-    const van = c.alumnos.filter(a => m[a.nombre]).length;
-    return `<div class='pn-days'>${LISTA.map((x,i) => `<button class='pn-day${i===diaSel?' on':''}' data-dia='${i}'><b>${esc(x.cuando)}</b>${esc(x.clase)}${x.tomada?' <i>✓</i>':''}</button>`).join('')}</div>
+    const c = LISTA[diaSel], ex = c.alumnos.filter(a => a.extra);
+    return `<div class='pn-days'>${LISTA.map((x,i) => { const n = x.alumnos.filter(a => a.extra).length; return `<button class='pn-day${i===diaSel?' on':''}' data-dia='${i}'><b>${esc(x.cuando)}</b>${esc(x.clase)}${n ? ` <i>+${n}</i>` : ''}</button>`; }).join('')}</div>
       <div class='pn-card'><span class='pn-when'>${esc(c.cuando === c.texto ? c.clase : c.cuando)}</span>
-        <h3>${esc(c.texto)}<span class='pn-count'>${van} de ${c.alumnos.length}</span></h3>
-        <p class='pn-sub'>${esc(c.clase)} · ${esc(c.horario)} · Toca a los que vinieron.</p>
-        ${c.alumnos.length ? c.alumnos.map((a,i) => `<div class='pn-kid'>
-          <button class='pn-tick ${m[a.nombre]===true?'si':m[a.nombre]===false?'no':''}' data-kid='${i}'><span>${m[a.nombre]===true?'✓':m[a.nombre]===false?'–':''}</span><div><b>${esc(a.nombre)}${a.extra?` <em class='pn-extra'>Extra</em>`:''}</b><small>${esc(a.grupo||'Sin grupo')}${a.extra ? (a.cobrado ? ' · ya cobrada' : ' · se suma a su próximo pago') : ''}</small></div></button></div>`).join('')
-          : `<p class='pn-empty'>No había alumnos en esta clase.</p>`}
-        ${agregando ? `<div class='pn-addx'><label for='pn-x-in'>¿Quién vino de extra?</label><input id='pn-x-in' list='pn-x-dl' placeholder='Nombre del alumno' autocomplete='off'><datalist id='pn-x-dl'>${LISTA_TODOS.filter(t => !c.alumnos.some(a => a.nombre === t.nombre)).map(t => `<option value='${esc(t.nombre)}'>${esc(t.grupo)}</option>`).join('')}</datalist>
-          <div class='pn-addx__b'><button class='pn-go' id='pn-x-ok'>Agregar</button><button class='pn-link' id='pn-x-no'>Cancelar</button></div></div>`
-          : `<button class='pn-addx__open' id='pn-x-open'>+ Agregar alumno que vino otro día</button>`}
-        ${c.alumnos.length ? `<button class='pn-go pn-save' id='pn-save'>${c.tomada ? 'Actualizar asistencia' : 'Guardar asistencia'}</button>` : ''}
-        <div id='pn-lista-msg'></div>
-      </div>
-      <p class='pn-note'>Las familias ven la asistencia en Mi clase. Si un alumno viene un día que no es el suyo, agrégalo como extra: esa clase se suma sola a su próximo pago.</p>`;
+        <h3>¿Vino alguien extra?${ex.length ? `<span class='pn-count'>${ex.length}</span>` : ''}</h3>
+        <p class='pn-sub'>${esc(c.texto)} · ${esc(c.clase)} · ${esc(c.horario)}. Anota al alumno que vino un día que no es el suyo: esa clase se suma sola a su próximo pago.</p>
+        ${ex.map(a => `<div class='pn-row'><div><b>${esc(a.nombre)} <em class='pn-extra'>Extra</em></b><small>${esc(a.grupo || 'Sin grupo')} · ${a.cobrado ? 'ya cobrada' : 'se suma a su próximo pago'}</small></div>${a.cobrado ? '' : `<div class='pn-acts'><button class='pn-link' data-xq='${esc(a.nombre)}'>Quitar</button></div>`}</div>`).join('')}
+        <div class='pn-addx'><label for='pn-x-in'>Nombre del alumno</label><input id='pn-x-in' list='pn-x-dl' placeholder='Escribe el nombre' autocomplete='off'><datalist id='pn-x-dl'>${LISTA_TODOS.filter(t => !ex.some(a => a.nombre === t.nombre)).map(t => `<option value='${esc(t.nombre)}'>${esc(t.grupo)}</option>`).join('')}</datalist>
+          <div class='pn-addx__b'><button class='pn-go' id='pn-x-ok'>Anotar extra</button></div></div>
+      </div>`;
   }
   function extrasCard(){
     return `<h3>Clases extra por cobrar${EXTRAS_PEND.length ? `<span class='pn-count'>${EXTRAS_PEND.length}</span>` : ''}</h3>
@@ -216,9 +210,13 @@
   function bindExtras(){
     const box = document.getElementById('pn-xp'); if(!box) return;
     box.querySelectorAll('[data-xc]').forEach(b => b.onclick = async () => {
-      const e = EXTRAS_PEND[+b.dataset.xc]; b.disabled = true; b.textContent = 'Un momento…';
-      try{ const d = await post(Object.assign({}, auth, {accion:'extra-cobrado', fecha:e.fecha, alumno:e.alumno})); EXTRAS_PEND = d.extrasPend || []; box.innerHTML = extrasCard(); bindExtras(); }
-      catch(x){ b.disabled = false; b.textContent = 'No se pudo, reintenta'; }
+      // Al tiro en pantalla; la planilla se anota por detrás.
+      const i = +b.dataset.xc, e = EXTRAS_PEND[i]; EXTRAS_PEND.splice(i, 1);
+      const pinta = () => { const bx = document.getElementById('pn-xp'); if(bx){ bx.innerHTML = extrasCard(); bindExtras(); } };
+      pinta(); if(ULT){ ULT.extrasPend = EXTRAS_PEND; guardarAnual(ULT); }
+      enFondo(Object.assign({}, auth, {accion:'extra-cobrado', fecha:e.fecha, alumno:e.alumno}), 'la clase extra de ' + e.alumno,
+        d => { if(!pendientes()){ EXTRAS_PEND = d.extrasPend || []; if(ULT){ ULT.extrasPend = EXTRAS_PEND; guardarAnual(ULT); } pinta(); } },
+        () => { if(!EXTRAS_PEND.some(x => x.fecha === e.fecha && x.alumno === e.alumno)) EXTRAS_PEND.splice(Math.min(i, EXTRAS_PEND.length), 0, e); pinta(); });
     });
   }
   function bindLista(){
@@ -226,28 +224,43 @@
     const redo = () => { pane.innerHTML = listaPane(); bindLista(); };
     pane.querySelectorAll('[data-dia]').forEach(b => b.onclick = () => { diaSel = +b.dataset.dia; redo(); });
     const c = LISTA[diaSel]; if(!c) return;
-    const m = marcas[c.fecha];
-    pane.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => { const n = c.alumnos[+b.dataset.kid].nombre; m[n] = m[n] === true ? false : true; redo(); });
-    const xo = document.getElementById('pn-x-open'); if(xo) xo.onclick = () => { agregando = true; redo(); const i = document.getElementById('pn-x-in'); if(i) i.focus(); };
-    const xn = document.getElementById('pn-x-no'); if(xn) xn.onclick = () => { agregando = false; redo(); };
-    const xk = document.getElementById('pn-x-ok'); if(xk) xk.onclick = () => {
-      const v = document.getElementById('pn-x-in').value.trim().replace(/\s+/g, ' '); if(!v) return;
-      const t = LISTA_TODOS.find(x => x.nombre.toLowerCase() === v.toLowerCase());
-      const nombre = t ? t.nombre : v.replace(/(^|\s)\S/g, x => x.toUpperCase());
-      if(!c.alumnos.some(a => a.nombre.toLowerCase() === nombre.toLowerCase())) c.alumnos.push({nombre, grupo: t ? t.grupo : '', vino: true, extra: true});
-      m[nombre] = true; agregando = false; redo();
-    };
-    const sv = document.getElementById('pn-save');
-    if(sv) sv.onclick = () => {
-      const body = Object.assign({}, auth, {accion:'asistencia', fecha:c.fecha, lista:c.alumnos.map(a=>a.nombre), presentes:c.alumnos.filter(a=>m[a.nombre]).map(a=>a.nombre), extras:c.alumnos.filter(a=>a.extra).map(a=>a.nombre)});
-      // Al tiro en pantalla; la planilla se escribe por detrás.
-      c.alumnos.forEach(a => { a.vino = !!m[a.nombre]; }); c.tomada = true; delete marcas[c.fecha]; redo();
-      const msg = document.getElementById('pn-lista-msg'); if(msg) msg.innerHTML = `<div class='pn-ok'>Asistencia guardada ✓</div>`;
-      enFondo(body, 'la asistencia', d => {
-        LISTA = d.lista || LISTA; if(d.extrasPend){ EXTRAS_PEND = d.extrasPend; const xp = document.getElementById('pn-xp'); if(xp){ xp.innerHTML = extrasCard(); bindExtras(); } }
-        const p = app.querySelector('[data-pane=lista]'); if(p && !escribiendo(p)){ const ms = document.getElementById('pn-lista-msg'), t = ms && ms.innerHTML; p.innerHTML = listaPane(); bindLista(); const m2 = document.getElementById('pn-lista-msg'); if(m2 && t) m2.innerHTML = t; }
+    // La planilla reescribe el día completo: se mandan solo los que ya tenían marca guardada + los extra, tal como están.
+    const guardar = que => {
+      const quedan = c.alumnos.filter(a => a.vino !== null && a.vino !== undefined);
+      const body = Object.assign({}, auth, {accion:'asistencia', fecha:c.fecha, lista:quedan.map(a => a.nombre), presentes:quedan.filter(a => a.vino).map(a => a.nombre), extras:quedan.filter(a => a.extra).map(a => a.nombre)});
+      if(ULT) guardarAnual(ULT); redo();
+      enFondo(body, que, d => {
+        if(pendientes()) return;
+        LISTA = d.lista || LISTA; if(ULT){ ULT.lista = LISTA; if(d.extrasPend) ULT.extrasPend = d.extrasPend; guardarAnual(ULT); }
+        if(d.extrasPend){ EXTRAS_PEND = d.extrasPend; const xp = document.getElementById('pn-xp'); if(xp){ xp.innerHTML = extrasCard(); bindExtras(); } }
+        const p = app.querySelector('[data-pane=lista]'); if(p && !escribiendo(p)){ p.innerHTML = listaPane(); bindLista(); }
       });
     };
+    const xk = document.getElementById('pn-x-ok'), xi = document.getElementById('pn-x-in');
+    const anotar = () => {
+      const v = xi.value.trim().replace(/\s+/g, ' '); if(!v) return xi.focus();
+      const t = LISTA_TODOS.find(x => x.nombre.toLowerCase() === v.toLowerCase());
+      const nombre = t ? t.nombre : v.replace(/(^|\s)\S/g, x => x.toUpperCase());
+      const ya = c.alumnos.find(a => a.nombre.toLowerCase() === nombre.toLowerCase());
+      if(ya && !ya.extra) return xi.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(nombre)} ya tiene clase este día.</p>`);
+      if(!ya){
+        c.alumnos.push({nombre, grupo: t ? t.grupo : '', vino: true, extra: true});
+        const precio = /skate/i.test(c.clase) ? 17000 : 25000;
+        EXTRAS_PEND.push({fecha: c.fecha, texto: c.texto, clase: c.clase, alumno: nombre, monto: precio});
+        const xp = document.getElementById('pn-xp'); if(xp){ xp.innerHTML = extrasCard(); bindExtras(); }
+      }
+      guardar('el extra de ' + nombre);
+    };
+    if(xk) xk.onclick = anotar;
+    if(xi) xi.onkeydown = e => { if(e.key === 'Enter') anotar(); };
+    pane.querySelectorAll('[data-xq]').forEach(b => b.onclick = () => {
+      if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Quitar?'; return; }
+      const n = b.dataset.xq;
+      c.alumnos = c.alumnos.filter(a => !(a.extra && a.nombre === n));
+      EXTRAS_PEND = EXTRAS_PEND.filter(x => !(x.fecha === c.fecha && x.alumno === n));
+      const xp = document.getElementById('pn-xp'); if(xp){ xp.innerHTML = extrasCard(); bindExtras(); }
+      guardar('el cambio de ' + n);
+    });
   }
   function copiar(){ app.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
     const t = mensajeGrupo(CL[+b.dataset.copy]);
@@ -326,7 +339,7 @@
     if(d.aCargo) ACARGO = d.aCargo;
     if(d.miGrupo) MIOS = d.miGrupo;
     LISTA = d.lista || []; LISTA_TODOS = d.listaTodos || []; EXTRAS_PEND = d.extrasPend || [];
-    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='lista'>Lista</button>`}<button class='pn-tab' data-tab='alumnos'>Alumnos</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='mensajes'>Mensajes</button>`}${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
+    const tabs = d => `<div class='pn-tabs'><button class='pn-tab' data-tab='clases'>Clases</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='lista'>Extras</button>`}<button class='pn-tab' data-tab='alumnos'>Alumnos</button>${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='mensajes'>Mensajes</button>`}${d.rol === 'instructor' ? '' : `<button class='pn-tab' data-tab='pagos'>Pagos${d.actual.faltan.length?`<i>${d.actual.faltan.length}</i>`:''}</button><button class='pn-tab' data-tab='avisos'>Avisos${(d.sinGrupo.length + d.revisar.length)?`<i>${d.sinGrupo.length + d.revisar.length}</i>`:''}</button>`}</div>`;
     const tabsOn = () => {
       const show = t => { tab = t; try{ sessionStorage.setItem(KEY + '-tab', t); }catch(_){}
         app.querySelectorAll('.pn-tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
@@ -372,7 +385,7 @@
         ${A.faltan.some(f=>f.monto) ? `<p class='pn-sub' style='margin-top:10px'>Cuando te llegue una transferencia, aprieta "Pagó ✓" y queda anotado en la planilla.</p>` : ''}
       </div>
       <div class='pn-card'><h3>Pagaron ${esc(M)}<span class='pn-count'>${A.pagaron.length}</span></h3>
-        ${A.pagaron.length ? A.pagaron.map(p => `<div class='pn-row'><div><b>${esc(p.alumno)}</b><small>Plan ${esc(p.plan)}${p.monto && p.fecha ? ' · '+esc(dm(p.fecha)) : ''}${p.grupo?' · '+esc(p.grupo):''}</small></div><span class='pn-amt'>${p.monto ? clp(p.monto) : 'Beca'}</span></div>`).join('')
+        ${A.pagaron.length ? A.pagaron.map(p => `<div class='pn-row'><div><b>${esc(p.alumno)}</b><small>${p.nuevo ? 'Recién anotado' : 'Plan ' + esc(p.plan)}${p.monto && p.fecha ? ' · '+esc(dm(p.fecha)) : ''}${p.grupo?' · '+esc(p.grupo):''}</small></div><span class='pn-amt'>${p.monto ? clp(p.monto) : 'Beca'}</span></div>`).join('')
           : `<p class='pn-empty'>Aún no hay pagos este mes.</p>`}
       </div>
       <p class='pn-note'>A los pagos con Mercado Pago se les descuenta una comisión de cerca de 3,4%; a las transferencias no. ${esc(cap(d.pasado.mes))}: ${clp(d.pasado.recaudado)} con ${d.pasado.alumnos} alumnos.</p>
@@ -413,9 +426,15 @@
     app.querySelectorAll('[data-paid]').forEach(b => b.onclick = async () => {
       const f = A.faltan[+b.dataset.paid];
       if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Confirmas?'; return; }
-      b.disabled = true; b.textContent = 'Anotando…';
-      try{ render(await post(Object.assign({}, auth, {accion:'marcar-pagado', alumnos:f.alumnos}))); }
-      catch(x){ b.disabled = false; delete b.dataset.ok; b.textContent = 'No se pudo, reintenta'; console.error(x); }
+      // Al tiro en pantalla (pasa a "Pagaron"); la planilla se anota por detrás.
+      const fi = A.faltan.indexOf(f), n = f.alumnos.length, hoy = hoyChile();
+      const nuevos = f.alumnos.map((al, k) => ({alumno: al, plan: '', monto: Math.round(f.monto / n) + (k ? 0 : f.monto - Math.round(f.monto / n) * n), fecha: hoy, grupo: '', nuevo: true}));
+      A.faltan.splice(fi, 1); A.porCobrar = Math.max(0, (A.porCobrar || 0) - f.monto); A.recaudado += f.monto; A.alumnos += n; A.pagaron = nuevos.concat(A.pagaron);
+      const enPagos = () => { const pp = app.querySelector("[data-pane='pagos']"); return pp && pp.offsetParent !== null && !escribiendo(app); };
+      render(d); guardarAnual(d);
+      enFondo(Object.assign({}, auth, {accion:'marcar-pagado', alumnos:f.alumnos}), 'el pago de ' + f.alumnos.join(' y '),
+        r => { guardarAnual(r); if(!pendientes() && enPagos()) render(r); },
+        () => { A.pagaron = A.pagaron.filter(x => !nuevos.includes(x)); A.faltan.splice(Math.min(fi, A.faltan.length), 0, f); A.porCobrar += f.monto; A.recaudado -= f.monto; A.alumnos -= n; if(enPagos()) render(d); });
     });
   }
 
@@ -612,9 +631,10 @@
     if(!FIN || (mes && mes !== FIN.mes)) pane.innerHTML = `${SK(1)}${SK(1)}`;
     let listo = false;
     if(!mes) rapidaPrimero('finanzas', 'finanzas', () => listo, d => { if(escribiendo(pane)) return; FIN = d; fMes = d.mes; pintarFinanzas(); });
-    try{ const d = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); listo = true; const igual = FIN && JSON.stringify(FIN) === JSON.stringify(d); FIN = d; fMes = FIN.mes; cacheGuardar('finanzas', d); if(!igual && !escribiendo(pane)) pintarFinanzas(); }
+    try{ const d = await post(Object.assign({}, auth, {accion:'finanzas', mes: mes || fMes})); listo = true; if(fBorrando) return; const igual = FIN && JSON.stringify(FIN) === JSON.stringify(d); FIN = d; fMes = FIN.mes; cacheGuardar('finanzas', d); if(!igual && !escribiendo(pane)) pintarFinanzas(); }
     catch(x){ falloCarga(pane, 'las finanzas', () => cargarFinanzas(mes), x); }
   }
+  let fBorrados = [], fBorrando = 0;
   // Anota un gasto o ingreso al tiro: se suma en pantalla y la planilla se escribe por detrás.
   function anotarFondo(b){
     const body = Object.assign({}, auth, {accion:'movimiento', mes: fMes}, b), antes = FIN ? JSON.stringify(FIN) : null;
@@ -629,7 +649,7 @@
       }
       if(app && app.querySelector("[data-pane='finanzas']")) try{ pintarFinanzas(); }catch(_){}
     }
-    return new Promise((res, rej) => enFondo(body, 'el ' + (b.tipo === 'ingreso' ? 'ingreso' : 'gasto'), d => { FIN = d; fMes = d.mes; cacheGuardar('finanzas', d); if(app && app.querySelector("[data-pane='finanzas']") && !escribiendo(app.querySelector("[data-pane='finanzas']"))) pintarFinanzas(); res(d); }, e => { if(antes && FIN && FIN.movs && FIN.movs.some(x => x.enviando)) FIN = JSON.parse(antes); if(app && app.querySelector("[data-pane='finanzas']")) try{ pintarFinanzas(); }catch(_){} rej(new Error(e)); }));
+    return new Promise((res, rej) => enFondo(body, 'el ' + (b.tipo === 'ingreso' ? 'ingreso' : 'gasto'), d => { if(fBorrando){ res(d); return; } FIN = d; fMes = d.mes; cacheGuardar('finanzas', d); if(app && app.querySelector("[data-pane='finanzas']") && !escribiendo(app.querySelector("[data-pane='finanzas']"))) pintarFinanzas(); res(d); }, e => { if(antes && FIN && FIN.movs && FIN.movs.some(x => x.enviando)) FIN = JSON.parse(antes); if(app && app.querySelector("[data-pane='finanzas']")) try{ pintarFinanzas(); }catch(_){} rej(new Error(e)); }));
   }
 
   // ---------- Ventas de la máquina Tuu (recepción) ----------
@@ -749,12 +769,26 @@
     pane.querySelectorAll('[data-fij]').forEach(b => b.onclick = () => {
       const x = (FIN.fijos || []).find(y => y.detalle === b.dataset.fij); if(!x) return;
       x.pagado = x.pagado ? '' : new Date().toISOString().slice(0, 10); pintarFinanzas(); // al tiro
-      enFondo(Object.assign({}, auth, {accion:'movimiento', mes: fMes, fijo: b.dataset.fij}), 'el gasto fijo', d => { FIN = d; cacheGuardar('finanzas', d); pintarFinanzas(); }, () => { x.pagado = x.pagado ? '' : 'antes'; pintarFinanzas(); });
+      enFondo(Object.assign({}, auth, {accion:'movimiento', mes: fMes, fijo: b.dataset.fij}), 'el gasto fijo', d => { if(fBorrando) return; FIN = d; cacheGuardar('finanzas', d); pintarFinanzas(); }, () => { x.pagado = x.pagado ? '' : 'antes'; pintarFinanzas(); });
     });
     pane.querySelectorAll('[data-fdel]').forEach(b => b.onclick = async () => {
       if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
-      b.disabled = true;
-      try{ FIN = await post(Object.assign({}, auth, {accion:'movimiento', mes: fMes, borrar: true, fila: +b.dataset.fdel})); pintarFinanzas(); }catch(x){ alert(x.message); }
+      // Al tiro en pantalla; la planilla borra por detrás, en orden. Mientras haya borrados en camino, las filas
+      // de la pantalla son las de antes: se corrige cada número por los borrados anteriores (las filas de abajo suben).
+      const fila = +b.dataset.fdel, i = (FIN.movs || []).findIndex(m => m.fila === fila); if(i < 0) return;
+      const m = FIN.movs[i], ing = /^ingreso/i.test(m.tipo);
+      FIN.movs.splice(i, 1);
+      if(!m.corr || m.corr === FIN.mes){
+        if(ing) FIN.ingresos -= m.monto; else FIN.gastos -= m.monto;
+        FIN.balance = (FIN.ingresos || 0) - (FIN.gastos || 0);
+        const ar = (FIN.areas || []).find(x => x.area === m.area); if(ar){ if(ing) ar.ingresos -= m.monto; else ar.gastos -= m.monto; }
+      }
+      pintarFinanzas();
+      const real = fila - fBorrados.filter(x => x < fila).length; fBorrados.push(fila);
+      enFondo(Object.assign({}, auth, {accion:'movimiento', mes: fMes, borrar: true, fila: real}), 'el borrado de ' + m.detalle,
+        d => { if(--fBorrando > 0) return; fBorrados = []; if(pendientes()) return; FIN = d; cacheGuardar('finanzas', d); if(!escribiendo(pane)) pintarFinanzas(); },
+        () => { fBorrando = 0; fBorrados = []; cargarFinanzas(); });
+      fBorrando++;
     });
   }
   // ---------- Mi año: saldo real de partida + balance de cada mes ----------
@@ -823,6 +857,11 @@
       <input inputmode='numeric' placeholder='Lo que dice el banco hoy' id='pn-acmp'><p class='pn-sub' id='pn-acmpr'></p></div>`;
     bindAnio(pane);
   }
+  function anioFondo(extra, que){
+    enFondo(Object.assign({}, auth, {accion:'anio'}, extra), que,
+      d => { if(pendientes()) return; ANIO = d; cacheGuardar('anio', d); const p = app.querySelector("[data-pane='anio']"); if(!escribiendo(p)) pintarAnio(); },
+      () => cargarAnio());
+  }
   function bindAnio(pane){
     const go = pane.querySelector('#pn-ago');
     if(go) go.onclick = async e => {
@@ -836,10 +875,15 @@
       const detalle = pane.querySelector('#pn-grdet').value.trim(), monto = +String(pane.querySelector('#pn-grmonto').value).replace(/\D/g, ''), mes = pane.querySelector('#pn-grmes').value.trim();
       if(!detalle) return pane.querySelector('#pn-grdet').focus();
       if(!monto) return pane.querySelector('#pn-grmonto').focus();
-      e.currentTarget.disabled = true; e.currentTarget.textContent = 'Anotando…';
-      await cargarAnio({grande:'nuevo', detalle, monto, mes});
+      // Al tiro en pantalla; la planilla lo anota por detrás.
+      ANIO.grandes = (ANIO.grandes || []).concat({fila: 0, detalle, monto, mes: mes || '', pagado: ''}); ANIO.porPagar = (ANIO.porPagar || 0) + monto; if(ANIO.libre != null) ANIO.libre -= monto;
+      pintarAnio(); anioFondo({grande:'nuevo', detalle, monto, mes}, 'el gasto grande');
     };
-    pane.querySelectorAll('[data-gr]').forEach(b => b.onclick = async () => { b.disabled = true; await cargarAnio({grande:'pagar', fila: +b.dataset.gr}); });
+    pane.querySelectorAll('[data-gr]').forEach(b => b.onclick = () => {
+      const g = (ANIO.grandes || []).find(x => x.fila === +b.dataset.gr); if(!g || !g.fila) return;
+      g.pagado = g.pagado ? '' : hoyChile(); ANIO.porPagar = (ANIO.porPagar || 0) + (g.pagado ? -g.monto : g.monto);
+      pintarAnio(); anioFondo({grande:'pagar', fila: g.fila}, 'el gasto grande');
+    });
     const ahg = pane.querySelector('#pn-ahgo');
     if(ahg) ahg.onclick = async e => { const monto = +String(pane.querySelector('#pn-ahmonto').value).replace(/\D/g, ''); if(!monto) return; e.currentTarget.disabled = true; e.currentTarget.textContent = 'Anotando…'; await cargarAnio({ahorro: 1, monto, mes: e.currentTarget.dataset.mes}); };
     const cmp = pane.querySelector('#pn-acmp');
@@ -901,9 +945,12 @@
       const go = box.querySelector('.pn-ntgo'), ta = box.querySelector('textarea');
       go.onclick = async () => {
         if(ta.value.trim().length < 2) return ta.focus();
-        go.disabled = true; go.textContent = 'Guardando…';
-        try{ NOTAS = await post(Object.assign({}, auth, {accion:'nota', alumno: ntAbierta, academia: box.dataset.acad, nota: ta.value.trim()})); repintar(); }
-        catch(x){ go.disabled = false; go.textContent = 'Guardar nota'; ta.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(x.message)}</p>`); }
+        // Al tiro en pantalla; la planilla se anota por detrás.
+        const nota = {alumno: ntAbierta, academia: box.dataset.acad, nota: ta.value.trim(), fecha: hoyChile(), de: 'Tú'};
+        NOTAS.notas = (NOTAS.notas || []).concat(nota); repintar();
+        enFondo(Object.assign({}, auth, {accion:'nota', alumno: nota.alumno, academia: nota.academia, nota: nota.nota}), 'la nota de ' + nota.alumno,
+          r => { if(!pendientes()){ NOTAS = r; if(!escribiendo(root)) repintar(); } },
+          () => { NOTAS.notas = NOTAS.notas.filter(x => x !== nota); repintar(); });
       };
     });
   }
@@ -955,14 +1002,17 @@
     const x = root.querySelector('#pn-clx'); if(x) x.onclick = () => { clMover = ''; clHacia = ''; repintar(); };
     const go = root.querySelector('#pn-clgo');
     if(go) go.onclick = async () => {
-      go.disabled = true; go.textContent = 'Guardando…';
-      try{
-        const r = await post(Object.assign({}, auth, {accion:'mover-panel', alumno: clAbierta, desde: clMover, hacia: clHacia, avisar: root.querySelector('#pn-clav').checked}));
-        NOTAS = r; const m = r.movida || {};
-        aMsg = `Listo: la clase de ${m.alumno || clAbierta} del ${String(m.desde || clMover).toLowerCase()} quedó para el ${String(m.hacia || clHacia).toLowerCase()}.` + (m.avisado ? ' Le avisamos a la familia.' : '');
-        clMover = ''; clHacia = ''; repintar();
-        const p = app.querySelector("[data-pane='alumnos']"); if(p) p.scrollIntoView({behavior:'smooth', block:'start'});
-      }catch(e){ go.disabled = false; go.textContent = 'Guardar cambio'; go.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(/desconocida/i.test(e.message) ? 'Falta pegar el programa nuevo (v45) de la planilla Anual.' : e.message)}</p>`); }
+      // Al tiro en pantalla; la planilla mueve la clase (y avisa a la familia) por detrás.
+      const alumno = clAbierta, desde = clMover, hacia = clHacia, avisar = root.querySelector('#pn-clav').checked;
+      const cs = clasesDe(alumno) || [], c = cs.find(x => x.fecha === desde), o = (NOTAS.opciones || []).find(x => x.fecha === hacia) || {};
+      const antes = c && Object.assign({}, c);
+      if(c){ Object.assign(c, {fecha: hacia, texto: o.texto || hacia, horario: o.horario || c.horario, clase: o.clase || c.clase, pasada: false, vino: null, movida: true}); cs.sort((a, b) => a.fecha < b.fecha ? -1 : 1); }
+      aMsg = `Listo: la clase de ${alumno} del ${String(antes ? antes.texto : desde).toLowerCase()} quedó para el ${String(o.texto || hacia).toLowerCase()}.` + (avisar ? ' Le avisamos a la familia.' : '');
+      clMover = ''; clHacia = ''; repintar();
+      const p = app.querySelector("[data-pane='alumnos']"); if(p) p.scrollIntoView({behavior:'smooth', block:'start'});
+      enFondo(Object.assign({}, auth, {accion:'mover-panel', alumno, desde, hacia, avisar}), 'el cambio de clase de ' + alumno,
+        r => { if(!pendientes()){ NOTAS = r; if(!escribiendo(root)) repintar(); } },
+        () => { if(c && antes){ Object.keys(c).forEach(k => delete c[k]); Object.assign(c, antes); } aMsg = ''; repintar(); });
     };
   }
   async function abrirAlumno(nombre, que){
@@ -989,9 +1039,12 @@
   function bindInformes(pane){
     pane.querySelectorAll('[data-infgo]').forEach(b => b.onclick = async () => {
       const ta = pane.querySelector(`[data-inf='${b.dataset.infgo}']`);
-      b.disabled = true; b.textContent = 'Enviando…';
-      try{ const r = await post(Object.assign({}, auth, {accion:'informe', fila: +b.dataset.infgo, texto: ta.value.trim()})); INF = r.informes || []; pintarAlumnos(); }
-      catch(x){ b.disabled = false; b.textContent = 'Enviar a la familia'; b.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(x.message)}</p>`); }
+      // Al tiro en pantalla; la planilla lo envía por detrás.
+      const x = INF.find(i => i.fila === +b.dataset.infgo), antes = x && Object.assign({}, x); if(!x) return;
+      Object.assign(x, {texto: ta.value.trim(), estado: 'Enviado', enviado: hoyChile()}); pintarAlumnos();
+      enFondo(Object.assign({}, auth, {accion:'informe', fila: x.fila, texto: x.texto}), 'el informe de ' + x.alumno,
+        r => { if(!pendientes()){ INF = r.informes || INF; if(!escribiendo(pane)) pintarAlumnos(); } },
+        () => { Object.assign(x, antes); pintarAlumnos(); });
     });
   }
   function pintarAlumnos(){
@@ -1014,13 +1067,15 @@
     const ax = pane.querySelector('#pn-anvx'); if(ax) ax.onclick = () => { aCambio = ''; aNuevo = ''; pintarAlumnos(); };
     const ago = pane.querySelector('#pn-anvgo');
     if(ago) ago.onclick = async () => {
-      ago.disabled = true; ago.textContent = 'Guardando…';
-      try{
-        const r = await post(Object.assign({}, auth, {accion:'grupo', alumno: aCambio, grupo: aNuevo, avisar: pane.querySelector('#pn-anvav').checked}));
-        NOTAS = r; const c = r.cambio || {};
-        aMsg = `Listo: ${c.alumno || aCambio} ahora está en ${c.grupo || aNuevo}.` + (c.avisado ? ' Le avisamos a la familia en la app.' : '');
-        aCambio = ''; aNuevo = ''; pintarAlumnos();
-      }catch(x){ ago.disabled = false; ago.textContent = 'Guardar'; ago.insertAdjacentHTML('afterend', `<p class='pn-msg'>${esc(x.message)}</p>`); }
+      // Al tiro en pantalla; la planilla lo cambia (y avisa a la familia) por detrás.
+      const alumno = aCambio, grupo = aNuevo, avisar = pane.querySelector('#pn-anvav').checked;
+      const a = (NOTAS.alumnos || []).find(x => x.nombre === alumno), antes = a && a.grupo;
+      if(a) a.grupo = grupo;
+      aMsg = `Listo: ${alumno} ahora está en ${grupo}.` + (avisar ? ' Le avisamos a la familia en la app.' : '');
+      aCambio = ''; aNuevo = ''; pintarAlumnos();
+      enFondo(Object.assign({}, auth, {accion:'grupo', alumno, grupo, avisar}), 'el cambio de nivel de ' + alumno,
+        r => { if(!pendientes()){ NOTAS = r; if(!escribiendo(pane)) pintarAlumnos(); } },
+        () => { if(a) a.grupo = antes; aMsg = ''; pintarAlumnos(); });
     };
     bindNotas(pane, pintarAlumnos);
     bindClases(pane, pintarAlumnos);
@@ -1311,10 +1366,11 @@
     adGuardando = false;
     if(ultimo && ultimo.ok !== false){ ADU = ultimo; cacheGuardar('adultos', ultimo); if(!escribiendo(app.querySelector('.pn-adultos'))) pintarAdultos(); }
   }
-  async function adEnviar(body, btn){
-    if(btn){ btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = '…'; }
-    try{ const d = await post(Object.assign({}, auth, body)); ADU = d; cacheGuardar('adultos', d); pintarAdultos(); return true; }
-    catch(x){ alert(x.message); if(btn){ btn.disabled = false; btn.textContent = btn.dataset.t; } return false; }
+  // Se cierra al tiro y la planilla lo anota por detrás; cuando responde, se actualiza la pantalla.
+  async function adEnviar(body){
+    enFondo(Object.assign({}, auth, body), body.accion === 'adultos-pago-manual' ? 'el pago' : body.accion === 'adultos-agregar' ? 'el alumno agregado' : 'el cambio de clase',
+      d => { if(pendientes() || adCola.length) return; ADU = adConCola(d); cacheGuardar('adultos', d); if(!escribiendo(app.querySelector('.pn-adultos'))) pintarAdultos(); });
+    return true;
   }
   // Mismo mensaje y mismos botones que el Link de pago de la Tienda.
   const adMsgLink = n => 'Hola' + (n.nombre ? ' ' + n.nombre.split(' ')[0] : '') + ', aquí puedes pagar en Storm (' + clp(n.total) + '): ' + n.link;
@@ -1395,10 +1451,10 @@
       if(adTipo !== 'cancelar') body.hora = pane.querySelector('#ad-h').value;
       if(adTipo === 'dia') body.nueva = pane.querySelector('#ad-d').value;
       if(adTipo === 'cancelar' && !confirm('¿Cancelar la clase del ' + c.texto.toLowerCase() + '?')) return;
-      if(await adEnviar(body, ag)){ adForm = false; if(body.nueva) adSel = body.nueva; pintarAdultos(); }
+      adEnviar(body); adForm = false; pintarAdultos();
     };
     pane.querySelectorAll('[data-adal]').forEach(r => r.onclick = () => adMarcar(c, r.dataset.adal, r.dataset.on !== '1'));
-    const an = pane.querySelector('[data-adagregar]'); if(an) an.onclick = () => { const n = pane.querySelector('#ad-nuevo').value.trim(); if(n) adEnviar({accion:'adultos-agregar', fecha:c.fecha, nombre:n}, an); };
+    const an = pane.querySelector('[data-adagregar]'); if(an) an.onclick = () => { const n = pane.querySelector('#ad-nuevo').value.trim(); if(n){ adEnviar({accion:'adultos-agregar', fecha:c.fecha, nombre:n}); pane.querySelector('#ad-nuevo').value = ''; } };
     pane.querySelectorAll('[data-adpagode]').forEach(b => b.onclick = () => { adPagoDe = adPagoDe === b.dataset.adpagode ? '' : b.dataset.adpagode; adLink = null; pintarAdultos(); });
     const av = pane.querySelector('[data-adver]'); if(av) av.onclick = () => { const t = pane.querySelector('#ad-pagos'); if(t) t.scrollIntoView({behavior:'smooth', block:'start'}); };
     // Link de pago: lo que debe, para mandarlo por WhatsApp. Si ya hay uno esperando pago por lo mismo, se usa ese.
@@ -1421,7 +1477,9 @@
     };
     pane.querySelectorAll('[data-adpagar]').forEach(b => b.onclick = async () => {
       let plan = pane.querySelector('#ad-pl').value, clases = 1; if(plan === 'Deuda'){ plan = 'Suelta'; clases = +b.dataset.n || 1; }
-      if(await adEnviar({accion:'adultos-pago-manual', alumno:b.dataset.adpagar, plan, clases, medio:pane.querySelector('#ad-me').value}, b)){ adPagoDe = ''; pintarAdultos(); }
+      adEnviar({accion:'adultos-pago-manual', alumno:b.dataset.adpagar, plan, clases, medio:pane.querySelector('#ad-me').value});
+      const al = ((ADU.cuentas || {}).alumnos || []).find(x => x.clave === b.dataset.adpagar); if(al && pane.querySelector('#ad-pl').value === 'Deuda'){ al.debe = 0; al.debeClases = 0; }
+      adPagoDe = ''; pintarAdultos();
     });
   }
   async function load(){
