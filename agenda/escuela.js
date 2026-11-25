@@ -449,7 +449,7 @@
     const pares = Math.floor(m / 2); for (let k = 0; k < pares; k++) g.push(2);
     let resto = p - pares * 2; if (pares && resto === 1) { g[g.length - 1]++; resto = 0; }
     if (resto > 0) { const n = p > (a.maxWeb || 8) ? 1 : Math.max(Math.ceil(resto / 4), 1); for (let k = 0; k < n; k++) g.push(Math.floor(resto / n) + (k < resto % n ? 1 : 0)); }
-    const pp = p >= 5 && p <= (a.maxWeb || 8) ? Number(a.porPersona) || 25000 : 0;
+    const pp = !m && p >= 5 && p <= (a.maxWeb || 8) ? Number(a.porPersona) || 25000 : 0;
     const precios = g.map(x => pp ? x * pp : Number((a.precios || {})[x]) || 0);
     return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
   }
