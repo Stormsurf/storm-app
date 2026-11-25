@@ -40,7 +40,7 @@ const AJUSTES_BASE = {
   cierreNoche: '20:00',  // las de la mañana se reservan hasta esta hora del día anterior
   diasAdelante: 60,
   retencionMin: 30,      // minutos que se guarda el horario mientras pagan
-  maxWeb: 5,             // más personas = por WhatsApp
+  maxWeb: 4,             // más personas = por WhatsApp (Armada 24-11: 1 instructor cada 4 alumnos)
   maxSeguidas: 2,
   // Enero y febrero: la Academia de Verano usa lun, mar, jue y vie de 9:00 a 12:00; en ese rato queda 1 instructor para particulares
   // Esos días la primera clase parte 9:30 (no llegar junto con los niños de la Academia): 9:00 → 9:30 y 10:30 → 11:00
@@ -114,6 +114,7 @@ async function ajustes(db) {
   const { results } = await db.prepare('SELECT clave, valor FROM ajustes').all();
   const a = JSON.parse(JSON.stringify(AJUSTES_BASE));
   results.forEach(r => { try { a[r.clave] = JSON.parse(r.valor); } catch (_) {} });
+  a.maxWeb = Math.min(Number(a.maxWeb) || MAX_GRUPO, MAX_GRUPO); // nunca más de 4 por la web (regla Armada), aunque Ajustes diga otra cosa
   a.horarios = [...new Set((a.horarios || []).map(normHora).filter(Boolean))].sort();
   return a;
 }
@@ -144,10 +145,10 @@ const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.is
 /** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
  *  - menores de 8: de a 2 por instructor; si sobra uno, va con los demás (o, si no hay más, con el último par: 3 niños = 1 instructor) (menores de 5: clase individual, aviso en la página);
  *  - (ninos: reservado por si se vuelve a separar por edades; hoy siempre 0)
- *  - desde 12 años cuenta como adulto; máximo 5 por instructor.
- *  Ej.: 4 niños = 2+2; 3 niños = 3; 5 niños = 2+3; 3 niños + 1 adulto = 2+2; 3 niños + 2 adultos = 2+3; 4 niños + 1 adulto = 2+3; 4 adultos + 1 niño = 5. */
+ *  - desde 12 años cuenta como adulto; máximo 4 por instructor (Armada 24-11-2026).
+ *  Ej.: 4 niños = 2+2; 3 niños = 3; 3 niños + 1 adulto = 2+2. */
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
-const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 5;
+const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 4; // Armada (24-11-2026): máximo 4 alumnos por instructor
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
 const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay', 'Webpay crédito', 'Webpay débito'];
 function cotizar(a, personas, menores, ninos, nivel) {
@@ -161,7 +162,7 @@ function cotizar(a, personas, menores, ninos, nivel) {
   let resto = personas - pares * MAX_MENORES; // incluye al niño que sobra
   if (pares && resto === 1) { grupos[grupos.length - 1].personas += 1; resto = 0; } // una sola persona suelta (niño o adulto) va con el último par
   if (resto > 0) {
-    // cuántos instructores para el resto: hasta 5 por grupo y hasta 3 niños de 7-11 por grupo; repartidos parejo
+    // cuántos instructores para el resto: hasta 4 por grupo y hasta 3 niños de 7-11 por grupo; repartidos parejo
     const n = personas > a.maxWeb && !ninos ? 1 : Math.max(Math.ceil(resto / MAX_GRUPO), Math.ceil(ninos / MAX_NINOS), 1);
     for (let g = 0; g < n; g++) grupos.push({ personas: Math.floor(resto / n) + (g < resto % n ? 1 : 0), ninos: false });
   }

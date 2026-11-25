@@ -441,13 +441,13 @@
 
   const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Por pagar', 'Aún no paga']];
   const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m === 'Flow' ? 'Reserva online (Flow)' : /^Webpay/.test(m) ? 'Reserva online (' + m + ')' : m;
-  // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 5
+  // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 4 (Armada)
   function cotiza(p, m) {
     const a = E.ajustes || {}, g = [];
     p = Math.max(1, Math.floor(+p || 1)); m = Math.max(0, Math.min(p, Math.floor(+m || 0)));
     const pares = Math.floor(m / 2); for (let k = 0; k < pares; k++) g.push(2);
     let resto = p - pares * 2; if (pares && resto === 1) { g[g.length - 1]++; resto = 0; }
-    if (resto > 0) { const n = p > (a.maxWeb || 5) ? 1 : Math.max(Math.ceil(resto / 5), 1); for (let k = 0; k < n; k++) g.push(Math.floor(resto / n) + (k < resto % n ? 1 : 0)); }
+    if (resto > 0) { const n = p > (a.maxWeb || 4) ? 1 : Math.max(Math.ceil(resto / 4), 1); for (let k = 0; k < n; k++) g.push(Math.floor(resto / n) + (k < resto % n ? 1 : 0)); }
     const precios = g.map(x => Number((a.precios || {})[x]) || 0);
     return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
   }
