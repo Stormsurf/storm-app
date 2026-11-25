@@ -829,18 +829,28 @@ async function panel(env, q) {
   }
   if (!admin && todo) out.ajustes = { precios: a.precios, maxWeb: a.maxWeb, horarios: a.horarios, pack: a.pack };
   if (todo) out.packs = await packsLista(db);
-  if (todo) { // clientes que ya reservaron, para no escribirlos de nuevo en la reserva a mano
-    const cl = await env.DB.prepare("SELECT nombre, telefono, correo, MAX(creada_ms) AS ult, COUNT(*) AS n FROM reservas WHERE estado IN ('pagada', 'pendiente', 'revisar') GROUP BY lower(nombre) ORDER BY ult DESC LIMIT 1000").all();
-    out.clientes = cl.results.map(c => ({ nombre: c.nombre, telefono: c.telefono || '', correo: c.correo || '', clases: c.n }));
-    // más los clientes guardados (lista de AgendaPro), sin repetir a quienes ya reservaron
-    try {
-      const sol = t => String(t || '').replace(/\D/g, '').slice(-8);
-      const ya = new Set(); out.clientes.forEach(c => { ya.add('n' + c.nombre.toLowerCase()); if (sol(c.telefono)) ya.add('t' + sol(c.telefono)); if (c.correo) ya.add('m' + c.correo.toLowerCase()); });
-      const gu = await env.DB.prepare('SELECT nombre, telefono, correo FROM clientes ORDER BY nombre LIMIT 3000').all();
-      gu.results.forEach(c => { if (ya.has('n' + c.nombre.toLowerCase()) || (sol(c.telefono) && ya.has('t' + sol(c.telefono))) || (c.correo && ya.has('m' + c.correo.toLowerCase()))) return; out.clientes.push({ nombre: c.nombre, telefono: c.telefono, correo: c.correo, clases: 0 }); });
-    } catch (x) { console.error('clientes', x); }
-  }
+  if (todo) out.clientes = await clientesLista(env); // para no escribirlos de nuevo en la reserva a mano
   return out;
+}
+/** Clientes: los que ya reservaron (más recientes primero) y los guardados (AgendaPro y rentas), sin repetir. */
+async function clientesLista(env) {
+  const cl = await env.DB.prepare("SELECT nombre, telefono, correo, MAX(creada_ms) AS ult, COUNT(*) AS n FROM reservas WHERE estado IN ('pagada', 'pendiente', 'revisar') GROUP BY lower(nombre) ORDER BY ult DESC LIMIT 1000").all();
+  const out = cl.results.map(c => ({ nombre: c.nombre, telefono: c.telefono || '', correo: c.correo || '', clases: c.n }));
+  try {
+    const sol = t => String(t || '').replace(/\D/g, '').slice(-8);
+    const ya = new Set(); out.forEach(c => { ya.add('n' + c.nombre.toLowerCase()); if (sol(c.telefono)) ya.add('t' + sol(c.telefono)); if (c.correo) ya.add('m' + c.correo.toLowerCase()); });
+    const gu = await env.DB.prepare('SELECT nombre, telefono, correo FROM clientes ORDER BY nombre LIMIT 3000').all();
+    gu.results.forEach(c => { if (ya.has('n' + c.nombre.toLowerCase()) || (sol(c.telefono) && ya.has('t' + sol(c.telefono))) || (c.correo && ya.has('m' + c.correo.toLowerCase()))) return; out.push({ nombre: c.nombre, telefono: c.telefono, correo: c.correo, clases: 0 }); });
+  } catch (x) { console.error('clientes', x); }
+  return out;
+}
+/** Isidora (25-11): quien arrienda queda guardado como cliente (igual que al agendar una clase). Si ya existe, solo completa el teléfono. */
+async function guardarCliente(db, nombre, telefono, origen, fecha) {
+  try {
+    await db.prepare("CREATE TABLE IF NOT EXISTS clientes (nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', origen TEXT NOT NULL DEFAULT '', creado TEXT NOT NULL DEFAULT '')").run();
+    await db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS clientes_nombre ON clientes (lower(nombre))').run();
+    await db.prepare('INSERT INTO clientes (nombre, telefono, origen, creado) VALUES (?, ?, ?, ?) ON CONFLICT DO UPDATE SET telefono = excluded.telefono WHERE clientes.telefono = \'\' AND excluded.telefono != \'\'').bind(nombre, telefono, origen, fecha).run();
+  } catch (x) { console.error('guardarCliente', x); }
 }
 
 /** Pago semanal (lunes a domingo): cuánto transferir a cada instructor y qué clases ya se le pagaron.
@@ -991,6 +1001,7 @@ async function rnTablas(db) {
   // Isidora (23-11): la renta guarda cuánto pagó (Finanzas suma desde el Panel, no desde Tuu).
   try { await db.prepare('ALTER TABLE rentas ADD COLUMN monto INTEGER NOT NULL DEFAULT 0').run(); } catch (_) {}
   try { await db.prepare('ALTER TABLE rentas ADD COLUMN fibras INTEGER NOT NULL DEFAULT 0').run(); } catch (_) {} // Isidora (23-11): tabla soft (tablas) y tabla de fibra (fibras)
+  try { await db.prepare('ALTER TABLE rentas ADD COLUMN dias INTEGER NOT NULL DEFAULT 1').run(); } catch (_) {} // Isidora (25-11): día completo por varios días (1 tabla × 3 días)
   const n = await db.prepare('SELECT COUNT(*) n FROM productos').first();
   if (!n.n) await db.batch(PRODUCTOS_BASE.map((x, i) => db.prepare('INSERT INTO productos (id, nombre, precio, orden) VALUES (?, ?, ?, ?)').bind('P' + (i + 1), x[0], x[1], i)));
 }
@@ -1016,7 +1027,7 @@ const nuevoId = (p, t) => p + '-' + t.fecha.slice(2).replace(/-/g, '') + '-' + M
 async function rentasLista(env) {
   const db = env.DB, desde = Date.now() - 35 * 86400000;
   const r = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND (devuelta_ms = 0 OR devuelta_ms > ?) ORDER BY creada_ms DESC LIMIT 300").bind(desde).all()).results;
-  return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, fibras: x.fibras || 0, trajes: x.trajes, tiempo: x.tiempo, pago: x.pago, monto: x.monto || 0, nota: x.nota, por: x.por,
+  return r.map(x => ({ id: x.id, fecha: x.fecha, hora: x.hora, nombre: x.nombre, telefono: x.telefono, tablas: x.tablas, fibras: x.fibras || 0, trajes: x.trajes, tiempo: x.tiempo, dias: x.tiempo === 'dia' ? x.dias || 1 : 1, pago: x.pago, monto: x.monto || 0, nota: x.nota, por: x.por,
     devuelta: !!x.devuelta_ms, devueltaHora: x.devuelta_hora, devueltaPor: x.devuelta_por }));
 }
 /** Anota una renta nueva (desde Nueva renta o desde el carro de Cobrar). Devuelve su id. */
@@ -1026,14 +1037,17 @@ async function crearRenta(env, q, d, yo) {
   const n20 = v => Math.max(0, Math.min(20, Math.floor(Number(v) || 0))), tablas = n20(d.tablas), fibras = n20(d.fibras), trajes = n20(d.trajes);
   if (!tablas && !fibras && !trajes) throw err('Elige tabla soft, tabla de fibra o traje.');
   const tiempo = d.tiempo === 'dia' ? 'dia' : d.tiempo === 'medio' ? 'medio' : ''; if (!tiempo) throw err('Elige medio día o día completo.');
+  const dias = tiempo === 'dia' ? Math.max(1, Math.min(14, Math.floor(Number(d.dias) || 1))) : 1;
   const pago = RENTA_PAGOS.includes(d.pago) ? d.pago : ''; if (!pago) throw err('Elige cómo pagó.');
   const hora = normHora(d.hora) || t.hora;
-  const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : tablas * PRECIO_RENTA.tablas[tiempo] + fibras * PRECIO_RENTA.fibras[tiempo] + trajes * PRECIO_RENTA.trajes[tiempo];
+  const monto = d.monto != null && d.monto !== '' ? Math.max(0, Math.round(Number(String(d.monto).replace(/\D/g, '')) || 0)) : dias * (tablas * PRECIO_RENTA.tablas[tiempo] + fibras * PRECIO_RENTA.fibras[tiempo] + trajes * PRECIO_RENTA.trajes[tiempo]);
   if (pago === 'Link de pago' && !monto) throw err('Escribe cuánto se cobra.');
   const id = nuevoId('R', t);
-  await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, fibras, trajes, tiempo, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(id, Date.now(), t.fecha, hora, nombre, String(d.telefono || '').trim().slice(0, 30), tablas, fibras, trajes, tiempo, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
-  await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'S ' + fibras + 'F ' + trajes + 'J ' + tiempo);
+  const telefono = String(d.telefono || '').trim().slice(0, 30);
+  await db.prepare('INSERT INTO rentas (id, creada_ms, fecha, hora, nombre, telefono, tablas, fibras, trajes, tiempo, dias, pago, nota, por, monto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, Date.now(), t.fecha, hora, nombre, telefono, tablas, fibras, trajes, tiempo, dias, pago, String(d.nota || '').trim().slice(0, 300), yo, monto).run();
+  await guardarCliente(db, nombre, telefono, 'renta', t.fecha);
+  await anotar(db, q, 'renta ' + nombre + ' ' + tablas + 'S ' + fibras + 'F ' + trajes + 'J ' + tiempo + (dias > 1 ? ' ' + dias + 'd' : ''));
   return id;
 }
 /** Rentas armadas en el carro (todavía sin guardar): se revisan todas antes de guardar ninguna. */
@@ -1064,7 +1078,9 @@ async function rentasAccion(env, q, d) {
     else throw err('Acción desconocida');
     await anotar(db, q, 'renta ' + x.id + ' ' + op);
   }
-  return Object.assign({ ok: true, hoy: t.fecha, rentas: await rentasLista(env), nuevo }, await tiendaLista(env, q));
+  const o = Object.assign({ ok: true, hoy: t.fecha, rentas: await rentasLista(env), nuevo }, await tiendaLista(env, q));
+  if (op === 'ver' || op === 'nueva') o.clientes = await clientesLista(env); // para buscar a quien arrienda
+  return o;
 }
 async function tiendaLista(env, q) {
   const db = env.DB, desde = ahoraChile(Date.now() - 30 * 86400000).fecha;
@@ -1151,13 +1167,14 @@ const partesDe = L => { try { const v = JSON.parse(L.partes || '[]'); return Arr
 const origenApp = () => PAGINA.replace(/\/reservar\/$/, '');
 /** Lo que falta cobrar de una clase: la clase entera (pendiente o 'Por pagar') o las diferencias sin cobrar. */
 const debeClase = r => r.estado === 'pagada' && r.medio !== 'Por pagar' ? saldosDe(r).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0) : (Number(r.total) || 0);
+const rentaTiempo = x => x.tiempo !== 'dia' ? 'medio día' : (x.dias || 1) > 1 ? x.dias + ' días completos' : 'día completo';
 /** Cómo ve el cliente una renta en la página de pago (Isidora 24-11: el carro del cliente tiene que ser explícito). */
-const rentaCliente = x => 'Arriendo · ' + [x.tablas ? x.tablas + (x.tablas === 1 ? ' tabla soft' : ' tablas soft') : '', x.fibras ? x.fibras + (x.fibras === 1 ? ' tabla de fibra' : ' tablas de fibra') : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(', ') + (x.tiempo === 'dia' ? ' · día completo' : ' · medio día');
+const rentaCliente = x => 'Arriendo · ' + [x.tablas ? x.tablas + (x.tablas === 1 ? ' tabla soft' : ' tablas soft') : '', x.fibras ? x.fibras + (x.fibras === 1 ? ' tabla de fibra' : ' tablas de fibra') : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(', ') + ' · ' + rentaTiempo(x);
 /** Rentas y clases que se pueden sumar a un link (sin pagar). */
 async function linkOpciones(env) {
   const db = env.DB, hoy = ahoraChile().fecha;
   const rentas = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND pago IN ('Falta pagar', 'Link de pago') AND creada_ms > ? ORDER BY creada_ms DESC").bind(Date.now() - 14 * 86400000).all()).results
-    .filter(x => x.monto > 0).map(x => ({ tipo: 'renta', id: x.id, detalle: 'Renta · ' + x.nombre, cliente: rentaCliente(x), sub: [x.tablas ? x.tablas + ' soft' : '', x.fibras ? x.fibras + ' fibra' : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ') + (x.tiempo === 'dia' ? ' · día completo' : ' · medio día'), monto: x.monto, telefono: x.telefono || '', nombre: x.nombre }));
+    .filter(x => x.monto > 0).map(x => ({ tipo: 'renta', id: x.id, detalle: 'Renta · ' + x.nombre, cliente: rentaCliente(x), sub: [x.tablas ? x.tablas + ' soft' : '', x.fibras ? x.fibras + ' fibra' : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ') + ' · ' + rentaTiempo(x), monto: x.monto, telefono: x.telefono || '', nombre: x.nombre }));
   const clases = (await db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND (estado = 'pendiente' OR (estado = 'pagada' AND (medio = 'Por pagar' OR saldos LIKE '%\"medio\":\"\"%'))) ORDER BY fecha, hora").bind(sumarDias(hoy, -14), sumarDias(hoy, 14)).all()).results
     .filter(r => r.estado !== 'pendiente' || aMano(r)).map(r => ({ tipo: 'clase', id: r.ref, detalle: 'Clase · ' + r.nombre, cliente: 'Clase de surf · ' + DIAS[new Date(diaUTC(r.fecha)).getUTCDay()].replace(/^./, c => c.toUpperCase()) + ' ' + (+r.fecha.slice(8)) + '/' + (+r.fecha.slice(5, 7)) + ' · ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + (debeClase(r) < (Number(r.total) || 0) ? ' (diferencia)' : ''), sub: (r.fecha === hoy ? 'Hoy' : r.fecha.slice(8) + '/' + r.fecha.slice(5, 7)) + ' ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas'), monto: debeClase(r), telefono: r.telefono || '', nombre: r.nombre }))
     .filter(x => x.monto > 0);

@@ -64,6 +64,10 @@
   .rn-st span{flex:1;font-weight:600;font-size:1.45rem}
   .rn-st button{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:2rem;line-height:1;color:#0f6e74;cursor:pointer;display:grid;place-items:center;padding:0}
   .rn-st b{min-width:20px;text-align:center;font-size:1.8rem}
+  .rn-dias{margin-top:8px}.rn-vu{margin:8px 4px 0;font-size:1.3rem;color:#0f6e74;font-weight:600}.rn-dias span{padding-left:6px}
+  .rn-cli{display:flex;flex-direction:column;gap:6px;margin-top:6px}.rn-cli:empty{display:none}
+  .rn-cli button{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;border:1.5px solid var(--line);border-radius:12px;background:#fff;padding:10px 12px;font:inherit;font-size:1.45rem;color:var(--ink);cursor:pointer}
+  .rn-cli button small{color:#8a8986;font-size:1.25rem}
   .rn-ch{display:flex;flex-wrap:wrap;gap:8px}
   .rn-ch button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:11px 16px;font:inherit;font-size:1.45rem;font-weight:600;color:var(--ink);cursor:pointer}
   .rn-ch button.on{background:#0f6e74;border-color:#0f6e74;color:#fff}
@@ -129,7 +133,7 @@
   .rn-pm.chico button.ancho{grid-column:1/-1}.rn-pm button small{display:block;font-weight:500;font-size:1.15rem;color:#8a8986}
   .rn-pm button.on{background:#0f6e74;border-color:#0f6e74;color:#fff}.rn-pm button.on svg,.rn-pm button.on small{color:#fff}
   .rn-ch2.solo h2{margin-bottom:0}
-  .rn-ok2 .rn-cb{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.rn-ok2 h2{margin:12px 0 4px;font-size:2.2rem}.rn-ok2 p{margin:0;font-size:1.5rem;color:#55544f}
+  .rn-ok2 .rn-cb{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.rn-ok2 h2{margin:12px 0 4px;font-size:2.2rem}.rn-ok2 p{margin:0;font-size:1.5rem;color:#55544f}.rn-ok2 p.rn-res{display:block;margin-top:8px;max-width:340px;font-size:1.4rem}
   .rn-ok2 .rn-big{width:72px;height:72px;border-radius:50%;background:#2f9a6a;color:#fff;display:grid;place-items:center;font-size:3.4rem;font-weight:700;margin:0}
   .rn-ok2 .rn-cf .rn-go{max-width:none}
   .rn-go.ter{background:none;color:#0f6e74;border:1.5px dashed rgba(15,110,116,.45);margin-top:8px;padding:11px;font-size:1.4rem}
@@ -157,7 +161,7 @@
   .rn-ok{color:#2f9a6a;font-weight:700}.rn-mal{color:#a6402c;font-weight:700}
   .rn-big{font-size:2rem;text-align:center;font-weight:700;margin-top:10px}
   `;
-  let auth = null, R = null, N = null, cargando = null, alCambiar = () => {}, elR = null, elN = null, tabN = 'aviso', verListas = false, verDev = false, nueva = null;
+  let auth = null, R = null, N = null, cargando = null, alCambiar = () => {}, elR = null, elN = null, tabN = 'aviso', verListas = false, verDev = false, nueva = null, CL = [];
 
   async function post(body) {
     const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth, body)) });
@@ -167,7 +171,9 @@
   }
   const KEY = 'storm-rn-datos';
   const guardarCache = () => { try { localStorage.setItem(KEY, JSON.stringify({ email: auth.email, R, N })); } catch (_) {} };
-  const leerCache = () => { try { const c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && c.email === auth.email) { R = c.R; N = c.N; } } catch (_) {} };
+  const leerCache = () => { try { const c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && c.email === auth.email) { R = c.R; N = c.N; CL = (R && R.clientes) || []; } } catch (_) {} };
+  // Clientes (Isidora 25-11): la lista viene con las rentas; se guarda aparte porque los cobros no la repiten.
+  const ponerR = d => { if (d && d.clientes) CL = d.clientes; else if (d) d.clientes = CL; R = d; };
 
   function montar(r, n, a, cb) {
     elR = r; elN = n; auth = a; alCambiar = cb || alCambiar;
@@ -178,13 +184,13 @@
     if (!auth) return Promise.resolve();
     if (cargando) return cargando;
     cargando = Promise.all([post({ accion: 'rentas' }), post({ accion: 'notas' })])
-      .then(([a, b]) => { R = a; N = b; guardarCache(); pintar(); alCambiar(); })
+      .then(([a, b]) => { ponerR(a); N = b; guardarCache(); pintar(); alCambiar(); })
       .catch(() => {}).finally(() => { cargando = null; });
     return cargando;
   }
   async function hacer(acc, body, btn) {
     if (btn) { btn.disabled = true; btn.dataset.t = btn.innerHTML; btn.textContent = 'Guardando…'; }
-    try { const d = await post(Object.assign({ accion: acc }, body)); if (acc === 'rentas' || acc === 'tienda') R = d; else N = d; guardarCache(); pintar(); alCambiar(); return true; }
+    try { const d = await post(Object.assign({ accion: acc }, body)); if (acc === 'rentas' || acc === 'tienda') ponerR(d); else N = d; guardarCache(); pintar(); alCambiar(); return true; }
     catch (x) { if (btn) { btn.disabled = false; btn.innerHTML = btn.dataset.t; } alert(x.message); return false; }
   }
   const pintar = () => { pintarRentas(); pintarNotas(); };
@@ -197,17 +203,21 @@
   const hoy = () => (R && R.hoy) || (N && N.hoy) || new Date().toISOString().slice(0, 10);
   const fechaC = f => { const [y, m, d] = f.split('-'); return DIAS[new Date(+y, m - 1, +d).getDay()] + ' ' + (+d) + '/' + (+m); };
   const queEs = x => [x.tablas ? x.tablas + (x.tablas === 1 ? ' tabla soft' : ' tablas soft') : '', x.fibras ? x.fibras + (x.fibras === 1 ? ' tabla de fibra' : ' tablas de fibra') : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' y ');
-  const tiempoT = t => t === 'dia' ? 'Día completo' : 'Medio día';
+  // Isidora (25-11): día completo puede ser por varios días (1 tabla × 3 días). La cantidad es de equipos; los días van aparte.
+  const diasDe = x => x.tiempo === 'dia' ? Math.max(1, x.dias || 1) : 1;
+  const tiempoT = (t, d) => t !== 'dia' ? 'Medio día' : (d || 1) > 1 ? d + ' días completos' : 'Día completo';
+  const sumarD = (f, n) => { const [y, m, d] = f.split('-').map(Number), x = new Date(Date.UTC(y, m - 1, d + n)); return x.toISOString().slice(0, 10); };
+  const vuelve = x => sumarD(x.fecha, diasDe(x) - 1); // último día de la renta
   const hace = (f, h) => { if (f !== hoy()) return ''; const [a, b] = h.split(':').map(Number), d = new Date(), m = d.getHours() * 60 + d.getMinutes() - (a * 60 + b); return m < 60 ? ' (hace ' + Math.max(0, m) + ' min)' : ' (hace ' + Math.floor(m / 60) + ' h' + (m % 60 >= 30 ? ' y media' : '') + ')'; };
   const afuera = () => R ? R.rentas.filter(x => !x.devuelta) : [];
-  const tarde = x => !x.devuelta && x.fecha < hoy();
+  const tarde = x => !x.devuelta && vuelve(x) < hoy();
   function tarjeta(x) {
     const t = tarde(x), wl = wa(x.telefono);
     const msg = encodeURIComponent('Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Storm por ' + ((x.tablas || x.fibras) && x.trajes || (x.tablas && x.fibras) ? 'el equipo' : (x.tablas || x.fibras) ? ((x.tablas || x.fibras) > 1 ? 'las tablas' : 'la tabla') : (x.trajes > 1 ? 'los trajes' : 'el traje')) + ' que arrendaste. ¿A qué hora lo traes? 🌊');
     return `<div class='rn-c${t ? ' tarde' : ''}${x.devuelta ? ' vuelta' : ''}'>
       <div class='rn-top'><div class='rn-ic'>${x.tablas ? `<i>${ICO.tabla}${x.tablas > 1 ? `<b>${x.tablas}</b>` : ''}</i>` : ''}${x.fibras ? `<i class='fib'>${ICO.tabla}${x.fibras > 1 ? `<b>${x.fibras}</b>` : ''}</i>` : ''}${x.trajes ? `<i>${ICO.traje}${x.trajes > 1 ? `<b>${x.trajes}</b>` : ''}</i>` : ''}</div>
-        <div class='rn-tx'><b>${esc(x.nombre)}</b><small>${esc(queEs(x))} · ${tiempoT(x.tiempo)}</small>
-          <small>${x.devuelta ? 'Salió ' + esc(x.hora) + ' · volvió ' + esc(x.devueltaHora) : (x.fecha === hoy() ? 'Salió hoy ' + esc(x.hora) + hace(x.fecha, x.hora) : 'Salió ' + fechaC(x.fecha) + ' ' + esc(x.hora))}${x.por ? ' · anotó ' + esc(x.por) : ''}</small>
+        <div class='rn-tx'><b>${esc(x.nombre)}</b><small>${esc(queEs(x))} · ${tiempoT(x.tiempo, diasDe(x))}</small>
+          <small>${x.devuelta ? 'Salió ' + esc(x.hora) + ' · volvió ' + esc(x.devueltaHora) : (x.fecha === hoy() ? 'Salió hoy ' + esc(x.hora) + (diasDe(x) > 1 ? '' : hace(x.fecha, x.hora)) : 'Salió ' + fechaC(x.fecha) + ' ' + esc(x.hora)) + (diasDe(x) > 1 ? ' · vuelve ' + (vuelve(x) === hoy() ? 'hoy' : fechaC(vuelve(x))) : '')}${x.por ? ' · anotó ' + esc(x.por) : ''}</small>
           ${x.nota ? `<small class='rn-nt'>${esc(x.nota)}</small>` : ''}</div>
         ${t ? `<span class='rn-tag tarde'>No ha vuelto</span>` : debe(x) ? `<span class='rn-tag debe'>${x.pago === 'Link de pago' ? 'Esperando pago' : 'Falta pagar'}</span>` : `<span class='rn-tag'>${esc(pagoT(x.pago))}${x.monto ? ' ' + clp(x.monto) : ''}</span>`}</div>
       ${x.devuelta ? `<div class='rn-acc'><button class='rn-lk' data-op='deshacer' data-id='${esc(x.id)}'>No ha vuelto (deshacer)</button></div>`
@@ -239,7 +249,7 @@
     const dev = R.rentas.filter(x => x.devuelta).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? 1 : -1);
     const devHoy = dev.filter(x => x.fecha === hoy());
     const mes = R.rentas.filter(x => x.fecha.slice(0, 7) === hoy().slice(0, 7));
-    const sum = (l, k, t) => l.filter(x => !t || x.tiempo === t).reduce((s, x) => s + (x[k] || 0), 0);
+    const sum = (l, k, t) => l.filter(x => !t || x.tiempo === t).reduce((s, x) => s + (x[k] || 0) * diasDe(x), 0); // día completo cuenta cada día
     const nT = af.reduce((s, x) => s + x.tablas + (x.fibras || 0), 0), nJ = af.reduce((s, x) => s + x.trajes, 0);
     const vHoy = (R.ventas || []).filter(v => v.fecha === hoy());
     let h = `<div class='rn'><div class='rn-2'><button class='rn-go' data-rnnueva>${sv("<path d='M12 5v14M5 12h14'/>")}Nueva renta</button><button class='rn-go sec' data-tienda>${ICO.carro}Cobrar</button></div>
@@ -279,21 +289,38 @@
   // Formulario de renta (lo usan Nueva renta y el carro de Cobrar)
   const rPR = () => (R && R.precios) || { tablas: { medio: 10000, dia: 20000 }, fibras: { medio: 20000, dia: 40000 }, trajes: { medio: 10000, dia: 20000 } };
   const rHay = n => n.tablas + n.fibras + n.trajes > 0;
-  const rMonto = n => n.montoAMano ? Number(n.monto) || 0 : (n.tiempo && rHay(n) ? ['tablas', 'fibras', 'trajes'].reduce((t, k) => t + n[k] * (rPR()[k][n.tiempo] || 0), 0) : 0);
-  const rQue = n => [n.tablas ? n.tablas + ' soft' : '', n.fibras ? n.fibras + ' fibra' : '', n.trajes ? n.trajes + (n.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ');
-  const rVacia = () => ({ tablas: 0, fibras: 0, trajes: 0, tiempo: '', pago: '', nombre: '', telefono: '', nota: '', monto: '', montoAMano: false, editar: false });
+  const rMonto = n => n.montoAMano ? Number(n.monto) || 0 : (n.tiempo && rHay(n) ? diasDe(n) * ['tablas', 'fibras', 'trajes'].reduce((t, k) => t + n[k] * (rPR()[k][n.tiempo] || 0), 0) : 0);
+  const rQue = n => [n.tablas ? n.tablas + ' soft' : '', n.fibras ? n.fibras + ' fibra' : '', n.trajes ? n.trajes + (n.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ') + (diasDe(n) > 1 ? ' · ' + n.dias + ' días' : '');
+  const rVacia = () => ({ tablas: 0, fibras: 0, trajes: 0, tiempo: '', dias: 1, pago: '', nombre: '', telefono: '', nota: '', monto: '', montoAMano: false, editar: false });
   const rArriba = n => `<p class='rn-q' style='margin-top:4px'>¿Qué se lleva?</p>
         <div class='rn-st'>${[['tablas', 'Tabla soft', ICO.tabla], ['fibras', 'Tabla de fibra', ICO.tabla], ['trajes', 'Traje', ICO.traje]].map(([k, t, ic]) => `<div class='${n[k] ? 'on' : ''}'><i>${ic}</i><span>${t}</span><button data-m='${k}' aria-label='Menos'>−</button><b>${n[k]}</b><button data-p='${k}' aria-label='Más'>+</button></div>`).join('')}</div>
         <p class='rn-q'>¿Cuánto tiempo?</p>
-        <div class='rn-ch dos'>${[['medio', 'Medio día'], ['dia', 'Día completo']].map(([k, t]) => `<button class='${n.tiempo === k ? 'on' : ''}' data-t='${k}'>${t}</button>`).join('')}</div>`;
+        <div class='rn-ch dos'>${[['medio', 'Medio día'], ['dia', 'Día completo']].map(([k, t]) => `<button class='${n.tiempo === k ? 'on' : ''}' data-t='${k}'>${t}</button>`).join('')}</div>
+        ${n.tiempo === 'dia' ? `<div class='rn-st rn-dias'><div class='on'><span>¿Cuántos días?</span><button data-dm aria-label='Menos'>−</button><b>${n.dias}</b><button data-dp aria-label='Más'>+</button></div></div><p class='rn-vu'>Sale hoy ${fechaC(hoy())} · vuelve ${n.dias > 1 ? fechaC(sumarD(hoy(), n.dias - 1)) : 'hoy'}</p>` : ''}`;
   const rQuien = n => `<p class='rn-q'>¿Quién arrienda?</p>
-        <input id='rn-nom' class='rn-in' placeholder='Nombre' autocomplete='off' value='${esc(n.nombre)}'>
+        <input id='rn-nom' class='rn-in' placeholder='Nombre (busca si ya es cliente)' autocomplete='off' value='${esc(n.nombre)}'>
+        <div class='rn-cli' id='rn-cli'></div>
         <input id='rn-tel' class='rn-in' placeholder='WhatsApp (para avisarle si no vuelve)' inputmode='tel' autocomplete='off' value='${esc(n.telefono)}'>
         <input id='rn-nota' class='rn-in' placeholder='Nota (ej: tabla azul 8’0, traje talla M, dejó carnet)' autocomplete='off' value='${esc(n.nota)}'>
         ${n.editar ? `<p class='rn-q'>Monto</p><input id='rn-monto' class='rn-in' inputmode='numeric' placeholder='Monto' value='${rMonto(n) || ''}'>` : `<button class='rn-lk' data-reditar style='display:block;margin:14px auto 0'>Cambiar el monto (descuento)</button>`}`;
   const rLeer = (w, n) => { const q = id => w.querySelector(id); if (q('#rn-nom')) { n.nombre = q('#rn-nom').value; n.telefono = q('#rn-tel').value; n.nota = q('#rn-nota').value; } if (q('#rn-monto')) { n.monto = q('#rn-monto').value.replace(/\D/g, ''); n.montoAMano = true; } };
-  /** Toques del formulario de renta (cantidades, tiempo, cambiar monto). true si lo atendió. */
+  // Buscar cliente al escribir el nombre (como al agendar una clase): por nombre o teléfono. Al tocarlo se completa el WhatsApp.
+  const solo = t => String(t || '').replace(/\D/g, '');
+  function rClientes(w) {
+    const nom = w.querySelector('#rn-nom'), box = w.querySelector('#rn-cli'); if (!nom || !box) return;
+    const ver = () => {
+      const q = nom.value.trim().toLowerCase(), qd = solo(q);
+      const l = q.length < 2 ? [] : CL.filter(c => c.nombre.toLowerCase() !== q && (c.nombre.toLowerCase().includes(q) || (qd.length >= 4 && solo(c.telefono).includes(qd)))).slice(0, 5);
+      box.innerHTML = l.map(c => `<button type='button' data-cli='${esc(c.nombre)}'><b>${esc(c.nombre)}</b>${c.telefono ? `<small>${esc(c.telefono)}</small>` : ''}</button>`).join('');
+      if (l.length) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    };
+    nom.oninput = ver; nom.onfocus = ver;
+    box.onclick = e => { const b = e.target.closest('[data-cli]'); if (!b) return; e.stopPropagation(); const c = CL.find(x => x.nombre === b.dataset.cli); if (!c) return;
+      nom.value = c.nombre; const t = w.querySelector('#rn-tel'); if (t && !t.value.trim()) t.value = c.telefono || ''; box.innerHTML = ''; };
+  }
+  /** Toques del formulario de renta (cantidades, tiempo, días, cambiar monto). true si lo atendió. */
   function rToque(w, n, b, repintar) {
+    if (b.dataset.dm !== undefined || b.dataset.dp !== undefined) { rLeer(w, n); n.dias = Math.max(1, Math.min(14, (n.dias || 1) + (b.dataset.dm !== undefined ? -1 : 1))); if (!n.editar) n.montoAMano = false; repintar(); return true; }
     if (b.dataset.m || b.dataset.p) { rLeer(w, n); const k = b.dataset.m || b.dataset.p; n[k] = Math.max(0, Math.min(20, n[k] + (b.dataset.m ? -1 : 1))); if (!n.editar) n.montoAMano = false; repintar(); return true; }
     if (b.dataset.t) { rLeer(w, n); n.tiempo = b.dataset.t; if (!n.editar) n.montoAMano = false; repintar(); return true; }
     if (b.dataset.reditar !== undefined) { rLeer(w, n); n.monto = String(rMonto(n) || ''); n.montoAMano = true; n.editar = true; repintar(); const mm = w.querySelector('#rn-monto'); if (mm) { mm.focus(); mm.select(); } return true; }
@@ -317,7 +344,7 @@
         <div class='rn-pm chico'>${MED.map(([k, t, ic, sub]) => `<button class='${nueva.pago === k ? 'on' : ''}${sub ? ' ancho' : ''}' data-pg='${k}'>${ic}<span>${t}${sub ? `<small>${sub}</small>` : ''}</span></button>`).join('')}</div>
         ${rQuien(nueva)}
         <p class='rn-err'></p>`;
-      cb.scrollTop = y;
+      cb.scrollTop = y; rClientes(cb);
       const mm = cb.querySelector('#rn-monto'); if (mm) mm.oninput = () => { nueva.monto = mm.value.replace(/\D/g, ''); nueva.montoAMano = true; pie(); };
       pie();
     }
@@ -329,7 +356,7 @@
     function hecho() {
       listo = true;
       const tag = nueva.pago === 'Falta pagar' ? 'Falta pagar · se cobra al volver' : nueva.pago;
-      w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Renta guardada</h2><p>${clp(monto())} · ${esc(tag)}</p><p class='rn-res' style='text-align:center'>${esc(nueva.nombre.trim())} · ${esc(que())} · ${tiempoT(nueva.tiempo)}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
+      w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Renta guardada</h2><p>${clp(monto())} · ${esc(tag)}</p><p class='rn-res' style='text-align:center'>${esc(nueva.nombre.trim())} · ${esc(queEs(nueva))} · ${tiempoT(nueva.tiempo, diasDe(nueva))}${diasDe(nueva) > 1 ? ' · vuelve ' + fechaC(sumarD(hoy(), nueva.dias - 1)) : ''}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
       setTimeout(() => { if (w.isConnected) w.remove(); }, 2500);
     }
     cuerpo();
@@ -345,7 +372,7 @@
         if (nueva.nombre.trim().length < 2) { er.textContent = 'Escribe el nombre de quien arrienda.'; const n = w.querySelector('#rn-nom'); n.scrollIntoView({ block: 'center' }); return n.focus(); }
         er.textContent = ''; b.disabled = true; b.textContent = 'Guardando…';
         try {
-          R = await post(Object.assign({ accion: 'rentas', op: 'nueva' }, nueva, { monto: String(monto()) })); guardarCache(); pintar(); alCambiar();
+          ponerR(await post(Object.assign({ accion: 'rentas', op: 'nueva' }, nueva, { monto: String(monto()) }))); guardarCache(); pintar(); alCambiar();
           hecho();
         } catch (x) { b.disabled = false; pie(); er.textContent = x.message; er.scrollIntoView({ block: 'center' }); }
       }
@@ -376,7 +403,7 @@
       const b = w.querySelector('.rn-cb'); if (!b) return;
       const q = sinT(v.q).trim(), lista = prods().filter(x => !q || sinT(x.nombre).includes(q));
       const libres = (v.ops || []).filter(o => !v.sel.has(o.id) && (!q || sinT(o.detalle + ' ' + o.sub).includes(q)));
-      const items = enCarro().map(x => fila(x.id, x.nombre, '', x.precio * v.cant[x.id], v.cant[x.id])).join('') + opsSel().map(o => fila(o.id, o.detalle, o.sub, o.monto)).join('') + v.nr.map((n, i) => fila('nr' + i, 'Renta · ' + n.nombre.trim(), rQue(n) + ' · ' + tiempoT(n.tiempo).toLowerCase(), rMonto(n))).join('')
+      const items = enCarro().map(x => fila(x.id, x.nombre, '', x.precio * v.cant[x.id], v.cant[x.id])).join('') + opsSel().map(o => fila(o.id, o.detalle, o.sub, o.monto)).join('') + v.nr.map((n, i) => fila('nr' + i, 'Renta · ' + n.nombre.trim(), rQue(n).replace(/ · \d+ días$/, '') + ' · ' + tiempoT(n.tiempo, diasDe(n)).toLowerCase(), rMonto(n))).join('')
         + (v.otro && num(v.om) ? fila('otro', v.od || (v.dano ? 'Cobro por daño' : 'Otro'), v.dano ? 'Cobro por daño' : '', num(v.om)) : '');
       b.innerHTML = `${items ? `<p class='rn-q' style='margin-top:4px'>En el cobro</p><div class='rn-cl'>${items}</div>` : ''}
         <p class='rn-q'>Rentas y clases</p><div class='rn-sp'><button data-rnueva class='nueva'><span>Renta nueva<small>Ármala aquí y se guarda al cobrar</small></span><i>+</i></button></div>
@@ -411,7 +438,7 @@
       w.innerHTML = `<div class='rn-cart'><div class='rn-ch2 solo'><button class='rn-back' data-volver aria-label='Volver'>‹</button><h2>Renta nueva</h2><button class='rn-x' aria-label='Cerrar'>✕</button></div><div class='rn-cb'></div><div class='rn-cf'></div></div>`;
       const cb = w.querySelector('.rn-cb'), cf = w.querySelector('.rn-cf');
       const pieR = () => { const ok = rHay(n) && n.tiempo; cf.innerHTML = `<div class='rn-tt'><small>${esc(!rHay(n) ? 'Toca + en lo que se lleva' : !n.tiempo ? 'Elige medio día o día completo' : rQue(n))}</small><b>${clp(rMonto(n))}</b></div><button class='rn-go' data-ragregar ${ok ? '' : 'disabled'}>${n.i != null ? 'Listo' : 'Agregar al cobro'}</button>`; };
-      v.rpinta = () => { const y = cb.scrollTop; cb.innerHTML = rArriba(n) + rQuien(n) + `<p class='rn-err'></p>`; cb.scrollTop = y; const mm = cb.querySelector('#rn-monto'); if (mm) mm.oninput = () => { n.monto = mm.value.replace(/\D/g, ''); n.montoAMano = true; pieR(); }; pieR(); };
+      v.rpinta = () => { const y = cb.scrollTop; cb.innerHTML = rArriba(n) + rQuien(n) + `<p class='rn-err'></p>`; cb.scrollTop = y; rClientes(cb); const mm = cb.querySelector('#rn-monto'); if (mm) mm.oninput = () => { n.monto = mm.value.replace(/\D/g, ''); n.montoAMano = true; pieR(); }; pieR(); };
       v.rpinta();
     }
     // --- paso 2: cómo paga ---
@@ -437,7 +464,7 @@
       w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Cobro guardado</h2><p>${clp(v.totalOk)} · ${esc(medio)}</p><p class='rn-res' style='text-align:center'>${esc(v.resOk)}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
       setTimeout(() => { if (w.isConnected && v.paso === 'listo') w.remove(); }, 2500);
     }
-    const base = () => ({ items: Object.keys(v.cant).filter(k => v.cant[k]).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v.od : '', otroMonto: v.otro && !v.dano ? v.om : '', danoDetalle: v.otro && v.dano ? v.od : '', danoMonto: v.otro && v.dano ? v.om : '', rentas: [...v.sel], clases: [...v.sel], nuevasRentas: v.nr.map(n => ({ tablas: n.tablas, fibras: n.fibras, trajes: n.trajes, tiempo: n.tiempo, nombre: n.nombre, telefono: n.telefono, nota: n.nota, monto: String(rMonto(n)) })) });
+    const base = () => ({ items: Object.keys(v.cant).filter(k => v.cant[k]).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v.od : '', otroMonto: v.otro && !v.dano ? v.om : '', danoDetalle: v.otro && v.dano ? v.od : '', danoMonto: v.otro && v.dano ? v.om : '', rentas: [...v.sel], clases: [...v.sel], nuevasRentas: v.nr.map(n => ({ tablas: n.tablas, fibras: n.fibras, trajes: n.trajes, tiempo: n.tiempo, dias: n.dias, nombre: n.nombre, telefono: n.telefono, nota: n.nota, monto: String(rMonto(n)) })) });
     w.onclick = async e => {
       if (e.target === w || e.target.closest('.rn-x')) return cerrar();
       const b = e.target.closest('button'); if (!b || b.disabled) return;
