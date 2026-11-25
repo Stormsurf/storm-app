@@ -207,17 +207,20 @@
   const diasDe = x => x.tiempo === 'dia' ? Math.max(1, x.dias || 1) : 1;
   const tiempoT = (t, d) => t !== 'dia' ? 'Medio día' : (d || 1) > 1 ? d + ' días completos' : 'Día completo';
   const sumarD = (f, n) => { const [y, m, d] = f.split('-').map(Number), x = new Date(Date.UTC(y, m - 1, d + n)); return x.toISOString().slice(0, 10); };
-  const vuelve = x => sumarD(x.fecha, diasDe(x) - 1); // último día de la renta
+  // Isidora (25-11): cada día de renta son 24 horas. Sale mié 13:30 por 3 días → vuelve sáb 13:30. Medio día vuelve el mismo día.
+  const ahoraH = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const vuelve = (f, h, x) => x.tiempo === 'dia' ? { f: sumarD(f, diasDe(x)), h } : { f, h: '' };
+  const vuelveT = v => (v.f === hoy() ? 'hoy' : v.f === sumarD(hoy(), 1) ? 'mañana ' + fechaC(v.f) : fechaC(v.f)) + (v.h ? ' ' + v.h : '');
   const hace = (f, h) => { if (f !== hoy()) return ''; const [a, b] = h.split(':').map(Number), d = new Date(), m = d.getHours() * 60 + d.getMinutes() - (a * 60 + b); return m < 60 ? ' (hace ' + Math.max(0, m) + ' min)' : ' (hace ' + Math.floor(m / 60) + ' h' + (m % 60 >= 30 ? ' y media' : '') + ')'; };
   const afuera = () => R ? R.rentas.filter(x => !x.devuelta) : [];
-  const tarde = x => !x.devuelta && vuelve(x) < hoy();
+  const tarde = x => { if (x.devuelta) return false; const v = vuelve(x.fecha, x.hora, x); return v.h ? v.f + ' ' + v.h < hoy() + ' ' + ahoraH() : v.f < hoy(); };
   function tarjeta(x) {
     const t = tarde(x), wl = wa(x.telefono);
     const msg = encodeURIComponent('Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Storm por ' + ((x.tablas || x.fibras) && x.trajes || (x.tablas && x.fibras) ? 'el equipo' : (x.tablas || x.fibras) ? ((x.tablas || x.fibras) > 1 ? 'las tablas' : 'la tabla') : (x.trajes > 1 ? 'los trajes' : 'el traje')) + ' que arrendaste. ¿A qué hora lo traes? 🌊');
     return `<div class='rn-c${t ? ' tarde' : ''}${x.devuelta ? ' vuelta' : ''}'>
       <div class='rn-top'><div class='rn-ic'>${x.tablas ? `<i>${ICO.tabla}${x.tablas > 1 ? `<b>${x.tablas}</b>` : ''}</i>` : ''}${x.fibras ? `<i class='fib'>${ICO.tabla}${x.fibras > 1 ? `<b>${x.fibras}</b>` : ''}</i>` : ''}${x.trajes ? `<i>${ICO.traje}${x.trajes > 1 ? `<b>${x.trajes}</b>` : ''}</i>` : ''}</div>
         <div class='rn-tx'><b>${esc(x.nombre)}</b><small>${esc(queEs(x))} · ${tiempoT(x.tiempo, diasDe(x))}</small>
-          <small>${x.devuelta ? 'Salió ' + esc(x.hora) + ' · volvió ' + esc(x.devueltaHora) : (x.fecha === hoy() ? 'Salió hoy ' + esc(x.hora) + (diasDe(x) > 1 ? '' : hace(x.fecha, x.hora)) : 'Salió ' + fechaC(x.fecha) + ' ' + esc(x.hora)) + (diasDe(x) > 1 ? ' · vuelve ' + (vuelve(x) === hoy() ? 'hoy' : fechaC(vuelve(x))) : '')}${x.por ? ' · anotó ' + esc(x.por) : ''}</small>
+          <small>${x.devuelta ? 'Salió ' + esc(x.hora) + ' · volvió ' + esc(x.devueltaHora) : (x.fecha === hoy() ? 'Salió hoy ' + esc(x.hora) + (x.tiempo === 'dia' ? '' : hace(x.fecha, x.hora)) : 'Salió ' + fechaC(x.fecha) + ' ' + esc(x.hora)) + (x.tiempo === 'dia' ? ' · vuelve ' + vuelveT(vuelve(x.fecha, x.hora, x)) : '')}${x.por ? ' · anotó ' + esc(x.por) : ''}</small>
           ${x.nota ? `<small class='rn-nt'>${esc(x.nota)}</small>` : ''}</div>
         ${t ? `<span class='rn-tag tarde'>No ha vuelto</span>` : debe(x) ? `<span class='rn-tag debe'>${x.pago === 'Link de pago' ? 'Esperando pago' : 'Falta pagar'}</span>` : `<span class='rn-tag'>${esc(pagoT(x.pago))}${x.monto ? ' ' + clp(x.monto) : ''}</span>`}</div>
       ${x.devuelta ? `<div class='rn-acc'><button class='rn-lk' data-op='deshacer' data-id='${esc(x.id)}'>No ha vuelto (deshacer)</button></div>`
@@ -296,7 +299,7 @@
         <div class='rn-st'>${[['tablas', 'Tabla soft', ICO.tabla], ['fibras', 'Tabla de fibra', ICO.tabla], ['trajes', 'Traje', ICO.traje]].map(([k, t, ic]) => `<div class='${n[k] ? 'on' : ''}'><i>${ic}</i><span>${t}</span><button data-m='${k}' aria-label='Menos'>−</button><b>${n[k]}</b><button data-p='${k}' aria-label='Más'>+</button></div>`).join('')}</div>
         <p class='rn-q'>¿Cuánto tiempo?</p>
         <div class='rn-ch dos'>${[['medio', 'Medio día'], ['dia', 'Día completo']].map(([k, t]) => `<button class='${n.tiempo === k ? 'on' : ''}' data-t='${k}'>${t}</button>`).join('')}</div>
-        ${n.tiempo === 'dia' ? `<div class='rn-st rn-dias'><div class='on'><span>¿Cuántos días?</span><button data-dm aria-label='Menos'>−</button><b>${n.dias}</b><button data-dp aria-label='Más'>+</button></div></div><p class='rn-vu'>Sale hoy ${fechaC(hoy())} · vuelve ${n.dias > 1 ? fechaC(sumarD(hoy(), n.dias - 1)) : 'hoy'}</p>` : ''}`;
+        ${n.tiempo === 'dia' ? `<div class='rn-st rn-dias'><div class='on'><span>¿Cuántos días?</span><button data-dm aria-label='Menos'>−</button><b>${n.dias}</b><button data-dp aria-label='Más'>+</button></div></div><p class='rn-vu'>Sale hoy ${ahoraH()} · vuelve ${vuelveT(vuelve(hoy(), ahoraH(), n))}</p>` : ''}`;
   const rQuien = n => `<p class='rn-q'>¿Quién arrienda?</p>
         <input id='rn-nom' class='rn-in' placeholder='Nombre (busca si ya es cliente)' autocomplete='off' value='${esc(n.nombre)}'>
         <div class='rn-cli' id='rn-cli'></div>
@@ -356,7 +359,7 @@
     function hecho() {
       listo = true;
       const tag = nueva.pago === 'Falta pagar' ? 'Falta pagar · se cobra al volver' : nueva.pago;
-      w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Renta guardada</h2><p>${clp(monto())} · ${esc(tag)}</p><p class='rn-res' style='text-align:center'>${esc(nueva.nombre.trim())} · ${esc(queEs(nueva))} · ${tiempoT(nueva.tiempo, diasDe(nueva))}${diasDe(nueva) > 1 ? ' · vuelve ' + fechaC(sumarD(hoy(), nueva.dias - 1)) : ''}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
+      w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Renta guardada</h2><p>${clp(monto())} · ${esc(tag)}</p><p class='rn-res' style='text-align:center'>${esc(nueva.nombre.trim())} · ${esc(queEs(nueva))} · ${tiempoT(nueva.tiempo, diasDe(nueva))}${nueva.tiempo === 'dia' ? ' · vuelve ' + vuelveT(vuelve(hoy(), ahoraH(), nueva)) : ''}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
       setTimeout(() => { if (w.isConnected) w.remove(); }, 2500);
     }
     cuerpo();
