@@ -422,13 +422,30 @@
 
   // ---------- Gastos de la Academia Anual (solo administradores) ----------
   let GAS = null, gMes = '', gAbierto = '', gOtro = false, gClase = '';
-  // Una clase queda pagada al instructor solo si se marcó con "Le pagué esta clase" (pago con nota "Clase …").
-  // Los adelantos y montos sueltos bajan lo que falta pagar, pero no marcan clases.
   const notaClase = c => `Clase ${c.clase} ${c.texto}`;
+  // La planilla convierte notas como "15/11" en fecha ("Sun Nov 15 2026 00:00:00 GMT-0300 …"): se muestra como 15/11.
+  const MESES_EN = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const notaLimpia = t => { t = String(t || ''); const m = t.match(/^\w{3} (\w{3}) (\d{1,2}) \d{4} \d\d:\d\d:\d\d GMT/); return m && MESES_EN[m[1].toLowerCase()] ? `${+m[2]}/${MESES_EN[m[1].toLowerCase()]}` : t; };
+  // Días que nombra una nota ("Pago clase 1, 5 y 8", "15/11"), sin contar montos como 25.000 o $25000.
+  const diasNota = (t, mes) => { const out = [], r = /(?:^|[^\d])(\d{1,2})(?:\/(\d{1,2}))?(?![\d.])/g; let m;
+    t = notaLimpia(t).replace(/\$\s*[\d.]+|\d{1,3}(?:\.\d{3})+|\d{3,}/g, ' ');
+    while((m = r.exec(t))) if(+m[1] >= 1 && +m[1] <= 31 && (!m[2] || +m[2] === mes)) out.push(+m[1]);
+    return out; };
+  // Qué clases están pagadas al instructor:
+  // 1) las marcadas con "Pagada" (pago con nota "Clase …"); 2) las que nombra la nota de un pago (ej. "clase 1, 5 y 8");
+  // 3) el resto de lo pagado (adelantos) cubre las clases más antiguas que falten.
   function clasesPagadas(p){
     const valor = c => c.clase === 'Skate' ? p.skate : p.surf, pagos = p.movs.filter(m => /^pago/i.test(m.tipo));
-    let libre = p.pagado;
-    const out = p.clases.map(c => { const m = c.falto ? null : pagos.find(x => x.detalle === notaClase(c)); if(m) libre -= m.monto; return Object.assign({}, c, {valor: valor(c), pagoFila: m ? m.fila : 0, pagada: !!m}); });
+    const out = p.clases.map(c => Object.assign({}, c, {valor: valor(c), pagoFila: 0, pagada: false, pagoDe: null}));
+    const quedan = new Map(pagos.map(m => [m, m.monto]));
+    out.forEach(c => { if(c.falto) return; const m = pagos.find(x => x.detalle === notaClase(c) && quedan.get(x) >= c.valor);
+      if(m){ quedan.set(m, quedan.get(m) - c.valor); Object.assign(c, {pagada: true, pagoFila: m.fila, pagoDe: m}); } });
+    pagos.forEach(m => { if(/^Clase (Surf|Skate) /.test(m.detalle)) return;
+      diasNota(m.detalle, +String((out[0] || {}).fecha || '').slice(5, 7)).forEach(d => {
+        const c = out.find(k => !k.falto && !k.pagada && +k.fecha.slice(8, 10) === d);
+        if(c && quedan.get(m) >= c.valor){ quedan.set(m, quedan.get(m) - c.valor); Object.assign(c, {pagada: true, pagoDe: m}); } }); });
+    let libre = [...quedan.values()].reduce((t, v) => t + v, 0);
+    out.forEach(c => { if(!c.falto && !c.pagada && libre >= c.valor){ libre -= c.valor; Object.assign(c, {pagada: true, pagoDe: 'adelanto'}); } });
     out.suelto = libre;
     return out;
   }
@@ -438,14 +455,50 @@
     if(!GAS && !mes){ GAS = cacheLeer('gastos'); if(GAS){ gMes = GAS.mes; pintarGastos(); } }
     if(!GAS || (mes && mes !== GAS.mes)) pane.innerHTML = `${SK(1)}${SK(1)}`;
     let listo = false;
-    if(!mes) rapidaPrimero('gastos', 'gastos', () => listo, d => { if(escribiendo(pane)) return; GAS = d; gMes = d.mes; pintarGastos(); });
-    try{ const d = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); listo = true; const igual = GAS && JSON.stringify(GAS) === JSON.stringify(d); GAS = d; gMes = GAS.mes; cacheGuardar('gastos', d); if(!igual && !escribiendo(pane)) pintarGastos(); }
+    if(!mes) rapidaPrimero('gastos', 'gastos', () => listo, d => { if(gCola.length || escribiendo(pane)) return; GAS = d; gMes = d.mes; pintarGastos(); });
+    try{ const d = await post(Object.assign({}, auth, {accion:'gastos', mes: mes || gMes})); listo = true; if(gCola.length) return; const igual = GAS && JSON.stringify(GAS) === JSON.stringify(d); GAS = d; gMes = GAS.mes; cacheGuardar('gastos', d); if(!igual && !escribiendo(pane)) pintarGastos(); }
     catch(x){ falloCarga(pane, 'los sueldos', () => cargarGastos(mes), x); }
   }
-  async function gasto(body, btn){
-    if(btn){ btn.disabled = true; btn.dataset.t = btn.textContent; btn.textContent = 'Anotando…'; }
-    try{ GAS = await post(Object.assign({}, auth, {accion:'gasto', mes: gMes}, body)); gAbierto = ''; gOtro = false; pintarGastos(); }
-    catch(x){ if(btn){ btn.disabled = false; btn.textContent = btn.dataset.t; } alert(x.message); }
+  // Anotar es inmediato en pantalla: se aplica aquí al tiro y se guarda en la planilla por detrás, uno tras otro.
+  // Para borrar se busca la fila en lo último guardado (las filas cambian al borrar otras).
+  const gCola = []; let gSrv = null;
+  const filaDe = (G, r) => { if(!G) return 0;
+    if(r.otro){ const o = G.otros.filter(x => x.detalle === r.detalle && x.monto === r.monto).pop(); return o ? o.fila : 0; }
+    const p = G.personas.find(x => x.nombre === r.persona); if(!p) return 0;
+    if(r.falta){ const c = p.clases.find(x => x.fecha === r.falta); return c ? c.falto : 0; }
+    const m = p.movs.filter(x => x.tipo === r.tipo && x.detalle === r.detalle && x.monto === r.monto).pop(); return m ? m.fila : 0; };
+  function gLocal(op){
+    const G = GAS, p = op.persona && G.personas.find(x => x.nombre === op.persona), hoy = hoyChile();
+    const valor = c => c.clase === 'Skate' ? p.skate : p.surf;
+    const total = (q, d) => { q.total += d; q.saldo += d; G.sueldos += d; G.gastos += d; };
+    const pago = (q, d) => { q.pagado += d; q.saldo -= d; G.pagado += d; };
+    if(op.tipo === 'pago'){ p.movs.push({fila: 0, tipo: 'Pago', fecha: hoy, clase: '', monto: op.monto, detalle: op.detalle}); pago(p, op.monto); }
+    else if(op.tipo === 'falta'){ const c = p.clases.find(x => x.fecha === op.clase); if(c && !c.falto){ c.falto = -1; c.clase === 'Skate' ? p.nSkate-- : p.nSurf--; total(p, -valor(c)); } }
+    else if(op.tipo === 'otro'){ G.otros.push({fila: 0, fecha: hoy, monto: op.monto, detalle: op.detalle}); G.otrosTotal += op.monto; G.gastos += op.monto; G.pagado += op.monto; }
+    else if(op.tipo === 'borrar'){ const r = op.ref;
+      if(r.otro){ const i = G.otros.findIndex(x => x.detalle === r.detalle && x.monto === r.monto); if(i >= 0){ G.otros.splice(i, 1); G.otrosTotal -= r.monto; G.gastos -= r.monto; G.pagado -= r.monto; } }
+      else if(r.falta){ const c = p.clases.find(x => x.fecha === r.falta); if(c && c.falto){ c.falto = 0; c.clase === 'Skate' ? p.nSkate++ : p.nSurf++; total(p, valor(c)); } }
+      else { const i = p.movs.findIndex(x => x.tipo === r.tipo && x.detalle === r.detalle && x.monto === r.monto); if(i >= 0){ p.movs.splice(i, 1); if(/^pago/i.test(r.tipo)) pago(p, -r.monto); } } }
+  }
+  function gasto(op){
+    if(!GAS) return;
+    if(!gCola.length) gSrv = JSON.parse(JSON.stringify(GAS));
+    op.mes = gMes; gLocal(op); gAbierto = ''; gOtro = false; pintarGastos();
+    gCola.push(op); if(gCola.length === 1) gEnviar();
+  }
+  async function gEnviar(){
+    while(gCola.length){
+      const op = gCola[0], body = Object.assign({}, auth, {accion:'gasto', mes: op.mes, tipo: op.tipo});
+      if(op.tipo === 'borrar'){ body.fila = filaDe(gSrv, op.ref); if(!body.fila){ gCola.shift(); continue; } }
+      else ['persona', 'monto', 'clase'].forEach(k => { if(op[k] != null) body[k] = op[k]; });
+      // El apóstrofo hace que la planilla guarde la nota como texto (si no, "15/11" queda como fecha).
+      if(op.detalle) body.detalle = "'" + op.detalle;
+      estado('Guardando…');
+      try{ gSrv = await post(body); gCola.shift(); }
+      catch(x){ gCola.length = 0; estado(''); if(gSrv && gSrv.mes === gMes){ GAS = gSrv; pintarGastos(); } toastError(sinRed() || /fetch/i.test(x.message) ? 'Sin internet: no se anotó. Quedó como estaba.' : `No se pudo anotar: ${x.message}. Quedó como estaba.`); return; }
+    }
+    estado('');
+    if(gSrv && gSrv.mes === gMes){ cacheGuardar('gastos', gSrv); GAS = gSrv; if(!escribiendo(app.querySelector("[data-pane='gastos']"))) pintarGastos(); }
   }
   function pintarGastos(){
     const pane = app.querySelector("[data-pane='gastos']"); if(!pane || !GAS) return;
@@ -466,9 +519,11 @@
         ${p.fijo ? '' : (() => { const cl = clasesPagadas(p), nPag = cl.filter(c => c.pagada).length, nVal = cl.filter(c => !c.falto).length, sel = cl.find(c => gClase === p.nombre + '|' + c.fecha);
           return `<div class='pn-gcl'>${cl.map(c => `<button class='pn-gc${c.falto?' no':c.pagada?' pag':''}${sel === c ? ' sel' : ''}' data-gp='${pi}' data-gcl='${c.fecha}'>${c.pagada ? '✓ ' : ''}${esc(c.texto)}<small>${c.falto ? 'No vino' : c.pagada ? 'Pagada' : c.clase}</small></button>`).join('')}</div>
           ${sel ? `<div class='pn-gcbox'><p>${esc(sel.texto)} · ${esc(sel.clase)} · ${clp(sel.valor)}</p>
-            <div class='pn-gseg'>${sel.falto ? `<button data-gcvino>Sí vino</button>` : sel.pagoFila ? `<button data-gcdes='${sel.pagoFila}'>Desmarcar pago</button>` : sel.pagada ? '' : `<button data-gcfalta>No vino</button><button class='on' data-gcpag>✓ Pagada</button>`}</div></div>`
-          : `<p class='pn-hint'>${nVal ? `${nPag} de ${nVal} pagadas` : ''}${cl.suelto > 0 ? ` · ${clp(cl.suelto)} en adelantos` : ''}</p>`}`; })()}
-        ${p.movs.length ? `<div class='pn-gmov'>${p.movs.map(m => `<div><span>${esc(m.tipo)} · ${esc(corta(m.fecha))}${m.detalle ? ' · ' + esc(m.detalle) : ''}</span><b>${clp(m.monto)}</b><button data-gdel='${m.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : ''}
+            ${sel.falto ? `<div class='pn-gseg'><button data-gcvino>Sí vino</button></div>` : sel.pagoFila ? `<div class='pn-gseg'><button data-gcdes>Desmarcar pago</button></div>`
+              : sel.pagada ? `<p class='pn-hint'>Pagada ${sel.pagoDe === 'adelanto' ? 'con lo que ya le pagaste' : `con el pago del ${esc(corta(sel.pagoDe.fecha))} (${clp(sel.pagoDe.monto)})`}. Para cambiarla, borra ese pago abajo.</p>`
+              : `<div class='pn-gseg'><button data-gcfalta>No vino</button><button class='on' data-gcpag>✓ Pagada</button></div>`}</div>`
+          : `<p class='pn-hint'>${nVal ? `${nPag} de ${nVal} pagadas` : ''}${cl.suelto > 0 ? ` · ${clp(cl.suelto)} de adelanto` : ''}</p>`}`; })()}
+        ${p.movs.length ? `<div class='pn-gmov'>${p.movs.map((m, mi) => `<div><span>${esc(m.tipo)} · ${esc(corta(m.fecha))}${m.detalle ? ' · ' + esc(notaLimpia(m.detalle)) : ''}</span><b>${clp(m.monto)}</b><button data-gdel='${pi}:${mi}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : ''}
         ${abierto ? `<div class='pn-gbox'>
             <p>¿Cuánto le pagaste a <b>${esc(p.nombre.split(' ')[0])}</b>?</p>
             <div class='pn-gpre'>${!p.fijo && valorClase ? [1,2,3].map(n => `<button data-gpre='${n*valorClase}'>${n} clase${n>1?'s':''}</button>`).join('') : ''}${p.saldo > 0 ? `<button data-gpre='${p.saldo}'>Todo (${clp(p.saldo)})</button>` : ''}</div>
@@ -479,7 +534,7 @@
       </div>`;
     }).join('');
     h += `<div class='pn-card'><h3>Otros gastos<span class='pn-count'>${clp(g.otrosTotal)}</span></h3>
-      ${g.otros.length ? `<div class='pn-gmov'>${g.otros.map(o => `<div><span>${esc(o.detalle)} · ${esc(corta(o.fecha))}</span><b>${clp(o.monto)}</b><button data-gdel='${o.fila}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Nada anotado este mes.</p>`}
+      ${g.otros.length ? `<div class='pn-gmov'>${g.otros.map((o, oi) => `<div><span>${esc(notaLimpia(o.detalle))} · ${esc(corta(o.fecha))}</span><b>${clp(o.monto)}</b><button data-gdel='o:${oi}' aria-label='Borrar'>×</button></div>`).join('')}</div>` : `<p class='pn-empty'>Nada anotado este mes.</p>`}
       ${gOtro ? `<div class='pn-gbox'><input placeholder='¿En qué fue? ej: parafina, bencina' id='pn-godet'><input inputmode='numeric' placeholder='Monto' id='pn-gomonto'>
         <div class='pn-acts'><button class='pn-link' data-gcan>Cancelar</button><button class='pn-ntgo' data-gosave>Anotar gasto</button></div></div>` : `<button class='pn-nt' data-gonew>+ Anotar otro gasto</button>`}
     </div>
@@ -492,28 +547,31 @@
     pane.querySelectorAll('[data-gsave]').forEach(b => b.onclick = () => {
       const monto = +String(pane.querySelector('#pn-gmonto').value).replace(/\D/g, '');
       if(!monto) return pane.querySelector('#pn-gmonto').focus();
-      gasto({tipo:'pago', persona: g.personas[+b.dataset.gsave].nombre, monto, detalle: pane.querySelector('#pn-gnota').value.trim()}, b);
+      gasto({tipo:'pago', persona: g.personas[+b.dataset.gsave].nombre, monto, detalle: pane.querySelector('#pn-gnota').value.trim()});
     });
     pane.querySelectorAll('[data-gcl]').forEach(b => b.onclick = () => {
       const k = g.personas[+b.dataset.gp].nombre + '|' + b.dataset.gcl;
       gClase = gClase === k ? '' : k; gAbierto = ''; gOtro = false; pintarGastos();
     });
     const gSel = () => { const [n, f] = gClase.split('|'), p = g.personas.find(x => x.nombre === n); return p && {p, c: clasesPagadas(p).find(x => x.fecha === f)}; };
-    const gcb = (sel, fn) => { const b = pane.querySelector(sel); if(b) b.onclick = () => { const s = gSel(); if(s && s.c){ gClase = ''; fn(s.p, s.c, b); } }; };
-    gcb('[data-gcpag]', (p, c, b) => gasto({tipo:'pago', persona: p.nombre, monto: c.valor, detalle: notaClase(c)}, b));
-    gcb('[data-gcdes]', (p, c, b) => gasto({tipo:'borrar', fila: c.pagoFila}, b));
-    gcb('[data-gcfalta]', (p, c, b) => gasto({tipo:'falta', persona: p.nombre, clase: c.fecha}, b));
-    gcb('[data-gcvino]', (p, c, b) => gasto({tipo:'borrar', fila: c.falto}, b));
+    const gcb = (sel, fn) => { const b = pane.querySelector(sel); if(b) b.onclick = () => { const s = gSel(); if(s && s.c){ gClase = ''; fn(s.p, s.c); } }; };
+    const refMov = (p, m) => ({persona: p.nombre, tipo: m.tipo, detalle: m.detalle, monto: m.monto});
+    gcb('[data-gcpag]', (p, c) => gasto({tipo:'pago', persona: p.nombre, monto: c.valor, detalle: notaClase(c)}));
+    gcb('[data-gcdes]', (p, c) => gasto({tipo:'borrar', persona: p.nombre, ref: refMov(p, c.pagoDe)}));
+    gcb('[data-gcfalta]', (p, c) => gasto({tipo:'falta', persona: p.nombre, clase: c.fecha}));
+    gcb('[data-gcvino]', (p, c) => gasto({tipo:'borrar', persona: p.nombre, ref: {persona: p.nombre, falta: c.fecha}}));
     pane.querySelectorAll('[data-gdel]').forEach(b => b.onclick = () => {
       if(!b.dataset.ok){ b.dataset.ok = 1; b.textContent = '¿Borrar?'; b.classList.add('ask'); return; }
-      gasto({tipo:'borrar', fila: +b.dataset.gdel}, b);
+      const [a, i] = b.dataset.gdel.split(':');
+      if(a === 'o'){ const o = g.otros[+i]; gasto({tipo:'borrar', ref: {otro: 1, detalle: o.detalle, monto: o.monto}}); }
+      else { const p = g.personas[+a]; gasto({tipo:'borrar', persona: p.nombre, ref: refMov(p, p.movs[+i])}); }
     });
     const ng = pane.querySelector('[data-gonew]'); if(ng) ng.onclick = () => { gOtro = true; gAbierto = ''; pintarGastos(); pane.querySelector('#pn-godet').focus(); };
     const og = pane.querySelector('[data-gosave]'); if(og) og.onclick = () => {
       const detalle = pane.querySelector('#pn-godet').value.trim(), monto = +String(pane.querySelector('#pn-gomonto').value).replace(/\D/g, '');
       if(!detalle) return pane.querySelector('#pn-godet').focus();
       if(!monto) return pane.querySelector('#pn-gomonto').focus();
-      gasto({tipo:'otro', detalle, monto}, og);
+      gasto({tipo:'otro', detalle, monto});
     };
   }
   const corta = f => { const m = String(f||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + '/' + (+m[2]) : f; };
