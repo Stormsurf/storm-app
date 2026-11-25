@@ -145,38 +145,40 @@ const partesPago = r => { const sl = saldosDe(r), base = (r.total || 0) - sl.red
 const parseLista = s => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch (_) { return []; } };
 
 /** Grupos por instructor (cada grupo se cobra como una clase de su tamaño):
- *  - menores de 8: de a 2 por instructor; si sobra uno, va con los demás (o, si no hay más, con el último par: 3 niños = 1 instructor) (menores de 5: clase individual, aviso en la página);
  *  - (ninos: reservado por si se vuelve a separar por edades; hoy siempre 0)
  *  - desde 12 años cuenta como adulto; máximo 4 por instructor (Armada 24-11-2026): 5 = 3+2, 8 = 4+4.
- *  - de 5 a 8 adultos se cobra por persona (porPersona); si vienen menores de 8, cada grupo se cobra con la tabla (Isidora 25-11).
+ *  - de 5 a 8 se cobra por persona (porPersona) y, si por los niños hace falta un instructor más, se suma porPersona por cada uno (Isidora 25-11).
  *  Ej.: 4 niños = 2+2; 3 niños = 3; 3 niños + 1 adulto = 2+2. */
 const edades = r => { const t = []; if (r.menores) t.push(r.menores + ' menor' + (r.menores === 1 ? '' : 'es') + ' de 8'); if (r.ninos) t.push(r.ninos + ' de 7 a 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · clase intermedia' : ''); };
 const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 4, MAX_WEB = 8; // Armada (24-11-2026): máximo 4 alumnos por instructor
 // Formas de pago de las clases anotadas a mano ('Mercado Pago' = reserva online)
 const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay', 'Webpay crédito', 'Webpay débito'];
+/** Reparte la clase entre instructores (Isidora 25-11): máximo 4 personas y máximo 2 menores de 8 por instructor;
+ *  un grupo de solo 3 niños puede ir con 1 instructor. Los niños se reparten entre todos los instructores.
+ *  Ej.: 3 niños = 1; 2 niños + 2 adultos = 1 (4); 4 niños = 2+2; 6 con 4 niños = 3+3; 8 con 6 niños = 3+3+2. */
+function armarGrupos(p, k, c) {
+  c = c || 0;
+  for (let n = Math.max(1, Math.ceil(p / MAX_GRUPO), Math.floor(k / MAX_MENORES), Math.ceil(c / MAX_NINOS)); ; n++) {
+    const g = Array.from({ length: n }, (_, i) => ({ personas: Math.floor(p / n) + (i < p % n ? 1 : 0), k: Math.floor(k / n) + (i < k % n ? 1 : 0) }));
+    if (g.every(x => x.personas <= MAX_GRUPO && (x.k <= MAX_MENORES || (x.k === 3 && x.personas === 3)))) return g;
+  }
+}
 function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
   const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; personas = Math.min(personas, maxInter(a)); }
   if (!(personas >= 1)) throw err('Elige cuántas personas son.');
   if (menores < 0 || ninos < 0 || menores + ninos > personas) throw err('Revisa cuántos son niños.');
-  const grupos = [];
-  const pares = Math.floor(menores / MAX_MENORES);
-  for (let k = 0; k < pares; k++) grupos.push({ personas: MAX_MENORES, ninos: true });
-  let resto = personas - pares * MAX_MENORES; // incluye al niño que sobra
-  if (pares && resto === 1) { grupos[grupos.length - 1].personas += 1; resto = 0; } // una sola persona suelta (niño o adulto) va con el último par
-  if (resto > 0) {
-    // cuántos instructores para el resto: hasta 4 por grupo y hasta 3 niños de 7-11 por grupo; repartidos parejo
-    const n = personas > a.maxWeb && !ninos ? 1 : Math.max(Math.ceil(resto / MAX_GRUPO), Math.ceil(ninos / MAX_NINOS), 1);
-    for (let g = 0; g < n; g++) grupos.push({ personas: Math.floor(resto / n) + (g < resto % n ? 1 : 0), ninos: false });
-  }
+  const grupos = personas > a.maxWeb && !menores && !ninos ? [{ personas, k: 0 }] : armarGrupos(personas, menores, ninos); // grupo grande anotado a mano: un solo grupo (total a mano)
   let precio = 0, pago = 0;
-  const pp = !inter && !menores && !ninos && personas >= 5 && personas <= a.maxWeb ? Number(a.porPersona) || AJUSTES_BASE.porPersona : 0; // 5 a 8: precio por persona
+  const pp = !inter && personas >= 5 && personas <= a.maxWeb ? Number(a.porPersona) || AJUSTES_BASE.porPersona : 0; // 5 a 8: precio por persona
+  const extra = pp ? Math.max(0, grupos.length - Math.ceil(personas / MAX_GRUPO)) : 0; // instructores de más que piden los niños: se cobra porPersona por cada uno
   grupos.forEach(g => {
     g.precio = inter ? Number(a.intermedio.precios[g.personas]) || 0 : pp ? g.personas * pp : Number(a.precios[g.personas]) || 0; // intermedio: tabla propia (1 = $50.000; Isidora 25-11)
     g.pago = Number(g.personas <= 5 ? a.pagos[g.personas] : a.pagos.grupo) || Number(a.pagos.grupo) || 0;
     precio += g.precio; pago += g.pago;
   });
-  return { personas, menores, ninos, nivel: inter ? 'intermedio' : '', instructores: grupos.length, grupos, precio, pagoInstructor: pago };
+  if (extra) { grupos[grupos.length - 1].precio += extra * pp; precio += extra * pp; }
+  return { extra, personas, menores, ninos, nivel: inter ? 'intermedio' : '', instructores: grupos.length, grupos, precio, pagoInstructor: pago };
 }
 /** Máximo de personas en una clase intermedia (Isidora 25-11: 3). */
 const maxInter = a => Math.max(1, Number((a.intermedio || {}).max) || AJUSTES_BASE.intermedio.max);

@@ -442,15 +442,14 @@
 
   const MEDIOS = [['POS', 'POS'], ['Transferencia', 'Transferencia'], ['Efectivo', 'Efectivo'], ['Factura', 'Factura'], ['Mercado Pago', 'Reserva online'], ['Por pagar', 'Aún no paga']];
   const medioTxt = m => m === 'Mercado Pago' ? 'Reserva online' : m === 'Flow' ? 'Reserva online (Flow)' : /^Webpay/.test(m) ? 'Reserva online (' + m + ')' : m;
-  // tabla de precios (igual que el servidor): niños de a 2 por instructor, el resto hasta 4 (Armada); de 5 a 8, precio por persona
+  // tabla de precios (igual que el servidor): máximo 4 personas y 2 menores de 8 por instructor (Armada); de 5 a 8 adultos, precio por persona
   function cotiza(p, m) {
     const a = E.ajustes || {}, g = [];
     p = Math.max(1, Math.floor(+p || 1)); m = Math.max(0, Math.min(p, Math.floor(+m || 0)));
-    const pares = Math.floor(m / 2); for (let k = 0; k < pares; k++) g.push(2);
-    let resto = p - pares * 2; if (pares && resto === 1) { g[g.length - 1]++; resto = 0; }
-    if (resto > 0) { const n = p > (a.maxWeb || 8) ? 1 : Math.max(Math.ceil(resto / 4), 1); for (let k = 0; k < n; k++) g.push(Math.floor(resto / n) + (k < resto % n ? 1 : 0)); }
-    const pp = !m && p >= 5 && p <= (a.maxWeb || 8) ? Number(a.porPersona) || 25000 : 0;
-    const precios = g.map(x => pp ? x * pp : Number((a.precios || {})[x]) || 0);
+    if (p > (a.maxWeb || 8) && !m) g.push(p); // grupo grande: total a mano
+    else for (let n = Math.max(1, Math.ceil(p / 4), Math.floor(m / 2)); ; n++) { const x = Array.from({ length: n }, (_, i) => [Math.floor(p / n) + (i < p % n ? 1 : 0), Math.floor(m / n) + (i < m % n ? 1 : 0)]); if (x.every(([t, k]) => t <= 4 && (k <= 2 || (k === 3 && t === 3)))) { x.forEach(([t]) => g.push(t)); break; } }
+    const pp = p >= 5 && p <= (a.maxWeb || 8) ? Number(a.porPersona) || 25000 : 0, extra = pp ? Math.max(0, g.length - Math.ceil(p / 4)) : 0; // + porPersona por cada instructor de más que piden los niños
+    const precios = g.map(x => pp ? x * pp : Number((a.precios || {})[x]) || 0); if (extra) precios.push(extra * pp);
     return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
   }
   const faltaCobrar = r => (r.saldos || []).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0);
@@ -875,7 +874,7 @@
         <table class='es-tab'><tr><th>Personas</th><th>Cliente paga</th><th>Instructor recibe</th></tr>${[1, 2, 3, 4].map(n => `<tr><td><b>${n}</b></td><td><input data-pr='${n}' value='${a.precios[n] || ''}' inputmode='numeric'></td><td><input data-pa='${n}' value='${a.pagos[n] || ''}' inputmode='numeric'></td></tr>`).join('')}
         <tr><td><b>5 a 8</b></td><td><input data-pp value='${a.porPersona || 25000}' inputmode='numeric'><small>por persona</small></td><td><small>2 instructores, cada uno según su grupo</small></td></tr>
         <tr><td colspan='2'>Grupo grande o empresa</td><td><input data-pa='grupo' value='${a.pagos.grupo || ''}' inputmode='numeric'></td></tr></table>
-        ${nota('Máximo 4 alumnos por instructor (Armada). De 5 a 8 la app pone 2 instructores (5 = 3+2, 8 = 4+4) y cada uno recibe lo de su grupo. Con niños menores de 8: 2 niños por instructor, y si sobra uno se suma al último par.')}
+        ${nota('Máximo 4 alumnos por instructor (Armada). De 5 a 8 se cobra por persona y la app pone 2 instructores (5 = 3+2, 8 = 4+4); cada uno recibe lo de su grupo. Si por los niños hace falta un instructor más, se suma el precio por persona por cada uno. Con niños menores de 8: máximo 2 por instructor (3 niños solos pueden ir con 1) y se reparten entre todos los instructores.')}
         <h3 style='margin-top:18px'>Pack de clases</h3><p class='pn-sub'>Se vende desde la página del cliente o al anotar una clase. El instructor recibe lo mismo de siempre por cada clase.</p>
         <div class='es-f'><label>Clases del pack<input data-pk='clases' inputmode='numeric' value='${PK().clases}'></label><label>Descuento (%)<input data-pk='descuento' inputmode='numeric' value='${PK().descuento}'></label><label>Se usa en… (meses)<input data-pk='meses' inputmode='numeric' value='${PK().meses}'></label></div>
         ${nota('Con 1 persona el pack queda en ' + clp(precioPack(1)) + ' (' + PK().clases + ' clases de ' + clp(a.precios[1]) + ' menos ' + PK().descuento + '%).')}
