@@ -49,7 +49,7 @@ const AJUSTES_BASE = {
   horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
   pack: { clases: 5, descuento: 10, meses: 1 }, // pack (meses: se usa dentro de 1 mes desde que se paga, Isidora 21-11) de clases particulares (Isidora 16-11): 5 clases con 10% de descuento, sin vencimiento por ahora
-  intermedio: { precio: 50000, instructores: ['Diego', 'Francisco'] }, // clase para alumnos intermedios: precio si es individual (desde 2, tabla normal), solo con estos instructores
+  intermedio: { precios: { 1: 50000, 2: 85000, 3: 100000 }, max: 3, instructores: ['Diego', 'Francisco'] }, // clase para alumnos intermedios (Isidora 25-11): tabla propia, máximo 3 personas, solo con estos instructores
   admins: ['isidoravergara@gmail.com', 'contacto@stormsurf.cl']
 };
 const INSTRUCTORES_BASE = ['Diego', 'Iñaki', 'Francisco', 'Emerson'];
@@ -115,6 +115,7 @@ async function ajustes(db) {
   const { results } = await db.prepare('SELECT clave, valor FROM ajustes').all();
   const a = JSON.parse(JSON.stringify(AJUSTES_BASE));
   results.forEach(r => { try { a[r.clave] = JSON.parse(r.valor); } catch (_) {} });
+  a.intermedio = Object.assign({}, AJUSTES_BASE.intermedio, a.intermedio, { precios: Object.assign({}, AJUSTES_BASE.intermedio.precios, (a.intermedio || {}).precios) });
   a.maxWeb = Math.min(Number(a.maxWeb) || MAX_WEB, MAX_WEB); // hasta 8 por la web (2 instructores), aunque Ajustes diga otra cosa
   a.horarios = [...new Set((a.horarios || []).map(normHora).filter(Boolean))].sort();
   return a;
@@ -155,7 +156,7 @@ const MAX_MENORES = 2, MAX_NINOS = 3, MAX_GRUPO = 4, MAX_WEB = 8; // Armada (24-
 const MEDIOS = ['POS', 'Transferencia', 'Efectivo', 'Factura', 'Por pagar', 'Mercado Pago', 'Flow', 'Webpay', 'Webpay crédito', 'Webpay débito'];
 function cotizar(a, personas, menores, ninos, nivel) {
   personas = Math.floor(Number(personas)); menores = Math.floor(Number(menores) || 0); ninos = Math.floor(Number(ninos) || 0);
-  const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; }
+  const inter = nivel === 'intermedio'; if (inter) { menores = 0; ninos = 0; personas = Math.min(personas, maxInter(a)); }
   if (!(personas >= 1)) throw err('Elige cuántas personas son.');
   if (menores < 0 || ninos < 0 || menores + ninos > personas) throw err('Revisa cuántos son niños.');
   const grupos = [];
@@ -169,14 +170,16 @@ function cotizar(a, personas, menores, ninos, nivel) {
     for (let g = 0; g < n; g++) grupos.push({ personas: Math.floor(resto / n) + (g < resto % n ? 1 : 0), ninos: false });
   }
   let precio = 0, pago = 0;
-  const pp = personas >= 5 && personas <= a.maxWeb ? Number(a.porPersona) || AJUSTES_BASE.porPersona : 0; // 5 a 8: precio por persona
+  const pp = !inter && personas >= 5 && personas <= a.maxWeb ? Number(a.porPersona) || AJUSTES_BASE.porPersona : 0; // 5 a 8: precio por persona
   grupos.forEach(g => {
-    g.precio = pp ? g.personas * pp : inter && g.personas === 1 ? Number((a.intermedio || {}).precio) || 0 : Number(a.precios[g.personas]) || 0; // intermedio: $50.000 individual (Isidora 21-11); desde 2 personas, precio normal
+    g.precio = inter ? Number(a.intermedio.precios[g.personas]) || 0 : pp ? g.personas * pp : Number(a.precios[g.personas]) || 0; // intermedio: tabla propia (1 = $50.000; Isidora 25-11)
     g.pago = Number(g.personas <= 5 ? a.pagos[g.personas] : a.pagos.grupo) || Number(a.pagos.grupo) || 0;
     precio += g.precio; pago += g.pago;
   });
   return { personas, menores, ninos, nivel: inter ? 'intermedio' : '', instructores: grupos.length, grupos, precio, pagoInstructor: pago };
 }
+/** Máximo de personas en una clase intermedia (Isidora 25-11: 3). */
+const maxInter = a => Math.max(1, Number((a.intermedio || {}).max) || AJUSTES_BASE.intermedio.max);
 /** Instructores que pueden dar ese tipo de clase (null = todos). */
 function soloNivel(a, nivel) {
   return nivel === 'intermedio' ? ((a.intermedio || {}).instructores || []) : null;
@@ -283,7 +286,7 @@ async function disponibilidad(db, d) {
     const horas = horasDia(a, f).filter(h => permitido(a, f, h, hoy) && topeVerano(a, ag, f, h, activos.filter(i => ag.libre(i.nombre, f, h)).map(i => i.nombre)).length >= c.instructores);
     if (horas.length) dias[f] = horas;
   }
-  return { ok: true, pack: a.pack || AJUSTES_BASE.pack, precios: a.precios, porPersona: a.porPersona, intermedio: (a.intermedio || {}).precio || 0, maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
+  return { ok: true, pack: a.pack || AJUSTES_BASE.pack, precios: a.precios, porPersona: a.porPersona, intermedio: a.intermedio.precios, maxInter: maxInter(a), maxWeb: a.maxWeb, duracion: a.duracion, lugar: a.lugar, whatsapp: WHATSAPP, cotizacion: c, dias, hoy: hoy.fecha, hasta };
 }
 
 // ---------- reservar y pagar ----------
@@ -359,7 +362,8 @@ async function reservar(env, d, ctx) {
   const conPack = d.pack && d.pack !== 'comprar' ? await packDelLink(db, d.pack, d.k) : null;
   if (conPack) { if (conPack.quedan <= 0) throw err('Ya usaste todas las clases de tu pack.'); if (fecha > conPack.vence) throw err('Tu pack vence el ' + fechaLarga(conPack.vence) + '. Elige un día hasta esa fecha.'); d.personas = conPack.personas; d.menores = conPack.menores || 0; d.ninos = 0; d.nivel = conPack.nivel || ''; }
   const personas = Math.floor(Number(d.personas));
-  if (!(personas >= 1 && personas <= a.maxWeb)) throw err('Para más de ' + a.maxWeb + ' personas escríbenos por WhatsApp.');
+  const tope = d.nivel === 'intermedio' ? maxInter(a) : a.maxWeb;
+  if (!(personas >= 1 && personas <= tope)) throw err('Para más de ' + tope + ' personas escríbenos por WhatsApp.');
   const c = cotizar(a, personas, d.menores, d.ninos, d.nivel), solo = soloNivel(a, c.nivel);
   const nombre = nombrePropio(d.nombre), telefono = String(d.telefono || '').trim(), correo = norm(d.correo), comentario = String(d.comentario || '').trim().slice(0, 500);
   if (nombre.length < 2) throw err('Escribe tu nombre.');
