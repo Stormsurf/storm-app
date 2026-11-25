@@ -1110,8 +1110,10 @@ async function tiendaAccion(env, q, d) {
     (Array.isArray(d.items) ? d.items : []).forEach(i => { const p = prods.find(x => x.id === String(i.id)), n = Math.min(50, Math.floor(Number(i.cant) || 0)); if (p && n > 0) lineas.push({ detalle: (n > 1 ? n + ' × ' : '') + p.nombre, monto: p.precio * n, area: 'tienda' }); });
     const otro = num(d.otroMonto); if (otro) lineas.push({ detalle: String(d.otroDetalle || '').trim().slice(0, 80) || 'Otro producto', monto: otro, area: 'tienda' });
     const dano = num(d.danoMonto); if (dano) lineas.push({ detalle: 'Cobro por daño' + (String(d.danoDetalle || '').trim() ? ': ' + String(d.danoDetalle).trim().slice(0, 80) : ''), monto: dano, area: 'renta' });
-    // Rentas y clases sin pagar sumadas al carro (el monto se lee aquí): cada una queda pagada en su área
+    // Rentas sin pagar sumadas al carro (el monto se lee aquí). Isidora (25-11): las clases no van en este carro (son exentas de IVA,
+    // otra máquina): se cobran desde la clase misma, nunca junto con rentas y tienda.
     const ids = new Set([].concat(d.rentas || [], d.clases || []).map(String)), otras = ids.size ? (await linkOpciones(env)).filter(o => ids.has(o.id)) : [];
+    if (otras.some(o => o.tipo !== 'renta')) throw err('Las clases se cobran aparte, desde la clase (no junto con rentas y tienda).');
     const partes = lineas.map(l => Object.assign({ tipo: 'tienda' }, l)).concat(otras.map(o => ({ tipo: o.tipo, id: o.id, detalle: o.detalle, monto: o.monto })));
     if (!partes.length && !rentasCarro(d).length) throw err('Elige qué se cobra.');
     const yo = await quienNombre(env, q.email);

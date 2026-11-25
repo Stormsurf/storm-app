@@ -384,12 +384,14 @@
 
   // ---------- Tienda (Isidora 23-11): se anota qué se vendió al cobrar ----------
   function hoja(html) { const w = document.createElement('div'); w.className = 'rn-f'; w.innerHTML = `<div><button class='rn-x' aria-label='Cerrar'>✕</button>${html}</div>`; document.body.appendChild(w); return w; }
-  // Cobrar (Isidora 24-11): un solo carro con productos de la tienda, rentas y clases sin pagar.
-  // Paso 1: armar el carro (buscador, productos con un toque, total siempre visible abajo). Paso 2: cómo paga (POS, efectivo,
-  // transferencia o link de pago). Al guardar se confirma; si se cierra con cosas en el carro, pregunta antes de descartar.
+  // Cobrar (Isidora 24-11): un solo carro con productos de la tienda y rentas.
+  // Isidora (25-11): las clases NO van en este carro. Desde diciembre hay una máquina para lo afecto a IVA (rentas y tienda)
+  // y otra exenta (clases): las clases se cobran desde la clase misma (Pagó o Link de pago), nunca junto con rentas y tienda.
+  // Paso 1: armar el carro (buscador, productos con un toque, total siempre visible abajo). Paso 2: cómo paga (POS, efectivo
+  // o transferencia). Al guardar se confirma; si se cierra con cosas en el carro, pregunta antes de descartar.
   function abrirTienda(opt) {
     opt = opt || {};
-    const v = { cant: {}, sel: new Set(opt.sel || []), ops: null, nr: [], rn: null, paso: 'carro', otro: false, dano: false, q: '', od: '', om: '', ln: '', lt: '' };
+    const v = { cant: {}, sel: new Set(opt.sel || []), ops: null, nr: [], rn: null, paso: 'carro', otro: false, dano: false, q: '', od: '', om: '' };
     const w = document.createElement('div'); w.className = 'rn-f'; document.body.appendChild(w);
     const num = t => Number(String(t || '').replace(/\D/g, '')) || 0;
     const sinT = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -399,7 +401,7 @@
     const total = () => enCarro().reduce((t, x) => t + x.precio * v.cant[x.id], 0) + (v.otro ? num(v.om) : 0) + opsSel().reduce((t, o) => t + o.monto, 0) + v.nr.reduce((t, n) => t + rMonto(n), 0);
     const lleno = () => total() > 0;
     const cerrar = () => { if (v.paso === 'renta') rLeer(w, v.rn); if (v.paso !== 'listo' && (lleno() || (v.paso === 'renta' && rHay(v.rn))) && !confirm('¿Descartar este cobro? No se ha guardado.')) return; w.remove(); };
-    post({ accion: 'link', op: 'opciones' }).then(d => { v.ops = d.opciones || []; const o = opsSel()[0]; if (o) { v.ln = v.ln || o.nombre; v.lt = v.lt || o.telefono; } if (v.paso === 'carro') cuerpo(); pie(); }).catch(() => { v.ops = []; if (v.paso === 'carro') cuerpo(); });
+    post({ accion: 'link', op: 'opciones' }).then(d => { v.ops = (d.opciones || []).filter(o => o.tipo === 'renta'); if (v.paso === 'carro') cuerpo(); pie(); }).catch(() => { v.ops = []; if (v.paso === 'carro') cuerpo(); });
     // --- paso 1: el carro ---
     const fila = (k, nombre, sub, monto, n) => `<div class='rn-ci2'><span>${esc(nombre)}${sub ? `<small>${esc(sub)}</small>` : ''}</span>${n != null ? `<button data-m='${k}' aria-label='Uno menos'>−</button><b>${n}</b><button data-p='${k}' aria-label='Uno más'>+</button>` : `<button data-qs='${k}' aria-label='Quitar'>✕</button>`}<em>${clp(monto)}</em></div>`;
     function cuerpo() {
@@ -409,7 +411,7 @@
       const items = enCarro().map(x => fila(x.id, x.nombre, '', x.precio * v.cant[x.id], v.cant[x.id])).join('') + opsSel().map(o => fila(o.id, o.detalle, o.sub, o.monto)).join('') + v.nr.map((n, i) => fila('nr' + i, 'Renta · ' + n.nombre.trim(), rQue(n).replace(/ · \d+ días$/, '') + ' · ' + tiempoT(n.tiempo, diasDe(n)).toLowerCase(), rMonto(n))).join('')
         + (v.otro && num(v.om) ? fila('otro', v.od || (v.dano ? 'Cobro por daño' : 'Otro'), v.dano ? 'Cobro por daño' : '', num(v.om)) : '');
       b.innerHTML = `${items ? `<p class='rn-q' style='margin-top:4px'>En el cobro</p><div class='rn-cl'>${items}</div>` : ''}
-        <p class='rn-q'>Rentas y clases</p><div class='rn-sp'><button data-rnueva class='nueva'><span>Renta nueva<small>Ármala aquí y se guarda al cobrar</small></span><i>+</i></button></div>
+        <p class='rn-q'>Rentas</p><div class='rn-sp'><button data-rnueva class='nueva'><span>Renta nueva<small>Ármala aquí y se guarda al cobrar</small></span><i>+</i></button></div>
         ${libres.length ? `<p class='rn-q' style='margin-top:10px'>Sin pagar</p><div class='rn-sp'>${libres.map(o => `<button data-op='${esc(o.id)}'><span>${esc(o.detalle)}<small>${esc(o.sub)}</small></span><b>${clp(o.monto)}</b><i>+</i></button>`).join('')}</div>` : !v.ops ? `<div class='pn-skel' style='height:52px;margin-top:10px'></div>` : ''}
         <p class='rn-q'>Tienda</p>
         <div class='rn-pg2'>${lista.map(x => `<button data-p='${esc(x.id)}' class='${v.cant[x.id] ? 'on' : ''}'><span>${esc(x.nombre)}</span><small>${clp(x.precio)}</small>${v.cant[x.id] ? `<i>${v.cant[x.id]}</i>` : ''}</button>`).join('')}
@@ -430,7 +432,7 @@
     function carro() {
       v.paso = 'carro';
       w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><h2>Cobrar</h2><button class='rn-x' aria-label='Cerrar'>✕</button>
-        <input id='rn-bq' class='rn-in' type='search' placeholder='Buscar producto, renta o clase' autocomplete='off' value='${esc(v.q)}'></div>
+        <input id='rn-bq' class='rn-in' type='search' placeholder='Buscar producto o renta' autocomplete='off' value='${esc(v.q)}'></div>
         <div class='rn-cb'></div><div class='rn-cf'></div></div>`;
       const bq = w.querySelector('#rn-bq'); bq.oninput = () => { v.q = bq.value; cuerpo(); };
       cuerpo(); pie();
@@ -446,28 +448,19 @@
     }
     // --- paso 2: cómo paga ---
     const resumen = () => enCarro().map(x => (v.cant[x.id] > 1 ? v.cant[x.id] + ' × ' : '') + x.nombre).concat(opsSel().map(o => o.detalle), v.nr.map(n => 'Renta · ' + n.nombre.trim()), v.otro && num(v.om) ? [v.od || 'Otro'] : []).join(' · ');
-    // Link de pago solo para clases (Isidora 24-11): lo online entra por Webpay y se declara exento; rentas y tienda llevan IVA y van por POS.
-    const soloClases = () => !enCarro().length && !(v.otro && num(v.om)) && !v.nr.length && opsSel().length > 0 && opsSel().every(o => o.tipo === 'clase');
     function pago(err) {
       v.paso = 'pago';
       w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><button class='rn-back' data-volver aria-label='Volver'>‹</button><h2>${clp(total())}</h2><button class='rn-x' aria-label='Cerrar'>✕</button><p class='rn-res'>${esc(resumen())}</p></div>
         <div class='rn-cb'><p class='rn-q' style='margin-top:6px'>¿Cómo paga?</p>
-        <div class='rn-pm'>${[['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco]].concat(soloClases() ? [['LINK', 'Link de pago', ICO.link]] : []).map(([k, t, ic]) => `<button data-pg='${k}'>${ic}<span>${t}</span></button>`).join('')}</div>
+        <div class='rn-pm'>${[['POS', 'POS', ICO.tarjeta], ['Efectivo', 'Efectivo', ICO.billete], ['Transferencia', 'Transferencia', ICO.banco]].map(([k, t, ic]) => `<button data-pg='${k}'>${ic}<span>${t}</span></button>`).join('')}</div>
         <p class='rn-err'>${esc(err || '')}</p></div><div class='rn-cf'></div></div>`;
-    }
-    function datosLink(err) {
-      v.paso = 'link';
-      w.innerHTML = `<div class='rn-cart'><div class='rn-ch2'><button class='rn-back' data-volver aria-label='Volver'>‹</button><h2>Link de pago</h2><button class='rn-x' aria-label='Cerrar'>✕</button><p class='rn-res'>${clp(total())} · ${esc(resumen())}</p></div>
-        <div class='rn-cb'><p class='rn-q' style='margin-top:6px'>¿A quién se lo mandas?</p><input id='rn-ln' class='rn-in' placeholder='Nombre (opcional)' autocomplete='off' value='${esc(v.ln)}'><input id='rn-lt' class='rn-in' inputmode='tel' placeholder='WhatsApp (opcional)' autocomplete='off' value='${esc(v.lt)}'>
-        <p style='font-size:1.25rem;color:#8a8986;margin:10px 2px 0'>Le llega un link para pagar en línea con Webpay. Cuando pague, cada cosa queda anotada sola.</p><p class='rn-err'>${esc(err || '')}</p></div>
-        <div class='rn-cf'><button class='rn-go' data-crear>Crear link</button></div></div>`;
     }
     function listo(medio) {
       v.paso = 'listo';
       w.innerHTML = `<div class='rn-cart rn-ok2'><div class='rn-cb'><div class='rn-big'>✓</div><h2>Cobro guardado</h2><p>${clp(v.totalOk)} · ${esc(medio)}</p><p class='rn-res' style='text-align:center'>${esc(v.resOk)}</p></div><div class='rn-cf'><button class='rn-go' data-fin>Listo</button></div></div>`;
       setTimeout(() => { if (w.isConnected && v.paso === 'listo') w.remove(); }, 2500);
     }
-    const base = () => ({ items: Object.keys(v.cant).filter(k => v.cant[k]).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v.od : '', otroMonto: v.otro && !v.dano ? v.om : '', danoDetalle: v.otro && v.dano ? v.od : '', danoMonto: v.otro && v.dano ? v.om : '', rentas: [...v.sel], clases: [...v.sel], nuevasRentas: v.nr.map(n => ({ tablas: n.tablas, fibras: n.fibras, trajes: n.trajes, tiempo: n.tiempo, dias: n.dias, nombre: n.nombre, telefono: n.telefono, nota: n.nota, monto: String(rMonto(n)) })) });
+    const base = () => ({ items: Object.keys(v.cant).filter(k => v.cant[k]).map(id => ({ id, cant: v.cant[id] })), otroDetalle: v.otro && !v.dano ? v.od : '', otroMonto: v.otro && !v.dano ? v.om : '', danoDetalle: v.otro && v.dano ? v.od : '', danoMonto: v.otro && v.dano ? v.om : '', rentas: [...v.sel], nuevasRentas: v.nr.map(n => ({ tablas: n.tablas, fibras: n.fibras, trajes: n.trajes, tiempo: n.tiempo, dias: n.dias, nombre: n.nombre, telefono: n.telefono, nota: n.nota, monto: String(rMonto(n)) })) });
     w.onclick = async e => {
       if (e.target === w || e.target.closest('.rn-x')) return cerrar();
       const b = e.target.closest('button'); if (!b || b.disabled) return;
@@ -480,38 +473,25 @@
         if (n.nombre.trim().length < 2) { er.textContent = 'Escribe el nombre de quien arrienda.'; const x = w.querySelector('#rn-nom'); x.scrollIntoView({ block: 'center' }); return x.focus(); }
         if (!rMonto(n)) { er.textContent = 'Escribe el monto.'; return er.scrollIntoView({ block: 'center' }); }
         if (n.i != null) v.nr[n.i] = n; else v.nr.push(n);
-        delete n.i; if (!v.ln) { v.ln = n.nombre; v.lt = n.telefono; } return carro();
+        delete n.i; return carro();
       }
       if (b.dataset.p || b.dataset.m) { const k = b.dataset.p || b.dataset.m; v.cant[k] = Math.max(0, (v.cant[k] || 0) + (b.dataset.m ? -1 : 1)); cuerpo(); return pie(); }
-      if (b.dataset.op) { v.sel.add(b.dataset.op); const o = (v.ops || []).find(x => x.id === b.dataset.op); if (o) { v.ln = v.ln || o.nombre; v.lt = v.lt || o.telefono; } v.q = ''; const bq = w.querySelector('#rn-bq'); if (bq) bq.value = ''; cuerpo(); return pie(); }
+      if (b.dataset.op) { v.sel.add(b.dataset.op); v.q = ''; const bq = w.querySelector('#rn-bq'); if (bq) bq.value = ''; cuerpo(); return pie(); }
       if (b.dataset.qs) { if (b.dataset.qs === 'otro') { v.otro = false; v.om = ''; v.od = ''; } else if (/^nr\d+$/.test(b.dataset.qs)) v.nr.splice(+b.dataset.qs.slice(2), 1); else v.sel.delete(b.dataset.qs); cuerpo(); return pie(); }
       if (b.dataset.otro !== undefined) { v.otro = !v.otro; cuerpo(); pie(); const om = w.querySelector('#rn-od'); if (om) om.focus(); return; }
       if (b.dataset.dano !== undefined) { v.dano = !v.dano; return cuerpo(); }
       if (b.dataset.editar !== undefined) { if (lleno() && !confirm('¿Descartar este cobro? No se ha guardado.')) return; w.remove(); return editarProductos(); }
       if (b.dataset.cobrar !== undefined) return pago();
-      if (b.dataset.pg === 'LINK') return datosLink();
-      if (b.dataset.pg || b.dataset.crear !== undefined) {
-        const link = b.dataset.crear !== undefined; if (link) { v.ln = w.querySelector('#rn-ln').value; v.lt = w.querySelector('#rn-lt').value; }
-        w.querySelectorAll('button').forEach(x => x.disabled = true); const t0 = b.innerHTML; b.innerHTML = link ? 'Creando link…' : 'Guardando…';
+      if (b.dataset.pg) {
+        w.querySelectorAll('button').forEach(x => x.disabled = true); b.innerHTML = 'Guardando…';
         v.totalOk = total(); v.resOk = resumen();
-        try {
-          if (link) { const d = await post(Object.assign({ accion: 'link', op: 'crear', nombre: v.ln, telefono: v.lt }, base())); v.paso = 'listo'; w.remove(); linkListo(d.nuevo); cargar(); }
-          else { R = await post(Object.assign({ accion: 'tienda', op: 'venta', pago: b.dataset.pg }, base())); guardarCache(); pintar(); alCambiar(); listo(pagoT(b.dataset.pg)); }
-        } catch (x) { link ? datosLink(x.message) : pago(x.message); }
+        try { ponerR(await post(Object.assign({ accion: 'tienda', op: 'venta', pago: b.dataset.pg }, base()))); guardarCache(); pintar(); alCambiar(); listo(pagoT(b.dataset.pg)); }
+        catch (x) { pago(x.message); }
       }
     };
     carro();
   }
   const msgLink = n => 'Hola' + (n.nombre ? ' ' + n.nombre.split(' ')[0] : '') + ', aquí puedes pagar en Storm (' + clp(n.total) + '): ' + n.link;
-  function linkListo(n) {
-    const tel = wa(n.telefono);
-    const w = hoja(`<h2>Link listo</h2><div class='rn-tot' style='margin-top:4px'><span>Total</span><b>${clp(n.total)}</b></div>
-      <div class='rn-lp'>${n.partes.map(x => `<span>${esc(x)}</span>`).join('')}</div>
-      <a class='rn-go' href='https://wa.me/${tel}?text=${encodeURIComponent(msgLink(n))}' target='_blank' rel='noopener' style='margin-top:16px;text-decoration:none'>${ICO.wa}Mandar por WhatsApp</a>
-      <button class='rn-go sec' data-copiar style='margin-top:8px'>Copiar link</button>
-      <p style='font-size:1.2rem;color:#8a8986;margin:10px 2px 0;text-align:center'>Cuando paguen, queda anotado solo en la Tienda y en la Agenda.</p>`);
-    w.onclick = e => { if (e.target === w || e.target.closest('.rn-x')) return w.remove(); const b = e.target.closest('[data-copiar]'); if (b) copiar(n.link, b); };
-  }
   function copiar(t, b) { const ok = () => { b.textContent = '✓ Copiado'; setTimeout(() => b.textContent = 'Copiar link', 1800); }; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(ok).catch(() => { prompt('Copia el link:', t); }); }
   function editarProductos() {
     const w = hoja('');
