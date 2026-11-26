@@ -81,15 +81,6 @@
 .mc-asis{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:1.35rem}
 .mc-asis i{flex:1;height:6px;border-radius:6px;background:var(--aa-soft);overflow:hidden;max-width:160px}
 .mc-asis i span{display:block;height:100%;background:var(--aa)}
-.mc-enc{background:var(--ink);color:#fff;border-color:transparent}
-.mc-enc h3{margin:0;font-family:var(--font-heading-family);font-weight:500;font-size:2rem}
-.mc-enc p{margin:4px 0 0;font-size:1.35rem;opacity:.75}
-.mc-stars{display:flex;gap:6px;margin-top:14px}
-.mc-star{flex:1;border:1.5px solid rgba(255,255,255,.25);background:none;color:#fff;border-radius:12px;padding:10px 0 8px;font:inherit;font-size:1.1rem;cursor:pointer;line-height:1.2}
-.mc-star b{display:block;font-size:2rem;font-weight:400;line-height:1}
-.mc-star.on{background:#fff;color:var(--ink);border-color:#fff}
-.mc-enc textarea{display:block;width:100%;box-sizing:border-box;margin-top:12px;border:0;border-radius:12px;padding:11px 12px;font:inherit;font-size:1.45rem;min-height:70px;resize:vertical}
-.mc-enc .mc-go{margin-top:12px;background:#fff;color:var(--ink)}
 .mc-ev{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
 .mc-ev:last-child{border-bottom:0}
 .mc-ev__d{flex:none;align-self:flex-start;width:52px;text-align:center;border-radius:12px;background:var(--aa-soft);color:var(--aa-dk);padding:6px 0;line-height:1.1}
@@ -500,16 +491,34 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const DSEM = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const listaY = xs => xs.length < 2 ? xs.join('') : xs.slice(0,-1).join(', ') + ' y ' + xs[xs.length-1];
   const tipoDe = c => c.cancelada ? 'no' : /vacacion/i.test((c.grupo||'') + ' ' + (c.nota||'')) ? 'vac' : /skate/i.test(c.clase) ? 'skate' : 'surf';
+  // Calendario rápido: copia en Cloudflare (/api/calendario) y la última vista guardada en el celular, para dibujarlo al tiro.
+  const CALK = KEY + '-cal-', CALP = {};
+  const calGuardado = m => { try{ return JSON.parse(localStorage.getItem(CALK + m) || 'null'); }catch(_){ return null; } };
+  function calMes(m){
+    return CALP[m] = CALP[m] || fetch('/api/calendario?mes=' + encodeURIComponent(m)).then(r => r.json()).then(d => { if(!d.ok) throw 0; return d; })
+      .catch(() => post({accion:'calendario', mes: m}))
+      .then(d => { const v = {clases: d.clases || [], canceladas: d.canceladas || []}; try{ localStorage.setItem(CALK + m, JSON.stringify(v)); }catch(_){} return v; })
+      .catch(() => calGuardado(m));
+  }
+  // Meses que muestra Mi clase (este y el próximo con Academia) + el siguiente, por las clases que cuentan para otro mes.
+  function mesesCal(){
+    const hoy = new Date(); let n = hoy.getFullYear()*12 + hoy.getMonth();
+    const meses = [];
+    while(meses.length < 2){ if(!SIN_ANUAL.includes(n % 12)) meses.push(n); n++; }
+    const claves = meses.concat([meses[meses.length-1] + 1]);
+    return {meses, claves, nombres: claves.map(k => MESES[k % 12] + ' ' + Math.floor(k/12))};
+  }
   function calendariosMes(mias){
     const box = app.querySelector('[data-calmes]'); if(!box || !API) return;
     const EV = {}; ((D.anual && D.anual.eventos) || []).forEach(e => { if(e && e.fecha) (EV[e.fecha] = EV[e.fecha] || []).push(e); });
     const hoy = new Date(), hoyIso = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
-    let n = hoy.getFullYear()*12 + hoy.getMonth();
-    const meses = [];
-    while(meses.length < 2){ if(!SIN_ANUAL.includes(n % 12)) meses.push(n); n++; }
-    const claves = meses.concat([meses[meses.length-1] + 1]);
-    const pedir = claves.map(k => post({accion:'calendario', mes: MESES[k % 12] + ' ' + Math.floor(k/12)}).catch(() => null));
-    Promise.all(pedir).then(rs => {
+    const {meses, claves, nombres} = mesesCal();
+    const guardados = nombres.map(calGuardado);
+    if(guardados.every(Boolean)) dibujar(guardados);
+    Promise.all(nombres.map(calMes)).then(rs => { if(JSON.stringify(rs) !== JSON.stringify(guardados)) dibujar(rs); });
+    function dibujar(rs){
+      if(!box.isConnected) return;
+      const sel = (box.querySelector('[data-calmes-tabs] .on') || {}).dataset;
       const dias = {};
       rs.forEach((r, i) => { if(!r) return;
         (r.clases || []).forEach(c => (dias[c.fecha] = dias[c.fecha] || []).push(Object.assign({mk: claves[i]}, c)));
@@ -557,17 +566,11 @@ body:has(.mc-hero--login) .ap-top{display:none}
       tabs.innerHTML = lista.length > 1 ? lista.map(k => `<button class='mc-calmes__tab' data-m='${k}'>${cap(MESES[k % 12])}</button>`).join('') : '';
       tabs.querySelectorAll('button').forEach(b => b.onclick = () => ver(+b.dataset.m));
       box.querySelector('.mc-h2').textContent = lista.length > 1 ? 'Calendario Academia' : 'Calendario de ' + MESES[lista[0] % 12];
-      ver(lista[0]); box.hidden = false;
-    });
+      ver(sel && lista.includes(+sel.m) ? +sel.m : lista[0]); box.hidden = false;
+    }
   }
-  // ---------- Encuesta de fin de mes y Calendario Storm ----------
+  // ---------- Calendario Storm ----------
   const MES3 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const ESTRELLAS = ['Mal','Regular','Bien','Muy bien','Increíble'];
-  function encuestaCard(e, i){
-    return `<div class='mc-card mc-enc' data-enc='${i}'><h3>¿Cómo lo pasó ${esc(e.alumno.split(' ')[0])} en ${esc(e.mes.split(' ')[0])}?</h3><p>Nos ayuda mucho a mejorar. Son 10 segundos.</p>
-      <div class='mc-stars'>${ESTRELLAS.map((t,n)=>`<button class='mc-star' data-n='${n+1}'><b>${n+1}</b>${t}</button>`).join('')}</div>
-      <div data-mas hidden><textarea placeholder='¿Algo que quieras contarnos? (opcional)' maxlength='1000'></textarea><button class='mc-go mc-go--sm' data-env>Enviar</button></div></div>`;
-  }
   const ical = s => String(s||'').replace(/[\\,;]/g, m => '\\' + m).replace(/\n/g, '\\n');
   function evFechas(e){
     const d = e.fecha.replace(/-/g,''), m = String(e.hora||'').match(/(\d{1,2})[:.](\d{2})/);
@@ -849,7 +852,6 @@ body:has(.mc-hero--login) .ap-top{display:none}
     }
     if((d.mensajes || []).length) h += mensajesCard(d.mensajes);
     h += informesCard('Anual');
-    (d.encuesta || []).forEach((e,i) => h += encuestaCard(e,i));
     if(activos.length){
       h += `<h2 class='mc-h2'>Tus surfistas</h2>` + activos.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('');
     }
@@ -879,16 +881,6 @@ body:has(.mc-hero--login) .ap-top{display:none}
     calendariosMes([].concat(...activos.map(a => (a.clases||[]).map(c => c.fecha))));
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
     app.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => agregarEvento(d.eventos[+b.dataset.ev]));
-    app.querySelectorAll('[data-enc]').forEach(card => {
-      const e = d.encuesta[+card.dataset.enc]; let nota = 0;
-      card.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { nota = +b.dataset.n; card.querySelectorAll('[data-n]').forEach(x => x.classList.toggle('on', +x.dataset.n <= nota)); card.querySelector('[data-mas]').hidden = false; });
-      card.querySelector('[data-env]').onclick = async (ev) => {
-        ev.target.disabled = true; ev.target.textContent = 'Enviando…';
-        try{ await call({accion:'encuesta', alumno:e.alumno, mes:e.mes, nota, comentario:card.querySelector('textarea').value.trim()});
-          card.innerHTML = `<h3>¡Gracias! 🌊</h3><p>Lo leemos todo el equipo Storm.</p>`; d.encuesta = d.encuesta.filter(x => x !== e); }
-        catch(x){ ev.target.disabled = false; ev.target.textContent = 'Enviar'; }
-      };
-    });
     app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ const o=document.getElementById('o-'+b.dataset.open); o.hidden=!o.hidden; b.textContent = o.hidden ? 'Mover' : 'Cerrar'; });
     app.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
       const id = b.dataset.pick, [ai,ci] = id.split('-').map(Number);
@@ -962,6 +954,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
   }
   async function load(){
     if(!auth) return login();
+    Object.keys(CALP).forEach(k => delete CALP[k]); mesesCal().nombres.forEach(calMes); // el calendario se pide junto con las clases
     const viejo = q.get('pago') ? null : leerDatos();
     const elegirVista = () => {
       let pref = ''; try{ pref = localStorage.getItem(VISTA) || ''; }catch(_){}
