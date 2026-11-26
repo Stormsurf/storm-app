@@ -1015,6 +1015,58 @@
         () => { if(c && antes){ Object.keys(c).forEach(k => delete c[k]); Object.assign(c, antes); } aMsg = ''; repintar(); });
     };
   }
+  // ---------- Autorización y exención de responsabilidad (la pide la Armada) ----------
+  // Vive en Cloudflare (/api/autorizacion): casilla aceptada al inscribirse en la web (planilla o Shopify) o firma con el dedo.
+  let AUT = (() => { try{ return JSON.parse(localStorage.getItem(KEY + '-aut') || 'null'); }catch(_){ return null; } })(), autAbierta = '', autLink = {};
+  const postAut = b => fetch('/api/autorizacion', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, auth, b))}).then(r => r.json()).then(d => { if(!d.ok) throw new Error(d.error || 'Error'); return d; });
+  async function cargarAut(){
+    try{ AUT = (await postAut({accion:'lista'})).autorizaciones || []; try{ localStorage.setItem(KEY + '-aut', JSON.stringify(AUT)); }catch(_){} }catch(_){ AUT = AUT || null; }
+    return AUT;
+  }
+  const lev = (a, b) => { if(Math.abs(a.length - b.length) > 2) return 9; let p = [...Array(b.length + 1).keys()]; for(let i = 1; i <= a.length; i++){ const c = [i]; for(let j = 1; j <= b.length; j++) c[j] = Math.min(p[j] + 1, c[j-1] + 1, p[j-1] + (a[i-1] === b[j-1] ? 0 : 1)); p = c; } return p[b.length]; };
+  // Mismo niño aunque el nombre venga escrito distinto ("Martin" / "Martín", "Diminga" / "Dominga", "Lucas" / "Lucas Undurraga").
+  const mismoNino = (x, y) => { const a = nk(x), b = nk(y); if(a === b) return true; const ta = a.split(' '), tb = b.split(' ');
+    if(ta[0] === tb[0] && Math.min(ta.length, tb.length) >= 2 && (ta.every(w => tb.includes(w)) || tb.every(w => ta.includes(w)))) return true;
+    return a.length >= 8 && lev(a, b) <= 2 && ta[ta.length-1].slice(0, 3) === tb[tb.length-1].slice(0, 3); };
+  // La más fuerte primero: firma con el dedo; si no, la casilla de la web más reciente.
+  const autDe = (acad, nombre) => !AUT ? undefined : AUT.filter(x => x.academia === acad && mismoNino(x.alumno, nombre)).sort((a, b) => (b.como === 'firma') - (a.como === 'firma') || (a.fecha < b.fecha ? 1 : -1))[0] || null;
+  const fechaAut = f => { const m = String(f).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + ' ' + ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][+m[2]-1] + ' ' + m[1] : f; };
+  function autBtn(acad, nombre){
+    const x = autDe(acad, nombre); if(x === undefined) return '';
+    return `<button class='pn-nt pn-aut${x ? ' pn-aut--ok' : ' pn-aut--no'}${autAbierta === acad + '|' + nombre ? ' on' : ''}' data-aut='${esc(acad + '|' + nombre)}'>${x ? '✓ Autorización' : '⚠︎ Falta autorización'}</button>`;
+  }
+  function autBox(acad, nombre){
+    if(autAbierta !== acad + '|' + nombre) return '';
+    const x = autDe(acad, nombre), l = autLink[acad + '|' + nombre];
+    if(x) return `<div class='pn-autbox pn-autbox--ok'><p><b>${esc(x.apoderado || 'Su apoderado/a')}</b> ${x.como === 'firma' ? 'firmó' : 'aceptó'} la autorización y exención de responsabilidad el <b>${esc(fechaAut(x.fecha))}</b>${x.como === 'firma' ? ', con su firma en la app.' : ', al inscribir' + (x.alumno && nk(x.alumno) !== nk(nombre) ? ' a ' + esc(x.alumno) : '') + ' y pagar en la web.'}</p>
+      ${x.rut ? `<small>RUT ${esc(x.rut)}${x.ref ? ' · ' + esc(x.ref) : ''}</small>` : x.ref ? `<small>${esc(x.ref)}</small>` : ''}
+      <a class='pn-autdoc' href='/autorizacion/?doc=${encodeURIComponent(x.id)}' target='_blank' rel='noopener'>Ver documento</a></div>`;
+    return `<div class='pn-autbox'><p>No tenemos la autorización firmada de su apoderado/a${acad === 'anual' ? ' (se inscribió por transferencia o a mano)' : ''}.</p>
+      ${ES_ADMIN ? (l ? `<p class='pn-sub'>Mándale este link a la familia para que la firme con el dedo:</p><div class='pn-autlink'>${esc(l)}</div>
+        <a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/?text=${encodeURIComponent('Hola 👋 Para que ' + nombre.split(' ')[0] + ' pueda entrar al mar en la ' + (acad === 'anual' ? 'Academia Anual' : 'Academia de Verano') + ', necesitamos que firmes la autorización y exención de responsabilidad. Toma 1 minuto: ' + l + '\n\nGracias, equipo Storm 🌊')}'>Mandar por WhatsApp</a><button class='pn-nt' data-autcp='${esc(acad + '|' + nombre)}'>Copiar link</button>`
+        : `<button class='pn-ntgo' data-autlk='${esc(acad + '|' + nombre)}'>Pedir la firma</button>`) : `<small>Avísale a Isidora para que se la pida.</small>`}</div>`;
+  }
+  // Resumen arriba (solo administradores): cuántos tienen la autorización y quiénes faltan.
+  function autResumen(acad, nombres){
+    if(!ES_ADMIN || !AUT || !nombres.length) return '';
+    const faltan = nombres.filter(n => !autDe(acad, n));
+    return `<div class='pn-card pn-autres${faltan.length ? '' : ' pn-autres--ok'}'><h3>Autorizaciones firmadas<span class='pn-count'>${nombres.length - faltan.length} de ${nombres.length}</span></h3>
+      <p class='pn-sub'>${faltan.length ? `Faltan: ${faltan.map(n => `<button class='pn-autfalta' data-aut='${esc(acad + '|' + n)}'>${esc(n)}</button>`).join(' ')}` : 'Todos los alumnos tienen la autorización y exención de responsabilidad aceptada por su apoderado/a. 👌'}</p></div>`;
+  }
+  function bindAut(root, repintar){
+    root.querySelectorAll('[data-aut]').forEach(b => b.onclick = () => {
+      const k = b.dataset.aut; autAbierta = autAbierta === k ? '' : k; repintar();
+      const row = [...root.querySelectorAll('[data-autrow]')].find(x => x.dataset.autrow === k); if(row && b.classList.contains('pn-autfalta')) row.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+    root.querySelectorAll('[data-autlk]').forEach(b => b.onclick = async () => {
+      const [academia, ...r] = b.dataset.autlk.split('|'), alumno = r.join('|');
+      b.disabled = true; b.textContent = 'Un momento…';
+      try{ autLink[b.dataset.autlk] = (await postAut({accion:'link', academia, alumno})).link; repintar(); }
+      catch(x){ b.disabled = false; b.textContent = 'Pedir la firma · ' + x.message; }
+    });
+    root.querySelectorAll('[data-autcp]').forEach(b => b.onclick = () => { const l = autLink[b.dataset.autcp];
+      (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { b.textContent = 'Copiado ✓'; }).catch(() => prompt('Copia el link:', l)); });
+  }
   async function abrirAlumno(nombre, que){
     await cargarNotas(); aGrupo = ''; aMsg = '';
     if(que === 'nivel'){ aCambio = nombre; aNuevo = ''; } else if(que === 'clases'){ clAbierta = nombre; clMover = ''; clHacia = ''; } else { ntAbierta = nombre; }
@@ -1055,11 +1107,11 @@
     const al = (NOTAS.alumnos || []).filter(a => !soloSkate.has(nn(a.nombre)) && (!delMes || !delMes.size || delMes.has(nn(a.nombre)))).sort((a,b) => primeroMio()(a.grupo, b.grupo) || a.nombre.localeCompare(b.nombre));
     const grupos = [...new Set(al.map(a => a.grupo || 'Sin grupo'))];
     const lista = aGrupo ? al.filter(a => (a.grupo || 'Sin grupo') === aGrupo) : al;
-    pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + informesHTML() + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
+    pane.innerHTML = (aMsg ? `<div class='pn-ok'>${esc(aMsg)}</div>` : '') + informesHTML() + autResumen('anual', al.map(a => a.nombre)) + (NOTAS.error ? `<div class='pn-msg'>${esc(NOTAS.error)}${/desconocida/i.test(NOTAS.error) ? ' (falta pegar el programa nuevo de la planilla Anual)' : ''}</div>` : '') +
       `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
       <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}${aGrupo && mio(aGrupo) ? `<span class='pn-tu'>Tu grupo</span>` : ''}<span class='pn-count'>${lista.length}</span></h3>${aGrupo && ACARGO[aGrupo] ? `<p class='pn-sub' style='margin-bottom:4px'>A cargo: ${esc(ACARGO[aGrupo])}</p>` : ''}
       <p class='pn-sub'>${ES_ADMIN ? 'Mira cuántas clases le quedan a cada alumno y muévelas si te avisan. ' : ''}Anota cómo va cada alumno en 📝 Notas: son solo para el equipo, la familia no las ve.</p>
-      ${lista.map(a => `<div class='pn-al' data-alumno='${esc(a.nombre)}'><div><b class='pn-alb'>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small>${quedanTxt(a.nombre)}</div><div>${notaBtn(a.nombre)}${claseBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${claseBox(a.nombre)}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
+      ${lista.map(a => `<div class='pn-al' data-alumno='${esc(a.nombre)}' data-autrow='anual|${esc(a.nombre)}'><div><b class='pn-alb' data-aut='anual|${esc(a.nombre)}'>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small>${quedanTxt(a.nombre)}</div><div>${autBtn('anual', a.nombre)}${notaBtn(a.nombre)}${claseBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${autBox('anual', a.nombre)}${claseBox(a.nombre)}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
     pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
     bindInformes(pane);
     pane.querySelectorAll('[data-acn]').forEach(b => b.onclick = () => { aCambio = b.dataset.acn; aNuevo = ''; aMsg = ''; pintarAlumnos(); });
@@ -1079,6 +1131,8 @@
     };
     bindNotas(pane, pintarAlumnos);
     bindClases(pane, pintarAlumnos);
+    bindAut(pane, pintarAlumnos);
+    if(!pintarAlumnos.aut){ pintarAlumnos.aut = 1; cargarAut().then(() => { if(!escribiendo(pane)) pintarAlumnos(); }); }
   }
 
   // ---------- Academia de Verano ----------
@@ -1275,23 +1329,23 @@
       <div class='pn-stat pn-stat--sun'><small>Niños inscritos</small><b>${v.total}</b><em>${v.tablas} con tabla · ${v.trajes} con traje</em></div>
       ${admin ? `<div class='pn-stat'><small>Recaudado</small><b>${clp(v.recaudado)}</b><em>antes de comisión</em></div>` : ''}
       <div class='pn-stat'><small>Federados</small><b>${fed ? fed.n : 0}</b><em>solo enero</em></div>
-    </div>
+    </div>${autResumen('verano', [...new Set(enSem.map(a => a.nombre))])}
     <div class='pn-days'><button class='pn-day${vSem==='todas'?' on':''}' data-vs='todas'><b>Todas</b><i>${v.total} niños</i></button>${v.semanas.map(s =>
       `<button class='pn-day${vSem===s.id?' on':''}' data-vs='${s.id}'><b>${esc(s.nombre)}</b><small>${esc(s.fechas)}</small><i>${s.n}${s.cupo ? ' de '+s.cupo : ''} niño${s.n===1?'':'s'}</i></button>`).join('')}</div>
     <div class='pn-gsel'><button class='pn-gbtn${vNiv?'':' on'}' data-vn=''>Todos<small>${enSem.length}</small></button>${vOrden.map(n => { const c = enSem.filter(a => a.nivel === n).length;
       return c ? `<button class='pn-gbtn${vNiv===n?' on':''}' data-vn='${esc(n)}'>${mio(n, vMios)?'★ ':''}${esc(n)}<small>${c}</small></button>` : ''; }).join('')}</div>
     <div class='pn-card'><h3>${vNiv ? esc(vNiv)+' · ' : ''}${sem ? esc(sem.nombre)+' · '+esc(sem.fechas) : 'Todo el verano'}<span class='pn-count'>${lista.length}</span></h3>
       ${lista.length ? vOrden.map(n => { const g = lista.filter(a => a.nivel === n); if(!g.length) return '';
-        return `<div class='pn-grp'>${grpHead(n, g.length, v.aCargo, vMios)}${g.map(a => `<div class='pn-vk'><div><b>${esc(a.nombre)}</b>
+        return `<div class='pn-grp'>${grpHead(n, g.length, v.aCargo, vMios)}${g.map(a => `<div class='pn-vk' data-autrow='verano|${esc(a.nombre)}'><div><b class='pn-alb' data-aut='verano|${esc(a.nombre)}'>${esc(a.nombre)}</b>
           <small>${duracion(a)}${esc(a.edad)}${a.tabla?" <span class='pn-tag'>tabla</span>":''}${a.traje?" <span class='pn-tag'>traje</span>":''}${vSem==='todas'?' · '+[['Enero',MES_SEM.ene],['Febrero',MES_SEM.feb]].map(([m,ids]) => { const w = ids.filter(x => a.semanas.includes(x)); return w.length ? m+': '+(w.length===4?'mes completo':w.map(x=>x.replace('s','S')).join(' ')) : ''; }).filter(Boolean).join(' · '):''}${admin?' · '+esc(a.apoderado):''}</small>
           ${a.salud ? `<span class='pn-salud'>⚠︎ ${esc(a.salud)}</span>` : ''}
           ${a.emergencia ? `<small>Emergencia: ${esc(a.emergencia)} ${esc(a.emergenciaTel)}</small>` : ''}
-          ${notaBtn(a.nombre)}${admin && a.nivel !== 'Federados' && vCambio !== a.nombre ? `<button class='pn-nv' data-cn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>
+          ${autBtn('verano', a.nombre)}${notaBtn(a.nombre)}${admin && a.nivel !== 'Federados' && vCambio !== a.nombre ? `<button class='pn-nv' data-cn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>
           ${admin && wa(a.telefono) ? `<a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/${wa(a.telefono)}'>WhatsApp</a>` : ''}
           ${vCambio === a.nombre ? `<div class='pn-nvbox'><p>¿A qué nivel pasa <b>${esc(a.nombre.split(' ')[0])}</b>? Hoy está en ${esc(a.nivel)}.</p>
             <div class='pn-nvops'>${NIV.filter(x => x !== 'Federados').map(x => `<button data-nv='${x}' class='${x===a.nivel?'act':''}${x===vNuevo?' on':''}'${x===a.nivel?' disabled':''}>${x}</button>`).join('')}</div>
             <label><input type='checkbox' id='pn-nvav' checked> Avisar a la familia en la app</label>
-            <button class='pn-nvgo' id='pn-nvgo'${vNuevo?'':' disabled'}>Guardar</button><button class='pn-link' id='pn-nvx'>Cancelar</button></div>` : ''}${notaBox(a.nombre, 'Verano')}</div>`).join('')}</div>`; }).join('')
+            <button class='pn-nvgo' id='pn-nvgo'${vNuevo?'':' disabled'}>Guardar</button><button class='pn-link' id='pn-nvx'>Cancelar</button></div>` : ''}${autBox('verano', a.nombre)}${notaBox(a.nombre, 'Verano')}</div>`).join('')}</div>`; }).join('')
         : `<p class='pn-empty'>${vNiv ? 'No hay niños de '+esc(vNiv)+' esta semana.' : 'Todavía no hay niños inscritos esta semana.'}</p>`}
     </div>`;
     if(admin){
@@ -1305,6 +1359,8 @@
     pane.querySelectorAll('[data-vs]').forEach(b => b.onclick = () => { vSem = b.dataset.vs; pintarVerano(pane); });
     pane.querySelectorAll('[data-vn]').forEach(b => b.onclick = () => { vNiv = b.dataset.vn; pintarVerano(pane); });
     bindNotas(pane, () => pintarVerano(pane));
+    bindAut(pane, () => pintarVerano(pane));
+    if(!pintarVerano.aut){ pintarVerano.aut = 1; cargarAut().then(() => { if(!escribiendo(pane)) pintarVerano(pane); }); }
     pane.querySelectorAll('[data-cn]').forEach(b => b.onclick = () => { vCambio = b.dataset.cn; vNuevo = ''; vMsg = ''; pintarVerano(pane); });
     pane.querySelectorAll('[data-nv]').forEach(b => b.onclick = () => { vNuevo = b.dataset.nv; const av = pane.querySelector('#pn-nvav').checked; pintarVerano(pane); pane.querySelector('#pn-nvav').checked = av; });
     const nx = pane.querySelector('#pn-nvx'); if(nx) nx.onclick = () => { vCambio = ''; vNuevo = ''; pintarVerano(pane); };
