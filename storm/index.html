@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/app.css?v=2">
-<link rel="stylesheet" href="/panel/panel.css?v=14">
+<link rel="stylesheet" href="/panel/panel.css?v=16">
 <script>window.STORM_SHELL = true;</script>
 <script src="/agenda/escuela.js?v=33"></script>
 <style>
@@ -223,7 +223,7 @@ main .pn{max-width:1440px}
 <section class='storm-section color-scheme-1 gradient'>
   <div class='storm-wrap pn'><div id='st'><div class='pn-skel'></div><div class='pn-skel'></div></div></div>
 </section>
-<script src="/panel/panel.js?v=32"></script>
+<script src="/panel/panel.js?v=34"></script>
 <script src="/storm/rentas-notas.js?v=13"></script>
 <script>
 (()=>{
@@ -387,6 +387,7 @@ main .pn{max-width:1440px}
     const w = document.createElement('div'); w.className = 'sp-mas';
     w.innerHTML = `<div>${esAdmin() ? `<button data-ira='notas'>${I.nota}<span>Notas<small>Avisos para el equipo</small></span></button>` : ''}<button data-fuera>${sv("<path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4'/>")}<span>Salir<small>${esc(auth.email)}</small></span></button></div>`;
     document.body.appendChild(w);
+    const fa = w.querySelector('.sp-faut'); if(fa && StormPanel.autFicha) StormPanel.autFicha(fa, x.n);
     w.onclick = e => { const b = e.target.closest('button'); if(e.target === w || b) w.remove(); if(b && b.dataset.fuera !== undefined) salir(); if(b && b.dataset.ira) ir(b.dataset.ira); };
   }
   function ir(a){
@@ -601,12 +602,15 @@ main .pn{max-width:1440px}
     w.innerHTML = `<div><button class='sp-fx' aria-label='Cerrar'>✕</button>
       <div class='sp-fh'><span class='sp-av' style='background:${COL[k % COL.length]}'>${esc(x.n.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span><div><h2>${esc(x.n)}</h2><p>${[mismas.length ? 'Particulares' : '', anual.length ? 'Academia Anual' : ''].filter(Boolean).join(' · ') || esc(x.tipo)}</p></div></div>
       ${wa(tel) ? `<div class='sp-fc'><a class='w' href='https://wa.me/${wa(tel)}' target='_blank' rel='noopener'>${WA}<span>WhatsApp</span></a><a href='tel:+${wa(tel)}'>${I.tel}<span>Llamar</span></a></div>` : ''}
+      ${anual.length && !anual[0].hijos ? `<div class='sp-faut'></div>` : ''}
       ${anual.map(a => `<p class='sp-h3'>Academia Anual</p><div class='sp-fb anual'>${a.hijos ? `<div><small>Apoderado de</small><b>${a.hijos.map(esc).join(', ')}</b></div>` : ''}${a.grupo ? `<div><small>Grupo</small><b>${esc(a.grupo)}</b></div>` : ''}${a.plan ? `<div><small>Plan</small><b>${esc(a.plan)}</b></div>` : ''}${a.dias && a.dias.length ? `<div><small>Viene</small><b>${esc(a.dias.join(' y '))}</b></div>` : ''}${a.qd != null && !a.hijos ? `<div><small>Le quedan</small><b>${a.qd} clase${a.qd === 1 ? '' : 's'}</b></div>` : ''}${a.pago ? `<div><small>Este mes</small><b class='${a.debe ? 'pend' : 'ok'}'>${a.debe ? '● ' : '✓ '}${esc(a.pago)}</b></div>` : ''}</div>
       ${a.hijos ? '' : `<div class='sp-fc' style='margin-top:8px'>${adm ? `<a href='#' data-alu='nivel'>${I.anual}<span>Cambiar nivel</span></a>` : ''}<a href='#' data-alu='notas'>${I.ficha}<span>Notas${a.nt ? ' (' + a.nt + ')' : ''}</span></a>${a.qd != null ? `<a href='#' data-alu='clases'>${I.anual}<span>${adm ? 'Ver y mover clases' : 'Ver clases'}</span></a>` : ''}</div>`}
       <button class='sp-fgo' data-fgo='anual:${a.debe ? 'pagos' : 'alumnos'}'>Ver en Academia Anual ›</button>`).join('')}
+
       ${mismas.length ? `<p class='sp-h3'>Clases particulares · ${mismas.length}</p>` + mismas.slice().sort((a, b) => a.fecha < b.fecha ? 1 : -1).map(r => { const [c, t] = est(r); return `<div class='sp-fr ${c}'><b>${r.fecha.split('-').reverse().join('/')} · ${esc(r.hora)}</b><span>${r.personas} persona${r.personas === 1 ? '' : 's'} · ${r.instructores.map(esc).join(' y ')}${adm && r.total ? ' · ' + clpS(r.total) : ''}</span><em>${t}</em></div>`; }).join('') + `<button class='sp-fgo' data-fgo='particulares:reservas'>Ver en Particulares ›</button>` : ''}
     </div>`;
     document.body.appendChild(w);
+    const fa = w.querySelector('.sp-faut'); if(fa && StormPanel.autFicha) StormPanel.autFicha(fa, x.n);
     w.onclick = e => {
       if(e.target === w || e.target.closest('.sp-fx')) return w.remove();
       const al = e.target.closest('[data-alu]'); if(al){ e.preventDefault(); w.remove(); ir('anual'); return StormPanel.alumno(x.n, al.dataset.alu); }

@@ -155,7 +155,7 @@
   }
   function msgBtns(c, i){
     const t = mensajeGrupo(c);
-    return `<div class='pn-msgs'><a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/?text=${encodeURIComponent(t)}'>Mensaje para el grupo</a><button class='pn-link' data-copy='${i}'>Copiar</button></div>`;
+    return `<div class='pn-msgs'><a class='pn-autwa' target='_blank' rel='noopener' href='https://wa.me/?text=${encodeURIComponent(t)}'>Mensaje para el grupo</a><button class='pn-link' data-copy='${i}'>Copiar</button></div>`;
   }
 
   function claseCard(c){
@@ -1035,19 +1035,20 @@
     const x = autDe(acad, nombre); if(x === undefined) return '';
     return `<button class='pn-nt pn-aut${x ? ' pn-aut--ok' : ' pn-aut--no'}${autAbierta === acad + '|' + nombre ? ' on' : ''}' data-aut='${esc(acad + '|' + nombre)}'>${x ? '✓ Autorización' : '⚠︎ Falta autorización'}</button>`;
   }
-  function autBox(acad, nombre){
-    if(autAbierta !== acad + '|' + nombre) return '';
+  function autBox(acad, nombre, abierta){
+    if(!abierta && autAbierta !== acad + '|' + nombre) return '';
     const x = autDe(acad, nombre), l = autLink[acad + '|' + nombre];
     if(x) return `<div class='pn-autbox pn-autbox--ok'><p><b>${esc(x.apoderado || 'Su apoderado/a')}</b> ${x.como === 'firma' ? 'firmó' : 'aceptó'} la autorización y exención de responsabilidad el <b>${esc(fechaAut(x.fecha))}</b>${x.como === 'firma' ? ', con su firma en la app.' : ', al inscribir' + (x.alumno && nk(x.alumno) !== nk(nombre) ? ' a ' + esc(x.alumno) : '') + ' y pagar en la web.'}</p>
       ${x.rut ? `<small>RUT ${esc(x.rut)}${x.ref ? ' · ' + esc(x.ref) : ''}</small>` : x.ref ? `<small>${esc(x.ref)}</small>` : ''}
       <a class='pn-autdoc' href='/autorizacion/?doc=${encodeURIComponent(x.id)}' target='_blank' rel='noopener'>Ver documento</a></div>`;
     return `<div class='pn-autbox'><p>No tenemos la autorización firmada de su apoderado/a${acad === 'anual' ? ' (se inscribió por transferencia o a mano)' : ''}.</p>
       ${ES_ADMIN ? (l ? `<p class='pn-sub'>Mándale este link a la familia para que la firme con el dedo:</p><div class='pn-autlink'>${esc(l)}</div>
-        <a class='pn-wa' target='_blank' rel='noopener' href='https://wa.me/?text=${encodeURIComponent('Hola 👋 Para que ' + nombre.split(' ')[0] + ' pueda entrar al mar en la ' + (acad === 'anual' ? 'Academia Anual' : 'Academia de Verano') + ', necesitamos que firmes la autorización y exención de responsabilidad. Toma 1 minuto: ' + l + '\n\nGracias, equipo Storm 🌊')}'>Mandar por WhatsApp</a><button class='pn-nt' data-autcp='${esc(acad + '|' + nombre)}'>Copiar link</button>`
-        : `<button class='pn-ntgo' data-autlk='${esc(acad + '|' + nombre)}'>Pedir la firma</button>`) : `<small>Avísale a Isidora para que se la pida.</small>`}</div>`;
+        <a class='pn-autwa' target='_blank' rel='noopener' href='https://wa.me/?text=${encodeURIComponent('Hola 👋 Para que ' + nombre.split(' ')[0] + ' pueda entrar al mar en la ' + (acad === 'anual' ? 'Academia Anual' : 'Academia de Verano') + ', necesitamos que firmes la autorización y exención de responsabilidad. Toma 1 minuto: ' + l + '\n\nGracias, equipo Storm 🌊')}'>Mandar por WhatsApp</a><button class='pn-autbtn' data-autcp='${esc(acad + '|' + nombre)}'>Copiar link</button>`
+        : `<button class='pn-autbtn pn-autbtn--go' data-autlk='${esc(acad + '|' + nombre)}'>Pedir la firma</button>`) : `<small>Avísale a Isidora para que se la pida.</small>`}</div>`;
   }
   // Resumen arriba (solo administradores): cuántos tienen la autorización y quiénes faltan.
   function autResumen(acad, nombres){
+    nombres = nombres.filter(n => !/prueba/i.test(n));
     if(!ES_ADMIN || !AUT || !nombres.length) return '';
     const faltan = nombres.filter(n => !autDe(acad, n));
     return `<div class='pn-card pn-autres${faltan.length ? '' : ' pn-autres--ok'}'><h3>Autorizaciones firmadas<span class='pn-count'>${nombres.length - faltan.length} de ${nombres.length}</span></h3>
@@ -1067,9 +1068,21 @@
     root.querySelectorAll('[data-autcp]').forEach(b => b.onclick = () => { const l = autLink[b.dataset.autcp];
       (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { b.textContent = 'Copiado ✓'; }).catch(() => prompt('Copia el link:', l)); });
   }
+  // Ficha del alumno en la plataforma Storm (tocar al alumno): la autorización de cada academia donde está.
+  async function autFicha(el, nombre){
+    if(!AUT) await cargarAut(); else cargarAut().then(() => pintar());
+    const ver = VER || cacheLeer('verano');
+    function pintar(){
+      if(!el.isConnected) return;
+      const en = a => autDe(a, nombre) || (a === 'anual' ? (NOTAS && NOTAS.alumnos || []).some(x => mismoNino(x.nombre, nombre)) : ((ver && ver.alumnos) || []).some(x => mismoNino(x.nombre, nombre)));
+      el.innerHTML = AUT ? ['anual', 'verano'].filter(en).map(a => `<p class='sp-h3'>Autorización · ${a === 'anual' ? 'Academia Anual' : 'Academia de Verano'}</p>${autBox(a, nombre, true)}`).join('') : '';
+      bindAut(el, pintar);
+    }
+    pintar();
+  }
   async function abrirAlumno(nombre, que){
     await cargarNotas(); aGrupo = ''; aMsg = '';
-    if(que === 'nivel'){ aCambio = nombre; aNuevo = ''; } else if(que === 'clases'){ clAbierta = nombre; clMover = ''; clHacia = ''; } else { ntAbierta = nombre; }
+    if(que === 'aut'){ autAbierta = 'anual|' + nombre; } else if(que === 'nivel'){ aCambio = nombre; aNuevo = ''; } else if(que === 'clases'){ clAbierta = nombre; clMover = ''; clHacia = ''; } else { ntAbierta = nombre; }
     pintarAlumnos();
     const row = [...app.querySelectorAll('[data-alumno]')].find(x => x.dataset.alumno === nombre); if(row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
@@ -1111,7 +1124,7 @@
       `<div class='pn-gsel'><button class='pn-gbtn${aGrupo?'':' on'}' data-ag=''>Todos<small>${al.length}</small></button>${grupos.map(g => `<button class='pn-gbtn${aGrupo===g?' on':''}' data-ag='${esc(g)}'>${esc(g)}<small>${al.filter(a => (a.grupo||'Sin grupo') === g).length}</small></button>`).join('')}</div>
       <div class='pn-card'><h3>Alumnos${aGrupo ? ' · ' + esc(aGrupo) : ''}${aGrupo && mio(aGrupo) ? `<span class='pn-tu'>Tu grupo</span>` : ''}<span class='pn-count'>${lista.length}</span></h3>${aGrupo && ACARGO[aGrupo] ? `<p class='pn-sub' style='margin-bottom:4px'>A cargo: ${esc(ACARGO[aGrupo])}</p>` : ''}
       <p class='pn-sub'>${ES_ADMIN ? 'Mira cuántas clases le quedan a cada alumno y muévelas si te avisan. ' : ''}Anota cómo va cada alumno en 📝 Notas: son solo para el equipo, la familia no las ve.</p>
-      ${lista.map(a => `<div class='pn-al' data-alumno='${esc(a.nombre)}' data-autrow='anual|${esc(a.nombre)}'><div><b class='pn-alb' data-aut='anual|${esc(a.nombre)}'>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small>${quedanTxt(a.nombre)}</div><div>${autBtn('anual', a.nombre)}${notaBtn(a.nombre)}${claseBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${autBox('anual', a.nombre)}${claseBox(a.nombre)}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
+      ${lista.map(a => `<div class='pn-al' data-alumno='${esc(a.nombre)}' data-autrow='anual|${esc(a.nombre)}'><div><b class='pn-alb'>${esc(a.nombre)}</b><small style='display:block;opacity:.65;font-size:1.2rem'>${esc(a.grupo || 'Sin grupo')}</small>${quedanTxt(a.nombre)}</div><div>${autBtn('anual', a.nombre)}${notaBtn(a.nombre)}${claseBtn(a.nombre)}${ES_ADMIN && aCambio !== a.nombre ? `<button class='pn-nv' data-acn='${esc(a.nombre)}'>Cambiar nivel</button>` : ''}</div>${aCambio === a.nombre ? nivelBox(a.nombre, a.grupo, ORDEN.slice(0,5), aNuevo, 'a') : ''}${autBox('anual', a.nombre)}${claseBox(a.nombre)}${notaBox(a.nombre, 'Anual')}</div>`).join('') || `<p class='pn-empty'>No hay alumnos este mes.</p>`}</div>`;
     pane.querySelectorAll('[data-ag]').forEach(b => b.onclick = () => { aGrupo = b.dataset.ag; pintarAlumnos(); });
     bindInformes(pane);
     pane.querySelectorAll('[data-acn]').forEach(b => b.onclick = () => { aCambio = b.dataset.acn; aNuevo = ''; aMsg = ''; pintarAlumnos(); });
@@ -1601,6 +1614,7 @@
       ir(x){ acad = x; try{ sessionStorage.setItem(KEY + '-acad', x); }catch(_){} if(app && app.querySelector('.pn-sw')) mostrarAcad(); },
       tab(t){ tab = t; const b = app && app.querySelector(`.pn-tab[data-tab='${t}']`); if(b) b.click(); },
       alumnos: () => NOTAS,
+      autFicha, // ficha del alumno: autorización y exención de responsabilidad
       async alumno(nombre, que){
         tab = 'alumnos'; const b = app && app.querySelector(".pn-tab[data-tab='alumnos']"); if(b) b.click();
         await abrirAlumno(nombre, que);
