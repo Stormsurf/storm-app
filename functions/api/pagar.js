@@ -37,10 +37,10 @@ const WEBPAY_PROD = 'https://webpay3g.transbank.cl', WEBPAY_INT = 'https://webpa
 const WEBPAY_INT_CODIGO = '597055555532', WEBPAY_INT_LLAVE = '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C'; // datos públicos de prueba de Transbank
 const REF_OK = /^(AA|AD|AV|ES|LK|PRUEBA)-[\w-]+$/; // LK- = link de pago de la Tienda (productos, rentas y clases) // PRUEBA- solo en la vista previa
 
-// Transferencia (Isidora 24-11): Anual, Adultos y Verano se pagan SOLO por transferencia hasta el 30-11 (hora Chile).
+// Transferencia (Isidora 24-11): Anual, Adultos y Verano se pagaron SOLO por transferencia hasta el 25-11 (hora Chile).
 // La familia ve los datos del banco y sube el comprobante; al subirlo el pago queda anotado. Desde el 1-12 vuelve Webpay solo.
 const BANCO = { titular: 'Storm SpA', rut: '77.957.792-9', banco: 'Banco de Chile - Edwards', tipo: 'Cuenta Vista', numero: '1367824213', correo: 'contacto@stormsurf.cl' };
-const TRANSFERENCIA_HASTA = '2026-11-30';
+const TRANSFERENCIA_HASTA = '2026-11-25'; // Isidora 26-11: Webpay desde hoy (antes era hasta el 30-11)
 const hoyChile = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const soloTransferencia = ref => /^(AA|AD|AV)-/.test(String(ref || '')) && hoyChile() <= TRANSFERENCIA_HASTA;
 const MAX_COMPROBANTE = 4 * 1024 * 1024; // base64 (~3 MB de archivo); las fotos se achican en el celular antes de subir
