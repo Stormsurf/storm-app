@@ -295,6 +295,17 @@ button.pn-chip{border:0;font:inherit;font-size:1.35rem;color:inherit;cursor:poin
 .pn-tuub{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
 .pn-tuub .pn-gbtn{width:100%;min-width:0;padding:9px 6px;white-space:normal}
 @media (min-width:700px){.pn-tuub{grid-template-columns:repeat(4,1fr)}}
+.pn-tuudet{margin-top:6px;font-size:1.25rem}
+.pn-tuudet summary,.pn-tuurevs summary{cursor:pointer;color:var(--aa);font-weight:500}
+.pn-tuud{margin-top:8px}
+.pn-tuud>small{display:block;opacity:.65;margin-bottom:2px}
+.pn-tuud>div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid rgba(0,0,0,.06)}
+.pn-tuud>div span{min-width:0;overflow-wrap:anywhere}
+.pn-tuud>div b{flex:none;font-weight:600}
+.pn-tuurevf{margin-top:8px}
+.pn-tuurevf input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;font-size:1.5rem;background:#fff}
+.pn-tuurevs{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:1.25rem}
+.pn-tuurevs small{opacity:.6}
 .pn-tuuc .pn-count.pn-tuuok{background:var(--ok-soft);color:var(--ok)}
 .pn-tuuc .pn-count.pn-tuuwarn{background:var(--warn-soft);color:var(--warn)}
 .pn-tuuc .pn-tuuokl b{color:var(--ok)}
