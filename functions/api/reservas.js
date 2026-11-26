@@ -1354,35 +1354,80 @@ async function ventasPanel(env, mes) {
   ['comRentas', 'comTienda', 'comClasesPOS'].forEach(k => o[k] = Math.round(o[k]));
   return o;
 }
-/** Lo cobrado según el Panel (desde PANEL_DESDE), por día de cobro y forma de pago: clases (día en que se anotaron), diferencias, packs, rentas y tienda. */
+/** Lo cobrado según el Panel (desde PANEL_DESDE), por día de cobro y forma de pago: clases (día en que se anotaron), diferencias, packs, rentas y tienda.
+ *  Cada día trae también "pos": qué se anotó con POS (para que Isidora vea el detalle cuando no cuadra). */
 async function cobrosPanel(db, desde, hasta) {
   await rnTablas(db); await packTabla(db);
   const dias = {}, en = f => f && f >= desde && f <= hasta && f >= PANEL_DESDE;
-  const sum = (f, medio, m) => { if (!en(f) || !m) return; const k = medio === 'POS' ? 'tarjeta' : medio === 'Efectivo' ? 'efectivo' : medio === 'Transferencia' ? 'transferencia' : ''; if (!k) return; const x = dias[f] = dias[f] || { tarjeta: 0, efectivo: 0, transferencia: 0 }; x[k] += m; };
+  const sum = (f, medio, m, que) => { if (!en(f) || !m) return; const k = medio === 'POS' ? 'tarjeta' : medio === 'Efectivo' ? 'efectivo' : medio === 'Transferencia' ? 'transferencia' : ''; if (!k) return; const x = dias[f] = dias[f] || { tarjeta: 0, efectivo: 0, transferencia: 0, pos: [] }; x[k] += m; if (k === 'tarjeta') x.pos.push({ que, monto: m }); };
   (await db.prepare("SELECT * FROM reservas WHERE estado = 'pagada' AND substr(creada,1,10) >= ?").bind(PANEL_DESDE).all()).results.forEach(r => {
-    const sl = saldosDe(r); sum(String(r.creada || '').slice(0, 10), r.medio, (r.total || 0) - sl.reduce((t, x) => t + (x.monto || 0), 0));
-    sl.forEach(x => sum(x.pagado, x.medio, x.monto || 0));
+    const sl = saldosDe(r), cl = 'Clase ' + (r.nombre || '') + ' (' + String(r.fecha || '').slice(8) + '/' + String(r.fecha || '').slice(5, 7) + ')';
+    sum(String(r.creada || '').slice(0, 10), r.medio, (r.total || 0) - sl.reduce((t, x) => t + (x.monto || 0), 0), cl);
+    sl.forEach(x => sum(x.pagado, x.medio, x.monto || 0, cl + ' · diferencia'));
   });
-  (await db.prepare("SELECT fecha_pago, total, medio FROM packs WHERE estado = 'activo'").all()).results.forEach(k => sum(k.fecha_pago, k.medio, k.total || 0));
-  (await db.prepare("SELECT fecha, monto, pago FROM rentas WHERE estado = 'activa' AND fecha >= ?").bind(desde).all()).results.forEach(x => sum(x.fecha, x.pago, x.monto || 0));
-  (await db.prepare("SELECT fecha, monto, pago FROM ventas WHERE estado = 'activa' AND fecha >= ?").bind(desde).all()).results.forEach(x => sum(x.fecha, x.pago, x.monto || 0));
+  (await db.prepare("SELECT fecha_pago, total, medio, nombre FROM packs WHERE estado = 'activo'").all()).results.forEach(k => sum(k.fecha_pago, k.medio, k.total || 0, 'Pack ' + (k.nombre || '')));
+  (await db.prepare("SELECT fecha, monto, pago, nombre FROM rentas WHERE estado = 'activa' AND fecha >= ?").bind(desde).all()).results.forEach(x => sum(x.fecha, x.pago, x.monto || 0, 'Renta ' + (x.nombre || '')));
+  (await db.prepare("SELECT fecha, monto, pago, detalle FROM ventas WHERE estado = 'activa' AND fecha >= ?").bind(desde).all()).results.forEach(x => sum(x.fecha, x.pago, x.monto || 0, x.detalle || 'Tienda'));
   return dias;
 }
-/** Lo pasado con tarjeta en la máquina Tuu, por día. */
-async function tuuTarjetaDias(db, desde, hasta) {
+/** Lo pasado con tarjeta en la máquina Tuu, por día (det: además la lista de cada venta). */
+async function tuuTarjetaDias(db, desde, hasta, det) {
   await tuuTablas(db); const dias = {};
-  (await db.prepare("SELECT fecha, monto, tipo, estado, categoria FROM tuu_ventas WHERE fecha >= ? AND fecha <= ?").bind(desde, hasta).all()).results
-    .filter(v => v.categoria !== 'anulada' && !tuuEfectivo(v.tipo) && !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado)).forEach(v => dias[v.fecha] = (dias[v.fecha] || 0) + v.monto);
+  (await db.prepare("SELECT fecha, hora, monto, tipo, estado, categoria, items FROM tuu_ventas WHERE fecha >= ? AND fecha <= ? ORDER BY hora").bind(desde, hasta).all()).results
+    .filter(v => v.categoria !== 'anulada' && !tuuEfectivo(v.tipo) && !/cancel|rechaz|reject|fail|anul|revers|refund|devol/i.test(v.estado)).forEach(v => {
+      dias[v.fecha] = (dias[v.fecha] || 0) + v.monto;
+      if (det) { let it = []; try { it = JSON.parse(v.items || '[]'); } catch (_) {} const nom = it.map(i => String(i.nombre || '').replace(/[\u0000-\u001f]/g, '').trim()).filter(n => n && !/^nombre [ií]tem/i.test(n));
+        (det[v.fecha] = det[v.fecha] || []).push({ hora: v.hora, monto: v.monto, que: nom.join(' + ') || (it.length > 1 ? it.map(i => '$' + Number(i.precio || 0).toLocaleString('es-CL')).join(' + ') : 'Sin nombre') }); }
+    });
   return dias;
 }
-/** Control simple del mes (desde PANEL_DESDE): tarjeta en la máquina Tuu vs tarjeta anotada en el Panel, día por día, y los cierres de caja. */
+/** Control simple del mes (desde PANEL_DESDE): tarjeta en la máquina Tuu vs tarjeta anotada en el Panel, día por día, y los cierres de caja.
+ *  Isidora (26-11): cada día que no cuadra lo puede dar por revisado (con nota) o unir con otro día (misma venta anotada otro día).
+ *  Queda revisado mientras la diferencia siga igual; si cambia, vuelve a aparecer. */
 async function tuuControl(env, mes) {
-  const db = env.DB, hoy = ahoraChile().fecha, desde = mes + '-01', hasta = mes + '-31' < hoy ? mes + '-31' : hoy;
-  const [p, t] = await Promise.all([cobrosPanel(db, desde, hasta), tuuTarjetaDias(db, desde, hasta)]);
-  const cierres = await cierresDe(db, desde, hasta);
+  const db = env.DB, hoy = ahoraChile().fecha, desde = mes + '-01', hasta = mes + '-31' < hoy ? mes + '-31' : hoy, det = {};
+  const [p, t, cierres, rev] = await Promise.all([cobrosPanel(db, desde, hasta), tuuTarjetaDias(db, desde, hasta, det), cierresDe(db, desde, hasta), revisadosDe(db, desde, hasta)]);
   const dias = [...new Set(Object.keys(p).concat(Object.keys(t)))].filter(f => f >= PANEL_DESDE).sort().reverse()
-    .map(f => ({ fecha: f, tuu: t[f] || 0, panel: (p[f] || {}).tarjeta || 0, cierre: cierres[f] || null }));
-  return { desde: PANEL_DESDE, dias, malos: dias.filter(x => x.tuu !== x.panel || (x.cierre && x.cierre.diferencia)) };
+    .map(f => { const x = { fecha: f, tuu: t[f] || 0, panel: (p[f] || {}).tarjeta || 0, cierre: cierres[f] || null }; x.dt = x.tuu - x.panel; x.de = x.cierre ? x.cierre.contado - x.cierre.efectivo : 0; return x; });
+  const malos = [], revisados = [];
+  dias.filter(x => x.dt || x.de).forEach(x => { const r = rev[x.fecha];
+    if (r && r.dt === x.dt && r.de === x.de) revisados.push(Object.assign(x, { revisado: r }));
+    else malos.push(Object.assign(x, { maquina: det[x.fecha] || [], anotado: (p[x.fecha] || {}).pos || [] })); });
+  return { desde: PANEL_DESDE, dias, malos, revisados };
+}
+async function revisadosTabla(db) { await db.prepare("CREATE TABLE IF NOT EXISTS cuadres (fecha TEXT PRIMARY KEY, dt INTEGER NOT NULL DEFAULT 0, de INTEGER NOT NULL DEFAULT 0, nota TEXT NOT NULL DEFAULT '', por TEXT NOT NULL DEFAULT '', ms INTEGER NOT NULL DEFAULT 0)").run(); }
+async function revisadosDe(db, desde, hasta) {
+  await revisadosTabla(db); const o = {};
+  (await db.prepare('SELECT * FROM cuadres WHERE fecha >= ? AND fecha <= ?').bind(desde, hasta).all()).results.forEach(c => o[c.fecha] = { dt: c.dt, de: c.de, nota: c.nota, por: c.por });
+  return o;
+}
+/** Marca un día como revisado (op 'revisar', con nota y opcionalmente 'con' = el otro día de la misma venta) o lo vuelve a abrir (op 'abrir'). */
+async function tuuRevisar(env, q, d) {
+  const db = env.DB, fecha = String(d.fecha || ''), con = String(d.con || '');
+  if (!esFecha(fecha) || (con && !esFecha(con))) throw err('Falta el día.');
+  const mes = fecha.slice(0, 7); await revisadosTabla(db);
+  const fechas = [fecha].concat(con ? [con] : []);
+  if (d.op === 'abrir') {
+    const r = await db.prepare('SELECT nota FROM cuadres WHERE fecha = ?').bind(fecha).first(), m = r && /^Misma venta que el (\d\d)\/(\d\d)/.exec(r.nota);
+    if (m) fechas.push(mes.slice(0, 4) + '-' + m[2] + '-' + m[1]); // si estaba unido, se abren los dos
+    for (const f of fechas) await db.prepare('DELETE FROM cuadres WHERE fecha = ?').bind(f).run();
+    await anotar(db, q, 'cuadre abierto ' + fechas.join(' '));
+  } else {
+    const ctl = {}; for (const f of fechas) Object.assign(ctl, Object.fromEntries((await tuuControl(env, f.slice(0, 7))).dias.map(x => [x.fecha, x])));
+    const yo = await quienNombre(env, q.email), nota = String(d.nota || '').trim().slice(0, 300), dm = f => f.slice(8) + '/' + f.slice(5, 7);
+    for (const f of fechas) { const x = ctl[f] || { dt: 0, de: 0 }, otra = fechas.find(g => g !== f);
+      const n = (otra ? 'Misma venta que el ' + dm(otra) + (nota ? '. ' : '') : '') + nota;
+      await db.prepare('INSERT OR REPLACE INTO cuadres (fecha, dt, de, nota, por, ms) VALUES (?, ?, ?, ?, ?, ?)').bind(f, x.dt || 0, x.de || 0, n, yo, Date.now()).run(); }
+    await anotar(db, q, 'cuadre revisado ' + fechas.join(' '));
+  }
+  return tuuMes(env, mes);
+}
+/** Todo lo de la tarjeta "Ventas de la máquina Tuu" del mes. */
+async function tuuMes(env, m, forzar) {
+  const r = await tuuResumen(env, m, !!forzar);
+  try { r.control = await tuuControl(env, m); } catch (x) { console.error(x); }
+  try { r.boletas = await boletasMes(env, m); } catch (x) { console.error(x); }
+  return r;
 }
 // ---------- Cierre del día (Isidora 23-11): la recepción cuenta la caja y confirma que todo está anotado ----------
 async function cierreTabla(db) { await db.prepare("CREATE TABLE IF NOT EXISTS cierres (fecha TEXT PRIMARY KEY, ms INTEGER NOT NULL, por TEXT NOT NULL DEFAULT '', tarjeta INTEGER NOT NULL DEFAULT 0, tuu INTEGER NOT NULL DEFAULT 0, efectivo INTEGER NOT NULL DEFAULT 0, contado INTEGER NOT NULL DEFAULT 0, transferencia INTEGER NOT NULL DEFAULT 0, nota TEXT NOT NULL DEFAULT '')").run(); }
@@ -1974,7 +2019,7 @@ async function tuuAsignar(env, q, d) {
   if (!v) throw err('No encontramos esa venta.');
   await env.DB.prepare('UPDATE tuu_ventas SET categoria = ?, quien = ? WHERE id = ?').bind(cat, q.email, v.id).run();
   await anotar(env.DB, q, 'tuu ' + v.id + ' → ' + (cat || 'automático'));
-  return tuuResumen(env, v.fecha.slice(0, 7));
+  return tuuMes(env, v.fecha.slice(0, 7));
 }
 
 // ---------- entrada ----------
@@ -2035,7 +2080,8 @@ export async function onRequest(context) {
     if (acc === 'notas') return json(await notasAccion(env, q, d));
     if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo', 'pack'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
-    if (acc === 'tuu-mes') { const m = /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), r = await tuuResumen(env, m, !!d.forzar); try { r.control = await tuuControl(env, m); } catch (x) { console.error(x); } try { r.boletas = await boletasMes(env, m); } catch (x) { console.error(x); } return json(r); }
+    if (acc === 'tuu-mes') return json(await tuuMes(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), d.forzar));
+    if (acc === 'tuu-revisar') return json(await tuuRevisar(env, q, d));
     if (acc === 'tuu-asignar') return json(await tuuAsignar(env, q, d));
     if (acc === 'resena-prueba') { const a = await ajustes(env.DB); if (!googleResena(a)) throw err('Primero pega el link de Google.'); await enviarCorreo(env, { to: q.email, subject: '¿Cómo estuvo tu clase de surf?', html: correoResena({ ref: 'PRUEBA', clave: 'prueba', nombre: 'Camila Prueba' }), body: 'Prueba' }); return json({ ok: true }); }
     if (acc === 'probar-push') { if (!env.ONESIGNAL_KEY) throw err('Falta ONESIGNAL_KEY en Cloudflare.'); const r = await enviarPush(env, [q.email], 'Prueba de Agenda Storm 🌊', 'Si ves esto, las notificaciones funcionan.'); return json({ ok: true, enviado: r === true, detalle: r === true ? '' : String(r) }); }

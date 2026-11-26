@@ -674,28 +674,49 @@
     // Isidora (23-11): "está todo muy confuso". Una sola tarjeta: si todo está bien, solo "✓ Todo cuadra".
     // Si algo falta, un renglón por problema, en simple, con lo que hay que hacer y su botón.
     const c = d.cuadre || {porRevisar: 0, claseSinPanel: [], sinTuu: []};
-    const fila = (monto, cuando, que, botones) => `<div class='pn-tuuv'><div class='pn-tuuh'><b>${clp(monto)}</b><small>${esc(cuando)}</small></div><p class='pn-tuuq'>${que}</p>${botones ? `<div class='pn-tuub'>${botones}</div>` : ''}</div>`;
+    const fila = (monto, cuando, que, botones, extra) => `<div class='pn-tuuv'><div class='pn-tuuh'><b>${clp(monto)}</b><small>${esc(cuando)}</small></div><p class='pn-tuuq'>${que}</p>${extra || ''}${botones ? `<div class='pn-tuub'>${botones}</div>` : ''}</div>`;
     const agenda = `<a class='pn-gbtn' href='/agenda/'>Anotar clase</a>`;
     const filas = [
       ...pr.map(v => fila(v.monto, corta(v.fecha) + ' · ' + v.hora, '¿Qué fue esta venta?', Object.keys(TUU_CAT).filter(k => k !== 'anulada').map(k => `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='${k}'>${TUU_CAT[k].split(' (')[0]}</button>`).join('') + `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat='anulada'>Anulada</button>`)),
       ...(c.claseSinPanel || []).map(v => fila(v.monto, corta(v.fecha) + ' · ' + v.hora, 'Se cobró una clase que no está en el Panel. Anótala con pago POS.', agenda + (v.producto ? '' : `<button class='pn-gbtn' data-tuu='${esc(v.id)}' data-cat=''>No era clase</button>`))),
       ...(c.sinTuu || []).map(v => fila(v.monto, corta(v.fecha) + ' · ' + v.hora + ' · ' + v.nombre, 'Clase con pago POS que no aparece en la máquina. ¿Se cobró? Si pagó de otra forma, cámbiala en la clase.', agenda.replace('Anotar clase', 'Ver clase'))),
       // Isidora (23-11): desde el 24-11 todo se anota en el Panel al cobrar. Solo se compara el total con tarjeta de cada día y el cierre de caja.
-      ...((d.control && d.control.malos) || []).map(x => { const dt = x.tuu - x.panel, ci = x.cierre, de = ci ? ci.contado - ci.efectivo : 0;
+      // Isidora (26-11): cada día que no cuadra se resuelve aquí mismo: ver qué hubo, unirlo con el otro día (misma venta) o darlo por revisado con una nota.
+      ...((d.control && d.control.malos) || []).map(x => { const dt = x.dt, ci = x.cierre, de = x.de;
         const que = [dt > 0 ? `Se pasaron ${clp(dt)} por la máquina que no están anotados en el Panel.` : dt < 0 ? `Hay ${clp(-dt)} anotados con POS que no aparecen en la máquina. ¿Se cobraron?` : '', de ? (de > 0 ? `En la caja sobraron ${clp(de)} en efectivo.` : `En la caja faltaron ${clp(-de)} en efectivo.`) : '', ci && ci.nota ? 'Nota: ' + esc(ci.nota) : ''].filter(Boolean).join(' ');
-        return fila(Math.abs(dt) + Math.abs(de), corta(x.fecha) + (ci ? ' · cerró ' + ci.por : ' · sin cierre'), que, ''); })
+        const par = dt && !de && d.control.malos.find(y => y !== x && y.dt === -dt && !y.de);
+        const lista = (t, l) => `<div class='pn-tuud'><small>${t}</small>${l.length ? l.map(i => `<div><span>${esc((i.hora ? i.hora + ' · ' : '') + i.que)}</span><b>${clp(i.monto)}</b></div>`).join('') : `<div><span>Nada</span></div>`}</div>`;
+        const ver = dt ? `<details class='pn-tuudet'><summary>Ver qué hubo ese día</summary>${lista('En la máquina (tarjeta)', x.maquina || [])}${lista('Anotado con POS en el Panel', x.anotado || [])}</details>` : '';
+        return fila(Math.abs(dt) + Math.abs(de), corta(x.fecha) + (ci ? ' · cerró ' + ci.por : ' · sin cierre'), que,
+          (par ? `<button class='pn-gbtn' data-tuuunir='${x.fecha}' data-con='${par.fecha}'>Es la misma venta del ${corta(par.fecha)}</button>` : '') + `<button class='pn-gbtn' data-tuurev='${x.fecha}'>Ya lo revisé</button>`, ver); })
     ];
+    const rev = (d.control && d.control.revisados) || [];
+    const revH = rev.length ? `<details class='pn-tuurevs'><summary>Revisadas (${rev.length})</summary>${rev.map(x => `<div class='pn-tuul'><div><span><b>${esc(corta(x.fecha))}</b> · ${clp(Math.abs(x.dt) + Math.abs(x.de))}${x.revisado.nota ? ' · ' + esc(x.revisado.nota) : ''}<br><small>${esc(x.revisado.por)}</small></span><button class='pn-gbtn' data-tuuabrir='${x.fecha}'>Abrir</button></div></div>`).join('')}</details>` : '';
     // Boletas exentas de los pagos con Webpay (Isidora 24-11: desde el 1-12 se emiten solas en SimpleFactura)
     const bl = d.boletas, malas = bl ? bl.lista.filter(b => b.estado !== 'emitida') : [];
     const bh = bl && bl.lista.length ? `<div class='pn-card pn-tuuc'><h3>Boletas exentas (Webpay)<span class='pn-count ${malas.length ? 'pn-tuuwarn' : 'pn-tuuok'}'>${malas.length ? malas.length + ' sin emitir' : '✓ ' + bl.emitidas + ' emitidas · ' + clp(bl.total)}</span></h3>
       ${bl.lista.map(b => `<div class='pn-row'><div><b>${b.folio ? 'N° ' + b.folio : 'Sin emitir'} · ${clp(b.monto)}</b><small>${esc(corta(b.fecha))} · ${esc(b.detalle)}${b.estado !== 'emitida' ? ' · se reintenta sola' : ''}</small></div>${b.link ? `<a class='pn-gbtn' href='${esc(b.link)}' target='_blank' rel='noopener'>Ver</a>` : ''}</div>`).join('')}</div>` : '';
-    return bh + `<div class='pn-card pn-tuuc'><h3>Ventas de la máquina Tuu<span class='pn-count ${filas.length ? 'pn-tuuwarn' : 'pn-tuuok'}'>${filas.length ? filas.length + ' por resolver' : '✓ Todo cuadra'}</span></h3>${filas.join('')}</div>`;
+    return bh + `<div class='pn-card pn-tuuc'><h3>Ventas de la máquina Tuu<span class='pn-count ${filas.length ? 'pn-tuuwarn' : 'pn-tuuok'}'>${filas.length ? filas.length + ' por resolver' : '✓ Todo cuadra'}</span></h3>${filas.join('')}${revH}</div>`;
   }
   function enlazarTuu(el, mes){
     el.querySelectorAll('[data-tuu]').forEach(b => b.onclick = async () => {
       b.disabled = true; b.textContent = '…';
       try{ const d = await postTuu({accion:'tuu-asignar', id: b.dataset.tuu, categoria: b.dataset.cat}); TUU[mesIso(mes)] = {t: Date.now(), d}; pintarTuu(mes); cargarFinanzas(mes); }
       catch(x){ alert(x.message); pintarTuu(mes); }
+    });
+    const revisar = async (b, body) => {
+      b.disabled = true; b.textContent = '…';
+      try{ const d = await postTuu(Object.assign({accion:'tuu-revisar'}, body)); TUU[mesIso(mes)] = {t: Date.now(), d}; pintarTuu(mes); }
+      catch(x){ alert(x.message); pintarTuu(mes); }
+    };
+    el.querySelectorAll('[data-tuuunir]').forEach(b => b.onclick = () => revisar(b, {fecha: b.dataset.tuuunir, con: b.dataset.con, op:'revisar'}));
+    el.querySelectorAll('[data-tuuabrir]').forEach(b => b.onclick = () => revisar(b, {fecha: b.dataset.tuuabrir, op:'abrir'}));
+    el.querySelectorAll('[data-tuurev]').forEach(b => b.onclick = () => {
+      const caja = b.closest('.pn-tuub'), f = b.dataset.tuurev;
+      caja.outerHTML = `<div class='pn-tuurevf'><input placeholder='¿Qué pasó? ej: se cobró en efectivo' maxlength='300'><div class='pn-tuub'><button class='pn-gbtn' data-tuuno>Volver</button><button class='pn-gbtn on' data-tuuok='${f}'>Listo, revisado</button></div></div>`;
+      const fm = el.querySelector(`[data-tuuok='${f}']`).closest('.pn-tuurevf'), inp = fm.querySelector('input'); inp.focus();
+      fm.querySelector('[data-tuuno]').onclick = () => pintarTuu(mes);
+      fm.querySelector('[data-tuuok]').onclick = e => revisar(e.currentTarget, {fecha: f, nota: inp.value, op:'revisar'});
     });
     const ya = el.querySelector('[data-tuuya]'); if(ya) ya.onclick = () => { ya.textContent = 'Actualizando…'; cargarTuu(mes, true); };
   }
