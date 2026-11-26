@@ -7,7 +7,7 @@
  * Una fila por alumno y por forma de aceptarla:
  *   como 'web'     → marcó la casilla al inscribirse y pagar en la web de Storm (pestaña Pagos de la planilla, ref AA- / AV-)
  *   como 'shopify' → marcó la casilla en el checkout de Shopify (pedidos #5101xx de Verano, antes de Mercado Pago)
- *   como 'firma'   → la firmó con el dedo en app.stormsurf.cl/autorizacion (link que manda Storm desde el Panel)
+ *   como 'firma'   → la aceptó (casilla + nombre y RUT) en app.stormsurf.cl/autorizacion, link que manda Storm desde el Panel
  *
  * Recibir de la planilla (Apps Script): { tipo:'subir', ts, firma, filas:[{academia, alumno, apoderado, rut, correo, fecha, ref}] }
  *   firma = HMAC(CLAVE_WEB, 'autorizacion|' + ts)
@@ -86,8 +86,9 @@ export async function onRequestPost({ request, env }) {
       const apoderado = nombrePropio(t(d.apoderado, 80)), rut = t(d.rut, 20), firma = String(d.firma || '');
       if (apoderado.length < 3) throw new Error('Falta tu nombre y apellido.');
       if (!/^[0-9kK.\- ]{7,14}$/.test(rut)) throw new Error('Revisa tu RUT.');
-      if (!d.acepta) throw new Error('Para firmar, marca que leíste y aceptas.');
-      if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(firma) || firma.length < 800 || firma.length > 400000) throw new Error('Falta tu firma.');
+      if (!d.acepta) throw new Error('Marca que leíste y aceptas.');
+      // Basta con la casilla (Isidora 26-11): la firma con el dedo es opcional y hoy la página no la pide.
+      if (firma && (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(firma) || firma.length > 400000)) throw new Error('Firma no válida.');
       const fecha = ahoraChile();
       await db.prepare('INSERT INTO autorizaciones (id, academia, alumno, apoderado, rut, correo, fecha, como, ref, firma, ip, creada_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
         .bind(a + '|firma|' + llave(n) + '|' + Date.now(), a, n, apoderado, rut, '', fecha, 'firma', '', firma, request.headers.get('CF-Connecting-IP') || '', Date.now()).run();

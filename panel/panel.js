@@ -1037,7 +1037,7 @@
     };
   }
   // ---------- Autorización y exención de responsabilidad (la pide la Armada) ----------
-  // Vive en Cloudflare (/api/autorizacion): casilla aceptada al inscribirse en la web (planilla o Shopify) o firma con el dedo.
+  // Vive en Cloudflare (/api/autorizacion): casilla aceptada al inscribirse en la web (planilla o Shopify) o aceptada en el link que manda Storm.
   let AUT = (() => { try{ return JSON.parse(localStorage.getItem(KEY + '-aut') || 'null'); }catch(_){ return null; } })(), autAbierta = '', autLink = {};
   const postAut = b => fetch('/api/autorizacion', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({}, auth, b))}).then(r => r.json()).then(d => { if(!d.ok) throw new Error(d.error || 'Error'); return d; });
   async function cargarAut(){
@@ -1049,7 +1049,7 @@
   const mismoNino = (x, y) => { const a = nk(x), b = nk(y); if(a === b) return true; const ta = a.split(' '), tb = b.split(' ');
     if(ta[0] === tb[0] && Math.min(ta.length, tb.length) >= 2 && (ta.every(w => tb.includes(w)) || tb.every(w => ta.includes(w)))) return true;
     return a.length >= 8 && lev(a, b) <= 2 && ta[ta.length-1].slice(0, 3) === tb[tb.length-1].slice(0, 3); };
-  // La más fuerte primero: firma con el dedo; si no, la casilla de la web más reciente.
+  // Primero la aceptada en el link de Storm; si no, la casilla de la web más reciente.
   const autDe = (acad, nombre) => !AUT ? undefined : AUT.filter(x => x.academia === acad && mismoNino(x.alumno, nombre)).sort((a, b) => (b.como === 'firma') - (a.como === 'firma') || (a.fecha < b.fecha ? 1 : -1))[0] || null;
   const fechaAut = f => { const m = String(f).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + ' ' + ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][+m[2]-1] + ' ' + m[1] : f; };
   function autBtn(acad, nombre){
@@ -1059,20 +1059,20 @@
   function autBox(acad, nombre, abierta){
     if(!abierta && autAbierta !== acad + '|' + nombre) return '';
     const x = autDe(acad, nombre), l = autLink[acad + '|' + nombre];
-    if(x) return `<div class='pn-autbox pn-autbox--ok'><p><b>${esc(x.apoderado || 'Su apoderado/a')}</b> ${x.como === 'firma' ? 'firmó' : 'aceptó'} la autorización y exención de responsabilidad el <b>${esc(fechaAut(x.fecha))}</b>${x.como === 'firma' ? ', con su firma en la app.' : ', al inscribir' + (x.alumno && nk(x.alumno) !== nk(nombre) ? ' a ' + esc(x.alumno) : '') + ' y pagar en la web.'}</p>
+    if(x) return `<div class='pn-autbox pn-autbox--ok'><p><b>${esc(x.apoderado || 'Su apoderado/a')}</b> aceptó la autorización y exención de responsabilidad el <b>${esc(fechaAut(x.fecha))}</b>${x.como === 'firma' ? ', en el link que le mandamos.' : ', al inscribir' + (x.alumno && nk(x.alumno) !== nk(nombre) ? ' a ' + esc(x.alumno) : '') + ' y pagar en la web.'}</p>
       ${x.rut ? `<small>RUT ${esc(x.rut)}${x.ref ? ' · ' + esc(x.ref) : ''}</small>` : x.ref ? `<small>${esc(x.ref)}</small>` : ''}
       <a class='pn-autdoc' href='/autorizacion/?doc=${encodeURIComponent(x.id)}' target='_blank' rel='noopener'>Ver documento</a></div>`;
-    return `<div class='pn-autbox'><p>No tenemos la autorización firmada de su apoderado/a${acad === 'anual' ? ' (se inscribió por transferencia o a mano)' : ''}.</p>
-      ${ES_ADMIN ? (l ? `<p class='pn-sub'>Mándale este link a la familia para que la firme con el dedo:</p><div class='pn-autlink'>${esc(l)}</div>
-        <a class='pn-autwa' target='_blank' rel='noopener' href='https://wa.me/?text=${encodeURIComponent('Hola 👋 Para que ' + nombre.split(' ')[0] + ' pueda entrar al mar en la ' + (acad === 'anual' ? 'Academia Anual' : 'Academia de Verano') + ', necesitamos que firmes la autorización y exención de responsabilidad. Toma 1 minuto: ' + l + '\n\nGracias, equipo Storm 🌊')}'>Mandar por WhatsApp</a><button class='pn-autbtn' data-autcp='${esc(acad + '|' + nombre)}'>Copiar link</button>`
-        : `<button class='pn-autbtn pn-autbtn--go' data-autlk='${esc(acad + '|' + nombre)}'>Pedir la firma</button>`) : `<small>Avísale a Isidora para que se la pida.</small>`}</div>`;
+    return `<div class='pn-autbox'><p>Su apoderado/a todavía no acepta la autorización${acad === 'anual' ? ' (se inscribió por transferencia o a mano)' : ''}.</p>
+      ${ES_ADMIN ? (l ? `<p class='pn-sub'>Mándale este link a la familia para que la acepte (nombre, RUT y marcar la casilla):</p><div class='pn-autlink'>${esc(l)}</div>
+        <a class='pn-autwa' target='_blank' rel='noopener' href='https://wa.me/?text=${encodeURIComponent('Hola 👋 Para que ' + nombre.split(' ')[0] + ' pueda entrar al mar en la ' + (acad === 'anual' ? 'Academia Anual' : 'Academia de Verano') + ', necesitamos que aceptes la autorización y exención de responsabilidad. Toma 1 minuto: ' + l + '\n\nGracias, equipo Storm 🌊')}'>Mandar por WhatsApp</a><button class='pn-autbtn' data-autcp='${esc(acad + '|' + nombre)}'>Copiar link</button>`
+        : `<button class='pn-autbtn pn-autbtn--go' data-autlk='${esc(acad + '|' + nombre)}'>Pedirla por WhatsApp</button>`) : `<small>Avísale a Isidora para que se la pida.</small>`}</div>`;
   }
   // Resumen arriba (solo administradores): cuántos tienen la autorización y quiénes faltan.
   function autResumen(acad, nombres){
     nombres = nombres.filter(n => !/prueba/i.test(n));
     if(!ES_ADMIN || !AUT || !nombres.length) return '';
     const faltan = nombres.filter(n => !autDe(acad, n));
-    return `<div class='pn-card pn-autres${faltan.length ? '' : ' pn-autres--ok'}'><h3>Autorizaciones firmadas<span class='pn-count'>${nombres.length - faltan.length} de ${nombres.length}</span></h3>
+    return `<div class='pn-card pn-autres${faltan.length ? '' : ' pn-autres--ok'}'><h3>Autorizaciones aceptadas<span class='pn-count'>${nombres.length - faltan.length} de ${nombres.length}</span></h3>
       <p class='pn-sub'>${faltan.length ? `Faltan: ${faltan.map(n => `<button class='pn-autfalta' data-aut='${esc(acad + '|' + n)}'>${esc(n)}</button>`).join(' ')}` : 'Todos los alumnos tienen la autorización y exención de responsabilidad aceptada por su apoderado/a. 👌'}</p></div>`;
   }
   function bindAut(root, repintar){
@@ -1084,7 +1084,7 @@
       const [academia, ...r] = b.dataset.autlk.split('|'), alumno = r.join('|');
       b.disabled = true; b.textContent = 'Un momento…';
       try{ autLink[b.dataset.autlk] = (await postAut({accion:'link', academia, alumno})).link; repintar(); }
-      catch(x){ b.disabled = false; b.textContent = 'Pedir la firma · ' + x.message; }
+      catch(x){ b.disabled = false; b.textContent = 'Pedirla por WhatsApp · ' + x.message; }
     });
     root.querySelectorAll('[data-autcp]').forEach(b => b.onclick = () => { const l = autLink[b.dataset.autcp];
       (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => { b.textContent = 'Copiado ✓'; }).catch(() => prompt('Copia el link:', l)); });

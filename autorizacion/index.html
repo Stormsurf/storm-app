@@ -30,10 +30,6 @@
 .au-f input[type=text]:focus{outline:none;border-color:var(--ac)}
 .au-f .au-chk{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:1.4rem;font-weight:400;line-height:1.45;cursor:pointer}
 .au-chk input{width:20px;height:20px;flex:none;margin:1px 0 0;accent-color:var(--ink)}
-.au-sig{position:relative;margin-top:6px;border:1.5px dashed #b9b6b0;border-radius:14px;background:#fff;touch-action:none}
-.au-sig canvas{display:block;width:100%;height:170px;border-radius:14px}
-.au-sig span{position:absolute;left:14px;bottom:10px;font-size:1.2rem;color:#b0ada7;pointer-events:none}
-.au-sig button{position:absolute;right:8px;top:8px;border:0;background:#F3F1EC;border-radius:999px;padding:5px 11px;font:inherit;font-size:1.2rem;cursor:pointer}
 .au-go{display:block;width:100%;margin-top:16px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:inherit;font-size:1.7rem;font-weight:600;padding:16px;cursor:pointer}
 .au-go:disabled{opacity:.45}
 .au-err{margin:10px 0 0;color:#a12c1c;font-size:1.4rem}
@@ -64,7 +60,7 @@
   const fechaLarga = f => { const m = String(f).match(/(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}))?/); return m ? (+m[3]) + ' de ' + MES[+m[2]-1] + ' de ' + m[1] + (m[4] ? ', ' + m[4] : '') : f; };
   async function post(b){ const r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b)}); let d; try{ d = await r.json(); }catch(_){ throw new Error('No pudimos conectarnos. Revisa tu internet.'); } if(!d.ok) throw new Error(d.error || 'Error'); return d; }
   const texto = a => { const T = window.STORM_AUT[a]; return `<div class='au-txt'><p>${esc(T.intro)}</p>${T.secciones.map(([h, ps], i) => `${h ? `<h3>${esc(h)}</h3>` : ''}<ol start='${T.secciones.slice(0, i).reduce((n, s) => n + s[1].length, 0) + 1}'>${ps.map(p => `<li>${esc(p)}</li>`).join('')}</ol>`).join('')}<p>${esc(T.cierre)}</p></div>`; };
-  const COMO = { web: 'Marcó la casilla de aceptación al inscribirse y pagar en la web de Storm', shopify: 'Marcó la casilla de aceptación al inscribirse y pagar en la web de Storm (tienda)', firma: 'Firmó con el dedo en la app Storm' };
+  const COMO = { web: 'Marcó la casilla de aceptación al inscribirse y pagar en la web de Storm', shopify: 'Marcó la casilla de aceptación al inscribirse y pagar en la web de Storm (tienda)', firma: 'Marcó la casilla de aceptación en el link que le mandó Storm' };
 
   // ---- Documento para el equipo (desde el Panel) ----
   async function documento(){
@@ -79,7 +75,7 @@
           <div><span>Apoderado/a</span><b>${esc(x.apoderado || '—')}</b></div>
           <div><span>RUT apoderado/a</span><b>${esc(x.rut || '—')}</b></div>
           <div><span>Fecha</span><b>${esc(fechaLarga(x.fecha))}</b></div>
-          <div><span>${x.como === 'firma' ? 'Forma' : 'Referencia'}</span><b>${esc(x.como === 'firma' ? 'Firma en la app' : x.ref)}</b></div>
+          <div><span>${x.como === 'firma' ? 'Forma' : 'Referencia'}</span><b>${esc(x.como === 'firma' ? 'Link de Storm' : x.ref)}</b></div>
           <div class='w'><span>Cómo la aceptó</span><b>${esc(COMO[x.como] || x.como)}${x.correo ? ' (' + esc(x.correo) + ')' : ''}.</b></div>
         </div>
         <div class='au-ok'>✓ Aceptada por ${esc(x.apoderado || 'el apoderado')}</div></div>
@@ -99,38 +95,28 @@
   function pintar(){
     const T = window.STORM_AUT[D.academia];
     if(D.firmada){
-      root.innerHTML = `<div class='au-card au-done'><div class='ic'>✓</div><h2>¡Autorización firmada!</h2><p>${esc(D.firmada.apoderado)} firmó la autorización de <b>${esc(D.alumno)}</b> para la ${esc(T.nombre)} el ${esc(fechaLarga(D.firmada.fecha))}. Gracias, ya no tienes que hacer nada más.</p></div>`;
+      root.innerHTML = `<div class='au-card au-done'><div class='ic'>✓</div><h2>¡Autorización lista!</h2><p>${esc(D.firmada.apoderado)} aceptó la autorización de <b>${esc(D.alumno)}</b> para la ${esc(T.nombre)} el ${esc(fechaLarga(D.firmada.fecha))}. Gracias, ya no tienes que hacer nada más.</p></div>`;
       return;
     }
     root.innerHTML = `<h1>Autorización y exención de responsabilidad</h1>
-      <p class='au-sub'>${esc(T.nombre)} · <b>${esc(D.alumno)}</b><br>Es obligatoria para que entre al mar. La firma su madre, padre o apoderado/a y toma 1 minuto.</p>
+      <p class='au-sub'>${esc(T.nombre)} · <b>${esc(D.alumno)}</b><br>Es obligatoria para que entre al mar. La acepta su madre, padre o apoderado/a y toma 1 minuto.</p>
       <div class='au-card'><h2>${esc(T.titulo)}</h2>${texto(D.academia)}</div>
-      <div class='au-card au-f'><h2>Firma del apoderado/a</h2>
+      <div class='au-card au-f'><h2>Datos del apoderado/a</h2>
         <label for='au-nom'>Nombre y apellido</label><input type='text' id='au-nom' autocomplete='name'>
         <label for='au-rut'>RUT</label><input type='text' id='au-rut' inputmode='text' placeholder='12.345.678-9'>
-        <label>Firma aquí con el dedo</label><div class='au-sig'><canvas id='au-c'></canvas><span>Firma</span><button type='button' id='au-b'>Borrar</button></div>
         <label class='au-chk'><input type='checkbox' id='au-ok'> <span>Soy la madre, padre o apoderado/a de ${esc(D.alumno)}. Leí y acepto estos términos y esta exención de responsabilidad, y lo/la autorizo a participar.</span></label>
         ${err ? `<p class='au-err'>${esc(err)}</p>` : ''}
-        <button class='au-go' id='au-go'>Firmar</button></div>
+        <button class='au-go' id='au-go'>Aceptar</button></div>
       <p class='au-foot'>Storm Academia de Surf · Matanzas</p>`;
-    const c = root.querySelector('#au-c'), x = c.getContext('2d'); let trazo = false, hay = false;
-    const tam = () => { const r = c.getBoundingClientRect(), k = window.devicePixelRatio || 1; c.width = r.width * k; c.height = r.height * k; x.scale(k, k); x.lineWidth = 2.4; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#1b1b1a'; };
-    tam();
-    const p = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    c.onpointerdown = e => { trazo = true; hay = true; c.setPointerCapture(e.pointerId); x.beginPath(); x.moveTo(...p(e)); };
-    c.onpointermove = e => { if(!trazo) return; x.lineTo(...p(e)); x.stroke(); };
-    c.onpointerup = c.onpointercancel = () => { trazo = false; };
-    root.querySelector('#au-b').onclick = () => { x.clearRect(0, 0, c.width, c.height); hay = false; };
     root.querySelector('#au-go').onclick = async ev => {
       const b = ev.currentTarget, nom = root.querySelector('#au-nom').value, rut = root.querySelector('#au-rut').value, ok = root.querySelector('#au-ok').checked;
       const msg = m => { let e = root.querySelector('.au-err'); if(!e){ e = document.createElement('p'); e.className = 'au-err'; b.before(e); } e.textContent = m; };
       if(nom.trim().length < 3) return msg('Falta tu nombre y apellido.');
       if(!rut.trim()) return msg('Falta tu RUT.');
-      if(!hay) return msg('Falta tu firma.');
       if(!ok) return msg('Marca que leíste y aceptas.');
       b.disabled = true; b.textContent = 'Guardando…';
-      try{ D = await post({accion:'firmar', a: A, n: N, k: K, apoderado: nom, rut, acepta: ok, firma: c.toDataURL('image/png')}); pintar(); scrollTo(0, 0); }
-      catch(e){ b.disabled = false; b.textContent = 'Firmar'; msg(e.message); }
+      try{ D = await post({accion:'firmar', a: A, n: N, k: K, apoderado: nom, rut, acepta: ok}); pintar(); scrollTo(0, 0); }
+      catch(e){ b.disabled = false; b.textContent = 'Aceptar'; msg(e.message); }
     };
   }
   DOC ? documento() : firmar();
