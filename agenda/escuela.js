@@ -245,6 +245,10 @@
   .es-rpago{padding:4px 16px 14px;display:flex;flex-wrap:wrap;gap:8px}
   .es-pkz{display:flex;align-items:center;gap:12px;background:#E3F1F1;border-radius:14px;padding:12px 14px;margin:8px 0 10px;cursor:pointer}
   .es-pkz .es-rx b{font-size:1.4rem}.es-pkz .es-rx small{color:#0f6e74}
+  .es-pkmas{background:#F3F9F9;border-radius:14px;padding:12px 14px;margin:0 0 10px}.es-pkmas>b{display:block;font-size:1.35rem;margin-bottom:2px}.es-pkmas>small{display:block;color:#5d6b6b;margin-bottom:8px}
+  .es-pkf{display:grid;grid-template-columns:1.55fr 1fr .75fr 26px;gap:6px;align-items:center;margin-bottom:6px}.es-pkf .es-in{margin:0;padding:8px 6px;font-size:1.4rem;min-width:0}.es-pkf.cab{margin-bottom:2px;font-size:1.15rem;color:#5d6b6b;font-weight:600}
+  .es-pkf button{border:0;background:none;font-size:2rem;color:#b54a3a;cursor:pointer;padding:0 6px}
+  .es-pkadd{border:1.5px dashed #0f6e74;background:#fff;color:#0f6e74;border-radius:12px;padding:9px 12px;font:inherit;font-weight:600;width:100%;cursor:pointer}
   .es-pkb{display:flex;gap:6px;padding:0 16px 14px 62px}.es-pkb i{flex:1;max-width:46px;height:10px;border-radius:6px;background:#0f6e74}.es-pkb i.us{background:#DCD8D0}
   .es-rpago span{width:100%;font-size:1.3rem;color:#b5662b;font-weight:600}
   .es-rpago button{border:1.5px solid #e0a03a;background:#fff;color:#7a4a1a;border-radius:999px;padding:9px 14px;font:inherit;font-size:1.4rem;font-weight:600;cursor:pointer}
@@ -654,7 +658,31 @@
   function zonaPack(pg, c) {
     const z = pg.querySelector('[data-pkz]'); if (!z) return;
     const k = PK(), tiene = packDe(c), inp = pg.querySelector('[name=pack]'), tot = pg.querySelector('[name=total]');
-    pg._cli = c;
+    pg._cli = c; pg._mas = pg._mas || [];
+    const precioDe = p => Number(((E.ajustes || {}).precios || {})[Math.min(5, Math.max(1, Math.floor(+p || 1)))]) || 0;
+    // precio del pack: cada clase a su precio según personas (las no agendadas, como la 1ª), menos el descuento
+    const precioMix = per => { let t = precioDe(per) * (k.clases - pg._mas.length); pg._mas.forEach(x => { t += precioDe(x.personas || per); }); return Math.round(t * (100 - k.descuento) / 100 / 100) * 100; };
+    // Agendar más clases del pack de una vez (Isidora 27-11)
+    const pintarMas = (usa, vende) => {
+      let m = pg.querySelector('[data-pkmas]'); if (!m) { m = document.createElement('div'); m.dataset.pkmas = 1; z.after(m); }
+      const tope = (vende ? k.clases : usa ? tiene.quedan : 0) - 1;
+      if (tope <= 0) { m.innerHTML = ''; m.className = ''; pg._mas = []; return; }
+      if (pg._mas.length > tope) pg._mas.length = tope;
+      const per = pg.querySelector('[name=personas]').value, hs = horasMano();
+      m.className = 'es-pkmas';
+      m.innerHTML = `<b>Más clases del pack</b><small>Opcional: agenda aquí las otras clases (te ${tope === 1 ? 'queda 1' : 'quedan ' + tope}). Las que no agendes, se agendan después.</small>`
+        + (pg._mas.length ? `<div class='es-pkf cab'><span>Día</span><span>Hora</span><span>Personas</span><span></span></div>` : '')
+        + pg._mas.map((x, i) => `<div class='es-pkf'><input class='es-in' type='date' data-pf='${i}' value='${x.fecha}'><select class='es-in' data-ph='${i}'>${hs.map(h => `<option${h === x.hora ? ' selected' : ''}>${h}</option>`).join('')}</select><select class='es-in' data-pp='${i}'>${[1, 2, 3].map(n => `<option value='${n}'${n === +x.personas ? ' selected' : ''}>${n}</option>`).join('')}</select><button type='button' data-px='${i}' aria-label='Quitar'>×</button></div>`).join('')
+        + (pg._mas.length < tope ? `<button type='button' class='es-pkadd' data-pkadd>+ Agregar otra clase del pack</button>` : '');
+      const otra = () => { const ult = pg._mas.length ? pg._mas[pg._mas.length - 1] : { fecha: pg.querySelector('[name=fecha]').value, hora: pg.querySelector('[name=hora]').value }; return { fecha: ult.fecha ? sumar(ult.fecha, 7) : E.hoy, hora: ult.hora || E.horarios[0], personas: Math.min(3, +per || 1) }; };
+      const cambio = () => { if (vende && tot.dataset.auto) tot.value = precioMix(pg.querySelector('[name=personas]').value); };
+      const add = m.querySelector('[data-pkadd]'); if (add) add.onclick = () => { pg._mas.push(otra()); pintarMas(usa, vende); cambio(); };
+      m.querySelectorAll('[data-px]').forEach(b => b.onclick = () => { pg._mas.splice(+b.dataset.px, 1); pintarMas(usa, vende); cambio(); });
+      m.querySelectorAll('[data-pf]').forEach(i => i.onchange = () => { pg._mas[+i.dataset.pf].fecha = i.value; });
+      m.querySelectorAll('[data-ph]').forEach(i => i.onchange = () => { pg._mas[+i.dataset.ph].hora = i.value; });
+      m.querySelectorAll('[data-pp]').forEach(i => i.onchange = () => { pg._mas[+i.dataset.pp].personas = +i.value; cambio(); });
+    };
+    pg._precioMix = precioMix;
     z.innerHTML = tiene
       ? `<label class='es-pkz'><span class='es-rx'><b>Usar su pack</b><small>${esc(packTxt(tiene))} · vence el ${esc(fcorta(tiene.vence))}${tiene.medio === 'Por pagar' ? ' · el pack no está pagado' : ''}</small></span><span class='es-sw'><input type='checkbox' data-pku='${esc(tiene.id)}' checked><span class='es-tg'></span></span></label>`
       : `<label class='es-pkz'><span class='es-rx'><b>Vender pack de ${k.clases} clases</b><small>${k.descuento}% de descuento · se usa en ${k.meses === 1 ? '1 mes' : k.meses + ' meses'} · esta es su 1ª clase</small></span><span class='es-sw'><input type='checkbox' data-pkn><span class='es-tg'></span></span></label>`;
@@ -669,7 +697,8 @@
       pg.querySelector('[data-pkl]').textContent = vende ? 'Precio del pack (' + k.clases + ' clases)' : 'Total a cobrar';
       const lk = pg.querySelector('[data-link]'); if (lk) { lk.disabled = vende; if (vende && pg.querySelector('[name=medio]').value === 'Link de pago') pg.querySelector('[name=medio]').value = 'Por pagar'; }
       const per = pg.querySelector('[name=personas]').value, pm = pg.querySelector('[name=menores]').value;
-      tot.value = vende ? precioPack(per) : (cotiza(per, pm).precio || ''); tot.dataset.auto = '1';
+      pintarMas(usa, vende);
+      tot.value = vende ? precioMix(per) : (cotiza(per, pm).precio || ''); tot.dataset.auto = '1';
     };
     z.querySelectorAll('input').forEach(i => i.onchange = aplicar);
     if (!pg._pkPer) { pg._pkPer = 1; pg.querySelector('[name=personas]').addEventListener('input', () => { const n = z.querySelector('[data-pkn]'); if (n && (+pg.querySelector('[name=personas]').value >= 4) !== (n.closest('.es-pkz').style.display === 'none')) aplicar(); }); }
@@ -1028,7 +1057,7 @@
     if (mc) {
       const re = () => { const c = cotiza(mc.querySelector('[name=personas]').value, mc.querySelector('[name=menores]').value), t = mc.querySelector('[name=total]'), n = mc.querySelector('[name=nInstructores]');
         const pk = mc.querySelector('[name=pack]').value;
-        if (t.dataset.auto) t.value = pk === 'nuevo' ? precioPack(mc.querySelector('[name=personas]').value) : (c.precio || ''); t.placeholder = c.precio ? '' : 'escribe el total (grupo grande)';
+        if (t.dataset.auto) t.value = pk === 'nuevo' ? (mc._precioMix ? mc._precioMix(mc.querySelector('[name=personas]').value) : precioPack(mc.querySelector('[name=personas]').value)) : (c.precio || ''); t.placeholder = c.precio ? '' : 'escribe el total (grupo grande)';
         if (n.dataset.auto) n.value = Math.max(c.ins, mc.querySelectorAll('[data-mi].on').length); };
       mc.querySelectorAll('[name=personas],[name=menores]').forEach(i => i.addEventListener('input', re));
       mc.querySelectorAll('[name=total],[name=nInstructores]').forEach(i => i.addEventListener('input', () => { delete i.dataset.auto; }));
@@ -1038,8 +1067,9 @@
       const c = mg.closest('.es-pg'), v = {}; c.querySelectorAll('[name]').forEach(i => v[i.name] = i.type === 'checkbox' ? i.checked : i.value.trim());
       const elegidos = [...c.querySelectorAll('[data-mi].on')].map(b => b.dataset.mi);
       const body = Object.assign({ accion: 'manual' }, v, { instructores: elegidos });
+      if (v.pack && c._mas && c._mas.length) { if (c._mas.some(x => !x.fecha)) { c.querySelector('.es-err').textContent = 'Elige el día de cada clase del pack.'; return; } body.mas = c._mas.map(x => ({ fecha: x.fecha, hora: x.hora, personas: x.personas })); }
       if (!v.nombre) { c.querySelector('.es-err').textContent = 'Elige o crea el cliente.'; return; }
-      accion(body, mg).then(ok => { if (ok) { manualOn = false; vista = null; pila = []; msg = E.nuevoLink ? '' : 'Clase de ' + v.nombre + ' guardada' + (v.pack === 'nuevo' ? ' y pack vendido' : v.pack ? ' con su pack' : '') + '.'; linkNuevo = E.nuevoLink || null; sub = 'reservas'; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+      accion(body, mg).then(ok => { if (ok) { manualOn = false; vista = null; pila = []; const pm = E.packMas; msg = E.nuevoLink ? '' : (pm ? (pm.ok + 1) + ' clases de ' + v.nombre + ' guardadas' : 'Clase de ' + v.nombre + ' guardada') + (v.pack === 'nuevo' ? ' y pack vendido' : v.pack ? ' con su pack' : '') + '.' + (pm && pm.fallas.length ? ' No se pudo agendar: ' + pm.fallas.join(', ') + ' (ese horario se tomó). Agéndala aparte.' : ''); c._mas = []; linkNuevo = E.nuevoLink || null; sub = 'reservas'; pintar(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
     };
     // calendario
     $$('[data-ci]').forEach(b => b.onclick = () => { calIns = b.dataset.ci; pintar(); });

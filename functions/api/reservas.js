@@ -946,10 +946,10 @@ async function pagosSemana(env, q, d) {
 // ---------- Packs de clases (Isidora 16-11) ----------
 // Se paga una vez (5 clases con 10% de descuento) y cada clase anotada con el pack descuenta una. Cancelar una clase devuelve la clase al pack.
 async function packTabla(db) {
-  await db.prepare("CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, creada TEXT NOT NULL, creada_ms INTEGER NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', personas INTEGER NOT NULL DEFAULT 1, clases INTEGER NOT NULL DEFAULT 5, total INTEGER NOT NULL DEFAULT 0, medio TEXT NOT NULL DEFAULT 'Por pagar', fecha_pago TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activo', nota TEXT NOT NULL DEFAULT '', clave TEXT NOT NULL DEFAULT '', menores INTEGER NOT NULL DEFAULT 0, nivel TEXT NOT NULL DEFAULT '')").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, creada TEXT NOT NULL, creada_ms INTEGER NOT NULL, nombre TEXT NOT NULL, telefono TEXT NOT NULL DEFAULT '', correo TEXT NOT NULL DEFAULT '', personas INTEGER NOT NULL DEFAULT 1, clases INTEGER NOT NULL DEFAULT 5, total INTEGER NOT NULL DEFAULT 0, medio TEXT NOT NULL DEFAULT 'Por pagar', fecha_pago TEXT NOT NULL DEFAULT '', estado TEXT NOT NULL DEFAULT 'activo', nota TEXT NOT NULL DEFAULT '', clave TEXT NOT NULL DEFAULT '', menores INTEGER NOT NULL DEFAULT 0, nivel TEXT NOT NULL DEFAULT '', vence TEXT NOT NULL DEFAULT '')").run();
 }
 /** Vence: 1 mes (ajuste pack.meses) desde que se pagó (o desde que se anotó, si aún no paga). Las clases deben ser hasta ese día. */
-const venceDe = (p, meses) => sumarMeses(p.fecha_pago || String(p.creada || '').slice(0, 10), meses || 1);
+const venceDe = (p, meses) => p.vence || sumarMeses(p.fecha_pago || String(p.creada || '').slice(0, 10), meses || 1); // p.vence: fecha a mano (ej. alargar un pack, Isidora 27-11)
 const packMeses = async db => { const v = await db.prepare("SELECT valor FROM ajustes WHERE clave = 'pack'").first(); try { return Math.max(1, Number(JSON.parse(v.valor).meses) || 1); } catch (_) { return 1; } };
 /** Link personal del pack: con él, el cliente agenda sus próximas clases en /reservar sin pagar. */
 const linkPack = p => PAGINA + '?pack=' + encodeURIComponent(p.id) + '&k=' + encodeURIComponent(p.clave || '');
@@ -1635,12 +1635,32 @@ async function manual(env, q, d, ctx) {
   if (d.pack === 'nuevo' && personas >= 4) throw err('El pack de clases es para 1 a 3 personas.');
   if (d.pack === 'nuevo') { pack = { nuevo: true }; const v = sumarMeses(ahoraChile().fecha, await packMeses(db)); if (fecha > v) throw err('El pack se usa dentro de 1 mes: la clase tiene que ser hasta el ' + fechaLarga(v) + '.'); }
   else if (d.pack) { await packTabla(db); pack = (await packsLista(db)).find(k => k.id === String(d.pack)); if (!pack) throw err('No encontramos ese pack.'); if (pack.quedan <= 0) throw err('Ese pack ya no tiene clases.'); if (fecha > pack.vence) throw err('Ese pack vence el ' + fechaLarga(pack.vence) + ': la clase tiene que ser hasta ese día.'); }
+  // Más clases del pack de una vez (Isidora 27-11): d.mas = [{ fecha, hora, personas }]. Se revisan todas antes de guardar nada.
+  const mas = [];
+  if (pack && Array.isArray(d.mas) && d.mas.length) {
+    const tope = (pack.nuevo ? (a.pack || AJUSTES_BASE.pack).clases : pack.quedan) - 1, vence = pack.nuevo ? sumarMeses(ahoraChile().fecha, await packMeses(db)) : pack.vence;
+    const filas = d.mas.map(x => ({ fecha: String((x || {}).fecha || ''), hora: normHora((x || {}).hora), personas: Math.floor(Number((x || {}).personas)) || personas }));
+    if (filas.length > tope) throw err('Al pack le ' + (tope ? 'quedan ' + (tope + 1) + ' clases' : 'queda 1 clase') + ' y estás agendando ' + (filas.length + 1) + '.');
+    const vistas = new Set([fecha + ' ' + hora]);
+    for (const x of filas) {
+      if (!esFecha(x.fecha) || !x.hora) throw err('Elige el día y la hora de cada clase del pack.');
+      if (!(x.personas >= 1 && x.personas <= 3)) throw err('Cada clase del pack es para 1 a 3 personas.');
+      if (x.fecha > vence) throw err('El pack se usa hasta el ' + fechaLarga(vence) + ': la clase del ' + fechaLarga(x.fecha) + ' queda fuera.');
+      if (vistas.has(x.fecha + ' ' + x.hora)) throw err('Hay dos clases del pack el mismo día y hora (' + fechaLarga(x.fecha) + ' ' + x.hora + ').');
+      vistas.add(x.fecha + ' ' + x.hora);
+      const cx = cotizar(a, x.personas, Math.min(menores, x.personas), 0), dur = duracionDe(d, a);
+      const libres = elegir(await estadoAgenda(db, a, x.fecha, x.fecha), a, x.fecha, x.hora, true, dur || a.duracion);
+      const ins = elegidos.filter(i => libres.includes(i)).concat(libres.filter(i => !elegidos.includes(i))).slice(0, Math.max(1, cx.instructores));
+      if (!ins.length) throw err('No hay instructores libres el ' + fechaLarga(x.fecha) + ' a las ' + x.hora + '. Elige otra hora para esa clase.');
+      mas.push(Object.assign(x, { ins, menores: Math.min(menores, x.personas), duracion: dur }));
+    }
+  }
   const conLink = !pack && d.medio === 'Link de pago';
   const medio = conLink ? 'Mercado Pago' : MEDIOS.includes(d.medio) ? d.medio : 'Por pagar';
   if (pack && pack.nuevo && !(total > 0)) throw err('Escribe el precio del pack.');
   if (conLink && !(total > 0)) throw err('Escribe el total a cobrar.');
   if (conLink && !env.MP_TOKEN) throw err('Falta conectar Mercado Pago (MP_TOKEN).');
-  const duracion = [60, 90, 120].includes(Number(d.duracion)) && Number(d.duracion) !== a.duracion ? Number(d.duracion) : 0;
+  const duracion = duracionDe(d, a);
   const ag = await estadoAgenda(db, a, fecha, fecha);
   // Los que eligió Isidora + (si faltan) los que elige la app entre los libres
   const ins = elegidos.concat(elegir(ag, a, fecha, hora, true, duracion || a.duracion).filter(i => !elegidos.includes(i))).slice(0, nIns);
@@ -1661,6 +1681,12 @@ async function manual(env, q, d, ctx) {
   try { await guardarReserva(db, a, r, hasta); }
   catch (x) { if (/UNIQUE|constraint/i.test(String(x.message))) throw err('Ese instructor ya tiene otra clase a esa hora.'); throw x; }
   await anotar(db, q, 'manual ' + r.ref + (conLink ? ' con link' : ''));
+  const fallas = [];
+  for (const x of mas) {
+    const t2 = ahoraChile(), r2 = Object.assign({}, r, { ref: nuevaRef(), creada: t2.fecha + ' ' + t2.hora, creada_ms: Date.now(), fecha: x.fecha, hora: x.hora, personas: x.personas, menores: x.menores, ninos: 0, instructores: x.ins, pagoManual: null, duracion: x.duracion, clave: '' });
+    try { await guardarReserva(db, a, r2, 0); await anotar(db, q, 'manual ' + r2.ref + ' pack ' + r.pack); tarea(ctx, pushNueva(env, Object.assign({}, r2, { instructores: JSON.stringify(x.ins) }), a, false)); }
+    catch (x2) { fallas.push(fechaLarga(x.fecha) + ' ' + x.hora); }
+  }
   if (conLink) {
     const o = await crearOrden(env, r);
     if (!o) { await db.batch([db.prepare('DELETE FROM bloques WHERE ref = ?').bind(r.ref), db.prepare("UPDATE reservas SET estado = 'cancelada', nota = 'Mercado Pago no respondió' WHERE ref = ?").bind(r.ref)]); throw err('Mercado Pago no respondió. Intenta de nuevo.'); }
@@ -1670,8 +1696,11 @@ async function manual(env, q, d, ctx) {
   }
   if (d.avisar && r.correo) tarea(ctx, avisarReserva(env, Object.assign({}, r, { instructores: JSON.stringify(ins) }), a));
   tarea(ctx, pushNueva(env, Object.assign({}, r, { instructores: JSON.stringify(ins) }), a, false));
-  return panel(env, q);
+  const out = await panel(env, q);
+  if (mas.length) out.packMas = { ok: mas.length - fallas.length, fallas };
+  return out;
 }
+const duracionDe = (d, a) => [60, 90, 120].includes(Number(d.duracion)) && Number(d.duracion) !== a.duracion ? Number(d.duracion) : 0;
 async function guardarInstructor(env, q, d) {
   const db = env.DB, nombre = nombrePropio(d.nombre);
   if (!nombre) throw err('Escribe el nombre.');
