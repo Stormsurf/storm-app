@@ -1782,39 +1782,55 @@ async function fichaVer(env, d) {
     hechas: hechas.map(f => ({ n: f.n, nombre: f.nombre })) };
 }
 const PREGUNTAS = ['experiencia', 'seguro', 'alergias', 'medicamentos', 'regimen', 'operaciones', 'embarazada', 'otros'];
-async function fichaGuardar(env, d, request) {
-  const r = await reservaConClave(env, d);
-  const n = Math.floor(Number(d.n));
-  if (!(n >= 1 && n <= Math.max(r.personas, 30))) throw err('Participante no válido.');
-  const f = d.datos || {}, t = v => String(v == null ? '' : v).trim().slice(0, 200);
+// Revisa y limpia una ficha (la misma regla para una sola o para varias juntas)
+function fichaLimpia(f, firma, acepta) {
+  f = f || {};
+  const t = v => String(v == null ? '' : v).trim().slice(0, 200);
   const datos = { nombre: nombrePropio(f.nombre), nacionalidad: t(f.nacionalidad), documento: t(f.documento), edad: Math.floor(Number(f.edad)) || 0, peso: t(f.peso),
     urgencia: (Array.isArray(f.urgencia) ? f.urgencia : []).slice(0, 2).map(u => ({ nombre: nombrePropio(u && u.nombre), telefono: t(u && u.telefono), correo: norm(u && u.correo) })).filter(u => u.nombre || u.telefono),
     declaracion: {}, firmante: nombrePropio(f.firmante), rutFirmante: t(f.rutFirmante), tutor: !!f.tutor, idioma: f.idioma === 'en' ? 'en' : 'es' };
   PREGUNTAS.forEach(k => { const x = (f.declaracion || {})[k] || {}; datos.declaracion[k] = { si: x.si === true, detalle: t(x.detalle) }; });
+  const de = datos.nombre.length >= 2 ? ' (' + datos.nombre + ')' : '';
   if (datos.nombre.length < 2) throw err('Falta el nombre del participante.');
-  if (!datos.documento) throw err('Falta el RUT o pasaporte.');
-  if (!(datos.edad > 0 && datos.edad < 110)) throw err('Revisa la edad.');
+  if (!datos.documento) throw err('Falta el RUT o pasaporte' + de + '.');
+  if (!(datos.edad > 0 && datos.edad < 110)) throw err('Revisa la edad' + de + '.');
   if (!datos.urgencia.length || !datos.urgencia[0].telefono) throw err('Falta un contacto en caso de urgencia.');
-  if (PREGUNTAS.some(k => (f.declaracion || {})[k] == null || typeof (f.declaracion || {})[k].si !== 'boolean')) throw err('Responde sí o no en todas las preguntas.');
+  if (PREGUNTAS.some(k => (f.declaracion || {})[k] == null || typeof (f.declaracion || {})[k].si !== 'boolean')) throw err('Responde sí o no en todas las preguntas' + de + '.');
   if (datos.edad < 18 && !datos.tutor) throw err('Para menores de edad, la ficha la firma su madre, padre o tutor.');
-  if (datos.firmante.length < 2 || !datos.rutFirmante) throw err('Falta el nombre y RUT de quien firma.');
-  if (!d.acepta) throw err('Para seguir, acepta la declaración.');
-  const firma = String(d.firma || '');
-  if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(firma) || firma.length < 800 || firma.length > 400000) throw err('Falta la firma.');
+  if (datos.firmante.length < 2 || !datos.rutFirmante) throw err('Falta el nombre y RUT de quien firma' + de + '.');
+  if (!acepta) throw err('Para seguir, acepta la declaración.');
+  firma = String(firma || '');
+  if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(firma) || firma.length < 800 || firma.length > 400000) throw err('Falta la firma' + de + '.');
+  return { datos, firma };
+}
+// Guarda una o varias fichas de la misma reserva. Primero revisa todas; si una está mal no se guarda ninguna.
+async function fichasGuardar(env, d, request, lista) {
+  const r = await reservaConClave(env, d);
+  if (!Array.isArray(lista) || !lista.length || lista.length > 30) throw err('No hay fichas para guardar.');
+  const limpias = lista.map(x => {
+    const n = Math.floor(Number(x && x.n));
+    if (!(n >= 1 && n <= Math.max(r.personas, 30))) throw err('Participante no válido.');
+    return Object.assign({ n }, fichaLimpia(x.datos, x.firma, d.acepta));
+  });
   // El número de participante lo elige la página al abrirse. Si se abre en dos celulares o pestañas, ambas eligen el mismo número
   // y la segunda borraba la ficha de la primera. Ahora solo se reemplaza si es la misma persona (corrige su ficha);
   // si ese número ya es de otra persona, la ficha se guarda en el primer número libre (o uno nuevo).
-  let slot = n;
-  const yaEstan = await fichasDe(env.DB, r.ref), mismo = s => norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const ocupada = yaEstan.find(x => x.n === slot);
-  if (ocupada && mismo(ocupada.nombre) !== mismo(datos.nombre)) {
-    const igual = yaEstan.find(x => mismo(x.nombre) === mismo(datos.nombre));
-    if (igual) slot = igual.n;
-    else { const usados = new Set(yaEstan.map(x => x.n)); slot = 1; while (usados.has(slot)) slot++; }
+  const yaEstan = (await fichasDe(env.DB, r.ref)).map(x => ({ n: x.n, nombre: x.nombre })), mismo = s => norm(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const tt = ahoraChile(), ip = (request && request.headers.get('CF-Connecting-IP')) || '', st = [];
+  for (const f of limpias) {
+    let slot = f.n;
+    const ocupada = yaEstan.find(x => x.n === slot);
+    if (ocupada && mismo(ocupada.nombre) !== mismo(f.datos.nombre)) {
+      const igual = yaEstan.find(x => mismo(x.nombre) === mismo(f.datos.nombre));
+      if (igual) slot = igual.n;
+      else { const usados = new Set(yaEstan.map(x => x.n)); slot = 1; while (usados.has(slot)) slot++; }
+    }
+    const i = yaEstan.findIndex(x => x.n === slot);
+    if (i >= 0) yaEstan[i].nombre = f.datos.nombre; else yaEstan.push({ n: slot, nombre: f.datos.nombre });
+    st.push(env.DB.prepare('INSERT OR REPLACE INTO fichas (ref, n, nombre, datos, firma, creada, ip) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(r.ref, slot, f.datos.nombre, JSON.stringify(f.datos), f.firma, tt.fecha + ' ' + tt.hora, ip));
   }
-  const tt = ahoraChile();
-  await env.DB.prepare('INSERT OR REPLACE INTO fichas (ref, n, nombre, datos, firma, creada, ip) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(r.ref, slot, datos.nombre, JSON.stringify(datos), firma, tt.fecha + ' ' + tt.hora, (request && request.headers.get('CF-Connecting-IP')) || '').run();
+  await env.DB.batch(st);
   return fichaVer(env, d);
 }
 async function fichasLeer(env, q, d) {
@@ -2092,7 +2108,8 @@ export async function onRequest(context) {
     if (acc === 'pack-ver') return json(await packVer(env, d));
     if (acc === 'estado') return json(await estado(env, d, context));
     if (acc === 'ficha') return json(await fichaVer(env, d));
-    if (acc === 'ficha-guardar') return json(await fichaGuardar(env, d, request));
+    if (acc === 'ficha-guardar') return json(await fichasGuardar(env, d, request, [{ n: d.n, datos: d.datos, firma: d.firma }]));
+    if (acc === 'fichas-guardar') return json(await fichasGuardar(env, d, request, d.fichas));
     if (acc === 'resena') return json(await resenaGuardar(env, d, context));
     const q = await quien(env, d);
     if (acc === 'fichas') return json(await fichasLeer(env, q, d));
