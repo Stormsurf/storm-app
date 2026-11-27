@@ -166,6 +166,25 @@
 .mc-duda__err{margin:8px 0 0;color:#b5523b;font-size:1.3rem}
 .mc-duda__ok{text-align:center}
 .mc-res.mc-res--q{background:linear-gradient(160deg,#FADF70,#E9B93A);color:#3B2610;border:0;font:inherit;text-align:left;cursor:pointer}
+/* Clases de vacaciones (v49): se pagan solas, sin volver a pagar el plan */
+.mc-vac{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#E7F4EE;border-color:transparent}
+.mc-vac>div{flex:1 1 200px}
+.mc-vac b{display:block;font-size:1.6rem;color:#1f5c43}
+.mc-vac p{margin:2px 0 0;font-size:1.4rem;line-height:1.45;color:#2E5E4A}
+.mc-vac .mc-go{background:#3E9B76;flex:none}
+.mc-vac__k{margin-top:16px}
+.mc-vac__k h4{margin:0 0 8px;font-size:1.55rem;font-weight:600}
+.mc-vac__d{display:grid;gap:8px}
+.mc-vac__d button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:1.5px solid var(--line);border-radius:14px;background:#fff;padding:12px 14px;font:inherit;font-size:1.45rem;color:var(--ink);text-align:left;cursor:pointer}
+.mc-vac__d button small{display:block;font-size:1.25rem;opacity:.65}
+.mc-vac__d button i{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid #C9DCD3;display:grid;place-items:center;font-style:normal;font-weight:700;color:#fff}
+.mc-vac__d button.on{border-color:#3E9B76;background:#E7F4EE}
+.mc-vac__d button.on i{background:#3E9B76;border-color:#3E9B76}
+.mc-vac__d button:disabled{cursor:default;opacity:.6}
+.mc-vac__d button:disabled i{background:#C9DCD3;border-color:#C9DCD3}
+.mc-vac__tot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.mc-vac__tot span{font-size:1.4rem}.mc-vac__tot b{display:block;font-size:2.2rem}
+.mc-vac__tot .mc-go{background:#3E9B76}.mc-vac__tot .mc-go:disabled{opacity:.45}
 .mc-res.mc-res--q i{background:rgba(59,38,16,.1)}
 .mc-sheet{--aa:#61A1C8;--aa-dk:#2d6e94;--aa-soft:#E6F1F8;--ink:#2C2C2B;--line:rgba(44,44,43,.12);color:var(--ink);position:fixed;inset:0;z-index:80;background:rgba(22,56,76,.45);display:flex;align-items:flex-end;justify-content:center}
 .mc-sheet[hidden]{display:none}
@@ -847,6 +866,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     h += proximaCard(proximas);
     const vv = vistos(), nNuevos = (d.mensajes || []).filter(m => !vv.includes(m.id)).length;
     h += accesos(nNuevos, `<a href='#mc-s-pago'><i>${IC.pay}</i>Pagar</a>`);
+    h += `<div data-vac></div>`;
     if(!d.alumnos.length){
       h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
     }
@@ -879,6 +899,7 @@ body:has(.mc-hero--login) .ap-top{display:none}
     bindSw(); bindProxima(proximas); bindNuevo();
     marcarVistos(d.mensajes || []);
     calendariosMes([].concat(...activos.map(a => (a.clases||[]).map(c => c.fecha))));
+    vacaciones(activos);
     document.getElementById('mc-out').onclick = () => { borrar(); auth = null; msg = ''; D = {anual:null, verano:null}; vista = ''; hero(); login(); };
     app.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => agregarEvento(d.eventos[+b.dataset.ev]));
     app.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{ const o=document.getElementById('o-'+b.dataset.open); o.hidden=!o.hidden; b.textContent = o.hidden ? 'Mover' : 'Cerrar'; });
@@ -901,6 +922,55 @@ body:has(.mc-hero--login) .ap-top{display:none}
         D.anual = r; render(r); window.scrollTo({top: app.offsetTop - 20, behavior:'smooth'});
       }catch(x){ msg = `<div class='mc-msg mc-msg--err'>${esc(x.message)}</div>`; load(); }
     });
+  }
+  // ---------- Clases de vacaciones (v49): quien tiene Básico o Medio las paga solas, sin volver a pagar el plan ----------
+  const VAC_PRECIO = 20000; // igual que EXTRA_PRECIO en el programa de la planilla (el programa pone el precio al cobrar)
+  const esVac = c => c.extra || /vacacion/i.test((c.grupo || '') + ' ' + (c.nota || ''));
+  const fechaCorta = f => { const d = new Date(f + 'T12:00:00'); return DSEM[d.getDay()] + ' ' + d.getDate(); };
+  function vacaciones(activos){
+    const box = app.querySelector('[data-vac]'); if(!box) return;
+    const hoy = isoHoy();
+    const pueden = activos.filter(a => String(a.plan).split('+').some(x => ['basico','medio'].includes(sinTilde(x))));
+    if(!pueden.length) return;
+    const meses = [...new Set(pueden.map(a => a.mes))];
+    Promise.all(meses.map(calMes)).then(rs => {
+      if(!box.isConnected) return;
+      const porMes = {}; meses.forEach((m, i) => porMes[m] = ((rs[i] || {}).clases || []).filter(c => esVac(c) && !c.pasada && c.fecha > hoy).sort((a,b) => a.fecha < b.fecha ? -1 : 1));
+      let kids = pueden.map(a => { const ya = new Set((a.clases || []).map(c => c.fecha)); return {alumno: a.alumno, mes: a.mes, dias: porMes[a.mes].map(c => Object.assign({ya: ya.has(c.fecha)}, c))}; })
+        .filter(k => k.dias.some(c => !c.ya));
+      if(!kids.length){ box.innerHTML = ''; return; }
+      kids = kids.filter(k => k.mes === kids[0].mes); // un pago es de un solo mes
+      const todas = [...new Set([].concat(...kids.map(k => k.dias.map(c => c.fecha))))].sort();
+      const nm = MESES[new Date(todas[0] + 'T12:00:00').getMonth()];
+      box.innerHTML = `<div class='mc-card mc-vac'><div><b>Clases de vacaciones de ${nm}</b><p>${esc(cap(listaY(todas.map(fechaCorta))))} de ${nm} · ${clp(VAC_PRECIO)} cada una. Agrégalas sin volver a pagar el mes.</p></div><button class='mc-go mc-go--sm' data-vac-open>Agregar clases</button></div>`;
+      box.querySelector('[data-vac-open]').onclick = () => hojaVac(kids, nm);
+    });
+  }
+  function hojaVac(kids, nm){
+    document.querySelectorAll('body > [data-vac-sheet]').forEach(x => x.remove());
+    const sh = document.createElement('div'); sh.className = 'mc-sheet'; sh.dataset.vacSheet = '';
+    sh.innerHTML = `<div class='mc-card mc-duda'><button type='button' class='mc-sheet__x' data-x aria-label='Cerrar'>×</button><h3>Clases de vacaciones</h3><p>Toca los días que quieres agregar. Cada clase cuesta ${clp(VAC_PRECIO)}.</p>` +
+      kids.map((k, ki) => `<div class='mc-vac__k'><h4>${esc(String(k.alumno).split(' ')[0])}</h4><div class='mc-vac__d'>` + k.dias.map(c =>
+        `<button type='button' data-k='${ki}' data-f='${c.fecha}'${c.ya ? ' disabled' : ''}><span>${esc(cap(c.texto || fechaCorta(c.fecha)))}<small>${c.ya ? 'Ya está inscrito/a' : esc(c.clase + ' · ' + c.horario)}</small></span><i>✓</i></button>`).join('') + `</div></div>`).join('') +
+      `<div class='mc-vac__tot'><span>Total<b data-tot>${clp(0)}</b></span><button type='button' class='mc-go' data-pagar disabled>Pagar</button></div><p class='mc-duda__err' hidden></p>
+      <p class='mc-note' style='text-align:left;margin-top:12px'>Pagas con tarjeta y quedan agendadas solas. Te llega la confirmación por correo.</p></div>`;
+    document.body.appendChild(sh); document.body.style.overflow = 'hidden';
+    const cerrar = () => { sh.remove(); document.body.style.overflow = ''; };
+    sh.onclick = e => { if(e.target === sh || e.target.closest('[data-x]')) cerrar(); };
+    const go = sh.querySelector('[data-pagar]'), tot = sh.querySelector('[data-tot]'), er = sh.querySelector('.mc-duda__err');
+    const elegidas = () => [...sh.querySelectorAll('.mc-vac__d button.on')];
+    const upd = () => { const n = elegidas().length; tot.textContent = clp(n * VAC_PRECIO); go.disabled = !n; go.textContent = n ? 'Pagar ' + n + (n === 1 ? ' clase' : ' clases') : 'Pagar'; };
+    sh.querySelectorAll('.mc-vac__d button:not(:disabled)').forEach(b => b.onclick = () => { b.classList.toggle('on'); er.hidden = true; upd(); });
+    go.onclick = async () => {
+      const porMes = {};
+      elegidas().forEach(b => { const k = kids[+b.dataset.k]; const m = porMes[k.mes] = porMes[k.mes] || {}; (m[k.alumno] = m[k.alumno] || []).push(b.dataset.f); });
+      const mes = Object.keys(porMes)[0];
+      go.disabled = true; go.textContent = 'Abriendo el pago…';
+      try{
+        const r = await call({accion:'pagar-vacaciones', mes, alumnos: Object.keys(porMes[mes]).map(a => ({alumno: a, extras: porMes[mes][a]}))});
+        location.href = (u => { const m = /[?&]order_id=(ORD[A-Z0-9]+)/.exec(u || ''); return m ? '/pagar/?o=' + m[1] : u; })(r.url);
+      }catch(x){ er.hidden = false; er.textContent = /desconocida/i.test(x.message) ? 'Esta opción se está activando. Intenta de nuevo en un rato o escríbenos por WhatsApp.' : x.message; upd(); }
+    };
   }
   // ---------- Academia de Adultos ----------
   const AD_RECURSOS = [
