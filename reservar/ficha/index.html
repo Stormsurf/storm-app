@@ -59,6 +59,15 @@
 .fi-done p{color:var(--mute);font-size:1.45rem;line-height:1.5;margin:8px 0 0}
 .fi-skel{height:200px;border-radius:16px;background:linear-gradient(90deg,#f3f1ed 25%,#ebe8e3 50%,#f3f1ed 75%);background-size:200% 100%;animation:fi-sk 1.2s infinite}
 @keyframes fi-sk{to{background-position:-200% 0}}
+.fi-ph{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
+.fi-ph h2{margin:0}
+.fi-lnk{border:0;background:none;padding:4px 0;font:inherit;font-size:1.25rem;color:var(--ac-dk);text-decoration:underline;cursor:pointer;flex:none}
+.fi-sec{margin:16px 0 2px;display:flex;align-items:center;justify-content:space-between;font-size:1.4rem;font-weight:600}
+.fi-skip{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:1.4rem;color:var(--mute)}
+.fi-who{margin-top:14px;padding:12px 14px;border-radius:14px;background:#FFF6DA;font-size:1.35rem;line-height:1.45}
+.fi-who .fi-ppl{margin-top:8px}
+.fi-sgl{margin:16px 0 4px;font-size:1.35rem;font-weight:600}
+.fi-sgl span{display:block;font-weight:400;color:var(--mute);font-size:1.2rem}
 .fi-foot{text-align:center;margin:16px 0 0;font-size:1.15rem;color:var(--mute)}
 </style>
 </head>
@@ -81,11 +90,15 @@
       urg:'Contacto en caso de urgencia', urg2:'Segundo contacto (opcional)', tel:'Teléfono', mail:'Correo', copiar:'Usar el mismo contacto del participante anterior',
       decl:'Declaración', si:'Sí', no:'No', esp:'Especificar',
       p:{ experiencia:'Experiencia en surf', seguro:'Cuenta con seguro', alergias:'Alergias', medicamentos:'Medicamentos contraindicados', regimen:'Régimen especial (alimentación)', operaciones:'Operaciones recientes', embarazada:'Embarazada', otros:'Otros' },
-      menor:'Es menor de edad: esta parte la completa y firma su madre, padre o tutor que lo acompaña.',
+      menor:'Es menor de edad: firma por él o ella un adulto a cargo.',
       riesgo:['declaro conocer y entender los riesgos que envuelve la participación en este tipo de actividades, el cual no puede ser completamente eliminado, aun cuando exista el cumplimiento de estándares de seguridad acreditados por el prestador, los cuales tienen por finalidad disminuir los riesgos que el desarrollo de esta actividad involucra.','Será deber del prestador de servicios de turismo aventura informar de las condiciones y requisitos para el desarrollo de la actividad, como asimismo, es deber de los participantes informarse adecuadamente de las condiciones en que se presta el servicio, de las condiciones mínimas que el participante debe poseer antes de efectuar la actividad y acatar las instrucciones que la empresa y guía a cargo de la actividad indiquen.'],
       yo:'Yo', firmante:'Nombre de quien firma', rutF:'RUT o pasaporte de quien firma', acepto:'Leí y acepto la declaración.', firma:'Firma aquí con el dedo', borrar:'Borrar', enviar:'Guardar ficha', guardando:'Guardando…',
       listo:'¡Fichas listas!', listoTxt:'Ya tenemos la ficha de todos los participantes. ¡Nos vemos en el agua!', siguiente:'Ficha guardada. Sigue con el participante ', faltan:'Faltan fichas', red:'No pudimos conectarnos. Revisa tu internet.',
-      error:'Este link no es válido. Escríbenos por WhatsApp.', yn:'Responde sí o no en todas las preguntas.', faltaFirma:'Falta la firma.', hecha:'lista', guardada:'¡Tu ficha quedó guardada!', guardadaDe:'Guardamos la ficha de ', estado:'Fichas de esta reserva', falta:'falta', otra:'Llenar la ficha del participante ' },
+      error:'Este link no es válido. Escríbenos por WhatsApp.', yn:'Responde sí o no en todas las preguntas', faltaFirma:'Falta la firma', hecha:'lista', guardada:'¡Tu ficha quedó guardada!', guardadas:'¡Fichas guardadas!', guardadaDe:'Guardamos la ficha de ', estado:'Fichas de esta reserva', falta:'falta', otra:'Llenar la ficha que falta', otras:'Llenar las fichas que faltan',
+      subVarias:'Obligatoria antes de entrar al mar (Sernatur, Decreto 19/2018). Llenen aquí las de todos juntos, o deja alguna para que la llene esa persona con este mismo link.',
+      laOtra:'La llena otra persona', llenarAqui:'Llenarla aquí', todoNo:'No a todo', firmaPor:'¿Quién firma por', otraPersona:'Su madre, padre o tutor', tutor:'madre, padre o tutor', todos:'para todos',
+      firmaT:'Declaración y firma', firmaDe:'Firma de', tambienPor:'También firma por', nos:'Nosotros,', y:'y', riesgoVarios:'declaramos conocer y entender los riesgos que envuelve la participación en este tipo de actividades, el cual no puede ser completamente eliminado, aun cuando exista el cumplimiento de estándares de seguridad acreditados por el prestador, los cuales tienen por finalidad disminuir los riesgos que el desarrollo de esta actividad involucra.',
+      aceptamos:'Leímos y aceptamos la declaración.', enviarN:'Guardar las # fichas', faltaNombre:'Falta el nombre', faltaDoc:'Falta el RUT o pasaporte', faltaEdad:'Revisa la edad', faltaUrg:'Falta un contacto en caso de urgencia.', faltaTutor:'Falta el nombre y RUT de quien firma por el menor.', faltaAcepta:'Para seguir, acepta la declaración.' },
     en: { titulo:'Registration form and acceptance of activity risk', sub:'Required before entering the sea (Sernatur, Decree 19/2018). One per participant. Takes 2 minutes.',
       actividad:'Activity', clase:'Surf lesson', fecha:'Date', inicio:'Start time', termino:'End time', guia:'Guide in charge', rut:'ID', salida:'Departure and arrival',
       ruta:'The lesson begins at Storm Surf Academy, where surfboard, leash and wetsuit are provided. Participants walk along the beach to the "school zone", where a warm-up takes place, technique is practiced, and then participants enter the sea.',
@@ -93,121 +106,157 @@
       urg:'Emergency contact', urg2:'Second contact (optional)', tel:'Phone', mail:'E-mail', copiar:'Use the same contact as the previous participant',
       decl:'Declaration', si:'Yes', no:'No', esp:'Specify',
       p:{ experiencia:'Experience in surfing', seguro:'Has insurance', alergias:'Allergies', medicamentos:'Contraindicated medications', regimen:'Special diet', operaciones:'Recent surgeries', embarazada:'Pregnant', otros:'Other' },
-      menor:'Underage participant: this part must be completed and signed by the parent or guardian accompanying them.',
+      menor:'Underage participant: an adult in charge signs for them.',
       riesgo:['declare that I know and understand the risks involved in participating in this type of activity, which cannot be completely eliminated, even when safety standards accredited by the service provider are complied with, whose purpose is to reduce the risks involved in the development of this activity.','It shall be the duty of the adventure tourism service provider to inform participants of the conditions and requirements for carrying out the activity. Likewise, it is the duty of the participants to properly inform themselves of the conditions under which the service is provided, the minimum conditions that the participant must meet before carrying out the activity, and to follow the instructions indicated by the company and the guide in charge of the activity.'],
       yo:'I,', firmante:'Name of the person signing', rutF:'ID of the person signing', acepto:'I have read and accept the declaration.', firma:'Sign here with your finger', borrar:'Clear', enviar:'Save form', guardando:'Saving…',
       listo:'All forms done!', listoTxt:'We have the form for every participant. See you in the water!', siguiente:'Form saved. Continue with participant ', faltan:'Forms missing', red:'We could not connect. Check your internet.',
-      error:'This link is not valid. Please contact us on WhatsApp.', yn:'Answer yes or no to every question.', faltaFirma:'Signature missing.', hecha:'done', guardada:'Your form was saved!', guardadaDe:'We saved the form for ', estado:'Forms for this booking', falta:'missing', otra:'Fill in the form for participant ' }
+      error:'This link is not valid. Please contact us on WhatsApp.', yn:'Answer yes or no to every question', faltaFirma:'Signature missing', hecha:'done', guardada:'Your form was saved!', guardadas:'Forms saved!', guardadaDe:'We saved the form for ', estado:'Forms for this booking', falta:'missing', otra:'Fill in the missing form', otras:'Fill in the missing forms',
+      subVarias:'Required before entering the sea (Sernatur, Decree 19/2018). Fill them in here for everyone together, or leave one for that person to fill in with this same link.',
+      laOtra:'Someone else will fill it in', llenarAqui:'Fill it in here', todoNo:'No to all', firmaPor:'Who signs for', otraPersona:'Their parent or guardian', tutor:'parent or guardian', todos:'for everyone',
+      firmaT:'Declaration and signature', firmaDe:'Signature of', tambienPor:'Also signs for', nos:'We,', y:'and', riesgoVarios:'declare that we know and understand the risks involved in participating in this type of activity, which cannot be completely eliminated, even when safety standards accredited by the service provider are complied with, whose purpose is to reduce the risks involved in the development of this activity.',
+      aceptamos:'We have read and accept the declaration.', enviarN:'Save the # forms', faltaNombre:'Name missing', faltaDoc:'RUT or passport missing', faltaEdad:'Check the age', faltaUrg:'An emergency contact is missing.', faltaTutor:'Name and ID of the person signing for the minor are missing.', faltaAcepta:'To continue, accept the declaration.' }
   };
   let L = (navigator.language || 'es').toLowerCase().startsWith('es') ? 'es' : 'en';
   try{ L = localStorage.getItem('storm-ficha-lang') || L; }catch(_){}
   { const l = new URLSearchParams(location.search).get('l'); if(l === 'es' || l === 'en') L = l; }
   const T = k => TX[L][k];
   const PREG = ['experiencia','seguro','alergias','medicamentos','regimen','operaciones','embarazada','otros'];
-  let D = null, n = 1, F = nuevo(), aviso = '', ultimoUrg = null, guardada = '';
-  function nuevo(){ return { nombre:'', nacionalidad: L==='es' ? 'Chilena' : '', documento:'', edad:'', peso:'', urgencia:[{nombre:'',telefono:'',correo:''},{nombre:'',telefono:'',correo:''}], declaracion:{}, firmante:'', rutFirmante:'', acepta:false }; }
+  // Se llenan juntas las fichas de todos los que faltan: datos y declaración de cada uno, un solo contacto de urgencia,
+  // y cada adulto firma la suya. Por un menor firma un adulto del grupo o su madre, padre o tutor.
+  let D = null, P = [], U = urgVacia(), TU = { nombre:'', rut:'' }, acepta = false, sigs = {}, guardada = [];
+  function urgVacia(){ return [{nombre:'',telefono:'',correo:''},{nombre:'',telefono:'',correo:''}]; }
+  function nuevo(n){ return { n, nombre:'', nacionalidad: L==='es' ? 'Chilena' : '', documento:'', edad:'', peso:'', declaracion:{}, otra:false, tutor:'' }; }
   const hechas = () => new Set((D.hechas || []).map(h => h.n));
-  const primeraLibre = () => { const h = hechas(); for(let i = 1; i <= D.personas; i++) if(!h.has(i)) return i; return 0; };
+  const faltan = () => { const h = hechas(), l = []; for(let i = 1; i <= D.personas; i++) if(!h.has(i)) l.push(i); return l; };
+  const armar = () => { P = faltan().map(nuevo); sigs = {}; acepta = false; };
+  const menor = p => Number(p.edad) > 0 && Number(p.edad) < 18;
+  const activos = () => P.filter(p => !p.otra);
+  const adultos = () => activos().filter(p => Number(p.edad) >= 18);
+  const nom = p => (p.nombre || '').trim() || T('part') + ' ' + p.n;
+  // quién firma por cada participante: 'p<n>' = un adulto del grupo, 't' = otra persona
+  const quienFirma = p => { if(!menor(p)) return 'p' + p.n; const a = adultos(); if(p.tutor === 't') return 't'; if(a.some(x => 'p' + x.n === p.tutor)) return p.tutor; return a.length ? 'p' + a[0].n : 't'; };
+  const firmantes = () => { const l = []; activos().forEach(p => { const k = quienFirma(p); if(!l.includes(k)) l.push(k); }); return l; };
 
   async function cargar(){
     root.innerHTML = `<div class='fi-skel'></div>`;
-    try{ D = await post({accion:'ficha', r: REF, k: K}); n = primeraLibre() || 1; if(!primeraLibre() && (D.hechas || []).length) aviso = 'fin'; pintar(); }
+    try{ D = await post({accion:'ficha', r: REF, k: K}); armar(); pintar(); }
     catch(x){ root.innerHTML = `<div class='fi-card fi-done'><h2>${esc(x.message)}</h2><p><a href='https://wa.me/56977744306'>WhatsApp +56 9 7774 4306</a></p></div>`; }
   }
-  const leerForm = () => { root.querySelectorAll('[data-k]').forEach(i => { const path = i.dataset.k.split('.'); let o = F; while(path.length > 1){ const p = path.shift(); o = o[p] = o[p] || {}; } o[path[0]] = i.type === 'checkbox' ? i.checked : i.value; }); };
+  // data-k='P.0.nombre', 'U.0.telefono', 'TU.rut' o 'acepta': de dónde se lee cada campo
+  const R = { get P(){ return P; }, get U(){ return U; }, get TU(){ return TU; }, get acepta(){ return acepta; }, set acepta(v){ acepta = v; } };
+  const leerForm = () => { root.querySelectorAll('[data-k]').forEach(i => { const path = i.dataset.k.split('.'); let o = R; while(path.length > 1){ const p = path.shift(); if(o[p] == null) o[p] = {}; o = o[p]; } o[path[0]] = i.type === 'checkbox' ? i.checked : i.value; }); };
+  const repintar = () => { leerForm(); const y = window.scrollY; pintar(); window.scrollTo({top:y}); };
+  const estado = () => Array.from({length: D.personas}, (_, i) => i + 1).map(i => { const hh = (D.hechas || []).find(x => x.n === i);
+    return `<li style='margin:6px 0;${hh ? 'color:#2f7a4d;font-weight:600' : 'color:#9a5b12'}'>${hh ? '✓ ' + esc(hh.nombre) : '○ ' + T('part') + ' ' + i + ' · ' + T('falta')}</li>`; }).join('');
 
   function pintar(){
-    const A = D.actividad, h = hechas(), menor = Number(F.edad) > 0 && Number(F.edad) < 18;
-    if(!primeraLibre() && !h.has(n)) n = 1;
-    if(guardada){
-      // Pantalla de confirmación después de guardar: que quede claro que la ficha se guardó
-      const sig = primeraLibre(), lista = Array.from({length: D.personas}, (_, i) => i + 1).map(i => { const hh = (D.hechas || []).find(x => x.n === i);
-        return `<li style='margin:6px 0;${hh ? 'color:#2f7a4d;font-weight:600' : 'color:#9a5b12'}'>${hh ? '✓ ' + esc(hh.nombre) : '○ ' + T('part') + ' ' + i + ' · ' + T('falta')}</li>`; }).join('');
-      root.innerHTML = lang() + `<div class='fi-card fi-done'><div class='ic'>✓</div><h2>${sig ? T('guardada') : T('listo')}</h2>
-        <p>${sig ? T('guardadaDe') + '<b>' + esc(guardada) + '</b>.' : T('listoTxt')}</p>
-        ${D.personas > 1 ? `<p style='margin:18px 0 6px;font-weight:600'>${T('estado')}</p><ul style='list-style:none;padding:0;margin:0;text-align:left;display:inline-block'>${lista}</ul>` : ''}
-        ${sig ? `<button class='fi-go' id='fi-sig' style='margin-top:20px'>${T('otra')}${sig}</button>` : ''}</div>`;
-      bindLang(); const b = document.getElementById('fi-sig'); if(b) b.onclick = () => { guardada = ''; n = sig; pintar(); window.scrollTo({top:0}); };
+    const A = D.actividad, f = faltan();
+    if(guardada.length || !f.length){
+      // Pantalla de confirmación después de guardar (o si ya están todas)
+      root.innerHTML = lang() + `<div class='fi-card fi-done'><div class='ic'>✓</div><h2>${f.length ? (guardada.length > 1 ? T('guardadas') : T('guardada')) : T('listo')}</h2>
+        <p>${f.length ? T('guardadaDe') + '<b>' + (guardada.length > 1 ? guardada.slice(0, -1).map(esc).join(', ') + ' ' + T('y') + ' ' + esc(guardada[guardada.length - 1]) : esc(guardada[0])) + '</b>.' : T('listoTxt')}</p>
+        ${D.personas > 1 ? `<p style='margin:18px 0 6px;font-weight:600'>${T('estado')}</p><ul style='list-style:none;padding:0;margin:0;text-align:left;display:inline-block'>${estado()}</ul>` : ''}
+        ${f.length ? `<button class='fi-go' id='fi-sig' style='margin-top:20px'>${f.length === 1 ? T('otra') : T('otras')}</button>` : ''}</div>`;
+      bindLang(); const b = document.getElementById('fi-sig'); if(b) b.onclick = () => { guardada = []; armar(); pintar(); window.scrollTo({top:0}); };
       return;
     }
-    if(!primeraLibre() && aviso === 'fin'){
-      root.innerHTML = lang() + `<div class='fi-card fi-done'><div class='ic'>✓</div><h2>${T('listo')}</h2><p>${T('listoTxt')}</p></div>`;
-      bindLang(); return;
-    }
-    root.innerHTML = lang() + `<h1>${T('titulo')}</h1><p class='fi-sub'>${T('sub')}</p>
+    const varias = P.length > 1, act = activos(), fs = firmantes(), hay = (D.hechas || []).length;
+    const persona = p => p.otra ? `<div class='fi-card fi-skip'><span><b style='color:var(--ink)'>${T('part')} ${p.n}</b> · ${T('laOtra')}</span><button class='fi-lnk' data-otra='${p.n}'>${T('llenarAqui')}</button></div>` :
+      `<div class='fi-card fi-f'><div class='fi-ph'><h2>${D.personas > 1 ? T('part') + ' ' + p.n : T('personales')}</h2>${varias && act.length > 1 ? `<button class='fi-lnk' data-otra='${p.n}'>${T('laOtra')}</button>` : ''}</div>
+        <label>${T('nombre')}</label><input data-k='P.${P.indexOf(p)}.nombre' data-re value='${esc(p.nombre)}' autocomplete='off'>
+        <div class='fi-g2'><div><label>${T('nac')}</label><input data-k='P.${P.indexOf(p)}.nacionalidad' value='${esc(p.nacionalidad)}'></div><div><label>${T('doc')}</label><input data-k='P.${P.indexOf(p)}.documento' data-re value='${esc(p.documento)}'></div></div>
+        <div class='fi-g2'><div><label>${T('edad')}</label><input data-k='P.${P.indexOf(p)}.edad' data-re type='number' inputmode='numeric' min='1' value='${esc(p.edad)}'></div><div><label>${T('peso')}</label><input data-k='P.${P.indexOf(p)}.peso' inputmode='decimal' value='${esc(p.peso)}'></div></div>
+        <div class='fi-sec'><span>${T('decl')}</span><button class='fi-lnk' data-todono='${p.n}'>${T('todoNo')}</button></div>
+        ${PREG.map(k => { const v = p.declaracion[k] || {};
+          return `<div class='fi-q'><div class='fi-qh'><span>${T('p')[k]}</span><div class='fi-yn'><button data-yn='${k}' data-p='${p.n}' data-v='1' class='${v.si === true ? 'on' : ''}'>${T('si')}</button><button data-yn='${k}' data-p='${p.n}' data-v='0' class='${v.si === false ? 'on' : ''}'>${T('no')}</button></div></div>
+            ${v.si ? `<input data-k='P.${P.indexOf(p)}.declaracion.${k}.detalle' placeholder='${T('esp')}' value='${esc(v.detalle || '')}'>` : ''}</div>`; }).join('')}
+        ${menor(p) ? `<div class='fi-who'>${T('menor')}${adultos().length ? `<br><b>${T('firmaPor')} ${esc(nom(p))}?</b><div class='fi-ppl'>${adultos().map(a => `<button data-tutor='${p.n}' data-t='p${a.n}' class='${quienFirma(p) === 'p' + a.n ? 'on' : ''}'>${esc(nom(a))}</button>`).join('')}<button data-tutor='${p.n}' data-t='t' class='${quienFirma(p) === 't' ? 'on' : ''}'>${T('otraPersona')}</button></div>` : ''}</div>` : ''}
+      </div>`;
+    const firmaDe = k => { const a = k === 't' ? null : P.find(p => 'p' + p.n === k), por = activos().filter(p => quienFirma(p) === k && 'p' + p.n !== k).map(nom);
+      return `${k === 't' ? `<div class='fi-g2'><div><label>${T('firmante')}</label><input data-k='TU.nombre' data-re value='${esc(TU.nombre)}'></div><div><label>${T('rutF')}</label><input data-k='TU.rut' value='${esc(TU.rut)}'></div></div>` : ''}
+        <p class='fi-sgl'>${T('firmaDe')} ${esc(k === 't' ? (TU.nombre.trim() || T('tutor')) : nom(a))}${por.length ? `<span>${T('tambienPor')} ${por.map(esc).join(', ')}</span>` : ''}</p>
+        <div class='fi-sig'><canvas data-c='${k}'></canvas><span>${T('firma')}</span><button type='button' data-cl='${k}'>${T('borrar')}</button></div>`; };
+    const nombresF = fs.map(k => k === 't' ? (TU.nombre.trim() || '______') : nom(P.find(p => 'p' + p.n === k)));
+    root.innerHTML = lang() + `<h1>${T('titulo')}</h1><p class='fi-sub'>${varias ? T('subVarias') : T('sub')}</p>
       <div class='fi-card'><h2>${T('actividad')}: ${T('clase')}</h2><div class='fi-act'>
         <div><span>${T('fecha')}</span><b>${esc(A.fechaLarga)}</b></div><div><span>${T('salida')}</span><b>Storm · ${esc(A.lugar)}</b></div>
         <div><span>${T('inicio')}</span><b>${esc(A.inicio)}</b></div><div><span>${T('termino')}</span><b>${esc(A.termino)}</b></div>
         ${A.guia ? `<div><span>${T('guia')}</span><b>${esc(A.guia)}</b></div><div><span>${T('rut')}</span><b>${esc(A.rutGuia || '—')}</b></div>` : ''}
       </div><p class='fi-ruta'>${T('ruta')}</p></div>
-      ${D.personas > 1 ? `<div class='fi-card'><h2>${T('quien')}</h2><div class='fi-ppl'>${Array.from({length: D.personas}, (_, i) => i + 1).map(i => { const hh = (D.hechas || []).find(x => x.n === i);
-        return `<button data-n='${i}' class='${i === n ? 'on' : hh ? 'ok' : ''}'>${hh ? '✓ ' + esc(hh.nombre.split(' ')[0]) : T('part') + ' ' + i}</button>`; }).join('')}</div></div>` : ''}
-      ${aviso && aviso !== 'fin' ? `<div class='fi-card' style='background:#e5f2ea;color:#2f7a4d;font-weight:600;font-size:1.4rem'>${esc(aviso)}</div>` : ''}
-      <div class='fi-card fi-f'><h2>${T('personales')}${D.personas > 1 ? ' · ' + T('part') + ' ' + n : ''}</h2>
-        <label>${T('nombre')}</label><input data-k='nombre' value='${esc(F.nombre)}' autocomplete='off'>
-        <div class='fi-g2'><div><label>${T('nac')}</label><input data-k='nacionalidad' value='${esc(F.nacionalidad)}'></div><div><label>${T('doc')}</label><input data-k='documento' value='${esc(F.documento)}'></div></div>
-        <div class='fi-g2'><div><label>${T('edad')}</label><input data-k='edad' data-re type='number' inputmode='numeric' min='1' value='${esc(F.edad)}'></div><div><label>${T('peso')}</label><input data-k='peso' inputmode='decimal' value='${esc(F.peso)}'></div></div>
-      </div>
-      <div class='fi-card fi-f'><h2>${T('urg')}</h2>
-        ${ultimoUrg ? `<label class='fi-chk' style='margin-top:0;font-weight:500'><input type='checkbox' data-copiar> ${T('copiar')}</label>` : ''}
-        <label>${T('nombre')}</label><input data-k='urgencia.0.nombre' value='${esc(F.urgencia[0].nombre)}'>
-        <div class='fi-g2'><div><label>${T('tel')}</label><input data-k='urgencia.0.telefono' type='tel' value='${esc(F.urgencia[0].telefono)}'></div><div><label>${T('mail')}</label><input data-k='urgencia.0.correo' type='email' value='${esc(F.urgencia[0].correo)}'></div></div>
+      ${hay ? `<div class='fi-card'><h2>${T('estado')}</h2><ul style='list-style:none;padding:0;margin:0'>${estado()}</ul></div>` : ''}
+      ${P.map(persona).join('')}
+      <div class='fi-card fi-f'><h2>${T('urg')}${act.length > 1 ? ' · ' + T('todos') : ''}</h2>
+        <label>${T('nombre')}</label><input data-k='U.0.nombre' value='${esc(U[0].nombre)}'>
+        <div class='fi-g2'><div><label>${T('tel')}</label><input data-k='U.0.telefono' type='tel' value='${esc(U[0].telefono)}'></div><div><label>${T('mail')}</label><input data-k='U.0.correo' type='email' value='${esc(U[0].correo)}'></div></div>
         <p style='margin:16px 0 0;font-size:1.3rem;font-weight:600'>${T('urg2')}</p>
-        <label>${T('nombre')}</label><input data-k='urgencia.1.nombre' value='${esc(F.urgencia[1].nombre)}'>
-        <div class='fi-g2'><div><label>${T('tel')}</label><input data-k='urgencia.1.telefono' type='tel' value='${esc(F.urgencia[1].telefono)}'></div><div><label>${T('mail')}</label><input data-k='urgencia.1.correo' type='email' value='${esc(F.urgencia[1].correo)}'></div></div>
+        <label>${T('nombre')}</label><input data-k='U.1.nombre' value='${esc(U[1].nombre)}'>
+        <div class='fi-g2'><div><label>${T('tel')}</label><input data-k='U.1.telefono' type='tel' value='${esc(U[1].telefono)}'></div><div><label>${T('mail')}</label><input data-k='U.1.correo' type='email' value='${esc(U[1].correo)}'></div></div>
       </div>
-      <div class='fi-card'><h2>${T('decl')}</h2>${PREG.map(k => { const v = F.declaracion[k] || {};
-        return `<div class='fi-q'><div class='fi-qh'><span>${T('p')[k]}</span><div class='fi-yn'><button data-yn='${k}' data-v='1' class='${v.si === true ? 'on' : ''}'>${T('si')}</button><button data-yn='${k}' data-v='0' class='${v.si === false ? 'on' : ''}'>${T('no')}</button></div></div>
-          ${v.si ? `<input data-k='declaracion.${k}.detalle' placeholder='${T('esp')}' value='${esc(v.detalle || '')}'>` : ''}</div>`; }).join('')}</div>
-      <div class='fi-card fi-f'>
-        ${menor ? `<div class='fi-tutor' style='margin:0 0 12px'>${T('menor')}</div>` : ''}
-        <div class='fi-decl'><p><b>${T('yo')} ${esc(F.firmante || '______')}</b>, ${T('riesgo')[0]}</p><p>${T('riesgo')[1]}</p></div>
-        <div class='fi-g2'><div><label>${T('firmante')}</label><input data-k='firmante' data-re value='${esc(F.firmante)}'></div><div><label>${T('rutF')}</label><input data-k='rutFirmante' value='${esc(F.rutFirmante)}'></div></div>
-        <label class='fi-chk'><input type='checkbox' data-k='acepta'${F.acepta ? ' checked' : ''}> ${T('acepto')}</label>
-        <div class='fi-sig'><canvas id='fi-c'></canvas><span id='fi-sp'>${T('firma')}</span><button type='button' id='fi-cl'>${T('borrar')}</button></div>
-        <button class='fi-go' id='fi-go'>${T('enviar')}</button><p class='fi-err' id='fi-err' hidden></p>
+      <div class='fi-card fi-f'><h2>${T('firmaT')}</h2>
+        <div class='fi-decl'><p><b>${fs.length > 1 ? T('nos') + ' ' + nombresF.slice(0, -1).map(esc).join(', ') + ' ' + T('y') + ' ' + esc(nombresF[nombresF.length - 1]) : T('yo') + ' ' + esc(nombresF[0] || '______')}</b>, ${fs.length > 1 ? T('riesgoVarios') : T('riesgo')[0]}</p><p>${T('riesgo')[1]}</p></div>
+        ${fs.map(firmaDe).join('')}
+        <label class='fi-chk'><input type='checkbox' data-k='acepta'${acepta ? ' checked' : ''}> ${fs.length > 1 ? T('aceptamos') : T('acepto')}</label>
+        <button class='fi-go' id='fi-go'>${act.length > 1 ? T('enviarN').replace('#', act.length) : T('enviar')}</button><p class='fi-err' id='fi-err' hidden></p>
       </div>
       <p class='fi-foot'>Storm Surf Academy · Prestador de turismo aventura registrado en Sernatur</p>`;
     bindLang();
-    root.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { leerForm(); n = +b.dataset.n; F = nuevo(); aviso = ''; pintar(); window.scrollTo({top:0}); });
-    root.querySelectorAll('[data-yn]').forEach(b => b.onclick = () => { leerForm(); const k = b.dataset.yn; F.declaracion[k] = Object.assign(F.declaracion[k] || {}, {si: b.dataset.v === '1'}); const y = window.scrollY; pintar(); window.scrollTo({top:y}); });
-    root.querySelectorAll('[data-re]').forEach(i => i.addEventListener('change', () => { leerForm(); const y = window.scrollY; pintar(); window.scrollTo({top:y}); }));
-    const cp = root.querySelector('[data-copiar]'); if(cp) cp.onchange = () => { leerForm(); if(cp.checked) F.urgencia = JSON.parse(JSON.stringify(ultimoUrg)); const y = window.scrollY; pintar(); window.scrollTo({top:y}); };
-    firma();
+    const pn = el => P.find(p => p.n === +el);
+    root.querySelectorAll('[data-otra]').forEach(b => b.onclick = () => { leerForm(); const p = pn(b.dataset.otra); p.otra = !p.otra; const y = window.scrollY; pintar(); window.scrollTo({top:y}); });
+    root.querySelectorAll('[data-todono]').forEach(b => b.onclick = () => { leerForm(); const p = pn(b.dataset.todono); PREG.forEach(k => p.declaracion[k] = { si:false, detalle:'' }); const y = window.scrollY; pintar(); window.scrollTo({top:y}); });
+    root.querySelectorAll('[data-yn]').forEach(b => b.onclick = () => { leerForm(); const p = pn(b.dataset.p), k = b.dataset.yn; p.declaracion[k] = Object.assign(p.declaracion[k] || {}, {si: b.dataset.v === '1'}); const y = window.scrollY; pintar(); window.scrollTo({top:y}); });
+    root.querySelectorAll('[data-tutor]').forEach(b => b.onclick = () => { leerForm(); pn(b.dataset.tutor).tutor = b.dataset.t; const y = window.scrollY; pintar(); window.scrollTo({top:y}); });
+    root.querySelectorAll('[data-re]').forEach(i => i.addEventListener('change', repintar));
+    root.querySelectorAll('canvas[data-c]').forEach(firma);
     document.getElementById('fi-go').onclick = guardar;
   }
   const lang = () => `<div class='fi-lang'><button data-l='es' class='${L==='es'?'on':''}'>Español</button><button data-l='en' class='${L==='en'?'on':''}'>English</button></div>`;
   function bindLang(){ root.querySelectorAll('[data-l]').forEach(b => b.onclick = () => { if(root.querySelector('[data-k]')) leerForm(); L = b.dataset.l; try{ localStorage.setItem('storm-ficha-lang', L); }catch(_){} pintar(); }); }
 
-  let trazos = 0;
-  function firma(){
-    const c = document.getElementById('fi-c'); if(!c) return;
+  // Firma con el dedo. Se guarda al soltar, para que no se borre al cambiar otra parte del formulario.
+  function firma(c){
+    const k = c.dataset.c, box = c.parentNode, hint = box.querySelector('span');
     const r = c.getBoundingClientRect(), dpr = Math.max(1, window.devicePixelRatio || 1);
     c.width = r.width * dpr; c.height = r.height * dpr;
     const x = c.getContext('2d'); x.scale(dpr, dpr); x.lineWidth = 2.4; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#1d1d1c';
-    trazos = 0; let dib = false, last = null;
+    const s = sigs[k];
+    if(s){ hint.style.display = 'none'; const im = new Image(); im.onload = () => x.drawImage(im, 0, 0, r.width, r.height); im.src = s.raw; }
+    let dib = false, last = null, tr = s ? s.trazos : 0;
     const pt = e => { const b = c.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
-    c.onpointerdown = e => { dib = true; last = pt(e); c.setPointerCapture(e.pointerId); document.getElementById('fi-sp').style.display = 'none'; };
-    c.onpointermove = e => { if(!dib) return; const p = pt(e); x.beginPath(); x.moveTo(last[0], last[1]); x.lineTo(p[0], p[1]); x.stroke(); last = p; trazos++; };
-    c.onpointerup = c.onpointercancel = () => { dib = false; };
-    document.getElementById('fi-cl').onclick = () => { x.clearRect(0, 0, c.width, c.height); trazos = 0; document.getElementById('fi-sp').style.display = ''; };
+    c.onpointerdown = e => { dib = true; last = pt(e); c.setPointerCapture(e.pointerId); hint.style.display = 'none'; };
+    c.onpointermove = e => { if(!dib) return; const p = pt(e); x.beginPath(); x.moveTo(last[0], last[1]); x.lineTo(p[0], p[1]); x.stroke(); last = p; tr++; };
+    c.onpointerup = c.onpointercancel = () => { if(!dib) return; dib = false; const er = document.getElementById('fi-err'); if(er) er.hidden = true;
+      // la firma se guarda en blanco y negro sobre fondo blanco, más liviana
+      const o = document.createElement('canvas'); o.width = 600; o.height = Math.round(600 * c.height / c.width);
+      const ox = o.getContext('2d'); ox.fillStyle = '#fff'; ox.fillRect(0, 0, o.width, o.height); ox.drawImage(c, 0, 0, o.width, o.height);
+      sigs[k] = { raw: c.toDataURL('image/png'), png: o.toDataURL('image/png'), trazos: tr }; };
+    box.querySelector('[data-cl]').onclick = () => { x.clearRect(0, 0, c.width, c.height); tr = 0; delete sigs[k]; hint.style.display = ''; };
   }
   async function guardar(){
     leerForm();
     const e = document.getElementById('fi-err'), msg = t => { e.hidden = false; e.textContent = t; };
-    if(PREG.some(k => !F.declaracion[k] || typeof F.declaracion[k].si !== 'boolean')) return msg(T('yn'));
-    if(trazos < 8) return msg(T('faltaFirma'));
-    const go = document.getElementById('fi-go'); go.disabled = true; go.textContent = T('guardando');
-    // la firma se guarda en blanco y negro sobre fondo blanco, más liviana
-    const c = document.getElementById('fi-c'), o = document.createElement('canvas'); o.width = 600; o.height = Math.round(600 * c.height / c.width);
-    const ox = o.getContext('2d'); ox.fillStyle = '#fff'; ox.fillRect(0, 0, o.width, o.height); ox.drawImage(c, 0, 0, o.width, o.height);
-    const datos = Object.assign({}, F, { edad: Number(F.edad), tutor: Number(F.edad) < 18, idioma: L, urgencia: F.urgencia.filter(u => u.nombre || u.telefono) });
+    const act = activos();
+    for(const p of act){
+      const de = ' (' + nom(p) + ')';
+      if(!p.nombre.trim()) return msg(T('faltaNombre') + de);
+      if(!p.documento.trim()) return msg(T('faltaDoc') + de);
+      if(!(Number(p.edad) > 0 && Number(p.edad) < 110)) return msg(T('faltaEdad') + de);
+      if(PREG.some(k => !p.declaracion[k] || typeof p.declaracion[k].si !== 'boolean')) return msg(T('yn') + de);
+    }
+    if(!U[0].telefono.trim()) return msg(T('faltaUrg'));
+    const fs = firmantes();
+    if(fs.includes('t') && (!TU.nombre.trim() || !TU.rut.trim())) return msg(T('faltaTutor'));
+    const sinFirma = fs.find(k => !sigs[k] || sigs[k].trazos < 8);
+    if(sinFirma) return msg(T('faltaFirma') + ' (' + (sinFirma === 't' ? TU.nombre.trim() || T('tutor') : nom(P.find(p => 'p' + p.n === sinFirma))) + ')');
+    if(!acepta) return msg(T('faltaAcepta'));
+    const go = document.getElementById('fi-go'), txt = go.textContent; go.disabled = true; go.textContent = T('guardando');
+    const urgencia = U.filter(u => u.nombre || u.telefono);
+    const fichas = act.map(p => { const k = quienFirma(p), a = k === 't' ? null : P.find(x => 'p' + x.n === k);
+      return { n: p.n, firma: sigs[k].png, datos: { nombre: p.nombre, nacionalidad: p.nacionalidad, documento: p.documento, edad: Number(p.edad), peso: p.peso, declaracion: p.declaracion, urgencia,
+        firmante: a ? a.nombre : TU.nombre, rutFirmante: a ? a.documento : TU.rut, tutor: menor(p), idioma: L } }; });
     try{
-      D = await post({accion:'ficha-guardar', r: REF, k: K, n, datos, firma: o.toDataURL('image/png'), acepta: F.acepta});
-      ultimoUrg = JSON.parse(JSON.stringify(F.urgencia));
-      const sig = primeraLibre();
-      guardada = datos.nombre || ' '; aviso = sig ? '' : 'fin'; if(sig) n = sig; F = nuevo(); pintar(); window.scrollTo({top:0, behavior:'smooth'});
-    }catch(x){ go.disabled = false; go.textContent = T('enviar'); msg(x.message); }
+      D = await post({accion:'fichas-guardar', r: REF, k: K, fichas, acepta: true});
+      guardada = act.map(p => p.nombre.trim()); pintar(); window.scrollTo({top:0, behavior:'smooth'});
+    }catch(x){ go.disabled = false; go.textContent = txt; msg(x.message); }
   }
   if(!REF || !K) root.innerHTML = `<div class='fi-card fi-done'><h2>${T('error')}</h2></div>`; else cargar();
 })();
