@@ -259,7 +259,7 @@ main .pn{max-width:1440px}
     nota: sv("<path d='M5 4h14v12l-4 4H5z'/><path d='M15 20v-4h4M8.5 9h7M8.5 12.5h5'/>"),
     grupo: sv("<circle cx='9' cy='8' r='3.2'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M17 11v6M14 14h6'/>")
   };
-  const TIT = { rentas: 'Tienda', notas: 'Notas', hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academias', verano: 'Academias', adultos: 'Academias', finanzas: 'Plata', sueldos: 'Plata' };
+  const TIT = { rentas: 'Tienda', notas: 'Notas', hoy: 'Hoy en Storm', particulares: 'Clases particulares', anual: 'Academias', verano: 'Academias', adultos: 'Academias', guia: 'Recursos', finanzas: 'Plata', sueldos: 'Plata' };
   const GRUPO = { anual: 'academias', verano: 'academias', adultos: 'academias', finanzas: 'plata', sueldos: 'plata' };
   const SEG = { academias: [['anual', 'Anual'], ['verano', 'Verano'], ['adultos', 'Adultos']], plata: [['finanzas', 'Este mes'], ['sueldos', 'Sueldos'], ['particulares:pagos', 'Pagos particulares']] };
   let ultimo = (() => { try{ return JSON.parse(sessionStorage.getItem('storm-ultimo') || 'null') || {}; }catch(_){ return {}; } })();
@@ -332,6 +332,7 @@ main .pn{max-width:1440px}
       ${b('particulares', adm ? 'Clases' : 'Mis clases', I.particulares)}
       ${soloPart() ? '' : `${b('academias', 'Academias', I.anual, ' data-solo-cel')}
       ${ac}Academias</div>${b('anual', 'Academia Anual', I.anual, ' data-solo-pc')}${veranoVisible() ? b('verano', 'Academia de Verano', I.verano, ' data-solo-pc') : ''}${adultosVisible() ? b('adultos', 'Academia de Adultos', I.adultos, ' data-solo-pc') : ''}`}
+      ${b('guia', 'Recursos', I.ficha, adm ? ' data-solo-pc' : '')}
       ${adm ? `${ac}Recepción</div>${b('rentas', 'Tienda', I.tienda)}<button class='sp-ni' data-area='notas' data-solo-pc>${I.nota}<span>Notas</span>${bAv}</button>` : ''}
       ${adm ? b('plata', 'Plata', I.finanzas, ' data-solo-cel') : ''}
       ${adm ? `${ac}Plata</div>${b('finanzas', 'Este mes', I.finanzas, ' data-solo-pc')}${b('sueldos', 'Sueldos', I.pago, ' data-solo-pc')}` : ''}
@@ -402,7 +403,7 @@ main .pn{max-width:1440px}
     area = a; try{ sessionStorage.setItem('storm-area', a); }catch(_){}
     const g = GRUPO[a]; if(g){ ultimo[g] = a; try{ sessionStorage.setItem('storm-ultimo', JSON.stringify(ultimo)); }catch(_){} }
     bindNav(); marcar();
-    const panel = ['anual', 'verano', 'adultos', 'finanzas', 'sueldos'].includes(a);
+    const panel = ['anual', 'verano', 'adultos', 'guia', 'finanzas', 'sueldos'].includes(a);
     root.querySelectorAll('.sp-area').forEach(x => x.hidden = !(x.dataset.a === a || (panel && x.dataset.a === 'panel')));
     if(a === 'finanzas' || a === 'sueldos'){ StormPanel.fsub(a === 'sueldos' ? 'gastos' : 'finanzas'); StormPanel.ir('finanzas'); }
     else if(panel) StormPanel.ir(a);
