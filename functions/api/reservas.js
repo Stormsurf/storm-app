@@ -506,6 +506,9 @@ async function confirmar(env, r, monto, ctx) {
   tarea(ctx, pushNueva(env, final, a, true));
   return 'pagada';
 }
+// Avisos de pago (Webpay, Flow, Mercado Pago) llegan como pedido interno desde /pagar: lo que se deja "en el fondo"
+// ahí se corta cuando /pagar termina (por eso no salía el correo de confirmación). Se espera antes de responder.
+const conEspera = ctx => { const t = []; return { ctx: Object.assign({}, ctx, { waitUntil: p => { t.push(p); } }), listo: () => Promise.allSettled(t) }; };
 const tarea = (ctx, p) => { if (ctx && ctx.waitUntil) ctx.waitUntil(p.catch(e => console.error(e))); else return p.catch(e => console.error(e)); };
 
 async function estado(env, d, ctx) {
@@ -567,7 +570,9 @@ async function enviarCorreo(env, o) {
   if (!env.CLAVE_CORREO) return false;
   const r = await fetch(env.CORREO_URL || CORREO_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain; charset=utf-8' }, redirect: 'follow',
     body: JSON.stringify({ clave: env.CLAVE_CORREO, to: o.to, subject: o.subject, body: o.body, htmlBody: o.html || '', bcc: o.bcc || '', name: 'Storm Surf Academy' }) });
-  return r.ok;
+  const ok = r.ok && /"ok"\s*:\s*true/.test(await r.text().catch(() => ''));
+  if (!ok && env.DB) await env.DB.prepare('INSERT INTO registro (ms, quien, que) VALUES (?, ?, ?)').bind(Date.now(), 'app', 'correo no salió: ' + o.to + ' · ' + String(o.subject).slice(0, 80)).run().catch(() => {});
+  return ok;
 }
 const correoStorm = (env, asunto, texto) => enviarCorreo(env, { to: CORREO_STORM, subject: asunto, body: texto });
 function cajaCorreo(titulo, filas, pie, despedida) {
@@ -2035,16 +2040,19 @@ export async function onRequest(context) {
     if (url.searchParams.get('mp')) {
       let id = url.searchParams.get('data.id') || url.searchParams.get('id');
       try { const b = await request.clone().json(); if (b && b.data && b.data.id) id = b.data.id; } catch (_) {}
-      if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, context);
-        else { await linkTabla(env.DB); const L = await env.DB.prepare('SELECT * FROM links WHERE orden_mp = ?').bind(String(id)).first(); if (L) await revisarLink(env, L, context); } }
+      const e = conEspera(context);
+      if (id) { const r = await env.DB.prepare('SELECT * FROM reservas WHERE orden_mp = ?').bind(String(id)).first(); if (r) await revisarPago(env, r, e.ctx);
+        else { await linkTabla(env.DB); const L = await env.DB.prepare('SELECT * FROM links WHERE orden_mp = ?').bind(String(id)).first(); if (L) await revisarLink(env, L, e.ctx); } }
+      await e.listo();
       return json({ ok: true });
     }
     // Pago con Flow o Webpay desde /pagar: se vuelve a revisar allá (no se confía en lo que llega)
     if (url.searchParams.get('externo')) {
-      const b = await request.json().catch(() => ({}));
-      if (/^LK-/.test(String(b.ref || ''))) { await linkTabla(env.DB); const L = await env.DB.prepare('SELECT * FROM links WHERE ref = ?').bind(String(b.ref)).first(); if (L && b.token && (L.orden_mp === 'flow:' + b.token || L.orden_mp === 'webpay:' + b.token)) await revisarLink(env, L, context); return json({ ok: true }); }
+      const b = await request.json().catch(() => ({})), e = conEspera(context);
+      if (/^LK-/.test(String(b.ref || ''))) { await linkTabla(env.DB); const L = await env.DB.prepare('SELECT * FROM links WHERE ref = ?').bind(String(b.ref)).first(); if (L && b.token && (L.orden_mp === 'flow:' + b.token || L.orden_mp === 'webpay:' + b.token)) await revisarLink(env, L, e.ctx); await e.listo(); return json({ ok: true }); }
       const r = b.ref ? await env.DB.prepare('SELECT * FROM reservas WHERE ref = ?').bind(String(b.ref)).first() : null;
-      if (r && b.token && (r.orden_mp === 'flow:' + b.token || r.orden_mp === 'webpay:' + b.token)) await revisarPago(env, r, context);
+      if (r && b.token && (r.orden_mp === 'flow:' + b.token || r.orden_mp === 'webpay:' + b.token)) await revisarPago(env, r, e.ctx);
+      await e.listo();
       return json({ ok: true });
     }
     if (url.searchParams.get('tarea')) {
