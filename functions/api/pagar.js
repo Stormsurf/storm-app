@@ -43,6 +43,8 @@ const BANCO = { titular: 'Storm SpA', rut: '77.957.792-9', banco: 'Banco de Chil
 const TRANSFERENCIA_HASTA = '2026-11-25'; // Isidora 26-11: Webpay desde hoy (antes era hasta el 30-11)
 const hoyChile = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const soloTransferencia = ref => /^(AA|AD|AV)-/.test(String(ref || '')) && hoyChile() <= TRANSFERENCIA_HASTA;
+// Verano (Isidora 27-11): la familia elige Webpay o transferencia + subir comprobante (siempre, sin fecha de término).
+const conTransferencia = ref => soloTransferencia(ref) || /^AV-/.test(String(ref || ''));
 const MAX_COMPROBANTE = 4 * 1024 * 1024; // base64 (~3 MB de archivo); las fotos se achican en el celular antes de subir
 async function compTabla(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS comprobantes (clave TEXT PRIMARY KEY, orden TEXT NOT NULL, ref TEXT NOT NULL, monto INTEGER NOT NULL DEFAULT 0, archivo TEXT NOT NULL DEFAULT '', tipo TEXT NOT NULL DEFAULT '', datos TEXT NOT NULL DEFAULT '', creada_ms INTEGER NOT NULL)").run();
@@ -337,10 +339,10 @@ export async function onRequest(context) {
       const ver = p => p.cliente || (p.tipo === 'renta' ? 'Arriendo de equipo' : p.tipo === 'clase' ? 'Clase de surf' : p.detalle);
       if (ps.length) carro = { nombre: String((L && L.nombre) || '').split(' ')[0], items: ps.map(p => ({ t: ver(p), m: Number(p.monto) || 0 })) };
     }
-    const tr = soloTransferencia(o.external_reference);
+    const tr = conTransferencia(o.external_reference);
     let subido = false;
     if (tr && env.DB) { await compTabla(env.DB); subido = !!(await env.DB.prepare('SELECT clave FROM comprobantes WHERE orden = ?').bind(o.id).first()); }
-    return json({ carro, transferencia: tr ? BANCO : null, subido,
+    return json({ carro, transferencia: tr ? BANCO : null, soloTransferencia: soloTransferencia(o.external_reference), subido,
       ok: true, estado: o.status, monto: Number(o.total_amount), titulo: it.title || o.description || 'Pago Storm',
       cuenta: o.checkout_url || '', vuelta: online.success_url || '', volver: online.failure_url || '',
       publicKey: env.MP_PUBLIC_KEY || PUBLIC_KEY, flow: flowListo(env) || !!webpayCfg(env), webpay: !!webpayCfg(env)
@@ -355,7 +357,7 @@ export async function onRequest(context) {
   if (o.status !== 'created') return fallo(o.status === 'processed' ? 'Este pago ya está hecho.' : 'Este pago ya no está disponible. Vuelve atrás e intenta de nuevo.');
   if (d.comprobante) {
     const ref = String(o.external_reference || ''), c = d.comprobante;
-    if (!soloTransferencia(ref) || !env.DB) return fallo('Este pago se hace con tarjeta.');
+    if (!conTransferencia(ref) || !env.DB) return fallo('Este pago se hace con tarjeta.');
     const tipo = String(c.tipo || ''), datos = String(c.datos || '');
     if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(tipo) || !/^[A-Za-z0-9+/=]+$/.test(datos)) return fallo('Sube una foto o un PDF del comprobante.');
     if (datos.length > MAX_COMPROBANTE) return fallo('El archivo es muy grande. Sube una foto o captura de pantalla.');

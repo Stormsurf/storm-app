@@ -120,12 +120,13 @@
       return;
     }
     // Transferencia (Isidora 24-11, hasta el 30-11): datos del banco y subir el comprobante. Al subirlo, el pago queda anotado.
-    if(D.transferencia){ transferencia(); return; }
+    if(D.transferencia && (D.soloTransferencia || D.subido || !D.webpay)){ transferencia(); return; }
     // Con Webpay (Transbank): todo lo online se paga solo con Webpay (Isidora 24-11: un solo código de comercio, ventas exentas). Sin cuenta Mercado Pago.
     if(D.webpay){
       pg.innerHTML = (D.carro ? carroH() : `<div class="pg-hero"><small>${esc(D.titulo)}</small><h1>${clp(D.monto)}</h1></div>`) + `
         <h2 class="pg-h2">${EN ? 'How would you like to pay?' : '¿Cómo quieres pagar?'}</h2>
         <button class="pg-opt" id="op-wp" type="button"><i>💳</i><span><b>${EN ? 'Card' : 'Tarjeta'}</b><small>${EN ? 'Credit, debit or prepaid, Chilean or foreign (Webpay)' : 'Crédito, débito o prepago, chilena o extranjera (Webpay)'}</small></span></button>
+        ${D.transferencia ? `<button class="pg-opt" id="op-tr" type="button"><i>🏦</i><span><b>${EN ? 'Bank transfer' : 'Transferencia'}</b><small>${EN ? 'Transfer and upload the receipt' : 'Transfiere y sube el comprobante'}</small></span></button>` : ''}
         <div class="pg-err" id="err" hidden></div>
         <p class="pg-note">${EN ? 'Payments are processed securely by Transbank (Webpay).' : 'Pago seguro con Webpay (Transbank).'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
       const b = document.getElementById('op-wp');
@@ -134,6 +135,7 @@
         b.querySelector('small').textContent = EN ? 'Taking you to Webpay…' : 'Te llevamos a Webpay…';
         if(!(await irExterno(''))){ b.disabled = false; b.classList.remove('on'); b.querySelector('small').textContent = EN ? 'Credit, debit or prepaid, Chilean or foreign (Webpay)' : 'Crédito, débito o prepago, chilena o extranjera (Webpay)'; }
       };
+      if(D.transferencia) document.getElementById('op-tr').onclick = () => { transferencia(); scrollTo(0, 0); };
       avisosVuelta();
       return;
     }
@@ -162,7 +164,9 @@
       <input type="file" id="cmp" accept="image/*,application/pdf" hidden>
       <button class="pg-up" id="up" type="button">${EN ? 'Upload receipt' : 'Subir comprobante'}</button>
       <div class="pg-err" id="err" hidden></div>
+      ${D.webpay && !D.soloTransferencia ? `<button class="pg-opt" id="op-wp2" type="button"><i>💳</i><span><b>${EN ? 'Pay by card instead' : 'Mejor pagar con tarjeta'}</b><small>Webpay</small></span></button>` : ''}
       <p class="pg-note">${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+    const wp2 = document.getElementById('op-wp2'); if(wp2) wp2.onclick = () => { pintar(); scrollTo(0, 0); };
     pg.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { try{ await navigator.clipboard.writeText(b.dataset.cp.replace(/\./g, '')); b.textContent = EN ? 'Copied' : 'Copiado'; }catch(_){} });
     const up = document.getElementById('up'), inp = document.getElementById('cmp');
     up.onclick = () => inp.click();
