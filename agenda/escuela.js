@@ -244,6 +244,7 @@
   .es-row .es-sw{flex:none}
   .es-rpago{padding:4px 16px 14px;display:flex;flex-wrap:wrap;gap:8px}
   .es-pkz{display:flex;align-items:center;gap:12px;background:#E3F1F1;border-radius:14px;padding:12px 14px;margin:8px 0 10px;cursor:pointer}
+  .es-pkd{display:flex;gap:4px;margin:6px 0 2px}.es-pkd i{width:22px;height:6px;border-radius:3px;background:#fff;box-shadow:inset 0 0 0 1.5px #d9a54a}.es-pkd i.a{background:#0f6e74;box-shadow:none}.es-pkd i.h{background:#cfcac0;box-shadow:none}
   .es-pkz .es-rx b{font-size:1.4rem}.es-pkz .es-rx small{color:#0f6e74}
   .es-pkmas{background:#F3F9F9;border-radius:14px;padding:12px 14px;margin:0 0 10px}.es-pkmas>b{display:block;font-size:1.35rem;margin-bottom:2px}.es-pkmas>small{display:block;color:#5d6b6b;margin-bottom:8px}
   .es-pkf{display:grid;grid-template-columns:1.55fr 1fr .75fr 26px;gap:6px;align-items:center;margin-bottom:6px}.es-pkf .es-in{margin:0;padding:8px 6px;font-size:1.4rem;min-width:0}.es-pkf.cab{margin-bottom:2px;font-size:1.15rem;color:#5d6b6b;font-weight:600}
@@ -354,6 +355,7 @@
     dia: sv("<rect x='3.5' y='5' width='17' height='15' rx='3'/><path d='M3.5 10h17M8 3v4M16 3v4'/>"),
     reservas: sv("<path d='M9 6h11M9 12h11M9 18h11'/><circle cx='4.5' cy='6' r='1'/><circle cx='4.5' cy='12' r='1'/><circle cx='4.5' cy='18' r='1'/>"),
     calendario: sv("<circle cx='12' cy='12' r='8.5'/><path d='M12 7.5V12l3 2'/>"),
+    packs: sv("<path d='M3.5 8.5a2 2 0 0 0 0 4v3a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-3a2 2 0 0 0 0-4v-1a2 2 0 0 0-2-2h-13a2 2 0 0 0-2 2z'/><path d='M14 5.5v12' stroke-dasharray='2 2'/>"),
     pagos: sv("<rect x='3' y='6' width='18' height='13' rx='3'/><path d='M3 10h18M7 15h3'/>"),
     ajustes: sv("<circle cx='12' cy='12' r='3'/><path d='M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8'/>")
   };
@@ -389,20 +391,21 @@
     if (!pane || !E) return;
     if (pedida && (E.reservas || []).some(r => r.ref === pedida)) { vista = { t: 'clase', ref: pedida }; pila = []; manualOn = false; pedida = ''; try { history.replaceState(null, '', location.pathname); } catch (_) {} }
     const recep = E.rol === 'recepcion', admin = E.rol === 'admin' || recep;
-    if (recep && !['dia', 'reservas'].includes(sub)) sub = 'dia';
+    if (recep && !['dia', 'reservas', 'packs'].includes(sub)) sub = 'dia';
     let h = `<style>${css}</style>`, cuerpo = '';
     const toast = msg; msg = '';
     if (linkNuevo) { const L = linkNuevo;
       cuerpo += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${esc(L.nombre)} · ${esc(flarga(L.fecha))} ${esc(L.hora)} · ${L.personas} persona${L.personas === 1 ? '' : 's'} · ${clp(L.total)}. El horario queda guardado aunque no pague: si no viene, cancélala a mano.</p>
         <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgLink(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgLink(L))}'>Copiar mensaje</button><button class='pn-link' data-lnx>Cerrar</button></div></div>`; }
-    const IT = recep ? [['dia', 'Agenda'], ['reservas', 'Clases']] : admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
+    const IT = recep ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['packs', 'Packs']] : admin ? [['dia', 'Agenda'], ['reservas', 'Clases'], ['packs', 'Packs'], ['pagos', 'Pagos'], ['ajustes', 'Ajustes']] : [['dia', 'Agenda'], ['reservas', 'Mis clases'], ['calendario', 'Disponibilidad'], ['pagos', 'Mis pagos']];
     const TIT = { dia: 'Agenda del día', clientes: 'Clientes', reservas: admin ? 'Clases' : 'Mis clases', calendario: admin ? 'Disponibilidad de instructores' : 'Mi disponibilidad', pagos: admin ? 'Pagos a instructores' : 'Mis pagos', ajustes: 'Ajustes' };
-    if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip${admin && !recep && k === 'ajustes' && sub === 'calendario' ? ' on' : ''}' data-sub='${k}'>${t}</button>`).join('')}${admin && ['dia', 'reservas'].includes(sub) ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
+    if (window.STORM_SHELL) h += `<div class='es-emb'><div class='es-tabs2'>${IT.map(([k, t]) => `<button class='es-chip${admin && !recep && k === 'ajustes' && sub === 'calendario' ? ' on' : ''}' data-sub='${k}'>${t}</button>`).join('')}${admin && ['dia', 'reservas', 'packs'].includes(sub) ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}</div>` + cuerpo;
     else h += `<div class='es-app'><nav class='es-nav'><div class='es-brand'><img src='/img/storm-logo.png' alt='Storm'><span>Agenda</span></div>${admin ? `<button class='es-nueva' data-nueva>+ Nueva clase</button>` : ''}${IT.map(([k, t]) => `<button class='es-ni' data-sub='${k}'>${ICO[k]}<span>${t}</span></button>`).join('')}<div class='es-yo'>${esc(auth.email)}<button data-salir>Salir</button></div></nav>
       <div class='es-main'><div class='es-top'><h2>${TIT[sub] || ''}</h2><div class='es-topb'>${admin ? `<button class='es-nueva' data-nueva>+ Nueva</button>` : ''}<button class='es-salir-m' data-salir>Salir</button></div></div>` + cuerpo;
     cuerpo = '';
     if (sub === 'dia') h += diaVista(admin);
     else if (sub === 'calendario') h += (admin ? `<button class='es-volver' data-sub='ajustes'>${ICO_S.atras.replace('<svg', "<svg width='20' height='20'")}Ajustes</button><h2 class='es-ajh'>Disponibilidad de instructores</h2>` : '') + calendario(admin);
+    else if (sub === 'packs' && admin) h += packsVista();
     else if (sub === 'pagos') h += pagosVista(admin);
     else if (sub === 'ajustes' && admin) h += ajustes();
     else if (sub === 'clientes' && admin) h += clientesVista();
@@ -628,6 +631,26 @@
           <p class='es-err vivo'></p><button class='es-big' data-pkgo='${esc(c.nombre)}' data-tel='${esc(c.telefono || '')}' data-mail='${esc(c.correo || '')}'>Vender pack</button><button class='es-no' data-pkno>Cancelar</button></div>`;
       else h += grupo('', [fila(String(k.clases), 'Vender pack de ' + k.clases + ' clases', k.descuento + '% de descuento · ' + clp(precioPack(1)) + ' para 1 persona', { tag: 'button', at: 'data-pkv', ic: 'ok' })]);
     }
+    return h;
+  }
+
+  // Packs vendidos (Isidora 27-11): seguimiento simple. Tocar abre la ficha del cliente.
+  function packsVista() {
+    const L = E.packs || [];
+    const prox = k => (E.reservas || []).filter(r => r.pack === k.id && r.estado !== 'cancelada' && r.fecha >= E.hoy).sort((x, y) => (x.fecha + x.hora).localeCompare(y.fecha + y.hora));
+    const enUso = k => prox(k).length > 0 || (k.quedan > 0 && !k.vencido);
+    const vivos = L.filter(enUso), listos = L.filter(k => !enUso(k)), sinPagar = L.filter(k => k.medio === 'Por pagar');
+    const pl = (n, a, b) => n + ' ' + (n === 1 ? a : b);
+    const fila = k => { const pr = prox(k), ag = pr.length, hechas = Math.max(0, k.usadas - ag), libres = k.vencido ? 0 : k.quedan;
+      const partes = [hechas ? pl(hechas, 'hecha', 'hechas') : '', ag ? pl(ag, 'agendada', 'agendadas') : '', libres ? `<span style='color:#b26a00'>${pl(libres, 'sin agendar', 'sin agendar')}</span>` : ''].filter(Boolean);
+      const dots = Array.from({ length: k.clases }, (_, i) => `<i class='${i < hechas ? 'h' : i < hechas + ag ? 'a' : ''}'></i>`).join('');
+      return `<button class='es-row' data-cliv='${esc(k.nombre)}'>${avatar(k.nombre)}<span class='es-rx'><b>${esc(k.nombre)}</b>
+        <small>${partes.join(' · ') || 'Sin clases'}</small><span class='es-pkd'>${dots}</span>
+        <small>${pr.length ? 'Próxima: ' + esc(fcorta(pr[0].fecha)) + ' ' + esc(pr[0].hora) + ' · ' : ''}${k.vencido ? 'venció ' : 'vence '}${esc(fcorta(k.vence))} · ${clp(k.total)} · ${k.medio === 'Por pagar' ? '<span style="color:#b26a00">no ha pagado</span>' : 'pagado'}</small></span><span class='es-rc'>›</span></button>`; };
+    let h = `<div class='pn-stats'><div class='pn-stat'><small>Packs en uso</small><b>${vivos.length}</b><em>${pl(vivos.reduce((t, k) => t + (k.vencido ? 0 : k.quedan), 0), 'clase', 'clases')} sin agendar</em></div>
+      <div class='pn-stat'><small>Sin pagar</small><b>${sinPagar.length}</b><em>${sinPagar.length ? clp(sinPagar.reduce((t, k) => t + (k.total || 0), 0)) + ' por cobrar' : 'todo pagado'}</em></div></div>`;
+    h += grupo('En uso', vivos.map(fila)) || `<p class='es-nota'>No hay packs en uso. Para vender uno: Nueva clase › Vender pack.</p>`;
+    h += grupo('Terminados o vencidos', listos.map(fila));
     return h;
   }
 
