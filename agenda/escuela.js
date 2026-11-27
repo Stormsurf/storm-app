@@ -320,9 +320,14 @@
     const ex = E.excepciones;
     const h = ex.find(e => e.instructor === inst && e.fecha === fecha && e.hora === hora); if (h) return h.libre;
     const d = ex.find(e => e.instructor === inst && e.fecha === fecha && e.hora === ''); if (d) return d.libre;
+    if (veranoSolo(inst, fecha, hora)) return true;
     const s = E.semana.find(s => s.instructor === inst && s.dia === dsem(fecha));
     return !!(s && s.horas.includes(hora));
   }
+  // Academia de Verano: en ese rato quien da particulares (Christopher) queda disponible aunque su semana tipo no tenga esas horas
+  function veranoSolo(inst, fecha, hora) { const v = E.verano; if (!v || !(v.solo || []).includes(inst) || !(v.dias || []).includes(dsem(fecha))) return false;
+    if (v.inicio && v.fin ? fecha < v.inicio || fecha > v.fin : !(v.meses || []).includes(+fecha.slice(5, 7))) return false;
+    const ini = aMin(hora); return ini >= aMin(v.desde) && ini < aMin(v.hasta); }
   const otraCosa = (inst, fecha, hora) => { const ini = aMin(hora), f = ini + E.duracion, d = dsem(fecha);
     const o = (E.ocupaciones || []).find(o => leToca(o, inst) && (o.fecha ? o.fecha === fecha : o.dia === d) && aMin(o.desde) < f && aMin(o.hasta) > ini);
     return o ? o.motivo || 'Ocupado' : ''; };

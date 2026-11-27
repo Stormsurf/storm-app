@@ -43,9 +43,11 @@ const AJUSTES_BASE = {
   maxWeb: 8,             // más personas = por WhatsApp. Armada (24-11): 1 instructor cada 4 alumnos → de 5 a 8 van 2 instructores
   porPersona: 25000,     // desde 5 personas se cobra por persona (Isidora 25-11)
   maxSeguidas: 2,
-  // Enero y febrero: la Academia de Verano usa lun, mar, jue y vie de 9:00 a 12:00; en ese rato queda 1 instructor para particulares
-  // Esos días la primera clase parte 9:30 (no llegar junto con los niños de la Academia): 9:00 → 9:30 y 10:30 → 11:00
-  verano: { meses: [1, 2], dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', instructores: 1, cambios: { '09:00': '09:30', '10:30': '11:00' } },
+  // Academia de Verano 2027 (Isidora 27-11): del lunes 4 de enero al último viernes de febrero; lun, mar, jue y vie hay academia en la mañana
+  // → de 9:00 a 12:00 solo Christopher da particulares y el resto del equipo queda bloqueado (a las 12:00 ya están libres; los niños se van 12:30).
+  // Además Diego está ocupado los miércoles hasta las 14:00 (extra). Esos días la primera clase se corre: 9:00 → 9:30 y 10:30 → 11:00.
+  verano: { meses: [1, 2], inicio: '2027-01-04', fin: '2027-02-26', dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', solo: ['Christopher'], cambios: { '09:00': '09:30', '10:30': '11:00' },
+    extra: [{ instructor: 'Diego', dia: 3, desde: '08:00', hasta: '14:00' }] },
   horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
   pack: { clases: 5, descuento: 10, meses: 1 }, // pack (meses: se usa dentro de 1 mes desde que se paga, Isidora 21-11) de clases particulares (Isidora 16-11): 5 clases con 10% de descuento, sin vencimiento por ahora
@@ -188,10 +190,25 @@ function soloNivel(a, nivel) {
 }
 
 /** Academia Anual (todos los instructores) y horas fijas de cada uno (talleres, etc.). */
-async function leerOcupaciones(db, desde, hasta) {
+async function leerOcupaciones(db, desde, hasta, a, ins) {
   const { results } = await db.prepare("SELECT * FROM ocupaciones WHERE fecha = '' OR fecha BETWEEN ? AND ?").bind(desde, hasta).all();
-  return results;
+  return results.concat(ocupacionesVerano(a, ins, desde, hasta));
 }
+/** Academia de Verano: cada día de academia bloquea a todos los instructores, menos a los que dan particulares en ese rato (verano.solo). */
+function ocupacionesVerano(a, ins, desde, hasta) {
+  const v = a && a.verano, out = [];
+  if (!v) return out;
+  for (let f = desde; f <= hasta; f = sumarDias(f, 1)) {
+    if (!enVerano(a, f)) continue;
+    if (esVerano(a, f) && (v.solo || []).length)
+      ins.filter(i => !v.solo.includes(i.nombre)).forEach(i => out.push({ origen: 'verano', instructor: i.nombre, fecha: f, dia: -1, desde: v.desde, hasta: v.hasta, motivo: 'Academia de Verano' }));
+    (v.extra || []).filter(x => x.dia === diaSemana(f)).forEach(x => out.push({ origen: 'verano', instructor: x.instructor, fecha: f, dia: -1, desde: x.desde, hasta: x.hasta, motivo: x.motivo || 'Academia de Verano' }));
+  }
+  return out;
+}
+/** ¿La clase cae en el rato de la Academia de Verano y este instructor es de los que dan particulares ahí? (le abre esas horas aunque su semana tipo no las tenga) */
+const veranoSolo = (a, inst, fecha, hora) => { const v = a.verano; if (!esVerano(a, fecha) || !(v.solo || []).includes(inst)) return false;
+  const ini = aMin(hora); return ini >= aMin(v.desde) && ini < aMin(v.hasta); };
 /** ¿La clase (hora + duración) se cruza con algo que el instructor ya tiene ese día? Devuelve el motivo. */
 function cruce(ocu, inst, fecha, hora, duracion) {
   const ini = aMin(hora), fin = ini + duracion, dia = diaSemana(fecha);
@@ -232,7 +249,7 @@ async function estadoAgenda(db, a, desde, hasta) {
     db.prepare('SELECT * FROM semana').all(),
     db.prepare('SELECT * FROM excepciones WHERE fecha BETWEEN ? AND ?').bind(desde, hasta).all(),
     db.prepare('SELECT instructor, fecha, hora, ref, hasta FROM bloques WHERE fecha BETWEEN ? AND ? AND (hasta = 0 OR hasta > ?)').bind(desde, hasta, ahoraMs).all(),
-    leerOcupaciones(db, desde, hasta)
+    leerOcupaciones(db, desde, hasta, a, ins)
   ]);
   const semana = {}; sem.results.forEach(r => { (semana[r.instructor] = semana[r.instructor] || {})[r.dia] = parseLista(r.horas); });
   const excep = {}; exc.results.forEach(r => { excep[r.instructor + '|' + r.fecha + '|' + r.hora] = !!r.libre; });
@@ -241,6 +258,7 @@ async function estadoAgenda(db, a, desde, hasta) {
     const k = inst + '|' + fecha + '|';
     if ((k + hora) in excep) return excep[k + hora];
     if (k in excep) return excep[k];
+    if (veranoSolo(a, inst, fecha, hora)) return true;
     return ((semana[inst] || {})[diaSemana(fecha)] || []).includes(horaBase(a, fecha, hora));
   };
   const enOtraCosa = (inst, fecha, hora, dur) => cruce(ocu, inst, fecha, hora, dur || a.duracion);
@@ -260,14 +278,16 @@ function permitido(a, fecha, hora, ahora = ahoraChile()) {
 
 /** Tope de la Academia de Verano: si la clase cae en ese rato, solo pueden darla los instructores que ya tienen particulares ahí,
  *  más los que falten para llegar al tope (1). lista = nombres ya ordenados; devuelve la lista recortada. */
-const esVerano = (a, fecha) => { const v = a.verano; return !!v && (v.meses || []).includes(+fecha.slice(5, 7)) && (v.dias || []).includes(diaSemana(fecha)); };
+/** enVerano = la fecha cae en la temporada; esVerano = además es día de academia (lun, mar, jue, vie) */
+const enVerano = (a, fecha) => { const v = a.verano; return !!v && (v.inicio && v.fin ? fecha >= v.inicio && fecha <= v.fin : (v.meses || []).includes(+fecha.slice(5, 7))); };
+const esVerano = (a, fecha) => enVerano(a, fecha) && (a.verano.dias || []).includes(diaSemana(fecha));
 /** Horarios de ese día (en días de Academia de Verano, corridos según verano.cambios) */
 const horasDia = (a, fecha) => esVerano(a, fecha) ? [...new Set(a.horarios.map(h => (a.verano.cambios || {})[h] || h))].sort() : a.horarios;
 /** Hora de la semana tipo que corresponde (11:00 de verano = 10:30 de la semana tipo) */
 const horaBase = (a, fecha, hora) => { if (!esVerano(a, fecha)) return hora; const c = a.verano.cambios || {}; return Object.keys(c).find(k => c[k] === hora) || hora; };
 function topeVerano(a, ag, fecha, hora, lista) {
   const v = a.verano;
-  if (!esVerano(a, fecha)) return lista;
+  if (!esVerano(a, fecha) || !v.instructores) return lista; // con verano.solo el bloqueo va en las ocupaciones
   const ini = aMin(hora), fin = ini + a.duracion, d = aMin(v.desde), h = aMin(v.hasta);
   if (fin <= d || ini >= h) return lista;
   const usados = new Set(ag.bloques.filter(b => b.fecha === fecha && aMin(b.hora) >= d && aMin(b.hora) < h).map(b => b.instructor));
@@ -800,7 +820,7 @@ async function panel(env, q) {
     db.prepare('SELECT * FROM semana').all(),
     db.prepare('SELECT * FROM excepciones WHERE fecha >= ?').bind(hoy).all(),
     db.prepare("SELECT * FROM reservas WHERE (fecha BETWEEN ? AND ? OR (fecha < ? AND medio = 'Por pagar' AND estado = 'pagada') OR (fecha < ? AND estado = 'pendiente' AND nota LIKE 'Agregada a mano%') OR (fecha < ? AND saldos LIKE '%\"medio\":\"\"%')) AND estado IN ('pagada', 'pendiente', 'revisar') ORDER BY fecha, hora").bind(desde, hasta, desde, desde, desde).all(), // + las antiguas que nunca se pagaron (para cobrarlas)
-    leerOcupaciones(db, hoy, hasta),
+    leerOcupaciones(db, hoy, hasta, a, ins),
     db.prepare("SELECT valor FROM ajustes WHERE clave = 'anualSync'").first()
   ]);
   const fic = await db.prepare('SELECT ref, n, nombre FROM fichas WHERE ref IN (SELECT ref FROM reservas WHERE fecha BETWEEN ? AND ?)').bind(desde, hasta).all();
@@ -812,6 +832,7 @@ async function panel(env, q) {
     instructores: ins.map(i => ({ nombre: i.nombre, activo: !!i.activo, ...(admin ? { correo: i.correo, telefono: i.telefono, rut: i.rut, tarifas: (() => { try { return JSON.parse(i.tarifas || 'null'); } catch (_) { return null; } })() } : {}) })),
     semana: sem.results.map(s => ({ instructor: s.instructor, dia: s.dia, horas: parseLista(s.horas) })).filter(s => todo || s.instructor === q.yo),
     soloParticulares: SOLO_PARTICULARES,
+    verano: a.verano,
     ocupaciones: ocu.filter(o => todo || leToca(o, q.yo)).map(o => ({ id: o.id, origen: o.origen, instructor: o.instructor, fecha: o.fecha, dia: o.dia, desde: o.desde, hasta: o.hasta, motivo: o.motivo })),
     anualSync: sync ? JSON.parse(sync.valor) : null,
     excepciones: exc.results.filter(e => todo || e.instructor === q.yo).map(e => ({ instructor: e.instructor, fecha: e.fecha, hora: e.hora, libre: !!e.libre })),
