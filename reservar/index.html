@@ -339,7 +339,7 @@
     const pintarVuelta = () => {
     if(r && (r.estado === 'pagada' || r.estado === 'revisar')){
       const ini = r.fecha.replace(/-/g,'') + 'T' + r.hora.replace(':','') + '00', fn = r.fecha.replace(/-/g,'') + 'T' + fin(r.hora).replace(':','') + '00';
-      const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(t('Clase de surf Storm', 'Storm surf lesson')) + '&dates=' + ini + '/' + fn + '&ctz=America/Santiago&location=' + encodeURIComponent('Playa de Matanzas') + '&details=' + encodeURIComponent(t('Llega 10 minutos antes. Trae traje de baño, toalla y bloqueador.', 'Arrive 10 minutes early. Bring a swimsuit, towel and sunscreen.'));
+      const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(t('Clase de surf Storm', 'Storm surf lesson')) + '&dates=' + ini + '/' + fn + '&ctz=America/Santiago&location=' + encodeURIComponent('Playa de Matanzas') + '&details=' + encodeURIComponent(t('Trae traje de baño, toalla y bloqueador.', 'Bring a swimsuit, towel and sunscreen.'));
       const ficha = r.ficha ? r.ficha + (L === 'en' && !/[?&]l=/.test(r.ficha) ? '&l=en' : '') : '';
       const pkb = r.pack ? `<div style='margin:16px 0 4px;padding:16px;border-radius:16px;background:#E3F1F1;text-align:left'><b style='font-size:1.6rem'>🏄 ${t('Tu pack de', 'Your pack of')} ${r.pack.clases} ${t('clases', 'lessons')}</b>
           <p style='margin:6px 0 0;color:#5c5b58'>${r.pack.quedan ? (r.pack.quedan === 1 ? t('Te queda 1 clase.', 'You have 1 lesson left.') : t('Te quedan', 'You have') + ' ' + r.pack.quedan + ' ' + t('clases.', 'lessons left.')) + ' ' + t('Úsalas hasta el', 'Use them by') + ' <b>' + esc(L === 'en' ? r.pack.venceEN : r.pack.venceLarga) + '</b>. ' + t('Agenda las próximas cuando quieras con tu link personal (también te llega por correo).', 'Book the next ones whenever you want with your personal link (also in your email).') : t('Esta es la última clase de tu pack.', 'This is the last lesson of your pack.')}</p>
@@ -349,7 +349,7 @@
         <p>${pl(r.personas, 'persona', 'personas', 'person', 'people')} · Playa de Matanzas<br>${t('Te enviamos el comprobante a', 'We sent the receipt to')} ${esc(r.correo)}.</p>
         <div class='rs-traer'><b>🏄 ${t('¿Qué debes traer?', 'What to bring')}</b>
           <ul>${(L === 'en' ? ['Swimsuit (to wear under the wetsuit)', 'Towel', 'Sunscreen', 'Water bottle', 'Comfortable clothes for after the lesson'] : ['Traje de baño (para usar debajo del wetsuit)', 'Toalla', 'Bloqueador solar', 'Botella con agua', 'Ropa cómoda para después de la clase']).map(x => `<li>${x}</li>`).join('')}</ul>
-          <p>${t('Nosotros te entregamos todo el equipamiento necesario 💙 Llega 10 minutos antes.', 'We provide all the equipment you need 💙 Arrive 10 minutes early.')}</p></div>
+          <p>${t('Nosotros te entregamos todo el equipamiento necesario 💙', 'We provide all the equipment you need 💙')}</p></div>
         ${pkb}
         <a class='rs-btn2' href='https://maps.app.goo.gl/xcFSTmgfwwKACqfb7' target='_blank' rel='noopener'>📍 ${t('Ver ubicación en el mapa', 'See location on the map')}</a>
         ${ficha ? `<div style='margin:18px 0 4px;padding:16px;border-radius:16px;background:#FFF6DA;text-align:left'><b style='font-size:1.6rem'>${t('Falta un paso: la ficha de cada participante', 'One more step: a form for each participant')}</b>

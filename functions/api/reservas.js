@@ -45,9 +45,10 @@ const AJUSTES_BASE = {
   maxSeguidas: 2,
   // Academia de Verano 2027 (Isidora 27-11): del lunes 4 de enero al último viernes de febrero; lun, mar, jue y vie hay academia en la mañana
   // → de 9:00 a 12:00 solo Christopher da particulares y el resto del equipo queda bloqueado (a las 12:00 ya están libres; los niños se van 12:30).
-  // Además Diego está ocupado los miércoles hasta las 14:00 (extra). Esos días la primera clase se corre: 9:00 → 9:30 y 10:30 → 11:00.
+  // Además Diego está ocupado los miércoles hasta las 14:00, y en enero también lunes y viernes (extra). Esos días la primera clase se corre: 9:00 → 9:30 y 10:30 → 11:00.
   verano: { meses: [1, 2], inicio: '2027-01-04', fin: '2027-02-26', dias: [1, 2, 4, 5], desde: '09:00', hasta: '12:00', solo: ['Christopher'], cambios: { '09:00': '09:30', '10:30': '11:00' },
-    extra: [{ instructor: 'Diego', dia: 3, desde: '08:00', hasta: '14:00' }] },
+    extra: [{ instructor: 'Diego', dia: 3, desde: '08:00', hasta: '14:00' }, // y en enero también lunes y viernes hasta las 14:00
+      { instructor: 'Diego', dia: 1, meses: [1], desde: '08:00', hasta: '14:00' }, { instructor: 'Diego', dia: 5, meses: [1], desde: '08:00', hasta: '14:00' }] },
   horasLink: 24,         // reservas anotadas a mano con link de pago: horas que se guarda el horario        // se juntan las clases en el mismo instructor hasta 2 seguidas
   lugar: 'Playa de Matanzas',
   pack: { clases: 5, descuento: 10, meses: 1 }, // pack (meses: se usa dentro de 1 mes desde que se paga, Isidora 21-11) de clases particulares (Isidora 16-11): 5 clases con 10% de descuento, sin vencimiento por ahora
@@ -202,7 +203,7 @@ function ocupacionesVerano(a, ins, desde, hasta) {
     if (!enVerano(a, f)) continue;
     if (esVerano(a, f) && (v.solo || []).length)
       ins.filter(i => !v.solo.includes(i.nombre)).forEach(i => out.push({ origen: 'verano', instructor: i.nombre, fecha: f, dia: -1, desde: v.desde, hasta: v.hasta, motivo: 'Academia de Verano' }));
-    (v.extra || []).filter(x => x.dia === diaSemana(f)).forEach(x => out.push({ origen: 'verano', instructor: x.instructor, fecha: f, dia: -1, desde: x.desde, hasta: x.hasta, motivo: x.motivo || 'Academia de Verano' }));
+    (v.extra || []).filter(x => x.dia === diaSemana(f) && (!x.meses || x.meses.includes(+f.slice(5, 7)))).forEach(x => out.push({ origen: 'verano', instructor: x.instructor, fecha: f, dia: -1, desde: x.desde, hasta: x.hasta, motivo: x.motivo || 'Academia de Verano' }));
   }
   return out;
 }
@@ -608,7 +609,7 @@ const filaC = (k, v) => '<p style="margin:0 0 8px;font-size:16px;line-height:1.4
 /** Correo de confirmación para el cliente: todo lo que necesita saber para llegar a su clase. */
 function correoReservada(r, a, ins) {
   const F = 'font-family:Helvetica,Arial,sans-serif;', fin = deMin(aMin(r.hora) + durDe(a, r));
-  const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Clase de surf Storm') + '&dates=' + r.fecha.replace(/-/g, '') + 'T' + r.hora.replace(':', '') + '00/' + r.fecha.replace(/-/g, '') + 'T' + fin.replace(':', '') + '00&ctz=America/Santiago&location=' + encodeURIComponent(MAPA) + '&details=' + encodeURIComponent('Llega 10 minutos antes. Ficha: ' + linkFicha(r));
+  const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Clase de surf Storm') + '&dates=' + r.fecha.replace(/-/g, '') + 'T' + r.hora.replace(':', '') + '00/' + r.fecha.replace(/-/g, '') + 'T' + fin.replace(':', '') + '00&ctz=America/Santiago&location=' + encodeURIComponent(MAPA) + '&details=' + encodeURIComponent('Ficha: ' + linkFicha(r));
   const boton = (href, txt, fondo, color) => '<a href="' + href + '" style="display:block;text-align:center;text-decoration:none;background:' + fondo + ';color:' + color + ';font-weight:700;font-size:16px;padding:14px 18px;border-radius:999px;margin:10px 0 0">' + txt + '</a>';
   const seccion = (titulo, cuerpo) => '<tr><td style="padding:22px 26px 0"><p style="margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8a8986;font-weight:700">' + titulo + '</p>' + cuerpo + '</td></tr>';
   const dato = (k, v) => '<td style="padding:6px 0;font-size:15px;color:#8a8986;width:42%">' + k + '</td><td style="padding:6px 0;font-size:15px;font-weight:700;text-align:right">' + v + '</td>';
@@ -623,7 +624,7 @@ function correoReservada(r, a, ins) {
     '<tr>' + (r.packInfo ? dato('Pack', 'Clase ' + r.packInfo.n + ' de ' + r.packInfo.clases) : dato('Total pagado', clp(r.total))) + '</tr>' +
     '<tr>' + dato('Reserva', esc(r.ref)) + '</tr></table></td></tr>' +
     ficha + (r.packInfo ? seccion('🏄 Tu pack de ' + r.packInfo.clases + ' clases', '<p style="margin:0;font-size:15px;line-height:1.5">' + (r.packInfo.quedan ? 'Te ' + (r.packInfo.quedan === 1 ? 'queda 1 clase' : 'quedan ' + r.packInfo.quedan + ' clases') + ', para usar hasta el <b>' + esc(fechaLarga(r.packInfo.vence)) + '</b>. Agenda las próximas cuando quieras con este link (guárdalo):' : 'Esta es la última clase de tu pack.') + '</p>' + (r.packInfo.quedan ? boton(r.packInfo.link, 'Agendar mi próxima clase', '#0f6e74', '#ffffff') : '')) : '') +
-    seccion('📍 Cómo llegar', '<p style="margin:0;font-size:15px;line-height:1.5">Nos encontramos en Storm, en ' + esc(a.lugar) + '. Llega 10 minutos antes para ponerte el traje con calma.</p>' + boton(MAPA, 'Ver ubicación en el mapa', '#2C2C2B', '#ffffff')) +
+    seccion('📍 Cómo llegar', '<p style="margin:0;font-size:15px;line-height:1.5">Nos encontramos en Storm, en ' + esc(a.lugar) + '.</p>' + boton(MAPA, 'Ver ubicación en el mapa', '#2C2C2B', '#ffffff')) +
     seccion('🎒 Qué traer', '<p style="margin:0;font-size:15px;line-height:1.9">' + TRAER.map(t => '✅ ' + esc(t)).join('<br>') + '</p>') +
     seccion('💙 Nosotros ponemos', '<p style="margin:0;font-size:15px;line-height:1.9">🏄 Tabla de surf y leash<br>🌊 Traje de agua (wetsuit)<br>🤙 Instructor certificado</p>') +
     seccion('🌊 Si el mar no está apto', '<p style="margin:0;font-size:15px;line-height:1.5">El surf es un deporte en el mar. Si las condiciones no son seguras, te escribimos por WhatsApp para cambiar la hora sin costo.</p>') +
@@ -635,7 +636,7 @@ function correoReservada(r, a, ins) {
 const edadesEN = r => { const t = []; if (r.menores) t.push(r.menores + ' under 8'); if (r.ninos) t.push(r.ninos + ' aged 7 to 11'); return (t.length ? ' (' + t.join(', ') + ')' : '') + (r.nivel === 'intermedio' ? ' · intermediate lesson' : ''); };
 function correoReservadaEN(r, a) {
   const F = 'font-family:Helvetica,Arial,sans-serif;', fin = deMin(aMin(r.hora) + durDe(a, r));
-  const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Storm surf lesson') + '&dates=' + r.fecha.replace(/-/g, '') + 'T' + r.hora.replace(':', '') + '00/' + r.fecha.replace(/-/g, '') + 'T' + fin.replace(':', '') + '00&ctz=America/Santiago&location=' + encodeURIComponent(MAPA) + '&details=' + encodeURIComponent('Arrive 10 minutes early. Form: ' + linkFicha(r));
+  const gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Storm surf lesson') + '&dates=' + r.fecha.replace(/-/g, '') + 'T' + r.hora.replace(':', '') + '00/' + r.fecha.replace(/-/g, '') + 'T' + fin.replace(':', '') + '00&ctz=America/Santiago&location=' + encodeURIComponent(MAPA) + '&details=' + encodeURIComponent('Form: ' + linkFicha(r));
   const boton = (href, txt, fondo, color) => '<a href="' + href + '" style="display:block;text-align:center;text-decoration:none;background:' + fondo + ';color:' + color + ';font-weight:700;font-size:16px;padding:14px 18px;border-radius:999px;margin:10px 0 0">' + txt + '</a>';
   const seccion = (titulo, cuerpo) => '<tr><td style="padding:22px 26px 0"><p style="margin:0 0 8px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8a8986;font-weight:700">' + titulo + '</p>' + cuerpo + '</td></tr>';
   const dato = (k, v) => '<td style="padding:6px 0;font-size:15px;color:#8a8986;width:42%">' + k + '</td><td style="padding:6px 0;font-size:15px;font-weight:700;text-align:right">' + v + '</td>';
@@ -650,7 +651,7 @@ function correoReservadaEN(r, a) {
     '<tr>' + (r.packInfo ? dato('Pack', 'Lesson ' + r.packInfo.n + ' of ' + r.packInfo.clases) : dato('Total paid', clp(r.total) + ' CLP')) + '</tr>' +
     '<tr>' + dato('Booking', esc(r.ref)) + '</tr></table></td></tr>' +
     ficha + (r.packInfo ? seccion('🏄 Your pack of ' + r.packInfo.clases + ' lessons', '<p style="margin:0;font-size:15px;line-height:1.5">' + (r.packInfo.quedan ? 'You have ' + r.packInfo.quedan + ' lesson' + (r.packInfo.quedan === 1 ? '' : 's') + ' left, to use by <b>' + esc(dateLong(r.packInfo.vence)) + '</b>. Book the next ones whenever you want with this link (save it):' : 'This is the last lesson of your pack.') + '</p>' + (r.packInfo.quedan ? boton(r.packInfo.link + '&l=en', 'Book my next lesson', '#0f6e74', '#ffffff') : '')) : '') +
-    seccion('📍 How to get there', '<p style="margin:0;font-size:15px;line-height:1.5">We meet at Storm, ' + esc(a.lugar) + '. Arrive 10 minutes early so you can put on your wetsuit calmly.</p>' + boton(MAPA, 'See location on the map', '#2C2C2B', '#ffffff')) +
+    seccion('📍 How to get there', '<p style="margin:0;font-size:15px;line-height:1.5">We meet at Storm, ' + esc(a.lugar) + '.</p>' + boton(MAPA, 'See location on the map', '#2C2C2B', '#ffffff')) +
     seccion('🎒 What to bring', '<p style="margin:0;font-size:15px;line-height:1.9">' + BRING.map(t => '✅ ' + esc(t)).join('<br>') + '</p>') +
     seccion('💙 We provide', '<p style="margin:0;font-size:15px;line-height:1.9">🏄 Surfboard and leash<br>🌊 Wetsuit<br>🤙 Certified instructor</p>') +
     seccion('🌊 If the ocean is not safe', '<p style="margin:0;font-size:15px;line-height:1.5">Surfing is an ocean sport. If conditions are not safe, we will message you on WhatsApp to change the time at no cost.</p>') +
@@ -682,15 +683,15 @@ async function recordatorios(env, a) {
     if (enIngles(r)) {
       await enviarCorreo(env, { to: r.correo, subject: 'Your surf lesson is tomorrow · ' + r.hora,
         html: cajaCorreo('Tomorrow we surf!', '<p style="margin:0 0 16px;font-size:16px">Hi ' + esc(r.nombre.split(' ')[0]) + ', a reminder of your lesson:</p>' + filaC('When', 'Tomorrow, ' + dateLong(r.fecha) + ' at ' + r.hora) + filaC('Where', a.lugar) + '<p style="margin:4px 0 0;font-size:16px">📍 <a href="' + MAPA + '" style="color:#2d6e94;font-weight:700">How to get there (map)</a></p>',
-          ((await fichasDe(env.DB, r.ref)).length < r.personas ? botonFichaEN(r) : '') + 'Bring a swimsuit, towel and sunscreen. Arrive 10 minutes early. If the ocean is not safe, we will message you on WhatsApp to change the time.', 'See you in the water 🌊<br><b>The Storm team</b>'),
-        body: 'Hi ' + r.nombre.split(' ')[0] + ', a reminder of your surf lesson tomorrow, ' + dateLong(r.fecha) + ' at ' + r.hora + ' at ' + a.lugar + '. Arrive 10 minutes early.\nHow to get there: ' + MAPA });
+          ((await fichasDe(env.DB, r.ref)).length < r.personas ? botonFichaEN(r) : '') + 'Bring a swimsuit, towel and sunscreen. If the ocean is not safe, we will message you on WhatsApp to change the time.', 'See you in the water 🌊<br><b>The Storm team</b>'),
+        body: 'Hi ' + r.nombre.split(' ')[0] + ', a reminder of your surf lesson tomorrow, ' + dateLong(r.fecha) + ' at ' + r.hora + ' at ' + a.lugar + '.\nHow to get there: ' + MAPA });
       await env.DB.prepare('UPDATE reservas SET recordatorio = 1 WHERE ref = ?').bind(r.ref).run();
       continue;
     }
     await enviarCorreo(env, { to: r.correo, subject: 'Mañana es tu clase de surf · ' + r.hora + ' hrs',
       html: cajaCorreo('¡Mañana surfeamos!', '<p style="margin:0 0 16px;font-size:16px">Hola ' + esc(r.nombre.split(' ')[0]) + ', te recordamos tu clase:</p>' + filaC('Cuándo', cuando) + filaC('Dónde', a.lugar) + '<p style="margin:4px 0 0;font-size:16px">📍 <a href="' + MAPA + '" style="color:#2d6e94;font-weight:700">Cómo llegar (mapa)</a></p>',
-        (!r.fichas_papel && (await fichasDe(env.DB, r.ref)).length < r.personas ? botonFicha(r) : '') + 'Trae traje de baño, toalla y bloqueador. Llega 10 minutos antes. Si el mar no está apto, te escribimos por WhatsApp para cambiar la hora.'),
-      body: 'Hola ' + r.nombre.split(' ')[0] + ', te recordamos tu clase de surf ' + cuando + ' en ' + a.lugar + '. Llega 10 minutos antes.\nCómo llegar: ' + MAPA });
+        (!r.fichas_papel && (await fichasDe(env.DB, r.ref)).length < r.personas ? botonFicha(r) : '') + 'Trae traje de baño, toalla y bloqueador. Si el mar no está apto, te escribimos por WhatsApp para cambiar la hora.'),
+      body: 'Hola ' + r.nombre.split(' ')[0] + ', te recordamos tu clase de surf ' + cuando + ' en ' + a.lugar + '.\nCómo llegar: ' + MAPA });
     await env.DB.prepare('UPDATE reservas SET recordatorio = 1 WHERE ref = ?').bind(r.ref).run();
   }
   return results.length;
