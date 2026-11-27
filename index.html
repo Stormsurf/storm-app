@@ -134,11 +134,6 @@
 .mc-next__a button,.mc-next__a a{flex:1;border:0;border-radius:999px;padding:12px;font:inherit;font-size:1.45rem;font-weight:600;text-align:center;text-decoration:none;cursor:pointer}
 .mc-next__a .p{background:#fff;color:var(--aa-dk)}
 .mc-next__a .s{background:rgba(255,255,255,.2);color:#fff}
-.mc-qa{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-.mc-qa a{position:relative;background:#fff;border:1px solid var(--line);border-radius:20px;padding:12px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:1.25rem;font-weight:600;color:var(--ink);text-decoration:none}
-.mc-qa i{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:var(--aa-soft);color:var(--aa-dk)}
-.mc-qa svg{width:21px;height:21px}
-.mc-qa em{position:absolute;top:7px;right:12px;min-width:18px;height:18px;border-radius:9px;background:#C2563A;color:#fff;font-style:normal;font-size:1.1rem;display:grid;place-items:center;padding:0 5px}
 .mc .mc-h2{font-size:1.9rem;font-weight:600;margin-top:28px}
 .mc .mc-h2:before{display:none}
 .mc-msg1{border-left:1px solid rgba(44,44,43,.09);border-radius:20px}
@@ -701,9 +696,6 @@ body:has(.mc-hero--login) .ap-top{display:none}
     box.querySelectorAll('[data-nk]').forEach(b => b.onclick = () => ver(+b.dataset.nk));
     ver(0);
   }
-  function accesos(pago){
-    return `<nav class='mc-qa' aria-label='Accesos'><a href='#mc-s-cal'><i>${IC.cal}</i>Calendario</a>${pago}<a href='#mc-s-fam'><i>${IC.fam}</i>Recursos</a></nav>`;
-  }
   function barra(ultimo){
     return `<nav class='mc-nav' aria-label='Menú'><div><button class='on' data-ir='top'>${IC.home}Inicio</button><button data-ir='mc-s-cal'>${IC.cal}Calendario</button><button data-ir='recursos'>${IC.fam}Recursos</button>${ultimo}</div></nav>`;
   }
@@ -871,7 +863,6 @@ body:has(.mc-hero--login) .ap-top{display:none}
       proximas.push({nombre: String(a.alumno).split(' ')[0], fecha: c.fecha, dia: cap(c.texto), que: [c.clase, c.horario].filter(Boolean).join(' · '), mover: c.recupera && c.movible ? ai + '-' + ci : ''}); });
     proximas.sort((x,y) => x.fecha < y.fecha ? -1 : 1);
     h += proximaCard(proximas);
-    h += accesos(`<a href='#mc-s-pago'><i>${IC.pay}</i>Pagar</a>`);
     h += `<div data-vac></div>`;
     if(!d.alumnos.length){
       h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
