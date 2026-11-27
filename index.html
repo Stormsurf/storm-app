@@ -134,7 +134,7 @@
 .mc-next__a button,.mc-next__a a{flex:1;border:0;border-radius:999px;padding:12px;font:inherit;font-size:1.45rem;font-weight:600;text-align:center;text-decoration:none;cursor:pointer}
 .mc-next__a .p{background:#fff;color:var(--aa-dk)}
 .mc-next__a .s{background:rgba(255,255,255,.2);color:#fff}
-.mc-qa{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.mc-qa{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
 .mc-qa a{position:relative;background:#fff;border:1px solid var(--line);border-radius:20px;padding:12px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:1.25rem;font-weight:600;color:var(--ink);text-decoration:none}
 .mc-qa i{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:var(--aa-soft);color:var(--aa-dk)}
 .mc-qa svg{width:21px;height:21px}
@@ -215,8 +215,8 @@
 .mc-dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
 .mc-dots i{width:6px;height:6px;border-radius:3px;background:rgba(44,44,43,.18);transition:all .2s}
 .mc-dots i.on{width:18px;background:var(--aa-dk)}
-.mc-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:center;pointer-events:none}
-.mc-nav div{pointer-events:auto;width:100%;max-width:680px;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+.mc-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:center;pointer-events:none;-webkit-transform:translateZ(0);transform:translateZ(0)}
+.mc-nav div{pointer-events:auto;width:100%;max-width:680px;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
 .mc-nav button,.mc-nav a{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;font:inherit;font-size:1.15rem;font-weight:600;color:#8e8a84;padding:4px 0;cursor:pointer;text-decoration:none}
 .mc-nav svg{width:24px;height:24px}
 .mc-nav .on{color:var(--aa-dk)}
@@ -355,6 +355,17 @@ body:has(.mc-hero--login) .ap-top{display:none}
   const LOGO_VERANO = '/img/verano-logo.png';
   let fuente = API;
   const app = document.getElementById('mc-app');
+  // Barra de abajo: vive directo en <body>, fuera de lo que se vuelve a dibujar. En iPhone (app instalada), una barra fija
+  // que se crea de nuevo dentro de la página mientras está bajada queda pegada a media pantalla. Así nunca se recrea a mitad de scroll.
+  new MutationObserver(rs => {
+    if(!rs.some(r => r.addedNodes.length)) return; // solo cuando se dibuja de nuevo (no al sacar la barra de aquí)
+    const nueva = app.querySelector('.mc-nav'), vieja = document.querySelector('body > .mc-nav');
+    if(!nueva){ if(vieja) vieja.remove(); return; }
+    const firma = n => [...n.querySelectorAll('[data-ir], a')].map(x => (x.dataset.ir || x.href) + x.textContent).join('|');
+    if(vieja && firma(vieja) === firma(nueva)) nueva.remove(); // la misma barra: se queda la que ya está (los botones ya quedaron conectados)
+    else if(vieja) vieja.replaceWith(nueva);
+    else document.body.appendChild(nueva);
+  }).observe(app, {childList: true});
   const q = new URLSearchParams(location.search);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
@@ -501,10 +512,6 @@ body:has(.mc-hero--login) .ap-top{display:none}
   // ---------- Mensajes del equipo para el grupo (v17) ----------
   const VISTOS = KEY + '-vistos';
   const vistos = () => { try{ return JSON.parse(localStorage.getItem(VISTOS) || '[]'); }catch(_){ return []; } };
-  function mensajesCard(ms){
-    const v = vistos();
-    return `<div class='mc-msgs' id='mc-s-msg'><h2 class='mc-h2'>Mensajes de Storm</h2>` + ms.map(m => `<div class='mc-msg1${v.includes(m.id)?'':' mc-msg1--new'}'><small>${v.includes(m.id)?'':'<i>Nuevo</i>'}${esc(m.de)} · ${esc(m.texto)}${m.hora?' · '+esc(m.hora):''}</small><p>${esc(m.mensaje)}</p></div>`).join('') + `</div>`;
-  }
   function marcarVistos(ms){ try{ const v = vistos(); ms.forEach(m => { if(!v.includes(m.id)) v.push(m.id); }); localStorage.setItem(VISTOS, JSON.stringify(v.slice(-40))); }catch(_){} }
   // ---------- Calendario del mes (dibujado desde la pestaña Calendario de la planilla) ----------
   const DSEM = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -694,8 +701,8 @@ body:has(.mc-hero--login) .ap-top{display:none}
     box.querySelectorAll('[data-nk]').forEach(b => b.onclick = () => ver(+b.dataset.nk));
     ver(0);
   }
-  function accesos(nMsg, pago){
-    return `<nav class='mc-qa' aria-label='Accesos'><a href='#mc-s-cal'><i>${IC.cal}</i>Calendario</a><a href='#mc-s-msg'><i>${IC.msg}</i>Mensajes${nMsg?`<em>${nMsg}</em>`:''}</a>${pago}<a href='#mc-s-fam'><i>${IC.fam}</i>Recursos</a></nav>`;
+  function accesos(pago){
+    return `<nav class='mc-qa' aria-label='Accesos'><a href='#mc-s-cal'><i>${IC.cal}</i>Calendario</a>${pago}<a href='#mc-s-fam'><i>${IC.fam}</i>Recursos</a></nav>`;
   }
   function barra(ultimo){
     return `<nav class='mc-nav' aria-label='Menú'><div><button class='on' data-ir='top'>${IC.home}Inicio</button><button data-ir='mc-s-cal'>${IC.cal}Calendario</button><button data-ir='recursos'>${IC.fam}Recursos</button>${ultimo}</div></nav>`;
@@ -703,12 +710,12 @@ body:has(.mc-hero--login) .ap-top{display:none}
   function bindNuevo(){
     bindDuda();
     const pg = app.querySelector('[data-recpage]');
-    if(pg){ const nav = id => app.querySelectorAll('.mc-nav [data-ir]').forEach(x => x.classList.toggle('on', x.dataset.ir === id));
+    if(pg){ const nav = id => document.querySelectorAll('.mc-nav [data-ir]').forEach(x => x.classList.toggle('on', x.dataset.ir === id));
       pg.querySelector('[data-recback]').onclick = () => { if(location.hash === '#recursos') history.back(); else { pg.hidden = true; nav('top'); } };
       window.onpopstate = () => { if(location.hash !== '#recursos' && !pg.hidden){ pg.hidden = true; nav('top'); } };
       if(location.hash === '#recursos'){ pg.hidden = false; nav('recursos'); } }
-    app.querySelectorAll('.mc-nav [data-ir]').forEach(b => b.onclick = () => {
-      app.querySelectorAll('.mc-nav [data-ir]').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.mc-nav [data-ir]').forEach(b => b.onclick = () => {
+      document.querySelectorAll('.mc-nav [data-ir]').forEach(x => x.classList.toggle('on', x === b));
       const id = b.dataset.ir, pg = app.querySelector('[data-recpage]');
       if(id === 'recursos'){ if(pg){ pg.hidden = false; pg.scrollTop = 0; if(location.hash !== '#recursos') history.pushState({rec:1}, '', '#recursos'); } return; }
       if(pg && !pg.hidden){ pg.hidden = true; if(location.hash === '#recursos') history.replaceState(null, '', location.pathname + location.search); }
@@ -864,13 +871,11 @@ body:has(.mc-hero--login) .ap-top{display:none}
       proximas.push({nombre: String(a.alumno).split(' ')[0], fecha: c.fecha, dia: cap(c.texto), que: [c.clase, c.horario].filter(Boolean).join(' · '), mover: c.recupera && c.movible ? ai + '-' + ci : ''}); });
     proximas.sort((x,y) => x.fecha < y.fecha ? -1 : 1);
     h += proximaCard(proximas);
-    const vv = vistos(), nNuevos = (d.mensajes || []).filter(m => !vv.includes(m.id)).length;
-    h += accesos(nNuevos, `<a href='#mc-s-pago'><i>${IC.pay}</i>Pagar</a>`);
+    h += accesos(`<a href='#mc-s-pago'><i>${IC.pay}</i>Pagar</a>`);
     h += `<div data-vac></div>`;
     if(!d.alumnos.length){
       h += `<div class='mc-card'><p style='margin:0'>Aún no vemos mensualidades pagadas con este correo. Si acabas de pagar, espera unos minutos y recarga. Si pagaste con otro correo, sal y entra con ese.</p></div>`;
     }
-    if((d.mensajes || []).length) h += mensajesCard(d.mensajes);
     h += informesCard('Anual');
     if(activos.length){
       h += `<h2 class='mc-h2'>Tus surfistas</h2>` + activos.map(a=>alumnoCard(a, d.alumnos.indexOf(a), d.aviso)).join('');
