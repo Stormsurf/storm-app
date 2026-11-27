@@ -243,6 +243,10 @@
   .es-row.rojo .es-rx b{color:#a12c1c}
   .es-row .es-sw{flex:none}
   .es-rpago{padding:4px 16px 14px;display:flex;flex-wrap:wrap;gap:8px}
+  .es-cbr{cursor:pointer}.es-cbr input{width:22px;height:22px;accent-color:#0f6e74;flex:none;margin:0}.es-cbr em{flex:none;font-style:normal;font-weight:600;font-size:1.5rem}
+  .es-cbt{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 10px}.es-cbt small{font-size:1.35rem;color:#77756f}.es-cbt b{font-size:2.2rem}
+  .es-cbp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.es-cbp button{border:1.5px solid #cfd9d9;background:#fff;color:#0f6e74;border-radius:999px;padding:10px 4px;font:inherit;font-size:1.3rem;font-weight:600;cursor:pointer}.es-cbp button[disabled]{opacity:.45}
+  .es-cbq{font-size:1.3rem;color:#77756f;text-align:center;margin:12px 0 0}
   .es-pkz{display:flex;align-items:center;gap:12px;background:#E3F1F1;border-radius:14px;padding:12px 14px;margin:8px 0 10px;cursor:pointer}
   .es-pkd{display:flex;gap:4px;margin:6px 0 2px}.es-pkd i{width:22px;height:6px;border-radius:3px;background:#fff;box-shadow:inset 0 0 0 1.5px #d9a54a}.es-pkd i.a{background:#0f6e74;box-shadow:none}.es-pkd i.h{background:#cfcac0;box-shadow:none}
   .es-pkz .es-rx b{font-size:1.4rem}.es-pkz .es-rx small{color:#0f6e74}
@@ -303,7 +307,7 @@
   @media (max-width:999px){.sp-shell .es-toast,.es-toast{bottom:calc(150px + env(safe-area-inset-bottom))}}
   `;
 
-  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], sumarIns = false, msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = '', vista = null, pila = [];
+  let linkNuevo = null, E = null, auth = null, pane = null, sub = 'dia', diaVer = '', manualPre = null, filtroIns = '', verPasadas = false, abierta = '', modo = '', sel = [], sumarIns = false, msg = '', calIns = '', calDesde = '', manualOn = false, ajTab = '', vista = null, pila = [], cobroLink = null;
   const KEY = 'storm-agenda-datos';
 
   async function post(body) {
@@ -416,6 +420,7 @@
     if (manualOn && admin) h += manualForm();
     else if (vista && vista.t === 'clase') h += paginaClase(E.reservas.find(r => r.ref === vista.ref), admin);
     else if (vista && vista.t === 'cliente' && admin) h += paginaCliente(vista.nombre);
+    else if (vista && vista.t === 'cobro' && admin) h += paginaCobro(vista);
     document.documentElement.style.overflow = (manualOn && admin) || vista ? 'hidden' : '';
     pane.innerHTML = h;
     pane.querySelectorAll('[data-sub]').forEach(b => { b.classList.toggle('on', b.dataset.sub === sub || (b.dataset.sub === 'ajustes' && sub === 'calendario' && admin)); b.onclick = () => { sub = b.dataset.sub; if (sub === 'ajustes') ajTab = ''; msg = ''; pintar(); }; });
@@ -465,6 +470,10 @@
     return { ins: g.length, precio: precios.every(Boolean) ? precios.reduce((t, x) => t + x, 0) : 0 };
   }
   const faltaCobrar = r => (r.saldos || []).filter(x => !x.medio).reduce((t, x) => t + (x.monto || 0), 0);
+  // Lo que falta cobrar de una clase (igual que en el servidor). Las que se están pagando en la web en este momento no cuentan.
+  const debeDe = r => r.estado === 'cancelada' || r.pack || r.medio === 'Pack' ? 0 : r.estado === 'pendiente' ? (/^Agregada a mano/.test(r.nota || '') ? r.total || 0 : 0) : r.medio === 'Por pagar' ? r.total || 0 : faltaCobrar(r);
+  const porCobrar = (nombre, tel) => { const t = wa(tel), n = String(nombre || '').trim().toLowerCase(); return (E.reservas || []).filter(r => debeDe(r) > 0 && (r.nombre.trim().toLowerCase() === n || (t && wa(r.telefono) === t))).sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora)); };
+  const cobroFila = (nombre, tel) => { const l = porCobrar(nombre, tel); return l.length ? fila('$', l.length === 1 ? 'Cobrar con link de pago' : 'Cobrar sus ' + l.length + ' clases juntas', clp(l.reduce((t, r) => t + debeDe(r), 0)) + (l.length === 1 ? ' · o anotar cómo pagó' : ' · un solo link o un solo pago'), { tag: 'button', at: `data-cobro='${esc(nombre)}' data-tel='${esc(tel || '')}'`, ic: 'pend' }) : ''; };
   // ---------- packs de clases (5 clases con 10% de descuento, se pagan una vez) ----------
   const PK = () => Object.assign({ clases: 5, descuento: 10, meses: 1 }, (E.ajustes || {}).pack || {});
   const precioPack = p => { const k = PK(), v = Number(((E.ajustes || {}).precios || {})[Math.min(5, Math.max(1, Math.floor(+p || 1)))]) || 0; return Math.round(v * k.clases * (100 - k.descuento) / 100 / 100) * 100; };
@@ -563,7 +572,7 @@
         });
       }
       if (viva && (r.medio === 'Por pagar' || r.estado === 'pendiente')) pago += `<div class='es-rpago'><span>¿Ya pagó? Toca cómo:</span>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([v, t]) => `<button data-pago='${esc(r.ref)}' data-m='${v}'>${t}</button>`).join('')}</div>`;
-      h += grupo('Pago', [pago,
+      h += grupo('Pago', [pago, viva ? cobroFila(r.nombre, r.telefono) : '',
         r.linkPago && wa(r.telefono) ? fila(ICO_S.wa, 'Mandar link de pago por WhatsApp', '', { tag: 'a', at: `target='_blank' rel='noopener' href='https://wa.me/${wa(r.telefono)}?text=${encodeURIComponent(ml)}'`, ic: 'ok' }) : '',
         r.linkPago ? fila(ICO_S.link, 'Copiar link de pago', '', { tag: 'button', at: `data-lf='${esc(ml)}'` }) : '']);
     }
@@ -587,6 +596,21 @@
     }
     return h + `</div></div>`;
   }
+  // Cobrar varias clases de un cliente juntas (Isidora 27-11): se eligen las clases sin pagar y se cobran con UN solo link de pago
+  // o se anota que pagó todo junto (POS, transferencia, efectivo o factura). Son todas clases (exentas), así que pueden ir juntas.
+  const msgCobro = L => 'Hola ' + L.nombre.split(' ')[0] + '! Te dejo el link para pagar ' + (L.n === 1 ? 'tu clase' : 'tus ' + L.n + ' clases') + ' de surf con Storm (' + L.dias + '), ' + clp(L.total) + ':\n' + L.link;
+  function paginaCobro(v) {
+    const l = porCobrar(v.nombre, v.tel), L = cobroLink && cobroLink.nombre === v.nombre ? cobroLink : null;
+    let h = `<div class='es-pg'>${cabeza('Cobrar')}<div class='es-pgb'>`;
+    h += `<div class='es-hero'>${avatar(v.nombre, 'xl')}<div><b>${esc(v.nombre)}</b><small>${l.length ? (l.length === 1 ? '1 clase sin pagar' : l.length + ' clases sin pagar') : 'No debe clases'}</small></div></div>`;
+    if (L) h += `<div class='pn-card' style='border:2px solid #0f6e74'><h3>Link de pago listo</h3><p class='pn-sub'>${L.n === 1 ? '1 clase' : L.n + ' clases'} · ${clp(L.total)}. Cuando pague, quedan pagadas solas.</p>
+        <div class='es-acc'>${wa(L.telefono) ? `<a class='es-btn' style='text-decoration:none' target='_blank' rel='noopener' href='https://wa.me/${wa(L.telefono)}?text=${encodeURIComponent(msgCobro(L))}'>Mandar por WhatsApp</a>` : ''}<button class='es-btn sec' data-lf='${esc(msgCobro(L))}'>Copiar mensaje</button></div></div>`;
+    if (!l.length) return h + `<p class='pn-note'>Todas sus clases están pagadas.</p></div></div>`;
+    h += `<p class='es-gt'>Toca las que se cobran</p><div class='es-grp'>` + l.map(r => `<label class='es-row es-cbr'><input type='checkbox' data-cbk='${esc(r.ref)}' data-m='${debeDe(r)}'${!L || L.refs.includes(r.ref) ? ' checked' : ''}><span class='es-rx'><b>${esc(fcorta(r.fecha))} · ${esc(r.hora)}</b><small>${esc(gentes(r))}${faltaCobrar(r) && r.medio !== 'Por pagar' ? ' · diferencia' : ''}</small></span><em>${clp(debeDe(r))}</em></label>`).join('') + `</div>`;
+    return h + `</div><div class='es-pgf' data-cbf><div class='es-cbt'><small data-cbn></small><b data-cbtot></b></div><p class='es-err vivo'></p>
+      <button class='es-big' data-cbl>Link de pago</button>
+      <p class='es-cbq'>¿Ya pagó todo junto? Toca cómo:</p><div class='es-cbp'>${MEDIOS.filter(m => !['Por pagar', 'Mercado Pago'].includes(m[0])).map(([x, t]) => `<button data-cbm='${x}'>${t}</button>`).join('')}</div></div></div>`;
+  }
   const clasesDe = c => { const t = wa(c.telefono), n = String(c.nombre || '').trim().toLowerCase(); return E.reservas.filter(r => r.nombre.trim().toLowerCase() === n || (t && wa(r.telefono) === t)).sort((a, b) => (b.fecha + b.hora).localeCompare(a.fecha + a.hora)); };
   function clientesVista() {
     const l = E.clientes || [];
@@ -600,6 +624,7 @@
     h += `<div class='es-hero'>${avatar(c.nombre, 'xl')}<div><b>${esc(c.nombre)}</b><small>${c.clases ? `${c.clases} clase${c.clases === 1 ? '' : 's'} con Storm` : 'Cliente de AgendaPro'}</small></div></div>`;
     h += botonesContacto(c.telefono, c.correo);
     h += grupo('Datos', [c.telefono ? fila(ICO_S.tel, esc(c.telefono), 'Teléfono') : '', c.correo ? fila(ICO_S.mail, esc(c.correo), 'Correo') : '', !c.telefono && !c.correo ? fila(ICO_S.persona, 'Sin teléfono ni correo', '') : '']);
+    h += grupo('', [cobroFila(c.nombre, c.telefono)]);
     h += packGrupo(c);
     h += grupo('Clases', cl.map(r => { const E0 = estadoDe(r); return fila(ICO_S.cal, esc(flarga(r.fecha)) + ' · ' + esc(r.hora), esc(gentes(r) + ' · ' + E0.t), { tag: 'button', at: `data-ver='${esc(r.ref)}'`, ic: E0.c }); }));
     if (!cl.length) h += `<p class='pn-note'>Sus clases antiguas no se muestran aquí.</p>`;
@@ -1008,6 +1033,25 @@
     const abrir = v => { if (vista) pila.push(vista); vista = v; abierta = ''; modo = ''; packVender = false; msg = ''; pintar(); const b = pane.querySelector('.es-pgb'); if (b) b.scrollTop = 0; };
     $$('[data-ver]').forEach(c => c.onclick = e => { if (e.target.closest('a') || (e.target.closest('button') && e.target.closest('button') !== c)) return; abrir({ t: 'clase', ref: c.dataset.ver }); });
     $$('[data-cliv]').forEach(b => b.onclick = () => abrir({ t: 'cliente', nombre: b.dataset.cliv }));
+    $$('[data-cobro]').forEach(b => b.onclick = () => { cobroLink = null; abrir({ t: 'cobro', nombre: b.dataset.cobro, tel: b.dataset.tel }); });
+    const cbf = $('[data-cbf]');
+    if (cbf) {
+      const elegidas = () => [...pane.querySelectorAll('[data-cbk]')].filter(i => i.checked);
+      const suma = () => { const l = elegidas(), t = l.reduce((s, i) => s + (+i.dataset.m || 0), 0); cbf.querySelector('[data-cbn]').textContent = l.length ? (l.length === 1 ? '1 clase' : l.length + ' clases') : 'Elige al menos una'; cbf.querySelector('[data-cbtot]').textContent = clp(t); cbf.querySelectorAll('button').forEach(x => x.disabled = !l.length); };
+      pane.querySelectorAll('[data-cbk]').forEach(i => i.onchange = suma); suma();
+      const er = cbf.querySelector('.es-err');
+      cbf.querySelector('[data-cbl]').onclick = async e => {
+        const b = e.currentTarget, refs = elegidas().map(i => i.dataset.cbk), rs = refs.map(x => E.reservas.find(r => r.ref === x)).filter(Boolean);
+        b.disabled = true; b.textContent = 'Creando link…'; er.textContent = '';
+        try {
+          const d = await post({ accion: 'link', op: 'crear', clases: refs, nombre: vista.nombre, telefono: vista.tel || (rs[0] || {}).telefono || '' });
+          cobroLink = { nombre: vista.nombre, telefono: d.nuevo.telefono || vista.tel || '', total: d.nuevo.total, link: d.nuevo.link, n: refs.length, refs, dias: rs.map(r => fcorta(r.fecha).toLowerCase()).join(', ') };
+          pintar(); const pb = pane.querySelector('.es-pgb'); if (pb) pb.scrollTop = 0;
+        } catch (x) { er.textContent = x.message; b.disabled = false; b.textContent = 'Link de pago'; }
+      };
+      cbf.querySelectorAll('[data-cbm]').forEach(b => b.onclick = () => { const n = elegidas().length, quien = vista.nombre.split(' ')[0];
+        accion({ accion: 'cobrar-clases', refs: elegidas().map(i => i.dataset.cbk), medio: b.dataset.cbm }, b).then(ok => { if (ok) { cobroLink = null; vista = pila.pop() || null; msg = quien + ': ' + (n === 1 ? '1 clase pagada' : n + ' clases pagadas') + ' con ' + b.dataset.t + '.'; pintar(); } }); });
+    }
     const cq = $('[data-cq]'); if (cq) cq.oninput = () => { const v = cq.value.trim().toLowerCase(); $$('[data-cliv]').forEach(b => b.style.display = !v || b.dataset.q.includes(v) ? '' : 'none'); };
     $$('[data-agendar]').forEach(b => b.onclick = () => { const c = (E.clientes || []).find(x => x.nombre === b.dataset.agendar); manualPre = { cliente: c }; manualOn = true; pintar(); });
     const pgN = $('[data-nf]'); if (pgN) pgN.querySelector('[data-cli]').onclick = () => hojaCliente(pgN);

@@ -1209,13 +1209,22 @@ const debeClase = r => r.estado === 'pagada' && r.medio !== 'Por pagar' ? saldos
 const rentaTiempo = x => x.tiempo !== 'dia' ? 'medio día' : (x.dias || 1) > 1 ? x.dias + ' días completos' : 'día completo';
 /** Cómo ve el cliente una renta en la página de pago (Isidora 24-11: el carro del cliente tiene que ser explícito). */
 const rentaCliente = x => 'Arriendo · ' + [x.tablas ? x.tablas + (x.tablas === 1 ? ' tabla soft' : ' tablas soft') : '', x.fibras ? x.fibras + (x.fibras === 1 ? ' tabla de fibra' : ' tablas de fibra') : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(', ') + ' · ' + rentaTiempo(x);
+const CLASE_DEBE = "(estado = 'pendiente' OR (estado = 'pagada' AND (medio = 'Por pagar' OR saldos LIKE '%\"medio\":\"\"%')))";
+const opClase = (r, hoy) => ({ tipo: 'clase', id: r.ref, detalle: 'Clase · ' + r.nombre, cliente: 'Clase de surf · ' + DIAS[new Date(diaUTC(r.fecha)).getUTCDay()].replace(/^./, c => c.toUpperCase()) + ' ' + (+r.fecha.slice(8)) + '/' + (+r.fecha.slice(5, 7)) + ' · ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + (debeClase(r) < (Number(r.total) || 0) ? ' (diferencia)' : ''), sub: (r.fecha === hoy ? 'Hoy' : r.fecha.slice(8) + '/' + r.fecha.slice(5, 7)) + ' ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas'), monto: debeClase(r), telefono: r.telefono || '', nombre: r.nombre });
+/** Clases sin pagar elegidas por ref (Isidora 27-11: cobrar varias clases de un cliente juntas, aunque sean de hace más de 2 semanas). */
+async function clasesDebe(db, refs) {
+  const l = [...new Set((refs || []).map(String))].slice(0, 30); if (!l.length) return [];
+  const hoy = ahoraChile().fecha;
+  return (await db.prepare('SELECT * FROM reservas WHERE ref IN (' + l.map(() => '?').join(',') + ') AND ' + CLASE_DEBE + ' ORDER BY fecha, hora').bind(...l).all()).results
+    .filter(r => !r.pack && (r.estado !== 'pendiente' || aMano(r))).map(r => opClase(r, hoy)).filter(x => x.monto > 0);
+}
 /** Rentas y clases que se pueden sumar a un link (sin pagar). */
 async function linkOpciones(env) {
   const db = env.DB, hoy = ahoraChile().fecha;
   const rentas = (await db.prepare("SELECT * FROM rentas WHERE estado = 'activa' AND pago IN ('Falta pagar', 'Link de pago') AND creada_ms > ? ORDER BY creada_ms DESC").bind(Date.now() - 14 * 86400000).all()).results
     .filter(x => x.monto > 0).map(x => ({ tipo: 'renta', id: x.id, detalle: 'Renta · ' + x.nombre, cliente: rentaCliente(x), sub: [x.tablas ? x.tablas + ' soft' : '', x.fibras ? x.fibras + ' fibra' : '', x.trajes ? x.trajes + (x.trajes === 1 ? ' traje' : ' trajes') : ''].filter(Boolean).join(' · ') + ' · ' + rentaTiempo(x), monto: x.monto, telefono: x.telefono || '', nombre: x.nombre }));
-  const clases = (await db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND (estado = 'pendiente' OR (estado = 'pagada' AND (medio = 'Por pagar' OR saldos LIKE '%\"medio\":\"\"%'))) ORDER BY fecha, hora").bind(sumarDias(hoy, -14), sumarDias(hoy, 14)).all()).results
-    .filter(r => r.estado !== 'pendiente' || aMano(r)).map(r => ({ tipo: 'clase', id: r.ref, detalle: 'Clase · ' + r.nombre, cliente: 'Clase de surf · ' + DIAS[new Date(diaUTC(r.fecha)).getUTCDay()].replace(/^./, c => c.toUpperCase()) + ' ' + (+r.fecha.slice(8)) + '/' + (+r.fecha.slice(5, 7)) + ' · ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas') + (debeClase(r) < (Number(r.total) || 0) ? ' (diferencia)' : ''), sub: (r.fecha === hoy ? 'Hoy' : r.fecha.slice(8) + '/' + r.fecha.slice(5, 7)) + ' ' + r.hora + ' · ' + r.personas + (r.personas === 1 ? ' persona' : ' personas'), monto: debeClase(r), telefono: r.telefono || '', nombre: r.nombre }))
+  const clases = (await db.prepare("SELECT * FROM reservas WHERE fecha BETWEEN ? AND ? AND " + CLASE_DEBE + " ORDER BY fecha, hora").bind(sumarDias(hoy, -14), sumarDias(hoy, 14)).all()).results
+    .filter(r => r.estado !== 'pendiente' || aMano(r)).map(r => opClase(r, hoy))
     .filter(x => x.monto > 0);
   return rentas.concat(clases);
 }
@@ -1256,7 +1265,7 @@ async function linkAccion(env, q, d, ctx) {
     // Rentas armadas en el carro: se guardan ahora esperando el link (si el link falla, quedan como renta 'Esperando pago' y se cobran igual)
     const yo0 = await quienNombre(env, q.email), nuevas = await guardarRentasCarro(env, q, d, 'Link de pago', yo0);
     // Rentas y clases sin pagar elegidas (el monto se lee aquí, no se confía en lo que manda el celular)
-    const ops = await linkOpciones(env), ids = new Set([].concat(d.rentas || [], d.clases || [], nuevas).map(String));
+    const ops0b = await linkOpciones(env), extra = (await clasesDebe(db, d.clases)).filter(c => !ops0b.some(o => o.id === c.id)), ops = ops0b.concat(extra), ids = new Set([].concat(d.rentas || [], d.clases || [], nuevas).map(String));
     ops.filter(o => ids.has(o.id)).forEach(o => partes.push({ tipo: o.tipo, id: o.id, detalle: o.detalle + (o.sub ? ' (' + o.sub + ')' : ''), cliente: o.cliente, monto: o.monto }));
     // Si el link no se puede crear, las rentas armadas en el carro se deshacen (así al reintentar no quedan repetidas)
     const deshacer = async m => { if (nuevas.length) await db.batch(nuevas.map(id => db.prepare("UPDATE rentas SET estado = 'borrada' WHERE id = ?").bind(id))); throw err(m); };
@@ -1287,6 +1296,21 @@ async function linkAccion(env, q, d, ctx) {
     await db.batch(st); await anotar(db, q, 'link anulado ' + L.ref);
   } else if (op === 'revisar') await revisarLink(env, L, ctx);
   return { ok: true, links: await linksLista(db) };
+}
+/** Cobrar varias clases del mismo cliente de una vez (Isidora 27-11): POS, transferencia, efectivo o factura. Quedan todas pagadas
+ *  igual que al tocar "¿Ya pagó?" en cada clase, y los links de pago que las tenían esperando se anulan (así no se cobran dos veces). */
+async function cobrarClases(env, q, d, ctx) {
+  const db = env.DB, medio = String(d.medio || '');
+  if (!['POS', 'Transferencia', 'Efectivo', 'Factura'].includes(medio)) throw err('¿Cómo pagó?');
+  const ops = await clasesDebe(db, d.refs);
+  if (!ops.length) throw err('Esas clases ya están pagadas.');
+  await linkTabla(db);
+  const ids = new Set(ops.map(o => o.id));
+  const viejos = (await db.prepare("SELECT * FROM links WHERE estado = 'pendiente'").all()).results.filter(L => partesDe(L).some(p => p.id && ids.has(p.id)));
+  if (viejos.length) await db.batch(viejos.map(L => db.prepare("UPDATE links SET estado = 'anulada' WHERE ref = ? AND estado = 'pendiente'").bind(L.ref)));
+  await anotarPartes(env, ops.map(o => ({ tipo: 'clase', id: o.id, monto: o.monto })), medio, await quienNombre(env, q.email), ctx, false);
+  await anotar(db, q, 'cobrar clases ' + [...ids].join(' ') + ' ' + medio);
+  return panel(env, q);
 }
 /** Revisa si el link se pagó (Webpay, Flow o Mercado Pago) y, si se pagó, anota cada parte. */
 async function revisarLink(env, L, ctx) {
@@ -2154,7 +2178,7 @@ export async function onRequest(context) {
     if (acc === 'cierre') return json(await cierreAccion(env, q, d));
     if (acc === 'tuu-control') { if (q.rol !== 'admin') throw err('Solo administradores.'); return json(Object.assign({ ok: true }, await tuuControl(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7)))); }
     if (acc === 'notas') return json(await notasAccion(env, q, d));
-    if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo', 'pack'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
+    if (q.rol !== 'admin' && !(q.rol === 'recepcion' && ['editar', 'cancelar', 'datos', 'manual', 'saldo', 'pack', 'cobrar-clases'].includes(acc))) throw err('Solo un administrador puede hacer esto.');
     if (acc === 'finanzas-mes') return json(await finanzasMes(env, d));
     if (acc === 'tuu-mes') return json(await tuuMes(env, /^\d{4}-\d{2}$/.test(String(d.mes || '')) ? d.mes : ahoraChile().fecha.slice(0, 7), d.forzar));
     if (acc === 'tuu-revisar') return json(await tuuRevisar(env, q, d));
@@ -2165,6 +2189,7 @@ export async function onRequest(context) {
     if (acc === 'cancelar') return json(await cancelar(env, q, d, context));
     if (acc === 'datos') return json(await datos(env, q, d));
     if (acc === 'saldo') return json(await cobrarSaldo(env, q, d));
+    if (acc === 'cobrar-clases') return json(await cobrarClases(env, q, d, context));
     if (acc === 'manual') return json(await manual(env, q, d, context));
     if (acc === 'pack') return json(await packAccion(env, q, d));
     if (acc === 'instructor') return json(await guardarInstructor(env, q, d));
