@@ -1645,7 +1645,12 @@
       pendientes: () => colaLeer().length,
       fin: () => FIN,
       datos: () => alDia(cacheLeer('anual')),
-      verano: () => VER || cacheLeer('verano')
+      verano: () => VER || cacheLeer('verano'),
+      async cargarVerano(){ // para el buscador: trae Verano sin abrir la pestaña
+        if(VER) return VER;
+        try{ const r = await (await fetch(API_VERANO, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({}, auth, {accion:'panel'}))})).json(); if(r.ok) cacheGuardar('verano', r); }catch(_){}
+        return VER || cacheLeer('verano');
+      }
     };
   } else load();
 })();
