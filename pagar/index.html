@@ -65,7 +65,7 @@
   try{ const g = localStorage.getItem('storm-lang'); if(g) EN = g === 'en'; }catch(_){}
   { const l = new URLSearchParams(location.search).get('l'); if(l === 'es' || l === 'en') EN = l === 'en'; }
   if(EN){ document.documentElement.lang = 'en'; document.title = 'Pay · Storm'; }
-  const ayuda = `<p class="pg-note">${EN ? 'Secure payment with Webpay (Transbank). Questions?' : 'Pago seguro con Webpay (Transbank). ¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">${EN ? 'Message us on WhatsApp' : 'Escríbenos por WhatsApp'}</a></p>`;
+  const ayuda = `<p class="pg-note">${EN ? 'Secure payment with Webpay (Transbank).' : 'Pago seguro con Webpay (Transbank).'}</p>`;
 
   const error = t => { const e = document.getElementById('err'); if(e){ e.hidden = !t; e.textContent = t || ''; } };
 
@@ -73,7 +73,7 @@
     document.getElementById('op-tarjeta').classList.add('on');
     const box = document.getElementById('brick');
     if(brick) return;
-    if(!D.publicKey || !window.MercadoPago){ error(EN ? 'Card payment is not available right now. Use your Mercado Pago account or message us on WhatsApp.' : 'El pago con tarjeta no está disponible en este momento. Usa tu cuenta Mercado Pago o escríbenos por WhatsApp.'); return; }
+    if(!D.publicKey || !window.MercadoPago){ error(EN ? 'Card payment is not available right now. Please try again later.' : 'El pago con tarjeta no está disponible en este momento. Intenta de nuevo más tarde.'); return; }
     box.innerHTML = '';
     const mp = new MercadoPago(D.publicKey, { locale: EN ? 'en-US' : 'es-CL' });
     brick = await mp.bricks().create('cardPayment', 'brick', {
@@ -128,7 +128,7 @@
         <button class="pg-opt" id="op-wp" type="button"><i>💳</i><span><b>${EN ? 'Card' : 'Tarjeta'}</b><small>${EN ? 'Credit, debit or prepaid, Chilean or foreign (Webpay)' : 'Crédito, débito o prepago, chilena o extranjera (Webpay)'}</small></span></button>
         ${D.transferencia ? `<button class="pg-opt" id="op-tr" type="button"><i>🏦</i><span><b>${EN ? 'Bank transfer' : 'Transferencia'}</b><small>${EN ? 'Transfer and upload the receipt' : 'Transfiere y sube el comprobante'}</small></span></button>` : ''}
         <div class="pg-err" id="err" hidden></div>
-        <p class="pg-note">${EN ? 'Payments are processed securely by Transbank (Webpay).' : 'Pago seguro con Webpay (Transbank).'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+        <p class="pg-note">${EN ? 'Payments are processed securely by Transbank (Webpay).' : 'Pago seguro con Webpay (Transbank).'}</p>`;
       const b = document.getElementById('op-wp');
       b.onclick = async () => {
         if(b.disabled) return; b.disabled = true; b.classList.add('on'); error('');
@@ -165,7 +165,7 @@
       <button class="pg-up" id="up" type="button">${EN ? 'Upload receipt' : 'Subir comprobante'}</button>
       <div class="pg-err" id="err" hidden></div>
       ${D.webpay && !D.soloTransferencia ? `<button class="pg-opt" id="op-wp2" type="button"><i>💳</i><span><b>${EN ? 'Pay by card instead' : 'Mejor pagar con tarjeta'}</b><small>Webpay</small></span></button>` : ''}
-      <p class="pg-note">${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+`;
     const wp2 = document.getElementById('op-wp2'); if(wp2) wp2.onclick = () => { pintar(); scrollTo(0, 0); };
     pg.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => { try{ await navigator.clipboard.writeText(b.dataset.cp.replace(/\./g, '')); b.textContent = EN ? 'Copied' : 'Copiado'; }catch(_){} });
     const up = document.getElementById('up'), inp = document.getElementById('cmp');
@@ -258,7 +258,7 @@
       <div class="pg-fl" id="detalle">${filas.map(([a, b]) => `<p style="display:flex;justify-content:space-between;gap:12px;opacity:1;margin:6px 0"><span style="opacity:.6">${a}</span><b style="text-align:right;overflow-wrap:anywhere;min-width:0">${esc(b)}</b></p>`).join('')}</div>
       ${Q.get('bo') && Q.get('bk') ? `<a class="pg-opt" href="/api/pagar?boleta=${encodeURIComponent(Q.get('bk'))}" target="_blank" rel="noopener"><i>🧾</i><span><b>${EN ? 'Tax receipt' : 'Boleta exenta'} N° ${esc(Q.get('bo'))}</b><small>${EN ? 'Download PDF' : 'Descargar PDF'}</small></span></a>` : ''}
       <a class="pg-opt" id="seguir" href="/"><i>✓</i><span><b>${EN ? 'Continue' : 'Continuar'}</b></span></a>
-      <p class="pg-note">${EN ? 'Payment processed by Webpay (Transbank).' : 'Pago procesado por Webpay (Transbank).'} ${EN ? 'Questions?' : '¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">WhatsApp</a></p>`;
+      <p class="pg-note">${EN ? 'Payment processed by Webpay (Transbank).' : 'Pago procesado por Webpay (Transbank).'}</p>`;
     fetch('/api/pagar?o=' + encodeURIComponent(id)).then(r => r.json()).then(r => {
       if(r && r.vuelta) document.getElementById('seguir').href = r.vuelta;
       if(r && r.titulo) document.getElementById('detalle').insertAdjacentHTML('beforeend', `<p style="display:flex;justify-content:space-between;gap:12px;opacity:1;margin:6px 0"><span style="opacity:.6">${EN ? 'Description' : 'Descripción'}</span><b style="text-align:right">${esc(r.titulo)}</b></p>`);

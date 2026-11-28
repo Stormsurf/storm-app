@@ -263,7 +263,7 @@ export async function onRequest(context) {
   // Vista previa (*.storm-app.pages.dev) sin llaves de Transbank: Webpay en modo prueba (datos públicos de prueba, no cobra de verdad)
   // Vista previa también: boletas en el ambiente de pruebas de SimpleFactura, sin esperar el 1-12
   const env = /\.storm-app\.pages\.dev$/.test(url.hostname) ? Object.assign({}, context.env, context.env.WEBPAY_CODIGO ? {} : { WEBPAY_PRUEBA: '1' }, { BOLETA_PRUEBA: '1', SF_AMBIENTE: '0' }) : context.env;
-  if (!env.MP_TOKEN) return fallo('El pago en línea no está activo en este momento. Escríbenos por WhatsApp.');
+  if (!env.MP_TOKEN) return fallo('El pago en línea no está activo en este momento. Intenta de nuevo más tarde.');
 
   const origen = /(^|\.)storm-app\.pages\.dev$/.test(url.hostname) ? url.origin : 'https://app.stormsurf.cl';
 
@@ -399,7 +399,7 @@ export async function onRequest(context) {
     return json({ ok: true, url: c.url, token_ws: c.token }); // la página manda el token por POST (como pide Transbank)
   }
   if (d.flow) {
-    if (!flowListo(env)) return fallo('Este medio de pago no está disponible. Escríbenos por WhatsApp.');
+    if (!flowListo(env)) return fallo('Este medio de pago no está disponible. Intenta de nuevo más tarde.');
     const correo = String(d.email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return fallo('Revisa tu correo. / Please check your email.');
     const ref = o.external_reference, it = (o.items || [])[0] || {};
