@@ -65,7 +65,7 @@
   try{ const g = localStorage.getItem('storm-lang'); if(g) EN = g === 'en'; }catch(_){}
   { const l = new URLSearchParams(location.search).get('l'); if(l === 'es' || l === 'en') EN = l === 'en'; }
   if(EN){ document.documentElement.lang = 'en'; document.title = 'Pay · Storm'; }
-  const ayuda = `<p class="pg-note">${EN ? 'Payments are processed securely by Mercado Pago. Questions?' : 'El pago lo procesa Mercado Pago de forma segura. ¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">${EN ? 'Message us on WhatsApp' : 'Escríbenos por WhatsApp'}</a></p>`;
+  const ayuda = `<p class="pg-note">${EN ? 'Secure payment with Webpay (Transbank). Questions?' : 'Pago seguro con Webpay (Transbank). ¿Dudas?'} <a href="https://wa.me/56977744306" target="_blank" rel="noopener">${EN ? 'Message us on WhatsApp' : 'Escríbenos por WhatsApp'}</a></p>`;
 
   const error = t => { const e = document.getElementById('err'); if(e){ e.hidden = !t; e.textContent = t || ''; } };
 

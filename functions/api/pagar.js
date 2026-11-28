@@ -143,11 +143,29 @@ async function mp(env, path, opt = {}) {
   return { code, body };
 }
 
+/** Lee la orden en Mercado Pago. Isidora 28-11: un link recién creado a veces todavía no aparece (Robbe vio "No encontramos este pago"),
+ *  así que se reintenta un par de veces. Si igual no aparece y es un link de pago (LK-), se arma con lo guardado en Storm (tabla links). */
+async function ordenDe(env, id) {
+  for (let i = 0; i < 3; i++) {
+    const { code, body } = await mp(env, '/v1/orders/' + encodeURIComponent(id));
+    if (code === 200 && body && body.id) return body;
+    if (code && code < 500 && code !== 404 && code !== 429) break;
+    await new Promise(r => setTimeout(r, 700 * (i + 1)));
+  }
+  if (!env.DB) return null;
+  const L = await env.DB.prepare('SELECT * FROM links WHERE link = ?').bind('https://app.stormsurf.cl/pagar/?o=' + encodeURIComponent(id)).first().catch(() => null);
+  if (!L) return null;
+  let ps = []; try { ps = JSON.parse(L.partes || '[]'); } catch (_) {}
+  const o = 'https://app.stormsurf.cl';
+  return { id, external_reference: L.ref, status: L.estado === 'pagada' ? 'processed' : 'created', total_amount: String(L.total), description: 'Storm' + (L.nombre ? ' · ' + L.nombre : ''),
+    items: [{ title: ps.map(x => x.tipo === 'clase' ? 'Clase de surf' : x.tipo === 'renta' ? 'Renta' : x.detalle).join(' + ').slice(0, 120) || 'Pago Storm', quantity: 1, unit_price: String(L.total) }],
+    config: { online: { success_url: o + '/pagar/?listo=link', failure_url: o + '/pagar/?listo=error' } } };
+}
 /** La orden original, solo si es de Storm (referencia conocida). */
 async function leerOrden(env, id, url) {
   if (!/^ORD[A-Z0-9]{10,40}$/.test(String(id || ''))) return null;
-  const { code, body } = await mp(env, '/v1/orders/' + encodeURIComponent(id));
-  if (code !== 200 || !body || !REF_OK.test(String(body.external_reference || ''))) return null;
+  const body = await ordenDe(env, id);
+  if (!body || !REF_OK.test(String(body.external_reference || ''))) return null;
   if (/^PRUEBA-/.test(body.external_reference) && !/\.storm-app\.pages\.dev$/.test(url.hostname)) return null;
   // Reservas: solo mientras el horario sigue guardado para esa persona
   if (/^ES-/.test(body.external_reference) && body.status === 'created' && env.DB) {
@@ -262,7 +280,7 @@ export async function onRequest(context) {
     let c = await webpay(env, 'PUT', '/' + encodeURIComponent(tok));
     if (!c) c = await webpay(env, 'GET', '/' + encodeURIComponent(tok)); // si ya se había confirmado (recargó la página)
     const p50 = !!(q.get('p50') || (c && /^PRUEBA50-/.test(String(c.session_id || '')))); // producto de prueba $50 que pide Transbank
-    const o = c && c.session_id && !p50 ? (await mp(env, '/v1/orders/' + encodeURIComponent(c.session_id))).body : null;
+    const o = c && c.session_id && !p50 ? await ordenDe(env, c.session_id) : null;
     const ref = o && o.external_reference;
     const ok = c && c.status === 'AUTHORIZED' && Number(c.response_code) === 0 && (p50 ? Math.round(Number(c.amount)) === 50 : ref && REF_OK.test(ref) && Math.round(Number(c.amount)) >= Math.round(Number(o.total_amount)));
     if (p50 && !ok) return html('<h1>Pago de prueba no aprobado</h1><p>' + (c ? 'Estado: ' + esc(c.status) + ' · código ' + esc(c.response_code) + ' · monto ' + esc(c.amount) : 'Transbank no respondió al confirmar: ' + esc(ultimoError)) + '</p><p>Token: ' + esc(tok) + '</p><p><a href="/api/pagar?prueba50=1">Intentar de nuevo</a></p>');
